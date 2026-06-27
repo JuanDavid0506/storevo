@@ -22,12 +22,15 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(AbstractHttpConfigurer::disable) // Desactivamos CSRF (el JWT en Cookie lo reemplaza)
+                .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
+                        // ¡NUEVO! Permitimos la ruta /error para que Spring no lance 403 ocultando fallos reales
+                        .requestMatchers("/error").permitAll()
+
                         // Landing Page y Estilos
                         .requestMatchers("/", "/css/**", "/js/**", "/images/**", "/icons/**").permitAll()
 
-                        // ¡NUEVO! Rutas públicas de las tiendas de los clientes
+                        // Rutas públicas de las tiendas de los clientes
                         .requestMatchers("/s/**").permitAll()
 
                         // Login y Webhooks
@@ -35,7 +38,6 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/webhooks/**").permitAll()
 
                         .anyRequest().authenticated()
-
                 )
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)

@@ -23,28 +23,33 @@ public class TenantFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        String serverName = request.getServerName(); // Ej: mitienda.storevo.com o localhost
+        String serverName = request.getServerName(); // Ej: storevo-production.up.railway.app
         String subdomain = extractSubdomain(serverName);
 
-        if (subdomain != null && !subdomain.equals("www") && !subdomain.equals("admin")) {
+        // CONDICIÓN MEJORADA:
+        // Si el dominio contiene "railway.app", es nuestro entorno de producción base (Landing Page)
+        // Por lo tanto, no ejecutamos la lógica de búsqueda de tiendas (Multi-Tenant).
+        boolean isBaseDomain = serverName.contains("railway.app") || serverName.equals("localhost");
+
+        if (!isBaseDomain && subdomain != null && !subdomain.equals("www") && !subdomain.equals("admin")) {
             // Buscamos la tienda en la base de datos de administración
             Optional<Store> storeOpt = storeRepository.findBySlug(subdomain);
 
             if (storeOpt.isPresent() && storeOpt.get().getStatus().equals("ACTIVE")) {
-                // Si existe y está activa, seteamos el schema_name (Ej: tenant_mitienda)
+                // Si existe y está activa, seteamos el schema_name
                 TenantContext.setCurrentTenant(storeOpt.get().getSchemaName());
             } else {
-                // Si la tienda no existe o está suspendida, devolvemos error 404/403
+                // Si la tienda no existe o está suspendida, devolvemos error 404
                 response.sendError(HttpServletResponse.SC_NOT_FOUND, "Tienda no encontrada o inactiva");
-                return;
+                return; // Cortamos la ejecución aquí
             }
         }
 
         try {
-            // Continuar con la petición normal
+            // Continuar con la petición normal (cargará la Landing Page)
             filterChain.doFilter(request, response);
         } finally {
-            // MUY IMPORTANTE: Limpiar el contexto al terminar para evitar fugas de memoria
+            // MUY IMPORTANTE: Limpiar el contexto
             TenantContext.clear();
         }
     }
