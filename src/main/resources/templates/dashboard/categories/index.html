@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/dashboard-layout}">
+<head>
+    <title>Categorías</title>
+</head>
+<body>
+<div layout:fragment="content" class="space-y-6">
+
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+            <h2 class="text-2xl font-bold text-white">Categorías</h2>
+            <p class="text-sm text-slate-400 mt-1">Gestiona las agrupaciones de tus productos en el catálogo.</p>
+        </div>
+        <a th:href="@{/dashboard/categories/new}" class="px-4 py-2 bg-storevo-500 hover:bg-storevo-600 text-white text-sm font-medium rounded-lg transition-colors shadow-sm">
+            + Nueva Categoría
+        </a>
+    </div>
+
+    <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-400">
+                <thead class="text-xs uppercase bg-slate-800 text-slate-300 border-b border-slate-800">
+                <tr>
+                    <th scope="col" class="px-6 py-4 font-medium">Nombre de la Categoría</th>
+                    <th scope="col" class="px-6 py-4 font-medium text-center">Orden</th>
+                    <th scope="col" class="px-6 py-4 font-medium text-center">Estado</th>
+                    <th scope="col" class="px-6 py-4 font-medium text-right">Acciones</th>
+                </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800/60">
+
+                <tr th:if="${#lists.isEmpty(categories)}">
+                    <td colspan="4" class="px-6 py-10 text-center text-slate-500">
+                        No tienes categorías configuradas. Crea la primera para organizar tu tienda.
+                    </td>
+                </tr>
+
+                <tr th:each="cat : ${categories}" class="hover:bg-slate-800/30 transition-colors">
+                    <td class="px-6 py-4">
+                        <span class="font-medium text-white" th:text="${cat.name}">Nombre Categoría</span>
+                        <p class="text-xs text-slate-500 mt-0.5 truncate max-w-xs" th:text="${cat.description} ?: 'Sin descripción'"></p>
+                    </td>
+
+                    <td class="px-6 py-4 text-center text-slate-300 font-medium" th:text="${cat.displayOrder}">
+                        0
+                    </td>
+
+                    <td class="px-6 py-4 text-center">
+                            <span th:if="${cat.isActive}" class="px-2.5 py-1 text-xs font-medium bg-green-500/10 text-green-400 rounded-full border border-green-500/20">
+                                Activa
+                            </span>
+                        <span th:unless="${cat.isActive}" class="px-2.5 py-1 text-xs font-medium bg-slate-500/10 text-slate-400 rounded-full border border-slate-500/20">
+                                Inactiva
+                            </span>
+                    </td>
+
+                    <td class="px-6 py-4 text-right">
+                        <div class="flex items-center justify-end gap-3">
+                            <form th:action="@{/dashboard/categories/{id}/toggle(id=${cat.id})}" method="post" class="inline">
+                                <button type="submit" class="text-xs text-slate-400 hover:text-white transition-colors" th:text="${cat.isActive ? 'Desactivar' : 'Activar'}">
+                                    Toggle
+                                </button>
+                            </form>
+                            <span class="text-slate-700">|</span>
+                            <a th:href="@{/dashboard/categories/{id}/edit(id=${cat.id})}" class="text-xs font-medium text-storevo-400 hover:text-storevo-300 transition-colors">
+                                Editar
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</body>
+</html>

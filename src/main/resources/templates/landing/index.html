@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="es"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/public-layout}">
+<head>
+    <title>Storevo | Inicio</title>
+</head>
+<body>
+<div layout:fragment="content">
+
+    <section th:replace="~{components/hero :: hero}"></section>
+
+    <section th:replace="~{components/problem :: problem}"></section>
+
+    <section th:replace="~{components/benefits :: benefits}"></section>
+
+    <section id="como-funciona" th:replace="~{components/how-it-works :: how-it-works}"></section>
+
+    <section id="caracteristicas" th:replace="~{components/features :: features}"></section>
+
+    <section id="planes" th:replace="~{components/pricing :: pricing}"></section>
+
+    <section id="faq" th:replace="~{components/faq :: faq}"></section>
+
+    <section th:replace="~{components/cta :: cta}"></section>
+
+</div>
+</body>
+</html>

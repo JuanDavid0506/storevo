@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/dashboard-layout}">
+<head>
+    <title>Formulario Categoría</title>
+</head>
+<body>
+<div layout:fragment="content" class="max-w-2xl mx-auto">
+
+    <div class="mb-6 flex items-center gap-4">
+        <a href="/dashboard/categories" class="text-slate-400 hover:text-white transition bg-slate-800 p-2 rounded-lg">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+        </a>
+        <h2 class="text-2xl font-bold text-white" th:text="${category.id != null ? 'Editar Categoría' : 'Nueva Categoría'}">Título</h2>
+    </div>
+
+    <form th:action="@{/dashboard/categories}" th:object="${category}" method="POST" class="bg-slate-900 border border-slate-800 rounded-xl shadow-sm p-8 space-y-6">
+
+        <input type="hidden" th:field="*{id}">
+
+        <div th:replace="~{components/ui/fragments :: input('name', 'Nombre de la Categoría (*)', 'text', 'Ej: Camisetas', *{name})}"></div>
+
+        <div th:replace="~{components/ui/fragments :: textarea('description', 'Descripción (Opcional)', 'Breve descripción de la categoría...', *{description}, '3')}"></div>
+
+        <div th:replace="~{components/ui/fragments :: input('displayOrder', 'Orden de Visualización', 'number', '0', *{displayOrder})}"></div>
+        <p class="text-xs text-slate-500 -mt-4">Las categorías con un número menor aparecerán primero en la tienda pública.</p>
+
+        <div class="flex items-center gap-3 pt-2">
+            <input type="checkbox" id="isActive" th:field="*{isActive}" class="w-5 h-5 rounded border-slate-700 bg-slate-950 text-storevo-500 focus:ring-storevo-500 cursor-pointer">
+            <label for="isActive" class="text-sm font-medium text-slate-300 cursor-pointer">Categoría Activa (Visible en la tienda)</label>
+        </div>
+
+        <div class="pt-6 border-t border-slate-800 flex justify-end gap-4">
+            <a href="/dashboard/categories" class="bg-slate-800 hover:bg-slate-700 text-white font-medium py-2 px-6 rounded-lg border border-slate-700 transition duration-200">Cancelar</a>
+            <div th:replace="~{components/ui/fragments :: btn-primary('Guardar Categoría', 'submit')}"></div>
+        </div>
+
+    </form>
+
+</div>
+</body>
+</html>

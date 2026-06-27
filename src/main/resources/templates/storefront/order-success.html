@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" layout:decorate="~{layouts/store-layout}"
+      xmlns:layout="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Pagar Pedido</title>
+</head>
+<body>
+<div layout:fragment="content" class="max-w-3xl mx-auto px-4 py-20 text-center">
+
+    <div class="bg-white p-10 rounded-2xl shadow-sm border border-slate-200">
+        <div class="w-20 h-20 bg-brand text-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+            <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+        </div>
+
+        <h1 class="text-3xl font-bold text-slate-900 mb-2">¡Pedido reservado con éxito!</h1>
+        <p class="text-slate-600 mb-8">Tu número de pedido es el <strong class="text-slate-900" th:text="'#' + ${order.id}"></strong></p>
+
+        <div class="bg-slate-50 p-6 rounded-xl border border-slate-200 text-left mb-8">
+            <h3 class="font-bold text-lg mb-4">Resumen a pagar</h3>
+            <div class="flex justify-between items-center border-b border-slate-200 pb-4 mb-4">
+                <span class="text-slate-600">Total</span>
+                <span class="text-2xl font-black text-brand" th:text="${'$' + order.total}"></span>
+            </div>
+            <p class="text-sm text-slate-500">Estado actual: <span class="font-bold text-orange-500">Pendiente de Pago</span></p>
+        </div>
+
+        <div class="flex justify-center w-full">
+            <form>
+                <script src="https://checkout.wompi.co/widget.js"
+                        data-render="button"
+                        th:data-public-key="${wompiPublicKey}"
+                        data-currency="COP"
+                        th:data-amount-in-cents="${amountInCents}"
+                        th:data-reference="${wompiReference}"
+                        th:attr="'data-signature:integrity'=${wompiSignature}"
+                        data-redirect-url="https://wompi.co/success">
+                </script>
+            </form>
+        </div>
+        <p class="text-xs text-slate-400 mt-4">Transacción 100% segura procesada por Wompi Bancolombia.</p>
+
+    </div>
+
+</div>
+</body>
+</html>

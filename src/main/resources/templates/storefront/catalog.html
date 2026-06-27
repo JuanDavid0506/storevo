@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/store-layout}">
+<head>
+    <title>Catálogo Completo</title>
+</head>
+<body>
+<div layout:fragment="content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+
+    <h1 class="text-3xl font-bold text-slate-900 mb-8">Todos los productos</h1>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+        <div th:each="prod : ${products}" th:if="${prod.isActive}" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden group hover:shadow-md transition">
+            <div class="aspect-square bg-slate-100 overflow-hidden">
+                <img th:if="${prod.images != null && !prod.images.isEmpty()}" th:src="${prod.images[0]}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+            </div>
+            <div class="p-4">
+                <p class="text-xs text-slate-500 mb-1" th:text="${prod.category != null ? prod.category.name : ''}"></p>
+                <h3 class="font-bold text-slate-900 truncate" th:text="${prod.name}"></h3>
+                <p class="text-brand font-bold mt-2" th:text="${prod.price != null ? '$ ' + #numbers.formatDecimal(prod.price, 1, 'POINT', 0, 'COMMA') : '$ 0'}"></p>
+                <a th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${prod.id})}" class="block w-full text-center bg-slate-100 hover:bg-slate-200 text-slate-800 font-medium py-2 rounded-lg mt-4 transition">Ver</a>
+            </div>
+        </div>
+    </div>
+
+</div>
+</body>
+</html>

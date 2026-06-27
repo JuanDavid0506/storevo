@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" layout:decorate="~{layouts/store-layout}">
+<head>
+    <title>Mi Bolsa</title>
+</head>
+<body>
+<div layout:fragment="content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <h1 class="text-3xl font-bold text-slate-900 mb-8">Bolsa de Compras</h1>
+
+    <div th:if="${#lists.isEmpty(cartItems)}" class="text-center py-20 bg-white rounded-xl shadow-sm border border-slate-200">
+        <svg class="w-20 h-20 mx-auto text-slate-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+        <h2 class="text-2xl font-bold text-slate-700 mb-2">Tu bolsa está vacía</h2>
+        <p class="text-slate-500 mb-6">Parece que aún no has agregado productos.</p>
+        <a th:href="@{/s/{slug}/catalog(slug=${slug})}" class="bg-brand text-white font-bold py-3 px-8 rounded-lg">Ir al Catálogo</a>
+    </div>
+
+    <div th:unless="${#lists.isEmpty(cartItems)}" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="lg:col-span-2 space-y-4">
+            <div th:each="item : ${cartItems}" class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex gap-4 items-center">
+                <div class="w-24 h-24 bg-slate-100 rounded-lg flex-shrink-0">
+                    <img th:if="${item.imageUrl}" th:src="${item.imageUrl}" class="w-full h-full object-cover rounded-lg">
+                </div>
+                <div class="flex-1">
+                    <h3 class="font-bold text-slate-900 text-lg" th:text="${item.name}">Producto</h3>
+                    <p class="text-brand font-medium" th:text="${item.price != null ? '$ ' + #numbers.formatDecimal(item.price, 1, 'POINT', 0, 'COMMA') : '$ 0'}">$0</p>
+                    <p class="text-sm text-slate-500 mt-1" th:text="${'Cantidad: ' + item.quantity}"></p>
+                </div>
+                <div class="text-right flex flex-col items-end gap-4">
+                    <p class="font-bold text-slate-900" th:text="${item.subtotal != null ? '$ ' + #numbers.formatDecimal(item.subtotal, 1, 'POINT', 0, 'COMMA') : '$ 0'}">$0</p>
+                    <form th:action="@{/s/{slug}/cart/remove(slug=${slug})}" method="POST">
+                        <input type="hidden" name="productId" th:value="${item.productId}">
+                        <button type="submit" class="text-red-500 hover:text-red-700 text-sm font-medium">Eliminar</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-fit">
+            <h3 class="font-bold text-xl mb-4 border-b pb-4">Resumen de Compra</h3>
+            <div class="flex justify-between mb-4">
+                <span class="text-slate-600">Subtotal</span>
+                <span class="font-bold text-slate-900" th:text="${cartTotal != null ? '$ ' + #numbers.formatDecimal(cartTotal, 1, 'POINT', 0, 'COMMA') : '$ 0'}">$0</span>            </div>
+            <a th:href="@{/s/{slug}/cart/checkout(slug=${slug})}" class="block w-full text-center bg-brand text-white font-bold py-3 rounded-lg shadow-md hover-bg-brand transition">Continuar Compra</a>
+        </div>
+    </div>
+</div>
+</body>
+</html>

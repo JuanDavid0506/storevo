@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title layout:title-pattern="$CONTENT_TITLE | Storevo">Dashboard</title>
+
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-slate-950 text-slate-300 font-sans antialiased flex h-screen overflow-hidden">
+
+<div th:replace="~{components/dashboard/sidebar :: sidebar}"></div>
+
+<div class="flex-1 flex flex-col md:ml-64 overflow-hidden">
+
+    <div th:replace="~{components/dashboard/topbar :: topbar}"></div>
+
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-slate-950 p-6">
+        <div class="max-w-7xl mx-auto" layout:fragment="content">
+        </div>
+    </main>
+
+</div>
+
+</body>
+</html>

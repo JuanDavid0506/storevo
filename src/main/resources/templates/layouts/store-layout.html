@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title layout:title-pattern="$CONTENT_TITLE | [[${settings.storeName}]]">Tienda</title>
+
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Magia CSS: Inyectamos el color corporativo del cliente en texto plano -->
+    <style th:inline="text">
+        :root {
+            --brand-color: [[${settings.primaryColor != null ? settings.primaryColor : '#000000'}]];
+            --brand-secondary: [[${settings.secondaryColor != null ? settings.secondaryColor : '#ffffff'}]];
+        }
+        /* Clases de Color Primario */
+        .bg-brand { background-color: var(--brand-color) !important; }
+        .text-brand { color: var(--brand-color) !important; }
+        .border-brand { border-color: var(--brand-color) !important; }
+        .hover-bg-brand:hover { filter: brightness(0.9); background-color: var(--brand-color) !important; }
+
+        /* Clases de Color Secundario */
+        .bg-secondary { background-color: var(--brand-secondary) !important; }
+        .text-secondary { color: var(--brand-secondary) !important; }
+        .border-secondary { border-color: var(--brand-secondary) !important; }
+        .hover-bg-secondary:hover { filter: brightness(0.9); background-color: var(--brand-secondary) !important; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans antialiased min-h-screen flex flex-col">
+
+<nav class="bg-white shadow-sm sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16 items-center">
+            <a th:href="@{/s/{slug}(slug=${slug})}" class="text-2xl font-black text-brand tracking-tight" th:text="${settings.storeName}">Mi Tienda</a>
+
+            <div class="hidden md:flex space-x-8">
+                <a th:href="@{/s/{slug}(slug=${slug})}" class="text-slate-600 hover:text-brand font-medium transition">Inicio</a>
+                <a th:href="@{/s/{slug}/catalog(slug=${slug})}" class="text-slate-600 hover:text-brand font-medium transition">Catálogo</a>
+            </div>
+
+            <div>
+                <a href="#" class="flex items-center gap-2 text-slate-600 hover:text-brand transition relative">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+                    <span class="absolute -top-2 -right-2 bg-brand text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full">0</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<main class="flex-1" layout:fragment="content"></main>
+
+<footer class="bg-brand text-white mt-12 py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div>
+            <h3 class="text-xl font-bold mb-4" th:text="${settings.storeName}">Tienda</h3>
+            <p class="text-sm opacity-90">Bienvenido a nuestra tienda online. Descubre nuestro catálogo con los mejores productos.</p>
+        </div>
+        <div>
+            <h4 class="font-bold mb-4 uppercase text-sm tracking-wider">Contacto</h4>
+            <ul class="space-y-2 text-sm opacity-90">
+                <li th:if="${settings.whatsapp != null && !settings.whatsapp.isBlank()}" th:text="'WhatsApp: ' + ${settings.whatsapp}"></li>
+                <li th:if="${settings.emailContact != null && !settings.emailContact.isBlank()}" th:text="'Email: ' + ${settings.emailContact}"></li>
+            </ul>
+        </div>
+        <div>
+            <h4 class="font-bold mb-4 uppercase text-sm tracking-wider">Desarrollado por</h4>
+            <p class="text-sm opacity-90 font-medium tracking-tight">Storevo SaaS</p>
+        </div>
+    </div>
+</footer>
+
+</body>
+</html>

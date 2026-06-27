@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" layout:decorate="~{layouts/store-layout}"
+      xmlns:layout="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Resultado del Pago</title>
+</head>
+<body>
+<div layout:fragment="content" class="max-w-3xl mx-auto px-4 py-20 text-center">
+
+    <div class="bg-white p-10 rounded-2xl shadow-sm border border-slate-200">
+        <div class="w-24 h-24 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+        </div>
+
+        <h1 class="text-4xl font-black text-slate-900 mb-4">¡Gracias por tu compra!</h1>
+        <p class="text-slate-600 mb-8 text-lg">Tu transacción ha finalizado. Hemos registrado tu pedido número <strong class="text-slate-900" th:text="'#' + ${order.id}"></strong>.</p>
+
+        <div class="bg-slate-50 p-6 rounded-xl border border-slate-200 text-left max-w-md mx-auto mb-8">
+            <ul class="space-y-3 text-sm">
+                <li class="flex justify-between">
+                    <span class="text-slate-500">Comprobante Wompi:</span>
+                    <span class="font-mono text-slate-900 font-bold" th:text="${wompiTransactionId != null ? wompiTransactionId : 'Pendiente'}"></span>
+                </li>
+                <li class="flex justify-between">
+                    <span class="text-slate-500">Cliente:</span>
+                    <span class="text-slate-900 font-medium" th:text="${order.customerName}"></span>
+                </li>
+                <li class="flex justify-between border-t border-slate-200 pt-3 mt-3">
+                    <span class="text-slate-500">Total Pagado:</span>
+                    <span class="text-brand font-bold" th:text="${order.total != null ? '$ ' + #numbers.formatDecimal(order.total, 1, 'POINT', 0, 'COMMA') : '$ 0'}"></span>
+                </li>
+            </ul>
+        </div>
+
+        <a th:href="@{/s/{slug}(slug=${slug})}" class="inline-block bg-brand hover-bg-brand text-white font-bold py-3 px-8 rounded-xl shadow-md transition">
+            Volver a la tienda
+        </a>
+    </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/dashboard-layout}">
+<head>
+    <title>Inicio</title>
+</head>
+<body>
+
+<div layout:fragment="content">
+
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold text-white">Hola, bienvenido a tu tienda</h1>
+        <p class="text-slate-400 mt-1">Aquí tienes un resumen de lo que está pasando hoy.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <!-- Ventas de hoy -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-sm font-medium text-slate-400">Ventas de hoy</p>
+                    <h3 class="text-3xl font-bold text-white mt-2"
+                        th:text="${metrics.totalRevenue != null ? '$ ' + #numbers.formatDecimal(metrics.totalRevenue, 1, 'POINT', 0, 'COMMA') : '$ 0'}">$0</h3>
+                </div>
+                <div class="p-3 bg-storevo-500/10 rounded-lg text-storevo-400">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pedidos Nuevos -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-sm font-medium text-slate-400">Pedidos Nuevos</p>
+                    <h3 class="text-3xl font-bold text-white mt-2"
+                        th:text="${metrics.pendingOrdersCount != null ? metrics.pendingOrdersCount : 0}">0</h3>
+                </div>
+                <div class="p-3 bg-blue-500/10 rounded-lg text-blue-400">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Productos Activos -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-sm font-medium text-slate-400">Productos Activos</p>
+                    <h3 class="text-3xl font-bold text-white mt-2"
+                        th:text="${metrics.activeProductsCount != null ? metrics.activeProductsCount : 0}">0</h3>
+                </div>
+                <div class="p-3 bg-purple-500/10 rounded-lg text-purple-400">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+</body>
+</html>

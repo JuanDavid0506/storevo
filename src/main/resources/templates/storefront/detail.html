@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/store-layout}">
+<head>
+  <title th:text="${product.name}">Detalle</title>
+</head>
+<body>
+<div layout:fragment="content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden p-6 md:p-12">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+
+      <div class="aspect-square bg-slate-100 rounded-xl overflow-hidden border border-slate-200 flex items-center justify-center">
+        <img th:if="${product.images != null && !product.images.isEmpty()}" th:src="${product.images[0]}" class="w-full h-full object-cover">
+        <span th:if="${product.images == null || product.images.isEmpty()}" class="text-slate-400">Sin Imagen</span>
+      </div>
+
+      <div class="flex flex-col justify-center">
+        <p class="text-sm text-brand font-bold mb-2 tracking-wider uppercase" th:text="${product.category != null ? product.category.name : 'Categoría General'}"></p>
+        <h1 class="text-4xl font-black text-slate-900 mb-4" th:text="${product.name}">Nombre</h1>
+        <p class="text-3xl font-bold text-slate-900 mb-6" th:text="${product.price != null ? '$ ' + #numbers.formatDecimal(product.price, 1, 'POINT', 0, 'COMMA') : '$ 0'}">$0</p>
+
+        <p class="text-slate-600 mb-8 leading-relaxed" th:text="${product.description}">Descripción del producto...</p>
+
+        <p class="text-sm font-medium text-slate-500 mb-6">Stock disponible: <span th:text="${product.stock}"></span></p>
+
+        <form th:action="@{/s/{slug}/cart/add(slug=${slug})}" method="POST">
+          <input type="hidden" name="productId" th:value="${product.id}">
+          <button type="submit" class="w-full bg-brand hover-bg-brand text-white font-bold py-4 rounded-xl shadow-lg transition flex justify-center items-center gap-2 mt-6">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+            Añadir a la Bolsa
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

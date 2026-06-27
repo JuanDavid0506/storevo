@@ -1,0 +1,24 @@
+spring:
+  application:
+    name: storevo
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/storevo_admin?useSSL=false&serverTimezone=UTC
+    username: root        # Cambia esto por tu usuario de MySQL
+    password: juan123        # Cambia esto por tu contrase�a de MySQL
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update    # En desarrollo, actualiza las tablas autom�ticamente
+    show-sql: true        # Te mostrar� en consola las consultas SQL (�til para depurar)
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
+
+  spring:
+    thymeleaf:
+      cache: false      # <- ¡Esta es la línea clave!
+      mode: HTML
+      encoding: UTF-8

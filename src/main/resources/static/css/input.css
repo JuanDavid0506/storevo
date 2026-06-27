@@ -1,0 +1,6 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Aquí puedes agregar CSS puro más adelante si es estrictamente necesario,
+   pero Tailwind cubrirá el 99% de tus necesidades */

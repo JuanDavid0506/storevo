@@ -1,0 +1,18 @@
+package com.storevo.backend.admin.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
+public class RegisterRequest {
+    private String storeName;
+    private String slug; // Ej: "mitienda"
+    private String ownerName;
+    private String email;
+    private String password;
+}
