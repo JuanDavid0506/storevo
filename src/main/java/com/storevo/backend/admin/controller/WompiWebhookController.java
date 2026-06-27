@@ -1,56 +1,114 @@
 package com.storevo.backend.admin.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.storevo.backend.admin.model.Store;
+import com.storevo.backend.admin.repository.StoreRepository;
 import com.storevo.backend.config.tenant.TenantContext;
+import com.storevo.backend.tenant.model.Order;
 import com.storevo.backend.tenant.model.OrderStatus;
-import com.storevo.backend.tenant.service.OrderService;
+import com.storevo.backend.tenant.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/v1/webhooks")
 @RequiredArgsConstructor
 public class WompiWebhookController {
 
-    private final ObjectMapper objectMapper;
-    private final OrderService orderService;
+    private final StoreRepository storeRepository;
+    private final OrderRepository orderRepository;
+
+    @Value("${wompi.events-secret}")
+    private String wompiEventsSecret;
 
     @PostMapping("/wompi")
-    public ResponseEntity<?> handleWompiWebhook(@RequestBody String payload) {
+    public ResponseEntity<String> handleWompiWebhook(@RequestBody JsonNode payload) {
         try {
-            JsonNode event = objectMapper.readTree(payload);
-            JsonNode data = event.get("data").get("transaction");
-
-            String reference = data.get("reference").asText();
-            String wompiStatus = data.get("status").asText(); // APPROVED, DECLINED, ERROR...
-
-            // Tu referencia tiene el formato: slug-orderId-timestamp
-            String[] parts = reference.split("-");
-            if (parts.length < 3) return ResponseEntity.ok("Referencia ignorada");
-
-            String slug = parts[0];
-            Long orderId = Long.parseLong(parts[1]);
-
-            // 1. Cambiamos el contexto de BD al esquema de esa tienda específica
-            TenantContext.setCurrentTenant("tenant_" + slug);
-
-            // 2. Mapeamos el resultado a tu sistema
-            if ("APPROVED".equals(wompiStatus)) {
-                orderService.updateOrderStatus(orderId, OrderStatus.PAID);
-            } else if ("DECLINED".equals(wompiStatus) || "ERROR".equals(wompiStatus) || "VOIDED".equals(wompiStatus)) {
-                // Al ponerlo en CANCELLED, el OrderService se encarga de devolver el stock a la base de datos
-                orderService.updateOrderStatus(orderId, OrderStatus.CANCELLED);
+            String eventType = payload.path("event").asText();
+            if (!"transaction.updated".equals(eventType)) {
+                return ResponseEntity.ok("Evento ignorado (No es una actualización de transacción)");
             }
 
-            return ResponseEntity.ok("Webhook procesado correctamente");
+            JsonNode transaction = payload.path("data").path("transaction");
+            String transactionId = transaction.path("id").asText();
+            String status = transaction.path("status").asText();
+            String amountInCents = transaction.path("amount_in_cents").asText();
+            String reference = transaction.path("reference").asText();
+
+            String timestamp = payload.path("timestamp").asText();
+            String signatureChecksum = payload.path("signature").path("checksum").asText();
+
+            // Validación de firma con el secreto del YML limpio
+            String cleanEventsSecret = wompiEventsSecret.trim();
+            String rawSignature = transactionId + status + amountInCents + timestamp + cleanEventsSecret;
+            String generatedChecksum = generateSha256(rawSignature);
+
+            if (!generatedChecksum.equals(signatureChecksum)) {
+                System.err.println("Wompi Webhook: FIRMA INVÁLIDA para referencia " + reference);
+                return ResponseEntity.status(403).body("Firma inválida. Acceso denegado.");
+            }
+
+            String[] refParts = reference.split("__");
+            if (refParts.length < 2) {
+                return ResponseEntity.badRequest().body("Formato de referencia inválido");
+            }
+
+            String slug = refParts[0];
+            Long orderId = Long.parseLong(refParts[1]);
+
+            Optional<Store> storeOpt = storeRepository.findBySlug(slug);
+            if (storeOpt.isEmpty()) {
+                return ResponseEntity.badRequest().body("Tienda no encontrada en la base maestra");
+            }
+
+            try {
+                TenantContext.setCurrentTenant(storeOpt.get().getSchemaName());
+
+                Optional<Order> orderOpt = orderRepository.findById(orderId);
+                if (orderOpt.isPresent()) {
+                    Order order = orderOpt.get();
+
+                    if ("APPROVED".equals(status)) {
+                        order.setStatus(OrderStatus.PAID);
+                        System.out.println("✅ PAGO APROBADO: Orden " + orderId + " marcada como PAGADA.");
+                    } else if ("DECLINED".equals(status) || "ERROR".equals(status)) {
+                        order.setStatus(OrderStatus.CANCELLED);
+                        System.out.println("❌ PAGO RECHAZADO: Orden " + orderId + " marcada como CANCELADA.");
+                    }
+
+                    orderRepository.save(order);
+                }
+            } finally {
+                TenantContext.clear();
+            }
+
+            return ResponseEntity.ok("Conciliación completada exitosamente.");
+
         } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.internalServerError().body("Error procesando webhook");
-        } finally {
-            // Limpiamos el hilo de seguridad
-            TenantContext.clear();
+            System.err.println("Error procesando Webhook de Wompi: " + e.getMessage());
+            return ResponseEntity.internalServerError().body("Error interno procesando evento");
+        }
+    }
+
+    private String generateSha256(String input) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(input.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hexString = new StringBuilder(2 * hash.length);
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) hexString.append('0');
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (Exception e) {
+            throw new RuntimeException("Error calculando hash SHA-256 en Webhook", e);
         }
     }
 }

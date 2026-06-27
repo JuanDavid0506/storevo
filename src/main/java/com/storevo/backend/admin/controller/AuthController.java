@@ -24,10 +24,6 @@ public class AuthController {
             setJwtCookie(response, authResponse.getToken());
             return "redirect:/dashboard";
         } catch (Exception e) {
-            // ¡AGREGA ESTA LÍNEA PARA VER EL ERROR REAL EN RAILWAY!
-            System.err.println("ERROR CRÍTICO AL REGISTRAR TIENDA: " + e.getMessage());
-            e.printStackTrace();
-
             return "redirect:/register?error=true";
         }
     }

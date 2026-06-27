@@ -33,8 +33,7 @@
                         th:data-amount-in-cents="${amountInCents}"
                         th:data-reference="${wompiReference}"
                         th:attr="'data-signature:integrity'=${wompiSignature}"
-                        data-redirect-url="https://wompi.co/success">
-                </script>
+                        th:data-redirect-url="${wompiRedirectUrl}"> </script>
             </form>
         </div>
         <p class="text-xs text-slate-400 mt-4">Transacción 100% segura procesada por Wompi Bancolombia.</p>

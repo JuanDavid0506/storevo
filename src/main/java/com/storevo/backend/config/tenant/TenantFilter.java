@@ -29,7 +29,11 @@ public class TenantFilter extends OncePerRequestFilter {
         // CONDICIÓN MEJORADA:
         // Si el dominio contiene "railway.app", es nuestro entorno de producción base (Landing Page)
         // Por lo tanto, no ejecutamos la lógica de búsqueda de tiendas (Multi-Tenant).
-        boolean isBaseDomain = serverName.contains("railway.app") || serverName.equals("localhost");
+        // CONDICIÓN MEJORADA (Ahora reconoce los túneles de Ngrok)
+        boolean isBaseDomain = serverName.contains("railway.app")
+                || serverName.equals("localhost")
+                || serverName.contains("ngrok-free.app")
+                || serverName.contains("ngrok.io");
 
         if (!isBaseDomain && subdomain != null && !subdomain.equals("www") && !subdomain.equals("admin")) {
             // Buscamos la tienda en la base de datos de administración

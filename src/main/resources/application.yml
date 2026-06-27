@@ -3,24 +3,33 @@ spring:
     name: storevo
 
   datasource:
-    url: ${MYSQL_URL} # Cambiado de jdbc:${MYSQL_URL} a solo la variable
-    username: ${MYSQLUSER}
-    password: ${MYSQLPASSWORD}
+    url: ${DB_URL:jdbc:mysql://localhost:3306/storevo_admin?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:juan123}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: false
+    show-sql: true
     properties:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.MySQLDialect
 
   thymeleaf:
-    cache: true
+    cache: false
     mode: HTML
     encoding: UTF-8
 
 server:
-  port: ${PORT:8080}
+  forward-headers-strategy: native
+
+security:
+  jwt:
+    secret: ${JWT_SECRET:StorevoSuperSecretKey2026_CambiarEnProduccion}
+
+wompi:
+  public-key: "pub_test_rXNURvf5usUF3DkyAQnu702qYj9fS8ts"
+  integrity-secret: "test_integrity_SdYPQHAW9XUM4vjFq17eIZwaXoSzzvBw"
+  events-secret: "test_events_gFqoObHOl6DKRKngPNY1wwDmvhvzL1ch"

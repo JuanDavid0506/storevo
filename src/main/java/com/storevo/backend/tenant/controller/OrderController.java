@@ -8,6 +8,7 @@ import com.storevo.backend.tenant.model.Order;
 import com.storevo.backend.tenant.repository.OrderRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -23,6 +24,12 @@ public class OrderController {
     private final OrderRepository orderRepository;
     private final StoreRepository storeRepository;
     private final StoreSettingsService storeSettingsService;
+
+    @Value("${wompi.public-key}")
+    private String wompiPublicKey;
+
+    @Value("${wompi.integrity-secret}")
+    private String wompiIntegritySecret;
 
     @ModelAttribute
     public void setupTenant(@PathVariable String slug, Model model) {
@@ -44,14 +51,13 @@ public class OrderController {
         order.setWompiTransactionId(wompiReference);
         orderRepository.save(order);
 
-        // ⚠️ ¡ATENCIÓN! PON TU SECRETO REAL AQUÍ O EL BOTÓN NUNCA APARECERÁ
-        String wompiPublicKey       = "pub_test_rXNURvf5usUF3DkyAQnu702qYj9fS8ts";
-        String wompiIntegritySecret = "PEGA_AQUI_EL_SECRETO_REAL_DEL_DASHBOARD_SIN_ESPACIOS";
+        // Limpieza de seguridad contra caracteres invisibles del YML
+        String cleanPublicKey = this.wompiPublicKey.trim();
+        String cleanIntegritySecret = this.wompiIntegritySecret.trim();
 
-        String rawSignature      = wompiReference + amountInCents + "COP" + wompiIntegritySecret;
+        String rawSignature = wompiReference + amountInCents + "COP" + cleanIntegritySecret;
         String integritySignature = generateSha256(rawSignature);
 
-        // 🚀 MAGIA PARA RAILWAY: Generación de URL dinámica
         String scheme = request.getHeader("X-Forwarded-Proto") != null ? request.getHeader("X-Forwarded-Proto") : request.getScheme();
         String serverName = request.getServerName();
         int serverPort = request.getServerPort();
@@ -63,7 +69,7 @@ public class OrderController {
         model.addAttribute("order",          order);
         model.addAttribute("wompiReference", wompiReference);
         model.addAttribute("amountInCents",  amountInCents);
-        model.addAttribute("wompiPublicKey", wompiPublicKey);
+        model.addAttribute("wompiPublicKey", cleanPublicKey);
         model.addAttribute("wompiSignature", integritySignature);
         model.addAttribute("wompiRedirectUrl", redirectUrl);
         model.addAttribute("pageTitle",      "Pagar Pedido");
