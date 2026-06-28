@@ -21,10 +21,10 @@ CREATE TABLE products (
     category_id    BIGINT,
     name           VARCHAR(150)    NOT NULL,
     description    TEXT,
-    price          DECIMAL(12, 2)  NOT NULL,
-    discount_price DECIMAL(12, 2)  DEFAULT 0.00,
+    price          DOUBLE          NOT NULL, -- Ajustado a DOUBLE para coincidir con tu Java
+    discount_price DOUBLE          DEFAULT 0.00,
     stock          INT             NOT NULL DEFAULT 0,
-    brand          VARCHAR(100),
+    brand          VARCHAR(100),   -- Dejado en 100 como marca tu @Column en Java
     sku            VARCHAR(50),
     weight         DOUBLE,
     images_json    JSON,
@@ -44,7 +44,7 @@ CREATE TABLE orders (
     address               VARCHAR(255)   NOT NULL,
     city                  VARCHAR(100)   NOT NULL,
     notes                 TEXT,
-    total                 DOUBLE         NOT NULL,
+    total                 DOUBLE         NOT NULL DEFAULT 0,
     status                VARCHAR(20)    NOT NULL DEFAULT 'PENDING',
     wompi_transaction_id  VARCHAR(100),
     created_at            TIMESTAMP      DEFAULT CURRENT_TIMESTAMP
@@ -55,7 +55,7 @@ CREATE TABLE order_items (
     id           BIGINT AUTO_INCREMENT PRIMARY KEY,
     order_id     BIGINT         NOT NULL,
     product_id   BIGINT         NOT NULL,
-    product_name VARCHAR(150)   NOT NULL,
+    product_name VARCHAR(150)   NOT NULL, -- Mantenido el límite estricto
     price        DOUBLE         NOT NULL,
     quantity     INT            NOT NULL,
     subtotal     DOUBLE         NOT NULL,
