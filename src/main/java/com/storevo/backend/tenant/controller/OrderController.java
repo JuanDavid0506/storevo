@@ -33,11 +33,16 @@ public class OrderController {
 
     @ModelAttribute
     public void setupTenant(@PathVariable String slug, Model model) {
-        TenantContext.setCurrentTenant("tenant_" + slug);
-        Store store = storeRepository.findBySlug(slug).orElseThrow();
+        // PASO 1: Leer de la base de datos maestra (storevo_admin)
+        Store store = storeRepository.findBySlug(slug)
+                .orElseThrow(() -> new RuntimeException("Tienda no encontrada"));
+
         model.addAttribute("store", store);
         model.addAttribute("settings", storeSettingsService.getSettingsByStore(store));
         model.addAttribute("slug", slug);
+
+        // PASO 2: "Bajar el switch" al esquema del cliente (tenant_prueba)
+        TenantContext.setCurrentTenant(store.getSchemaName());
     }
 
     @GetMapping("/{id}/success")

@@ -9,7 +9,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 @Controller
-@RequestMapping("/dashboard/categories")
+@RequestMapping("/dashboard/{slug}/categories")
 @RequiredArgsConstructor
 public class CategoryController {
 

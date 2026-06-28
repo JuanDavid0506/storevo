@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import java.security.Principal;
 
 @Controller
-@RequestMapping("/dashboard/settings")
+@RequestMapping("/dashboard/{slug}/settings")
 @RequiredArgsConstructor
 public class SettingsController {
 

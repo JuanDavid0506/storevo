@@ -23,37 +23,29 @@ public class TenantFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        String serverName = request.getServerName(); // Ej: storevo-production.up.railway.app
-        String subdomain = extractSubdomain(serverName);
+        String uri = request.getRequestURI();
 
-        // CONDICIÓN MEJORADA:
-        // Si el dominio contiene "railway.app", es nuestro entorno de producción base (Landing Page)
-        // Por lo tanto, no ejecutamos la lógica de búsqueda de tiendas (Multi-Tenant).
-        // CONDICIÓN MEJORADA (Ahora reconoce los túneles de Ngrok)
-        boolean isBaseDomain = serverName.contains("railway.app")
-                || serverName.equals("localhost")
-                || serverName.contains("ngrok-free.app")
-                || serverName.contains("ngrok.io");
+        // 1. Siempre iniciamos en la base de datos maestra
+        TenantContext.setCurrentTenant("storevo_admin");
 
-        if (!isBaseDomain && subdomain != null && !subdomain.equals("www") && !subdomain.equals("admin")) {
-            // Buscamos la tienda en la base de datos de administración
-            Optional<Store> storeOpt = storeRepository.findBySlug(subdomain);
-
-            if (storeOpt.isPresent() && storeOpt.get().getStatus().equals("ACTIVE")) {
-                // Si existe y está activa, seteamos el schema_name
-                TenantContext.setCurrentTenant(storeOpt.get().getSchemaName());
-            } else {
-                // Si la tienda no existe o está suspendida, devolvemos error 404
-                response.sendError(HttpServletResponse.SC_NOT_FOUND, "Tienda no encontrada o inactiva");
-                return; // Cortamos la ejecución aquí
+        // 2. Si es una ruta de tienda (/s/) O una ruta de dashboard (/dashboard/)
+        if (uri.startsWith("/s/") || uri.startsWith("/dashboard/")) {
+            String[] pathParts = uri.split("/");
+            // pathParts[0] = ""
+            // pathParts[1] = "s" o "dashboard"
+            // pathParts[2] = "{slug}"
+            if (pathParts.length >= 3) {
+                String slug = pathParts[2];
+                Optional<Store> storeOpt = storeRepository.findBySlug(slug);
+                if (storeOpt.isPresent()) {
+                    request.setAttribute("currentStore", storeOpt.get());
+                }
             }
         }
 
         try {
-            // Continuar con la petición normal (cargará la Landing Page)
             filterChain.doFilter(request, response);
         } finally {
-            // MUY IMPORTANTE: Limpiar el contexto
             TenantContext.clear();
         }
     }

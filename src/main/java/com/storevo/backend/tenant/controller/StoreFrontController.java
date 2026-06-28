@@ -6,6 +6,7 @@ import com.storevo.backend.admin.service.StoreSettingsService;
 import com.storevo.backend.config.tenant.TenantContext; // Ajusta el paquete si tu TenantContext está en otra ruta
 import com.storevo.backend.tenant.service.CategoryService;
 import com.storevo.backend.tenant.service.ProductService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -24,20 +25,24 @@ public class StoreFrontController {
     private final ProductService productService;
     private final CategoryService categoryService;
 
-    // Este método se ejecuta ANTES de cualquier vista de este controlador
+
     @ModelAttribute
-    public void loadStoreData(@PathVariable String slug, Model model) {
-        // 1. Apuntamos la base de datos al esquema de esta tienda
-        TenantContext.setCurrentTenant("tenant_" + slug);
+    public void loadStoreData(Model model, HttpServletRequest request) {
+        // 1. Obtenemos la tienda ya cargada por el filtro (sin consultar base de datos)
+        Store store = (Store) request.getAttribute("currentStore");
 
-        // 2. Cargamos los colores y datos desde la base de datos central
-        Store store = storeRepository.findBySlug(slug)
-                .orElseThrow(() -> new RuntimeException("Tienda no encontrada"));
+        if (store == null) {
+            throw new RuntimeException("Tienda no encontrada en la petición");
+        }
 
+        // 2. Ahora sí, cambiamos al esquema del inquilino (tenant_prueba)
+        TenantContext.setCurrentTenant(store.getSchemaName());
+
+        // 3. Ya en el esquema correcto, cargamos la data propia de la tienda
         model.addAttribute("store", store);
         model.addAttribute("settings", storeSettingsService.getSettingsByStore(store));
         model.addAttribute("categories", categoryService.getAllCategories());
-        model.addAttribute("slug", slug);
+        model.addAttribute("slug", store.getSlug());
     }
 
     @GetMapping
