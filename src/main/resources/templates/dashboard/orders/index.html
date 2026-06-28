@@ -75,7 +75,7 @@
 
                     <!-- Acciones de Estado -->
                     <td class="px-6 py-4 text-right">
-                        <form th:action="@{/dashboard/orders/{id}/status(id=${order.id})}" method="POST" class="flex items-center justify-end gap-2">
+                        <form th:action="@{|/dashboard/${slug}/orders/${order.id}/status|}" method="POST" class="flex items-center justify-end gap-2">
                             <select name="status" class="bg-slate-950 border border-slate-700 text-slate-300 text-sm rounded-lg focus:ring-storevo-500 focus:border-storevo-500 px-2 py-1.5">
                                 <option th:each="state : ${orderStatuses}"
                                         th:value="${state}"

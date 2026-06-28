@@ -1,18 +1,14 @@
 package com.storevo.backend.tenant.controller;
 
 import com.storevo.backend.admin.model.Store;
-import com.storevo.backend.admin.repository.UserRepository;
 import com.storevo.backend.admin.service.StoreSettingsService;
+import com.storevo.backend.config.tenant.TenantContext;
 import com.storevo.backend.tenant.dto.StoreSettingsDto;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-
-import java.security.Principal;
+import org.springframework.web.bind.annotation.*;
 
 @Controller
 @RequestMapping("/dashboard/{slug}/settings")
@@ -20,17 +16,22 @@ import java.security.Principal;
 public class SettingsController {
 
     private final StoreSettingsService storeSettingsService;
-    private final UserRepository userRepository;
 
-    private Store getCurrentStore(Principal principal) {
-        return userRepository.findByEmail(principal.getName())
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"))
-                .getStore();
+    @ModelAttribute
+    public void setupTenant(@PathVariable String slug, Model model, HttpServletRequest request) {
+        Store store = (Store) request.getAttribute("currentStore");
+        if (store == null) {
+            throw new RuntimeException("Tienda no encontrada en la petición");
+        }
+        TenantContext.setCurrentTenant(store.getSchemaName());
+        model.addAttribute("store", store);
+        model.addAttribute("slug", slug);
     }
 
     @GetMapping
-    public String showSettings(Model model, Principal principal) {
-        Store store = getCurrentStore(principal);
+    public String showSettings(Model model, HttpServletRequest request) {
+        // La tienda ya fue cargada por el TenantFilter
+        Store store = (Store) request.getAttribute("currentStore");
         StoreSettingsDto settings = storeSettingsService.getSettingsByStore(store);
 
         model.addAttribute("settings", settings);
@@ -39,10 +40,11 @@ public class SettingsController {
     }
 
     @PostMapping
-    public String saveSettings(@ModelAttribute StoreSettingsDto settingsDto, Principal principal) {
-        Store store = getCurrentStore(principal);
+    public String saveSettings(@PathVariable String slug, @ModelAttribute StoreSettingsDto settingsDto, HttpServletRequest request) {
+        // La tienda ya fue cargada por el TenantFilter
+        Store store = (Store) request.getAttribute("currentStore");
         storeSettingsService.updateSettings(store, settingsDto);
 
-        return "redirect:/dashboard/settings?success=true";
+        return "redirect:/dashboard/" + slug + "/settings?success=true";
     }
 }

@@ -15,7 +15,7 @@
         <h2 class="text-2xl font-bold text-white" th:text="${product.id != null ? 'Editar Producto' : 'Nuevo Producto'}">Título</h2>
     </div>
 
-    <form th:action="@{/dashboard/products}" th:object="${product}" method="POST" class="space-y-6">
+    <form th:action="@{|/dashboard/${slug}/products|}" th:object="${product}" method="POST" class="space-y-6">
         <input type="hidden" th:field="*{id}">
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -68,7 +68,7 @@
         </div>
 
         <div class="pt-6 flex justify-end gap-4">
-            <a href="/dashboard/products" class="bg-slate-800 hover:bg-slate-700 text-white font-medium py-2 px-6 rounded-lg border border-slate-700">Cancelar</a>
+            <a th:href="@{|/dashboard/${slug}/products|}" class="bg-slate-800 hover:bg-slate-700 text-white font-medium py-2 px-6 rounded-lg border border-slate-700">Cancelar</a>
             <div th:replace="~{components/ui/fragments :: btn-primary('Guardar Producto', 'submit')}"></div>
         </div>
     </form>

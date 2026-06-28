@@ -1,7 +1,6 @@
 package com.storevo.backend.tenant.controller;
 
 import com.storevo.backend.admin.model.Store;
-import com.storevo.backend.admin.repository.StoreRepository;
 import com.storevo.backend.admin.service.StoreSettingsService;
 import com.storevo.backend.config.tenant.TenantContext;
 import com.storevo.backend.tenant.model.Order;
@@ -22,7 +21,6 @@ import java.security.MessageDigest;
 public class OrderController {
 
     private final OrderRepository orderRepository;
-    private final StoreRepository storeRepository;
     private final StoreSettingsService storeSettingsService;
 
     @Value("${wompi.public-key}")
@@ -32,17 +30,18 @@ public class OrderController {
     private String wompiIntegritySecret;
 
     @ModelAttribute
-    public void setupTenant(@PathVariable String slug, Model model) {
-        // PASO 1: Leer de la base de datos maestra (storevo_admin)
-        Store store = storeRepository.findBySlug(slug)
-                .orElseThrow(() -> new RuntimeException("Tienda no encontrada"));
+    public void setupTenant(@PathVariable String slug, Model model, HttpServletRequest request) {
+        Store store = (Store) request.getAttribute("currentStore");
+        if (store == null) {
+            throw new RuntimeException("Tienda no encontrada en la petición");
+        }
+
+        // Bajamos el switch
+        TenantContext.setCurrentTenant(store.getSchemaName());
 
         model.addAttribute("store", store);
         model.addAttribute("settings", storeSettingsService.getSettingsByStore(store));
         model.addAttribute("slug", slug);
-
-        // PASO 2: "Bajar el switch" al esquema del cliente (tenant_prueba)
-        TenantContext.setCurrentTenant(store.getSchemaName());
     }
 
     @GetMapping("/{id}/success")
@@ -56,7 +55,6 @@ public class OrderController {
         order.setWompiTransactionId(wompiReference);
         orderRepository.save(order);
 
-        // Limpieza de seguridad contra caracteres invisibles del YML
         String cleanPublicKey = this.wompiPublicKey.trim();
         String cleanIntegritySecret = this.wompiIntegritySecret.trim();
 
