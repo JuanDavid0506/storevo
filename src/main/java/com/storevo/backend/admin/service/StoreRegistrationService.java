@@ -17,30 +17,41 @@ public class StoreRegistrationService {
     private final EntityManager entityManager;
 
     @Transactional
-    public Store registerNewStore(String storeName, String slug, String emailContact) {
+    public Store registerNewStore(String storeName, String slug, String emailContact, String businessType, String themeName) {
         String schemaName = "tenant_" + slug.replace("-", "_");
 
-        // 1. Crear la tienda (Pendiente de pago)
         Store newStore = Store.builder()
                 .name(storeName)
                 .slug(slug)
                 .schemaName(schemaName)
-                .status("ACTIVE") // Asumimos que se activa tras el pago
+                .status("ACTIVE")
                 .build();
 
         newStore = storeRepository.save(newStore);
 
-        // 2. Crear su configuración visual por defecto
+        // Magia de Colores: Asignamos paletas automáticas según la plantilla
+        String primary = "#0F172A"; // Minimalista (Slate 900)
+        String secondary = "#FFFFFF";
+
+        if ("urbano".equals(themeName)) {
+            primary = "#4F46E5"; // Indigo vibrante
+            secondary = "#F3F4F6";
+        } else if ("elegante".equals(themeName)) {
+            primary = "#9CA3AF"; // Gris plata
+            secondary = "#111827"; // Negro oscuro
+        }
+
         StoreSettings defaultSettings = StoreSettings.builder()
                 .store(newStore)
                 .emailContact(emailContact)
-                .primaryColor("#000000")
-                .secondaryColor("#FFFFFF")
+                .businessType(businessType)
+                .themeName(themeName)
+                .primaryColor(primary)
+                .secondaryColor(secondary)
                 .build();
 
         entityManager.persist(defaultSettings);
 
-        // 3. Crear físicamente la base de datos para este cliente
         tenantSchemaService.createDatabaseSchema(schemaName);
 
         return newStore;

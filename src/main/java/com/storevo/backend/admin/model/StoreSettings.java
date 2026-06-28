@@ -20,16 +20,22 @@ public class StoreSettings {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Relación 1 a 1 con la tabla principal de tiendas
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "store_id", nullable = false, unique = true)
     private Store store;
 
+    // NUEVOS CAMPOS PARA EL ONBOARDING MÁGICO
+    @Column(name = "business_type", length = 50)
+    private String businessType;
+
+    @Column(name = "theme_name", length = 50)
+    private String themeName;
+
     @Column(name = "primary_color", length = 7)
-    private String primaryColor = "#000000"; // Color por defecto (Negro premium)
+    private String primaryColor;
 
     @Column(name = "secondary_color", length = 7)
-    private String secondaryColor = "#FFFFFF"; // Color secundario por defecto (Blanco)
+    private String secondaryColor;
 
     @Column(name = "logo_url", length = 255)
     private String logoUrl;

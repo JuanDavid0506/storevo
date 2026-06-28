@@ -22,34 +22,33 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
-    private final StoreRegistrationService storeRegistrationService; // Reutilizamos el orquestador de tiendas
+    private final StoreRegistrationService storeRegistrationService;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
-        // 1. Validar si el email ya existe (puedes agregar validaciones más robustas luego)
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new RuntimeException("El email ya está registrado");
         }
 
-        // 2. Crear la tienda y aprovisionar su esquema de base de datos
+        // Pasamos businessType y themeName
         Store newStore = storeRegistrationService.registerNewStore(
                 request.getStoreName(),
                 request.getSlug(),
-                request.getEmail()
+                request.getEmail(),
+                request.getBusinessType(),
+                request.getThemeName()
         );
 
-        // 3. Crear el usuario dueño de la tienda
         User user = User.builder()
                 .name(request.getOwnerName())
                 .email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword())) // ¡Siempre encriptada!
+                .password(passwordEncoder.encode(request.getPassword()))
                 .store(newStore)
                 .role("ROLE_STORE_OWNER")
                 .build();
 
         userRepository.save(user);
 
-        // 4. Generar el Token JWT
         String jwtToken = jwtService.generateToken(user);
 
         return AuthResponse.builder()
@@ -57,9 +56,9 @@ public class AuthService {
                 .storeSlug(newStore.getSlug())
                 .build();
     }
+
     @Transactional
     public AuthResponse login(LoginRequest request) {
-        // 1. Spring Security verifica que el email y la contraseña coincidan
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.getEmail(),
@@ -67,11 +66,9 @@ public class AuthService {
                 )
         );
 
-        // 2. Si pasa la línea anterior, las credenciales son correctas. Buscamos al usuario.
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow();
 
-        // 3. Generamos un nuevo token
         String jwtToken = jwtService.generateToken(user);
 
         return AuthResponse.builder()

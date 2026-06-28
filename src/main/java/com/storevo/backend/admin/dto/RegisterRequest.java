@@ -11,8 +11,12 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class RegisterRequest {
     private String storeName;
-    private String slug; // Ej: "mitienda"
+    private String slug;
     private String ownerName;
     private String email;
     private String password;
+
+    // Agregamos las selecciones del usuario
+    private String businessType;
+    private String themeName;
 }
