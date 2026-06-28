@@ -4,9 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.storevo.backend.admin.model.Store;
 import com.storevo.backend.admin.repository.StoreRepository;
 import com.storevo.backend.config.tenant.TenantContext;
-import com.storevo.backend.tenant.model.Order;
 import com.storevo.backend.tenant.model.OrderStatus;
-import com.storevo.backend.tenant.repository.OrderRepository;
+import com.storevo.backend.tenant.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -22,7 +21,8 @@ import java.util.Optional;
 public class WompiWebhookController {
 
     private final StoreRepository storeRepository;
-    private final OrderRepository orderRepository;
+    // 1. Inyectamos OrderService en lugar de OrderRepository
+    private final OrderService orderService;
 
     @Value("${wompi.events-secret}")
     private String wompiEventsSecret;
@@ -40,11 +40,9 @@ public class WompiWebhookController {
             String status = transaction.path("status").asText();
             String amountInCents = transaction.path("amount_in_cents").asText();
             String reference = transaction.path("reference").asText();
-
             String timestamp = payload.path("timestamp").asText();
             String signatureChecksum = payload.path("signature").path("checksum").asText();
 
-            // Validación de firma con el secreto del YML limpio
             String cleanEventsSecret = wompiEventsSecret.trim();
             String rawSignature = transactionId + status + amountInCents + timestamp + cleanEventsSecret;
             String generatedChecksum = generateSha256(rawSignature);
@@ -70,26 +68,20 @@ public class WompiWebhookController {
             try {
                 TenantContext.setCurrentTenant(storeOpt.get().getSchemaName());
 
-                Optional<Order> orderOpt = orderRepository.findById(orderId);
-                if (orderOpt.isPresent()) {
-                    Order order = orderOpt.get();
-
-                    if ("APPROVED".equals(status)) {
-                        order.setStatus(OrderStatus.PAID);
-                        System.out.println("✅ PAGO APROBADO: Orden " + orderId + " marcada como PAGADA.");
-                    } else if ("DECLINED".equals(status) || "ERROR".equals(status)) {
-                        order.setStatus(OrderStatus.CANCELLED);
-                        System.out.println("❌ PAGO RECHAZADO: Orden " + orderId + " marcada como CANCELADA.");
-                    }
-
-                    orderRepository.save(order);
+                // 2. ¡EL CAMBIO CRÍTICO! Delegamos al OrderService para que él descuente el stock
+                if ("APPROVED".equals(status)) {
+                    orderService.updateOrderStatus(orderId, OrderStatus.PAID);
+                    System.out.println("✅ PAGO APROBADO: Orden " + orderId + " marcada como PAGADA y stock descontado.");
+                } else if ("DECLINED".equals(status) || "ERROR".equals(status) || "VOIDED".equals(status)) {
+                    orderService.updateOrderStatus(orderId, OrderStatus.CANCELLED);
+                    System.out.println("❌ PAGO RECHAZADO: Orden " + orderId + " marcada como CANCELADA y stock restaurado (si aplica).");
                 }
+
             } finally {
                 TenantContext.clear();
             }
 
             return ResponseEntity.ok("Conciliación completada exitosamente.");
-
         } catch (Exception e) {
             System.err.println("Error procesando Webhook de Wompi: " + e.getMessage());
             return ResponseEntity.internalServerError().body("Error interno procesando evento");

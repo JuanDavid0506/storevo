@@ -27,19 +27,24 @@ public class StoreFrontController {
 
 
     @ModelAttribute
-    public void setupTenant(@PathVariable String slug, Model model, HttpServletRequest request) {
+    public void loadStoreData(@PathVariable String slug, Model model, HttpServletRequest request) {
+        // 1. Obtenemos la tienda que el TenantFilter ya cargó desde la base maestra
         Store store = (Store) request.getAttribute("currentStore");
+
         if (store == null) {
-            throw new RuntimeException("Tienda no encontrada en la petición");
+            throw new RuntimeException("CRÍTICO: El TenantFilter no cargó la tienda para el slug: " + slug);
         }
 
-        // 1. MIENTRAS estamos en storevo_admin leemos los settings
+        // 2. PRIMERO leemos los settings (estando en storevo_admin)
         model.addAttribute("store", store);
         model.addAttribute("settings", storeSettingsService.getSettingsByStore(store));
         model.addAttribute("slug", slug);
 
-        // 2. Bajamos el switch
+        // 3. SEGUNDO bajamos el switch a la base del cliente
         TenantContext.setCurrentTenant(store.getSchemaName());
+
+        // 4. AHORA cargamos las categorías desde la tabla del cliente
+        model.addAttribute("categories", categoryService.getAllCategories());
     }
 
     @GetMapping

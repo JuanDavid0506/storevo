@@ -4,7 +4,9 @@ import com.storevo.backend.admin.model.Store;
 import com.storevo.backend.admin.service.StoreSettingsService;
 import com.storevo.backend.config.tenant.TenantContext;
 import com.storevo.backend.tenant.model.Order;
+import com.storevo.backend.tenant.model.OrderStatus;
 import com.storevo.backend.tenant.repository.OrderRepository;
+import com.storevo.backend.tenant.service.OrderService; // ¡Importante, lo hemos añadido!
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,6 +24,7 @@ public class OrderController {
 
     private final OrderRepository orderRepository;
     private final StoreSettingsService storeSettingsService;
+    private final OrderService orderService; // <--- Inyectamos el servicio
 
     @Value("${wompi.public-key}")
     private String wompiPublicKey;
@@ -36,12 +39,12 @@ public class OrderController {
             throw new RuntimeException("Tienda no encontrada en la petición");
         }
 
-        // 1. MIENTRAS estamos en storevo_admin leemos los settings
+        // 1. PRIMERO leemos los settings
         model.addAttribute("store", store);
         model.addAttribute("settings", storeSettingsService.getSettingsByStore(store));
         model.addAttribute("slug", slug);
 
-        // 2. Bajamos el switch
+        // 2. LUEGO bajamos el switch
         TenantContext.setCurrentTenant(store.getSchemaName());
     }
 
@@ -104,13 +107,26 @@ public class OrderController {
             @RequestParam(name = "id", required = false) String wompiTransactionId,
             Model model) {
 
+        // 1. Verificamos la transacción en Wompi en tiempo real
+        if (wompiTransactionId != null) {
+            orderService.verifyTransactionWithWompi(id, wompiTransactionId);
+        }
+
+        // 2. Volvemos a consultar la base de datos para obtener el estado ACTUALIZADO
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
 
         model.addAttribute("order", order);
         model.addAttribute("wompiTransactionId", wompiTransactionId);
-        model.addAttribute("pageTitle", "Resultado del Pago");
 
+        // 3. Verificamos el estado para decidir qué pantalla mostrar
+        if (order.getStatus() == OrderStatus.CANCELLED) {
+            model.addAttribute("pageTitle", "Pago Rechazado");
+            return "storefront/order-failed"; // <--- Nueva vista HTML
+        }
+
+        // Si fue exitoso o sigue pendiente
+        model.addAttribute("pageTitle", "Resultado del Pago");
         return "storefront/order-result";
     }
 }
