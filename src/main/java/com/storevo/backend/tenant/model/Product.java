@@ -40,7 +40,8 @@ public class Product {
     private Integer stock;
 
     // Relación con la Categoría (Fase 4)
-    @ManyToOne(fetch = FetchType.LAZY)
+    // Relación con la Categoría (Cambiado a EAGER por apagar OSIV)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "category_id")
     private Category category;
 

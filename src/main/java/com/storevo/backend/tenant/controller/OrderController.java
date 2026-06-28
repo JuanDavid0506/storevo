@@ -36,12 +36,13 @@ public class OrderController {
             throw new RuntimeException("Tienda no encontrada en la petición");
         }
 
-        // Bajamos el switch
-        TenantContext.setCurrentTenant(store.getSchemaName());
-
+        // 1. MIENTRAS estamos en storevo_admin leemos los settings
         model.addAttribute("store", store);
         model.addAttribute("settings", storeSettingsService.getSettingsByStore(store));
         model.addAttribute("slug", slug);
+
+        // 2. Bajamos el switch
+        TenantContext.setCurrentTenant(store.getSchemaName());
     }
 
     @GetMapping("/{id}/success")

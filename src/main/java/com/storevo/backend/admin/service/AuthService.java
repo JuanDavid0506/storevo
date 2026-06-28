@@ -57,7 +57,7 @@ public class AuthService {
                 .storeSlug(newStore.getSlug())
                 .build();
     }
-
+    @Transactional
     public AuthResponse login(LoginRequest request) {
         // 1. Spring Security verifica que el email y la contraseña coincidan
         authenticationManager.authenticate(

@@ -22,9 +22,10 @@ public class AuthController {
         try {
             AuthResponse authResponse = authService.register(request);
             setJwtCookie(response, authResponse.getToken());
-            return "redirect:/dashboard";
+            // Redirigimos usando el slug que viene en la respuesta del AuthService
+            return "redirect:/dashboard/" + authResponse.getStoreSlug();
         } catch (Exception e) {
-            return "redirect:/register?error=true";
+            return "redirect:/auth/register?error=true";
         }
     }
 
@@ -33,18 +34,18 @@ public class AuthController {
         try {
             AuthResponse authResponse = authService.login(request);
             setJwtCookie(response, authResponse.getToken());
-            return "redirect:/dashboard";
+            // Redirigimos usando el slug que viene en la respuesta del AuthService
+            return "redirect:/dashboard/" + authResponse.getStoreSlug();
         } catch (Exception e) {
-            return "redirect:/login?error=true"; // Contraseña o usuario incorrecto
+            return "redirect:/auth/login?error=true";
         }
     }
 
     private void setJwtCookie(HttpServletResponse response, String token) {
         Cookie cookie = new Cookie("jwt", token);
-        cookie.setHttpOnly(true); // El navegador no dejará que Javascript lea esto (Antirrobo)
-        cookie.setPath("/"); // Disponible en toda la aplicación
-        cookie.setMaxAge(24 * 60 * 60); // Expira en 1 día
-        // cookie.setSecure(true); // ¡Descomentar cuando subas a producción con HTTPS!
+        cookie.setHttpOnly(true);
+        cookie.setPath("/");
+        cookie.setMaxAge(24 * 60 * 60);
         response.addCookie(cookie);
     }
 }

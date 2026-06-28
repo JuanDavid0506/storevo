@@ -31,12 +31,15 @@ public class ProductController {
             throw new RuntimeException("Tienda no encontrada en la petición");
         }
 
-        // Bajamos el switch
-        TenantContext.setCurrentTenant(store.getSchemaName());
-
+        // 1. PRIMERO: Leemos la data maestra (Settings) MIENTRAS seguimos en storevo_admin
         model.addAttribute("store", store);
         model.addAttribute("settings", storeSettingsService.getSettingsByStore(store));
         model.addAttribute("slug", slug);
+
+        // 2. SEGUNDO: Bajamos el switch a la base de datos del cliente (ej. tenant_prueba)
+        TenantContext.setCurrentTenant(store.getSchemaName());
+
+        // (Nota: Si estás en CartController, tu 'cartCount' iría AQUÍ abajo, en el paso 3)
     }
 
     @GetMapping

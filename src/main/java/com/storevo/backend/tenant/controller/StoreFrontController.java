@@ -27,22 +27,19 @@ public class StoreFrontController {
 
 
     @ModelAttribute
-    public void loadStoreData(Model model, HttpServletRequest request) {
-        // 1. Obtenemos la tienda ya cargada por el filtro (sin consultar base de datos)
+    public void setupTenant(@PathVariable String slug, Model model, HttpServletRequest request) {
         Store store = (Store) request.getAttribute("currentStore");
-
         if (store == null) {
             throw new RuntimeException("Tienda no encontrada en la petición");
         }
 
-        // 2. Ahora sí, cambiamos al esquema del inquilino (tenant_prueba)
-        TenantContext.setCurrentTenant(store.getSchemaName());
-
-        // 3. Ya en el esquema correcto, cargamos la data propia de la tienda
+        // 1. MIENTRAS estamos en storevo_admin leemos los settings
         model.addAttribute("store", store);
         model.addAttribute("settings", storeSettingsService.getSettingsByStore(store));
-        model.addAttribute("categories", categoryService.getAllCategories());
-        model.addAttribute("slug", store.getSlug());
+        model.addAttribute("slug", slug);
+
+        // 2. Bajamos el switch
+        TenantContext.setCurrentTenant(store.getSchemaName());
     }
 
     @GetMapping

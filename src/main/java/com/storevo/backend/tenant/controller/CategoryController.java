@@ -24,9 +24,13 @@ public class CategoryController {
         if (store == null) {
             throw new RuntimeException("Tienda no encontrada en la petición");
         }
-        TenantContext.setCurrentTenant(store.getSchemaName());
+
+        // 1. Pasamos la data básica
         model.addAttribute("store", store);
         model.addAttribute("slug", slug);
+
+        // 2. Bajamos el switch
+        TenantContext.setCurrentTenant(store.getSchemaName());
     }
 
     @GetMapping
