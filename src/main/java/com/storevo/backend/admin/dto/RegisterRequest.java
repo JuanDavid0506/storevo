@@ -15,8 +15,4 @@ public class RegisterRequest {
     private String ownerName;
     private String email;
     private String password;
-
-    // Agregamos las selecciones del usuario
-    private String businessType;
-    private String themeName;
 }

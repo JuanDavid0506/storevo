@@ -30,13 +30,11 @@ public class AuthService {
             throw new RuntimeException("El email ya está registrado");
         }
 
-        // Pasamos businessType y themeName
+        // Creación neutra de la tienda
         Store newStore = storeRegistrationService.registerNewStore(
                 request.getStoreName(),
                 request.getSlug(),
-                request.getEmail(),
-                request.getBusinessType(),
-                request.getThemeName()
+                request.getEmail()
         );
 
         User user = User.builder()

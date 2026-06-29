@@ -17,7 +17,7 @@ public class StoreRegistrationService {
     private final EntityManager entityManager;
 
     @Transactional
-    public Store registerNewStore(String storeName, String slug, String emailContact, String businessType, String themeName) {
+    public Store registerNewStore(String storeName, String slug, String emailContact) {
         String schemaName = "tenant_" + slug.replace("-", "_");
 
         Store newStore = Store.builder()
@@ -29,25 +29,15 @@ public class StoreRegistrationService {
 
         newStore = storeRepository.save(newStore);
 
-        // Magia de Colores: Asignamos paletas automáticas según la plantilla
-        String primary = "#0F172A"; // Minimalista (Slate 900)
-        String secondary = "#FFFFFF";
-
-        if ("urbano".equals(themeName)) {
-            primary = "#4F46E5"; // Indigo vibrante
-            secondary = "#F3F4F6";
-        } else if ("elegante".equals(themeName)) {
-            primary = "#9CA3AF"; // Gris plata
-            secondary = "#111827"; // Negro oscuro
-        }
+        // Paleta base neutra para la plantilla oficial del MVP
+        String defaultPrimary = "#0F172A";
+        String defaultSecondary = "#FFFFFF";
 
         StoreSettings defaultSettings = StoreSettings.builder()
                 .store(newStore)
                 .emailContact(emailContact)
-                .businessType(businessType)
-                .themeName(themeName)
-                .primaryColor(primary)
-                .secondaryColor(secondary)
+                .primaryColor(defaultPrimary)
+                .secondaryColor(defaultSecondary)
                 .build();
 
         entityManager.persist(defaultSettings);
