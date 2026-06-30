@@ -75,7 +75,7 @@
             <div>
                 <a th:href="@{/s/{slug}/cart(slug=${slug})}" class="flex items-center gap-2 text-slate-600 hover:text-brand transition relative">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
-                    <span class="absolute -top-2 -right-2 bg-brand text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full" th:text="${cartCount != null ? cartCount : 0}">0</span>
+                    <span id="navCartCounter" class="absolute -top-2 -right-2 bg-brand text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full" th:text="${cartCount != null ? cartCount : 0}">0</span>
                 </a>
             </div>
 
@@ -129,6 +129,63 @@
         }
     }, 3000);
 </script>
+<script>
+    // 1. Toggle Inteligente del Carrito desde la Tarjeta
+    function toggleCartItem(btn, slug, productId) {
+        const emptyIcon = btn.querySelector('.icon-empty');
+        const filledIcon = btn.querySelector('.icon-filled');
+        const isAdded = !filledIcon.classList.contains('hidden');
 
+        const formData = new FormData();
+        formData.append('productId', productId);
+
+        if (isAdded) {
+            // Eliminar del carrito visualmente
+            filledIcon.classList.add('hidden');
+            emptyIcon.classList.remove('hidden');
+            btn.classList.remove('bg-white', 'border-brand');
+            btn.classList.add('bg-white/90');
+            updateCartGlobalCounter(-1);
+
+            // Petición silenciosa a tu endpoint de remover
+            fetch(`/s/${slug}/cart/remove`, { method: 'POST', body: formData }).catch(e => console.log(e));
+        } else {
+            // Agregar al carrito visualmente
+            emptyIcon.classList.add('hidden');
+            filledIcon.classList.remove('hidden');
+            btn.classList.remove('bg-white/90');
+            btn.classList.add('bg-white', 'border-brand'); // Se rellena de color corporativo
+            updateCartGlobalCounter(1);
+
+            // Petición silenciosa de agregar
+            formData.append('quantity', 1);
+            fetch(`/s/${slug}/cart/add`, { method: 'POST', body: formData }).catch(e => console.log(e));
+        }
+    }
+
+    // 2. Comprar Rápidamente desde la Tarjeta
+    function buyNowFast(slug, productId) {
+        const formData = new FormData();
+        formData.append('productId', productId);
+        formData.append('quantity', 1);
+
+        // Agrega y redirige inmediatamente
+        fetch(`/s/${slug}/cart/add`, { method: 'POST', body: formData })
+            .then(() => { window.location.href = `/s/${slug}/cart`; })
+            .catch(() => { window.location.href = `/s/${slug}/cart`; });
+    }
+
+    // 3. Actualizar la burbuja del carrito en el Navbar
+    function updateCartGlobalCounter(changeAmount) {
+        // Asume que tu icono del carrito en el Navbar tiene un <span> con el número.
+        // Asegúrate de que ese <span> en el Navbar (store-layout.html) tenga el ID 'navCartCounter'
+        const badge = document.getElementById('navCartCounter');
+        if (badge) {
+            let current = parseInt(badge.textContent) || 0;
+            let newVal = current + changeAmount;
+            badge.textContent = newVal < 0 ? 0 : newVal;
+        }
+    }
+</script>
 </body>
 </html>

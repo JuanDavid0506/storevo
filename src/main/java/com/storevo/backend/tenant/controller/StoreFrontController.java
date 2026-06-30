@@ -5,6 +5,7 @@ import com.storevo.backend.admin.repository.StoreRepository;
 import com.storevo.backend.admin.service.StoreSettingsService;
 import com.storevo.backend.config.tenant.TenantContext;
 import com.storevo.backend.tenant.model.Category;
+import com.storevo.backend.tenant.model.Product;
 import com.storevo.backend.tenant.service.CartManager;
 import com.storevo.backend.tenant.service.CategoryService;
 import com.storevo.backend.tenant.service.ProductService;
@@ -17,6 +18,8 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+
+import java.util.List;
 
 @Controller
 @RequestMapping("/s/{slug}")
@@ -78,8 +81,24 @@ public class StoreFrontController {
     }
 
     @GetMapping("/p/{id}")
-    public String productDetail(@PathVariable Long id, Model model) {
-        model.addAttribute("product", productService.getProductById(id));
+    public String productDetail(@PathVariable String slug, @PathVariable Long id, Model model) {
+        Product product = productService.getProductById(id);
+        model.addAttribute("product", product);
+
+        // Lógica de Productos Relacionados (Misma categoría, máximo 4, excluyendo el actual)
+        Long categoryId = product.getCategory() != null ? product.getCategory().getId() : null;
+        List<Product> allActive = productService.getPublicCatalog(categoryId);
+
+        List<Product> relatedProducts = new java.util.ArrayList<>();
+        for (Product p : allActive) {
+            if (!p.getId().equals(product.getId())) {
+                relatedProducts.add(p);
+            }
+            if (relatedProducts.size() == 4) break; // Solo mostramos 4 recomendaciones
+        }
+
+        model.addAttribute("relatedProducts", relatedProducts);
+        model.addAttribute("pageTitle", product.getName());
         return "storefront/detail";
     }
 }

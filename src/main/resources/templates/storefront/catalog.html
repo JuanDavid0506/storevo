@@ -11,15 +11,42 @@
     <h1 class="text-3xl font-bold text-slate-900 mb-8">Todos los productos</h1>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-        <div th:each="prod : ${products}" th:if="${prod.isActive}" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden group hover:shadow-md transition">
-            <div class="aspect-square bg-slate-100 overflow-hidden">
-                <img th:if="${prod.images != null && !prod.images.isEmpty()}" th:src="${prod.images[0]}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+        <div th:each="p : ${products}" class="group relative bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-100 flex flex-col h-full">
+
+            <div class="relative aspect-[4/5] overflow-hidden bg-slate-50 flex-shrink-0">
+                <a th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${p.id})}">
+                    <img th:src="${p.images != null and !p.images.isEmpty() ? p.images[0] : '/img/placeholder.jpg'}" th:alt="${p.name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                </a>
+
+                <button type="button" th:data-slug="${slug}" th:data-id="${p.id}" onclick="toggleCartItem(this, this.getAttribute('data-slug'), this.getAttribute('data-id'))" class="absolute top-3 right-3 p-2.5 bg-white/90 backdrop-blur text-slate-400 hover:text-brand rounded-full shadow-lg transition-all duration-300 z-10" title="Agregar al carrito">
+                    <svg class="w-5 h-5 icon-empty" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+                    <svg class="w-5 h-5 icon-filled hidden text-brand" fill="currentColor" viewBox="0 0 24 24"><path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path><path fill="white" d="M10.5 15.5l-3-3 1.4-1.4 1.6 1.6 4.6-4.6 1.4 1.4-6 6z"></path></svg>
+                </button>
             </div>
-            <div class="p-4">
-                <p class="text-xs text-slate-500 mb-1" th:text="${prod.category != null ? prod.category.name : ''}"></p>
-                <h3 class="font-bold text-slate-900 truncate" th:text="${prod.name}"></h3>
-                <p class="text-brand font-bold mt-2" th:text="${prod.price != null ? '$ ' + #numbers.formatDecimal(prod.price, 1, 'POINT', 0, 'COMMA') : '$ 0'}"></p>
-                <a th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${prod.id})}" class="block w-full text-center bg-slate-100 hover:bg-slate-200 text-slate-800 font-medium py-2 rounded-lg mt-4 transition">Ver</a>
+
+            <div class="p-4 flex flex-col flex-grow">
+                <div class="mb-2">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider" th:text="${p.category != null ? p.category.name : 'General'}">Categoría</p>
+                    <a th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${p.id})}">
+                        <h3 class="text-sm sm:text-base font-bold text-slate-800 leading-tight mt-1 line-clamp-2 group-hover:text-brand transition-colors" th:text="${p.name}">Producto</h3>
+                    </a>
+                </div>
+
+                <div class="mt-auto pt-3 border-t border-slate-50">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="text-lg font-black text-slate-900" th:text="${'$ ' + #numbers.formatDecimal((p.discountPrice != null and p.discountPrice > 0 ? p.discountPrice : p.price), 1, 'POINT', 0, 'COMMA')}">$0</span>
+                        <span th:if="${p.discountPrice != null and p.discountPrice > 0}" class="text-xs text-slate-400 line-through font-medium" th:text="${'$ ' + #numbers.formatDecimal(p.price, 1, 'POINT', 0, 'COMMA')}">$0</span>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <a th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${p.id})}" class="flex items-center justify-center px-2 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors text-center">
+                            Ver detalles
+                        </a>
+                        <button type="button" th:data-slug="${slug}" th:data-id="${p.id}" onclick="buyNowFast(this.getAttribute('data-slug'), this.getAttribute('data-id'))" class="flex items-center justify-center px-2 py-2 text-xs font-bold text-white bg-brand hover:bg-brand/90 rounded-lg transition-colors shadow-md shadow-brand/20 text-center">
+                            Comprar
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

@@ -3,39 +3,182 @@
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layouts/store-layout}">
 <head>
-  <title th:text="${product.name}">Detalle</title>
+  <title th:text="${product.name} + ' - ' + ${settings.storeName}">Detalle</title>
 </head>
 <body>
-<div layout:fragment="content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+<div layout:fragment="content" class="bg-white">
 
-  <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden p-6 md:p-12">
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
-
-      <div class="aspect-square bg-slate-100 rounded-xl overflow-hidden border border-slate-200 flex items-center justify-center">
-        <img th:if="${product.images != null && !product.images.isEmpty()}" th:src="${product.images[0]}" class="w-full h-full object-cover">
-        <span th:if="${product.images == null || product.images.isEmpty()}" class="text-slate-400">Sin Imagen</span>
-      </div>
-
-      <div class="flex flex-col justify-center">
-        <p class="text-sm text-brand font-bold mb-2 tracking-wider uppercase" th:text="${product.category != null ? product.category.name : 'Categoría General'}"></p>
-        <h1 class="text-4xl font-black text-slate-900 mb-4" th:text="${product.name}">Nombre</h1>
-        <p class="text-3xl font-bold text-slate-900 mb-6" th:text="${product.price != null ? '$ ' + #numbers.formatDecimal(product.price, 1, 'POINT', 0, 'COMMA') : '$ 0'}">$0</p>
-
-        <p class="text-slate-600 mb-8 leading-relaxed" th:text="${product.description}">Descripción del producto...</p>
-
-        <p class="text-sm font-medium text-slate-500 mb-6">Stock disponible: <span th:text="${product.stock}"></span></p>
-
-        <form th:action="@{/s/{slug}/cart/add(slug=${slug})}" method="POST">
-          <input type="hidden" name="productId" th:value="${product.id}">
-          <button type="submit" class="w-full bg-brand hover-bg-brand text-white font-bold py-4 rounded-xl shadow-lg transition flex justify-center items-center gap-2 mt-6">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-            Añadir a la Bolsa
-          </button>
-        </form>
-      </div>
+  <div class="bg-slate-50 border-b border-slate-100">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+      <nav class="flex text-xs font-medium text-slate-500">
+        <a th:href="@{/s/{slug}(slug=${slug})}" class="hover:text-brand transition">Inicio</a>
+        <span class="mx-2">/</span>
+        <a th:href="@{/s/{slug}/catalog(slug=${slug})}" class="hover:text-brand transition">Catálogo</a>
+        <span th:if="${product.category != null}" class="mx-2">/</span>
+        <a th:if="${product.category != null}" th:href="@{/s/{slug}/catalog(slug=${slug}, category=${product.category.id})}" class="hover:text-brand transition truncate max-w-[100px]" th:text="${product.category.name}">Cat</a>
+        <span class="mx-2">/</span>
+        <span class="text-slate-800 truncate max-w-[150px] sm:max-w-xs" th:text="${product.name}">Producto</span>
+      </nav>
     </div>
   </div>
 
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 mb-16">
+
+      <div class="flex flex-col-reverse lg:flex-row gap-4">
+        <div th:if="${product.images != null and product.images.size() > 1}" class="flex lg:flex-col gap-3 overflow-x-auto lg:overflow-visible lg:w-24 flex-shrink-0 hide-scrollbar">
+          <button th:each="img, stat : ${product.images}" type="button" onclick="changeMainImage(this)" class="relative aspect-[4/5] rounded-xl overflow-hidden border-2 transition-all thumb-btn" th:classappend="${stat.index == 0 ? 'border-brand' : 'border-transparent hover:border-brand/50'}">
+            <img th:src="${img}" class="w-full h-full object-cover">
+          </button>
+        </div>
+
+        <div class="relative w-full aspect-[4/5] lg:aspect-auto lg:h-[600px] bg-slate-50 rounded-2xl overflow-hidden border border-slate-100">
+          <img id="mainImage" th:src="${product.images != null and !product.images.isEmpty() ? product.images[0] : '/img/placeholder.jpg'}" th:alt="${product.name}" class="w-full h-full object-cover">
+          <div th:if="${product.discountPrice != null and product.discountPrice > 0}" class="absolute top-4 left-4 bg-red-500 text-white text-xs font-black uppercase px-3 py-1.5 rounded-full shadow-lg">
+            Oferta
+          </div>
+        </div>
+      </div>
+
+      <div class="flex flex-col">
+        <div class="mb-6">
+          <p class="text-sm font-bold text-brand uppercase tracking-wider mb-2" th:text="${product.brand != null and !product.brand.isEmpty() ? product.brand : (product.category != null ? product.category.name : 'Storevo')}">Marca/Cat</p>
+          <h1 class="text-3xl sm:text-4xl font-black text-slate-900 leading-tight mb-4" th:text="${product.name}">Nombre del Producto</h1>
+
+          <div class="flex items-end gap-3 mb-4">
+            <span class="text-4xl font-black text-slate-900" th:text="${'$ ' + #numbers.formatDecimal((product.discountPrice != null and product.discountPrice > 0 ? product.discountPrice : product.price), 1, 'POINT', 0, 'COMMA')}">$0</span>
+            <span th:if="${product.discountPrice != null and product.discountPrice > 0}" class="text-lg text-slate-400 line-through font-medium mb-1" th:text="${'$ ' + #numbers.formatDecimal(product.price, 1, 'POINT', 0, 'COMMA')}">$0</span>
+          </div>
+
+          <div class="flex items-center gap-2 mb-6 bg-slate-50 w-max px-3 py-1.5 rounded-lg border border-slate-100">
+            <div class="relative flex h-2.5 w-2.5">
+              <span th:if="${product.stock > 0}" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+              <span th:classappend="${product.stock > 0 ? 'bg-green-500' : 'bg-red-500'}" class="relative inline-flex rounded-full h-2.5 w-2.5"></span>
+            </div>
+            <span class="text-sm font-bold" th:classappend="${product.stock > 0 ? 'text-green-600' : 'text-red-600'}" th:text="${product.stock > 0 ? 'En stock (' + product.stock + ' unidades)' : 'Agotado'}">Stock</span>
+          </div>
+        </div>
+
+        <div class="prose prose-slate prose-sm max-w-none mb-8 text-slate-600 leading-relaxed" th:text="${product.description ?: 'Sin descripción detallada.'}">
+          Descripción
+        </div>
+
+        <div class="bg-slate-50 rounded-2xl p-6 mb-8 border border-slate-100">
+          <h3 class="text-xs font-black text-slate-900 uppercase tracking-widest mb-4 border-b border-slate-200 pb-3">Ficha Técnica</h3>
+          <ul class="space-y-3 text-sm">
+            <li class="flex items-center justify-between" th:if="${product.sku != null and !product.sku.isEmpty()}">
+              <span class="text-slate-500">Código (SKU)</span>
+              <span class="font-bold text-slate-800" th:text="${product.sku}">SKU-123</span>
+            </li>
+            <li class="flex items-center justify-between" th:if="${product.brand != null and !product.brand.isEmpty()}">
+              <span class="text-slate-500">Marca</span>
+              <span class="font-bold text-slate-800" th:text="${product.brand}">Marca</span>
+            </li>
+            <li class="flex items-center justify-between" th:if="${product.weight != null}">
+              <span class="text-slate-500">Peso de envío</span>
+              <span class="font-bold text-slate-800" th:text="${product.weight + ' kg'}">0 kg</span>
+            </li>
+            <li class="flex items-center justify-between">
+              <span class="text-slate-500">Categoría</span>
+              <span class="font-bold text-brand" th:text="${product.category != null ? product.category.name : 'General'}">Categoría</span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="mt-auto space-y-3" th:if="${product.stock > 0}">
+          <div class="flex gap-3">
+            <div class="w-28 bg-white border-2 border-slate-200 rounded-xl flex items-center justify-between px-3">
+              <button type="button" onclick="document.getElementById('qty').stepDown()" class="text-slate-400 hover:text-brand font-bold text-lg">-</button>
+              <input type="number" id="qty" value="1" min="1" th:max="${product.stock}" class="w-full text-center font-black text-slate-800 bg-transparent border-none focus:ring-0 p-0" readonly>
+              <button type="button" onclick="document.getElementById('qty').stepUp()" class="text-slate-400 hover:text-brand font-bold text-lg">+</button>
+            </div>
+
+            <button type="button" th:data-slug="${slug}" th:data-id="${product.id}" onclick="addToCartWithQty(this, this.getAttribute('data-slug'), this.getAttribute('data-id'))" class="flex-1 bg-white border-2 border-brand text-brand hover:bg-brand hover:text-white font-black uppercase tracking-wider py-4 rounded-xl transition-colors flex items-center justify-center gap-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+              Agregar a la Bolsa
+            </button>
+          </div>
+
+          <button type="button" th:data-slug="${slug}" th:data-id="${product.id}" onclick="buyNowWithQty(this.getAttribute('data-slug'), this.getAttribute('data-id'))" class="w-full bg-brand hover:bg-brand/90 text-white font-black uppercase tracking-wider py-4 rounded-xl shadow-lg shadow-brand/30 transition-colors">
+            Comprar Ahora
+          </button>
+        </div>
+
+        <div th:if="${product.stock <= 0}" class="bg-red-50 text-red-600 font-bold p-4 rounded-xl text-center border border-red-100">
+          Lo sentimos, este producto se encuentra agotado temporalmente.
+        </div>
+      </div>
+    </div>
+
+    <div th:if="${relatedProducts != null and !relatedProducts.isEmpty()}" class="pt-16 border-t border-slate-100">
+      <h2 class="text-2xl font-black text-slate-900 tracking-tight mb-8">También te podría interesar</h2>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
+
+        <div th:each="p : ${relatedProducts}" class="group relative bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-100 flex flex-col h-full">
+          <div class="relative aspect-[4/5] overflow-hidden bg-slate-50 flex-shrink-0">
+            <a th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${p.id})}">
+              <img th:src="${p.images != null and !p.images.isEmpty() ? p.images[0] : '/img/placeholder.jpg'}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+            </a>
+          </div>
+          <div class="p-4 flex flex-col flex-grow">
+            <a th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${p.id})}">
+              <h3 class="text-sm font-bold text-slate-800 leading-tight mb-2 line-clamp-2" th:text="${p.name}">Producto</h3>
+            </a>
+            <div class="mt-auto pt-3 border-t border-slate-50 flex justify-between items-center">
+              <span class="text-base font-black text-slate-900" th:text="${'$ ' + #numbers.formatDecimal((p.discountPrice != null and p.discountPrice > 0 ? p.discountPrice : p.price), 1, 'POINT', 0, 'COMMA')}">$0</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    function changeMainImage(btn) {
+        const imgUrl = btn.querySelector('img').src;
+        document.getElementById('mainImage').src = imgUrl;
+
+        document.querySelectorAll('.thumb-btn').forEach(b => {
+            b.classList.remove('border-brand');
+            b.classList.add('border-transparent');
+        });
+        btn.classList.remove('border-transparent');
+        btn.classList.add('border-brand');
+    }
+
+    function addToCartWithQty(btn, slug, productId) {
+        const qty = document.getElementById('qty').value;
+        const formData = new FormData();
+        formData.append('productId', productId);
+        formData.append('quantity', qty);
+
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '¡Agregado con éxito!';
+        btn.classList.add('bg-brand', 'text-white');
+
+        fetch(`/s/${slug}/cart/add`, { method: 'POST', body: formData })
+            .then(() => {
+                if(typeof updateCartGlobalCounter === 'function') updateCartGlobalCounter(parseInt(qty));
+                setTimeout(() => {
+                    btn.innerHTML = originalHTML;
+                    btn.classList.remove('bg-brand', 'text-white');
+                }, 2000);
+            });
+    }
+
+    function buyNowWithQty(slug, productId) {
+        const qty = document.getElementById('qty').value;
+        const formData = new FormData();
+        formData.append('productId', productId);
+        formData.append('quantity', qty);
+
+        fetch(`/s/${slug}/cart/add`, { method: 'POST', body: formData })
+            .then(() => { window.location.href = `/s/${slug}/cart`; });
+    }
+  </script>
 </div>
 </body>
 </html>
