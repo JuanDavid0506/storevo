@@ -13,6 +13,9 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Controller
 @RequestMapping("/dashboard/{slug}/products")
 @RequiredArgsConstructor
@@ -22,7 +25,6 @@ public class ProductController {
     private final CategoryService categoryService;
     private final StoreSettingsService storeSettingsService;
 
-    // 1. EL MODEL ATTRIBUTE LIMPIO (Lee del filtro, no hace querys)
     @ModelAttribute
     public void setupTenant(@PathVariable String slug, Model model, HttpServletRequest request) {
         Store store = (Store) request.getAttribute("currentStore");
@@ -30,12 +32,10 @@ public class ProductController {
             throw new RuntimeException("Tienda no encontrada en la petición");
         }
 
-        // 1. PRIMERO leemos los settings (estando en storevo_admin)
         model.addAttribute("store", store);
         model.addAttribute("settings", storeSettingsService.getSettingsByStore(store));
         model.addAttribute("slug", slug);
 
-        // 2. LUEGO bajamos el switch a la base del cliente
         TenantContext.setCurrentTenant(store.getSchemaName());
     }
 
@@ -61,6 +61,16 @@ public class ProductController {
     public String showEditForm(@PathVariable Long id, Model model) {
         Product product = productService.getProductById(id);
 
+        // Desempaquetamos el mapa JSON en dos listas para el formulario
+        List<String> keys = new ArrayList<>();
+        List<String> values = new ArrayList<>();
+        if (product.getAttributes() != null) {
+            product.getAttributes().forEach((k, v) -> {
+                keys.add(k);
+                values.add(v);
+            });
+        }
+
         ProductDto dto = ProductDto.builder()
                 .id(product.getId())
                 .name(product.getName())
@@ -74,6 +84,8 @@ public class ProductController {
                 .weight(product.getWeight())
                 .isActive(product.getIsActive())
                 .mainImageUrl(product.getImages() != null && !product.getImages().isEmpty() ? product.getImages().get(0) : "")
+                .attrKeys(keys)
+                .attrValues(values)
                 .build();
 
         model.addAttribute("product", dto);
@@ -81,8 +93,6 @@ public class ProductController {
         model.addAttribute("pageTitle", "Editar Producto");
         return "dashboard/products/form";
     }
-
-    // 2. REDIRECTS ARREGLADOS (Agregamos el @PathVariable slug a los POST)
 
     @PostMapping
     public String saveProduct(@PathVariable String slug, @ModelAttribute ProductDto productDto) {

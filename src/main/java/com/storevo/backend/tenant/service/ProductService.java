@@ -10,7 +10,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -19,36 +21,25 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
 
-    // Método para el Dashboard (muestra todo)
     public List<Product> getAllProducts() {
         return productRepository.findAllByOrderByIdDesc();
     }
 
-    // NUEVO: Método inteligente para la tienda pública
     public List<Product> getPublicCatalog(Long categoryId) {
-        // Si no seleccionaron ninguna categoría, devolvemos todos los activos
         if (categoryId == null) {
             return productRepository.findAllByIsActiveTrueOrderByIdDesc();
         }
-
         Category category = categoryRepository.findById(categoryId).orElse(null);
-
-        // Si mandan un ID inválido por la URL, mostramos todo por seguridad
         if (category == null) {
             return productRepository.findAllByIsActiveTrueOrderByIdDesc();
         }
-
-        // Armamos la lista de IDs. Agregamos la categoría actual...
         List<Long> categoryIds = new ArrayList<>();
         categoryIds.add(category.getId());
-
-        // ... Y si es una categoría principal, agregamos también los IDs de sus subcategorías
         if (category.getSubCategories() != null) {
             for (Category sub : category.getSubCategories()) {
                 categoryIds.add(sub.getId());
             }
         }
-
         return productRepository.findActiveProductsByCategoryIds(categoryIds);
     }
 
@@ -87,6 +78,19 @@ public class ProductService {
         } else {
             product.setCategory(null);
         }
+
+        // NUEVO: Empaquetar las listas en un Map JSON
+        Map<String, String> attributes = new HashMap<>();
+        if (dto.getAttrKeys() != null && dto.getAttrValues() != null) {
+            for (int i = 0; i < dto.getAttrKeys().size(); i++) {
+                String k = dto.getAttrKeys().get(i);
+                String v = dto.getAttrValues().get(i);
+                if (k != null && !k.trim().isEmpty() && v != null && !v.trim().isEmpty()) {
+                    attributes.put(k.trim(), v.trim());
+                }
+            }
+        }
+        product.setAttributes(attributes.isEmpty() ? null : attributes);
 
         productRepository.save(product);
     }

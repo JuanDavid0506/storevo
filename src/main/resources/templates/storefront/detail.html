@@ -8,7 +8,6 @@
 <body>
 <div layout:fragment="content" class="bg-white">
 
-  <!-- Migas de pan (Breadcrumbs) -->
   <div class="bg-slate-50 border-b border-slate-100">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
       <nav class="flex text-xs font-medium text-slate-500">
@@ -25,19 +24,15 @@
 
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 mb-16">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16">
 
-      <!-- COLUMNA IZQUIERDA: Galería de Imágenes -->
       <div class="flex flex-col-reverse lg:flex-row gap-4">
-
-        <!-- Miniaturas -->
         <div th:if="${product.images != null and product.images.size() > 1}" class="flex lg:flex-col gap-3 overflow-x-auto lg:overflow-visible lg:w-24 flex-shrink-0 hide-scrollbar">
           <button th:each="img, stat : ${product.images}" type="button" onclick="changeMainImage(this)" class="relative aspect-[4/5] rounded-xl overflow-hidden border-2 transition-all thumb-btn" th:classappend="${stat.index == 0 ? 'border-brand' : 'border-transparent hover:border-brand/50'}">
             <img th:src="${img}" class="w-full h-full object-cover">
           </button>
         </div>
 
-        <!-- Imagen Principal con Badges y Favoritos -->
         <div class="relative w-full aspect-[4/5] lg:aspect-auto lg:h-[600px] bg-slate-50 rounded-2xl overflow-hidden border border-slate-100">
           <img id="mainImage" th:src="${product.images != null and !product.images.isEmpty() ? product.images[0] : '/img/placeholder.jpg'}" th:alt="${product.name}" class="w-full h-full object-cover">
 
@@ -45,7 +40,6 @@
             Oferta
           </div>
 
-          <!-- BOTÓN FAVORITOS (AÑADIDO) -->
           <button type="button" th:data-slug="${slug}" th:data-id="${product.id}" onclick="toggleWishlistItem(this, this.getAttribute('data-slug'), this.getAttribute('data-id'))"
                   class="absolute top-4 right-4 p-3 backdrop-blur rounded-full shadow-lg transition-all duration-300 z-10"
                   th:classappend="${wishlistProductIds != null and wishlistProductIds.contains(product.id) ? 'bg-white border border-red-500 text-red-500' : 'bg-white/90 text-slate-400 hover:text-red-500'}" title="Agregar a favoritos">
@@ -55,52 +49,23 @@
         </div>
       </div>
 
-      <!-- COLUMNA DERECHA: Información y Compra -->
       <div class="flex flex-col">
-        <div class="mb-6">
+        <div class="mb-8">
           <p class="text-sm font-bold text-brand uppercase tracking-wider mb-2" th:text="${product.brand != null and !product.brand.isEmpty() ? product.brand : (product.category != null ? product.category.name : 'Storevo')}">Marca/Cat</p>
           <h1 class="text-3xl sm:text-4xl font-black text-slate-900 leading-tight mb-4" th:text="${product.name}">Nombre del Producto</h1>
 
-          <!-- Precios -->
           <div class="flex items-end gap-3 mb-4">
             <span class="text-4xl font-black text-slate-900" th:text="${'$ ' + #numbers.formatDecimal((product.discountPrice != null and product.discountPrice > 0 ? product.discountPrice : product.price), 1, 'POINT', 0, 'COMMA')}">$0</span>
             <span th:if="${product.discountPrice != null and product.discountPrice > 0}" class="text-lg text-slate-400 line-through font-medium mb-1" th:text="${'$ ' + #numbers.formatDecimal(product.price, 1, 'POINT', 0, 'COMMA')}">$0</span>
           </div>
 
-          <!-- Semáforo de Stock -->
-          <div class="flex items-center gap-2 mb-6 bg-slate-50 w-max px-3 py-1.5 rounded-lg border border-slate-100">
+          <div class="flex items-center gap-2 mb-2 bg-slate-50 w-max px-3 py-1.5 rounded-lg border border-slate-100">
             <div class="relative flex h-2.5 w-2.5">
               <span th:if="${product.stock > 0}" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
               <span th:classappend="${product.stock > 0 ? 'bg-green-500' : 'bg-red-500'}" class="relative inline-flex rounded-full h-2.5 w-2.5"></span>
             </div>
-            <span class="text-sm font-bold" th:classappend="${product.stock > 0 ? 'text-green-600' : 'text-red-600'}" th:text="${product.stock > 0 ? 'En stock (' + product.stock + ' unidades)' : 'Agotado'}">Stock</span>
+            <span class="text-sm font-bold" th:classappend="${product.stock > 0 ? 'text-green-600' : 'text-red-600'}" th:text="${product.stock > 0 ? 'En stock (' + product.stock + ' disponibles)' : 'Agotado'}">Stock</span>
           </div>
-        </div>
-
-        <div class="prose prose-slate prose-sm max-w-none mb-8 text-slate-600 leading-relaxed" th:text="${product.description ?: 'Sin descripción detallada.'}">
-          Descripción
-        </div>
-
-        <div class="bg-slate-50 rounded-2xl p-6 mb-8 border border-slate-100">
-          <h3 class="text-xs font-black text-slate-900 uppercase tracking-widest mb-4 border-b border-slate-200 pb-3">Ficha Técnica</h3>
-          <ul class="space-y-3 text-sm">
-            <li class="flex items-center justify-between" th:if="${product.sku != null and !product.sku.isEmpty()}">
-              <span class="text-slate-500">Código (SKU)</span>
-              <span class="font-bold text-slate-800" th:text="${product.sku}">SKU-123</span>
-            </li>
-            <li class="flex items-center justify-between" th:if="${product.brand != null and !product.brand.isEmpty()}">
-              <span class="text-slate-500">Marca</span>
-              <span class="font-bold text-slate-800" th:text="${product.brand}">Marca</span>
-            </li>
-            <li class="flex items-center justify-between" th:if="${product.weight != null}">
-              <span class="text-slate-500">Peso de envío</span>
-              <span class="font-bold text-slate-800" th:text="${product.weight + ' kg'}">0 kg</span>
-            </li>
-            <li class="flex items-center justify-between">
-              <span class="text-slate-500">Categoría</span>
-              <span class="font-bold text-brand" th:text="${product.category != null ? product.category.name : 'General'}">Categoría</span>
-            </li>
-          </ul>
         </div>
 
         <div class="mt-auto space-y-3" th:if="${product.stock > 0}">
@@ -128,8 +93,74 @@
       </div>
     </div>
 
-    <!-- Productos Relacionados -->
-    <div th:if="${relatedProducts != null and !relatedProducts.isEmpty()}" class="pt-16 border-t border-slate-100">
+    <div class="max-w-4xl mx-auto mt-16 lg:mt-24 space-y-3">
+
+      <details class="group bg-slate-50 rounded-xl border border-slate-100 open:bg-white open:shadow-md transition-all duration-300" open>
+        <summary class="flex justify-between items-center font-bold cursor-pointer list-none [&::-webkit-details-marker]:hidden text-lg text-slate-800 p-6">
+          Descripción del producto
+          <span class="transition-transform duration-300 group-open:rotate-180 text-slate-400">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </span>
+        </summary>
+        <div class="px-6 pb-6 pt-2 text-slate-600 prose prose-slate prose-sm max-w-none leading-relaxed" th:text="${product.description ?: 'Sin descripción detallada.'}"></div>
+      </details>
+
+      <details class="group bg-slate-50 rounded-xl border border-slate-100 open:bg-white open:shadow-md transition-all duration-300">
+        <summary class="flex justify-between items-center font-bold cursor-pointer list-none [&::-webkit-details-marker]:hidden text-lg text-slate-800 p-6">
+          Especificaciones
+          <span class="transition-transform duration-300 group-open:rotate-180 text-slate-400">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </span>
+        </summary>
+        <div class="px-6 pb-6 pt-2">
+          <ul class="divide-y divide-slate-100 text-sm">
+            <li th:if="${product.sku != null and !product.sku.isEmpty()}" class="py-3 flex justify-between">
+              <span class="text-slate-500">Código (SKU)</span>
+              <span class="font-bold text-slate-800" th:text="${product.sku}"></span>
+            </li>
+            <li th:if="${product.brand != null and !product.brand.isEmpty()}" class="py-3 flex justify-between">
+              <span class="text-slate-500">Marca</span>
+              <span class="font-bold text-slate-800" th:text="${product.brand}"></span>
+            </li>
+            <li th:if="${product.weight != null}" class="py-3 flex justify-between">
+              <span class="text-slate-500">Peso de envío</span>
+              <span class="font-bold text-slate-800" th:text="${product.weight + ' kg'}"></span>
+            </li>
+            <li th:if="${product.attributes != null}" th:each="attr : ${product.attributes}" class="py-3 flex justify-between">
+              <span class="text-slate-500" th:text="${attr.key}">Atributo</span>
+              <span class="font-bold text-slate-800" th:text="${attr.value}">Valor</span>
+            </li>
+          </ul>
+        </div>
+      </details>
+
+      <details class="group bg-slate-50 rounded-xl border border-slate-100 open:bg-white open:shadow-md transition-all duration-300">
+        <summary class="flex justify-between items-center font-bold cursor-pointer list-none [&::-webkit-details-marker]:hidden text-lg text-slate-800 p-6">
+          Guía de tallas
+          <span class="transition-transform duration-300 group-open:rotate-180 text-slate-400">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </span>
+        </summary>
+        <div class="px-6 pb-6 pt-2 text-sm text-slate-600">
+          <p>La guía de tallas específica para este producto estará disponible pronto.</p>
+        </div>
+      </details>
+
+      <details class="group bg-slate-50 rounded-xl border border-slate-100 open:bg-white open:shadow-md transition-all duration-300">
+        <summary class="flex justify-between items-center font-bold cursor-pointer list-none [&::-webkit-details-marker]:hidden text-lg text-slate-800 p-6">
+          Envíos y devoluciones
+          <span class="transition-transform duration-300 group-open:rotate-180 text-slate-400">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </span>
+        </summary>
+        <div class="px-6 pb-6 pt-2 text-sm text-slate-600 space-y-3 leading-relaxed">
+          <p><strong>Envíos:</strong> Los tiempos de entrega varían según tu ubicación en el país. Te notificaremos al correo electrónico una vez que tu pedido sea empacado y despachado.</p>
+          <p><strong>Devoluciones:</strong> Cuentas con garantía y soporte directo. Tienes 30 días para solicitar cambios si el producto presenta fallas de fábrica o no es la talla correcta, siempre y cuando conserve sus etiquetas.</p>
+        </div>
+      </details>
+    </div>
+
+    <div th:if="${relatedProducts != null and !relatedProducts.isEmpty()}" class="pt-16 mt-16 border-t border-slate-100">
       <h2 class="text-2xl font-black text-slate-900 tracking-tight mb-8">También te podría interesar</h2>
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
         <div th:each="p : ${relatedProducts}" class="group relative bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-100 flex flex-col h-full">
@@ -142,7 +173,6 @@
               Oferta
             </div>
 
-            <!-- Botones Tarjetas -->
             <div class="absolute top-3 right-3 flex flex-col gap-2 z-10">
               <button type="button" th:data-slug="${slug}" th:data-id="${p.id}" onclick="toggleCartItem(this, this.getAttribute('data-slug'), this.getAttribute('data-id'))" class="p-2.5 bg-white/90 backdrop-blur text-slate-400 hover:text-brand rounded-full shadow-lg transition-all duration-300" title="Agregar al carrito">
                 <svg class="w-5 h-5 icon-empty" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
@@ -190,7 +220,6 @@
         const textSpan = btn.querySelector('.btn-text');
         const originalHTML = textSpan.innerHTML;
 
-        // Efecto visual de carga
         btn.classList.add('opacity-75', 'pointer-events-none');
         textSpan.innerHTML = 'Procesando...';
 
@@ -201,7 +230,6 @@
 
                 if(data.success) {
                     textSpan.innerHTML = '¡Agregado!';
-                    // Rellenamos el botón sin romper el layout
                     btn.classList.replace('bg-white', 'bg-brand');
                     btn.classList.replace('text-brand', 'text-white');
 

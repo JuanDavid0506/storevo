@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.util.List;
 
 @Data
 @Builder
@@ -16,10 +17,14 @@ public class ProductDto {
     private Double price;
     private Double discountPrice;
     private Integer stock;
-    private Long categoryId; // Solo necesitamos el ID para enlazarlo
+    private Long categoryId;
     private String brand;
     private String sku;
     private Double weight;
     private Boolean isActive;
-    private String mainImageUrl; // Temporal para la URL de la imagen principal
+    private String mainImageUrl;
+
+    // NUEVO: Listas paralelas para recibir especificaciones dinámicas desde el HTML
+    private List<String> attrKeys;
+    private List<String> attrValues;
 }

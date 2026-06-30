@@ -42,22 +42,16 @@
                     <span class="bg-slate-800 text-slate-400 w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold">2</span>
                     <h3 class="text-lg font-bold text-white">Organización</h3>
                 </div>
-
                 <div>
                     <label class="block text-sm font-bold text-slate-300 mb-2">Categoría Principal</label>
                     <select id="mainCatSelect" class="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-storevo-500 cursor-pointer font-medium">
                         <option value="">Selecciona la categoría del catálogo...</option>
                     </select>
                 </div>
-
                 <div id="subCatBox" class="hidden pt-3 border-t border-slate-800 mt-4">
-                    <label class="block text-xs font-bold uppercase tracking-wide text-slate-500 mb-3 flex items-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path></svg>
-                        Subcategorías Disponibles
-                    </label>
+                    <label class="block text-xs font-bold uppercase tracking-wide text-slate-500 mb-3 flex items-center gap-2">Subcategorías Disponibles</label>
                     <div id="subCatChips" class="flex flex-wrap gap-2"></div>
                 </div>
-
                 <div id="catSummaryBox" class="hidden mt-4 p-4 bg-storevo-500/10 border border-storevo-500/20 rounded-xl flex items-center gap-4 transition-all">
                     <div class="bg-storevo-500/20 p-2 rounded-lg text-storevo-400">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
@@ -67,7 +61,6 @@
                         <p id="summaryText" class="text-white font-bold text-base flex items-center gap-2"></p>
                     </div>
                 </div>
-
                 <input type="hidden" id="finalCategoryId" th:field="*{categoryId}">
             </div>
 
@@ -85,28 +78,45 @@
                     <div th:replace="~{components/ui/fragments :: input('sku', 'Código SKU', 'text', 'Ej: CAM-001', *{sku})}"></div>
                 </div>
             </div>
+
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm space-y-4 mt-6">
+                <div class="flex items-center gap-2 border-b border-slate-800 pb-3 mb-4">
+                    <span class="bg-slate-800 text-slate-400 w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold">4</span>
+                    <h3 class="text-lg font-bold text-white">Ficha Técnica (Especificaciones)</h3>
+                </div>
+                <p class="text-xs text-slate-400 mb-4">Agrega pares dinámicos. Ej: Material - Algodón, Color - Negro.</p>
+
+                <div id="specsContainer" class="space-y-3">
+                    <div th:if="${product.attrKeys != null}" th:each="key, stat : ${product.attrKeys}" class="flex gap-3">
+                        <input type="text" name="attrKeys" th:value="${key}" placeholder="Atributo (Ej: Material)" class="w-1/2 px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:ring-storevo-500">
+                        <input type="text" name="attrValues" th:value="${product.attrValues[stat.index]}" placeholder="Valor (Ej: Algodón)" class="w-1/2 px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:ring-storevo-500">
+                        <button type="button" onclick="this.parentElement.remove()" class="p-2 text-slate-500 hover:text-red-500 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+                    </div>
+                </div>
+
+                <button type="button" onclick="addSpecRow()" class="mt-3 text-sm text-storevo-400 font-bold hover:text-storevo-300 flex items-center gap-1 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                    Agregar especificación
+                </button>
+            </div>
         </div>
 
         <div class="space-y-6">
-
             <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm">
                 <div class="flex items-center gap-2 border-b border-slate-800 pb-3 mb-4">
-                    <span class="bg-slate-800 text-slate-400 w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold">4</span>
+                    <span class="bg-slate-800 text-slate-400 w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold">5</span>
                     <h3 class="text-lg font-bold text-white">Apariencia</h3>
                 </div>
-
                 <div th:if="${product.mainImageUrl != null and !product.mainImageUrl.isEmpty()}" class="mb-4 rounded-xl overflow-hidden border border-slate-800 aspect-square bg-slate-950 flex items-center justify-center">
                     <img th:src="${product.mainImageUrl}" alt="Vista previa" class="object-cover w-full h-full">
                 </div>
-
                 <div th:replace="~{components/ui/fragments :: input('mainImageUrl', 'URL de la Imagen Principal', 'url', 'https://...', *{mainImageUrl})}"></div>
             </div>
 
             <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
-                <h3 class="text-lg font-bold text-white border-b border-slate-800 pb-2 mb-4">Detalles Adicionales</h3>
-
+                <h3 class="text-lg font-bold text-white border-b border-slate-800 pb-2 mb-4">Otros Detalles</h3>
                 <div th:replace="~{components/ui/fragments :: input('brand', 'Marca (Opcional)', 'text', 'Ej: Nike', *{brand})}"></div>
-
+                <div th:replace="~{components/ui/fragments :: input('weight', 'Peso para envío (Kg)', 'number', '0.5', *{weight})}"></div>
                 <label class="flex items-start gap-3 pt-4 border-t border-slate-800 mt-4 cursor-pointer group">
                     <div class="flex items-center h-5 mt-0.5">
                         <input type="checkbox" id="isActive" th:field="*{isActive}" class="w-5 h-5 rounded border-slate-700 bg-slate-950 text-storevo-500 focus:ring-storevo-500 cursor-pointer">
@@ -131,126 +141,84 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function() {
+            // ... (El código JS de las categorías sigue exactamente igual, no lo borres, déjalo aquí)
             const catNodes = document.querySelectorAll('.cat-data-node');
-
-            // Si por alguna razón está vacío, no hacemos nada para no lanzar errores
             if (catNodes.length === 0) return;
-
             const catMap = new Map();
             const rootCats = [];
-
-            // Leer datos del HTML
             catNodes.forEach(node => {
                 const id = parseInt(node.dataset.id);
                 const name = node.dataset.name;
                 const parentId = node.dataset.parentId ? parseInt(node.dataset.parentId) : null;
-
-                catMap.set(id, {
-                    id: id,
-                    name: name,
-                    parentId: parentId,
-                    subs: []
-                });
+                catMap.set(id, { id: id, name: name, parentId: parentId, subs: [] });
             });
-
-            // Armar el árbol
             catMap.forEach((cat) => {
-                if (cat.parentId && catMap.has(cat.parentId)) {
-                    catMap.get(cat.parentId).subs.push(cat);
-                } else if (!cat.parentId) {
-                    rootCats.push(cat);
-                }
+                if (cat.parentId && catMap.has(cat.parentId)) { catMap.get(cat.parentId).subs.push(cat); }
+                else if (!cat.parentId) { rootCats.push(cat); }
             });
-
             const mainCatSelect = document.getElementById("mainCatSelect");
             const subCatBox = document.getElementById("subCatBox");
             const subCatChips = document.getElementById("subCatChips");
             const catSummaryBox = document.getElementById("catSummaryBox");
             const summaryText = document.getElementById("summaryText");
             const finalCategoryId = document.getElementById("finalCategoryId");
-
-            // Rellenar Select Principal
             rootCats.forEach(root => {
-                const opt = document.createElement("option");
-                opt.value = root.id;
-                opt.textContent = root.name;
-                mainCatSelect.appendChild(opt);
+                const opt = document.createElement("option"); opt.value = root.id; opt.textContent = root.name; mainCatSelect.appendChild(opt);
             });
-
             function updateSummary(rootName, subName, finalId) {
-                finalCategoryId.value = finalId;
-                catSummaryBox.classList.remove('hidden');
-
-                if (subName) {
-                    summaryText.innerHTML = `${rootName} <span class="text-slate-500 font-normal mx-1">/</span> ${subName}`;
-                } else {
-                    summaryText.textContent = rootName;
-                }
+                finalCategoryId.value = finalId; catSummaryBox.classList.remove('hidden');
+                if (subName) { summaryText.innerHTML = `${rootName} <span class="text-slate-500 font-normal mx-1">/</span> ${subName}`; }
+                else { summaryText.textContent = rootName; }
             }
-
             function renderChips(rootNode, activeChipId = null) {
                 subCatChips.innerHTML = '';
-
                 if (rootNode.subs.length > 0) {
                     subCatBox.classList.remove('hidden');
-
                     rootNode.subs.forEach(sub => {
-                        const btn = document.createElement("button");
-                        btn.type = "button";
-                        btn.dataset.id = sub.id;
-
-                        const inactiveClass = "px-4 py-2 rounded-xl text-sm font-bold border transition-all duration-200 bg-slate-900 border-slate-700 text-slate-300 hover:border-storevo-500 hover:text-storevo-400";
-                        const activeClass = "px-4 py-2 rounded-xl text-sm font-bold border-transparent transition-all duration-200 bg-storevo-500 text-white shadow-lg shadow-storevo-500/30";
-
-                        btn.className = activeChipId == sub.id ? activeClass : inactiveClass;
-                        btn.textContent = sub.name;
-
+                        const btn = document.createElement("button"); btn.type = "button"; btn.dataset.id = sub.id;
+                        const inactiveClass = "px-4 py-2 rounded-xl text-sm font-bold border bg-slate-900 border-slate-700 text-slate-300 hover:border-storevo-500 hover:text-storevo-400";
+                        const activeClass = "px-4 py-2 rounded-xl text-sm font-bold border-transparent bg-storevo-500 text-white shadow-lg shadow-storevo-500/30";
+                        btn.className = activeChipId == sub.id ? activeClass : inactiveClass; btn.textContent = sub.name;
                         btn.addEventListener("click", () => {
-                            Array.from(subCatChips.children).forEach(b => b.className = inactiveClass);
-                            btn.className = activeClass;
+                            Array.from(subCatChips.children).forEach(b => b.className = inactiveClass); btn.className = activeClass;
                             updateSummary(rootNode.name, sub.name, sub.id);
                         });
-
                         subCatChips.appendChild(btn);
                     });
-                } else {
-                    subCatBox.classList.add('hidden');
-                }
+                } else { subCatBox.classList.add('hidden'); }
             }
-
             mainCatSelect.addEventListener("change", (e) => {
                 const rootId = parseInt(e.target.value);
-
-                if (!rootId) {
-                    subCatBox.classList.add('hidden');
-                    catSummaryBox.classList.add('hidden');
-                    finalCategoryId.value = "";
-                    return;
-                }
-
-                const rootNode = catMap.get(rootId);
-                renderChips(rootNode);
-                updateSummary(rootNode.name, null, rootNode.id);
+                if (!rootId) { subCatBox.classList.add('hidden'); catSummaryBox.classList.add('hidden'); finalCategoryId.value = ""; return; }
+                const rootNode = catMap.get(rootId); renderChips(rootNode); updateSummary(rootNode.name, null, rootNode.id);
             });
-
-            // Modo Edición
             const initialId = finalCategoryId.value;
             if (initialId && initialId !== "") {
                 const node = catMap.get(parseInt(initialId));
                 if (node) {
                     if (node.parentId) {
-                        mainCatSelect.value = node.parentId;
-                        const parentNode = catMap.get(node.parentId);
-                        renderChips(parentNode, node.id);
-                        updateSummary(parentNode.name, node.name, node.id);
+                        mainCatSelect.value = node.parentId; const parentNode = catMap.get(node.parentId); renderChips(parentNode, node.id); updateSummary(parentNode.name, node.name, node.id);
                     } else {
-                        mainCatSelect.value = node.id;
-                        renderChips(node, null);
-                        updateSummary(node.name, null, node.id);
+                        mainCatSelect.value = node.id; renderChips(node, null); updateSummary(node.name, null, node.id);
                     }
                 }
             }
         });
+
+        // NUEVO: Función JavaScript para agregar filas a la Ficha Técnica
+        function addSpecRow() {
+            const container = document.getElementById('specsContainer');
+            const row = document.createElement('div');
+            row.className = 'flex gap-3 mb-3';
+            row.innerHTML = `
+                <input type="text" name="attrKeys" placeholder="Atributo (Ej: Material)" class="w-1/2 px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:ring-storevo-500">
+                <input type="text" name="attrValues" placeholder="Valor (Ej: Algodón)" class="w-1/2 px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:ring-storevo-500">
+                <button type="button" onclick="this.parentElement.remove()" class="p-2 text-slate-500 hover:text-red-500 transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                </button>
+            `;
+            container.appendChild(row);
+        }
     </script>
 </div>
 </body>
