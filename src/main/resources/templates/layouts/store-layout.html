@@ -72,7 +72,12 @@
                 </div>
             </div>
 
-            <div>
+            <div class="flex items-center gap-5">
+                <a th:href="@{/s/{slug}/wishlist(slug=${slug})}" class="flex items-center gap-2 text-slate-600 hover:text-red-500 transition relative">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+                    <span id="navWishlistCounter" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full" th:text="${wishlistCount != null ? wishlistCount : 0}">0</span>
+                </a>
+
                 <a th:href="@{/s/{slug}/cart(slug=${slug})}" class="flex items-center gap-2 text-slate-600 hover:text-brand transition relative">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
                     <span id="navCartCounter" class="absolute -top-2 -right-2 bg-brand text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full" th:text="${cartCount != null ? cartCount : 0}">0</span>
@@ -224,6 +229,43 @@
             }
         }
     }
+
+    // 5. Toggle Inteligente de Lista de Deseos
+        function toggleWishlistItem(btn, slug, productId) {
+            if(btn.classList.contains('pointer-events-none')) return;
+            btn.classList.add('pointer-events-none');
+
+            const emptyIcon = btn.querySelector('.icon-heart-empty');
+            const filledIcon = btn.querySelector('.icon-heart-filled');
+            const formData = new FormData();
+            formData.append('productId', productId);
+
+            fetch(`/s/${slug}/wishlist/toggle-ajax`, { method: 'POST', body: formData })
+                .then(r => r.json())
+                .then(data => {
+                    if(data.success) {
+                        if(data.added) {
+                            emptyIcon.classList.add('hidden');
+                            filledIcon.classList.remove('hidden');
+                            btn.classList.remove('bg-white/90', 'text-slate-400');
+                            btn.classList.add('bg-white', 'border-red-500', 'text-red-500');
+                        } else {
+                            filledIcon.classList.add('hidden');
+                            emptyIcon.classList.remove('hidden');
+                            btn.classList.remove('bg-white', 'border-red-500', 'text-red-500');
+                            btn.classList.add('bg-white/90', 'text-slate-400');
+                        }
+                        updateWishlistGlobalCounter(data.wishlistCount);
+                        showToast(data.message, 'success');
+                    }
+                }).finally(() => btn.classList.remove('pointer-events-none'));
+        }
+
+        // 6. Actualizar Contador de Favoritos
+        function updateWishlistGlobalCounter(value) {
+            const badge = document.getElementById('navWishlistCounter');
+            if (badge) badge.textContent = value;
+        }
 </script>
 </body>
 </html>

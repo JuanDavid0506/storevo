@@ -9,6 +9,7 @@ import com.storevo.backend.tenant.model.Product;
 import com.storevo.backend.tenant.service.CartManager;
 import com.storevo.backend.tenant.service.CategoryService;
 import com.storevo.backend.tenant.service.ProductService;
+import com.storevo.backend.tenant.service.WishlistManager;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
@@ -31,14 +32,12 @@ public class StoreFrontController {
     private final ProductService productService;
     private final CategoryService categoryService;
     private final CartManager cartManager;
+    private final WishlistManager wishlistManager;
 
     @ModelAttribute
     public void loadStoreData(@PathVariable String slug, Model model, HttpServletRequest request) {
         Store store = (Store) request.getAttribute("currentStore");
-
-        if (store == null) {
-            throw new RuntimeException("CRÍTICO: El TenantFilter no cargó la tienda para el slug: " + slug);
-        }
+        if (store == null) throw new RuntimeException("CRÍTICO: El TenantFilter no cargó la tienda para el slug: " + slug);
 
         model.addAttribute("store", store);
         model.addAttribute("settings", storeSettingsService.getSettingsByStore(store));
@@ -49,6 +48,9 @@ public class StoreFrontController {
         model.addAttribute("categories", categoryService.getAllCategories());
         model.addAttribute("navCategories", categoryService.getNavCategories());
         model.addAttribute("cartCount", cartManager.getCartCount(slug));
+
+        model.addAttribute("wishlistCount", wishlistManager.getWishlistCount(slug));
+        model.addAttribute("wishlistProductIds", wishlistManager.getWishlist(slug));
     }
 
     @GetMapping
