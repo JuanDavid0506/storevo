@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 @RequestMapping("/s/{slug}/cart")
@@ -25,7 +26,6 @@ public class CartController {
     private final StoreSettingsService storeSettingsService;
     private final OrderService orderService;
 
-    // Configuración global para estas rutas usando el Patrón Store-in-Request
     @ModelAttribute
     public void setupTenant(@PathVariable String slug, Model model, HttpServletRequest request) {
         Store store = (Store) request.getAttribute("currentStore");
@@ -33,15 +33,11 @@ public class CartController {
             throw new RuntimeException("Tienda no encontrada en la petición");
         }
 
-        // 1. PRIMERO leemos los settings
         model.addAttribute("store", store);
         model.addAttribute("settings", storeSettingsService.getSettingsByStore(store));
         model.addAttribute("slug", slug);
 
-        // 2. LUEGO bajamos el switch a la base del cliente
         TenantContext.setCurrentTenant(store.getSchemaName());
-
-        // 3. AHORA leemos el carrito
         model.addAttribute("cartCount", cartManager.getCartCount(slug));
     }
 
@@ -54,7 +50,12 @@ public class CartController {
     }
 
     @PostMapping("/add")
-    public String addToCart(@PathVariable String slug, @RequestParam Long productId, @RequestParam(defaultValue = "1") Integer quantity) {
+    public String addToCart(@PathVariable String slug,
+                            @RequestParam Long productId,
+                            @RequestParam(defaultValue = "1") Integer quantity,
+                            HttpServletRequest request,
+                            RedirectAttributes redirectAttributes) {
+
         Product product = productService.getProductById(productId);
 
         CartItemDto item = CartItemDto.builder()
@@ -66,12 +67,23 @@ public class CartController {
                 .build();
 
         cartManager.addItem(slug, item);
-        return "redirect:/s/" + slug + "/cart";
+
+        // FlashAttribute es la forma correcta de pasar datos a través de un redirect
+        redirectAttributes.addFlashAttribute("cartSuccess", "¡Producto agregado a tu bolsa!");
+
+        String referer = request.getHeader("Referer");
+        return "redirect:" + (referer != null ? referer : "/s/" + slug + "/catalog");
     }
 
     @PostMapping("/remove")
-    public String removeFromCart(@PathVariable String slug, @RequestParam Long productId) {
+    public String removeFromCart(@PathVariable String slug,
+                                 @RequestParam Long productId,
+                                 RedirectAttributes redirectAttributes) {
         cartManager.removeItem(slug, productId);
+
+        // Notificación persistente para borrado
+        redirectAttributes.addFlashAttribute("cartSuccess", "Producto eliminado de la bolsa");
+
         return "redirect:/s/" + slug + "/cart";
     }
 

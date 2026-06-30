@@ -4,6 +4,7 @@ import com.storevo.backend.admin.model.Store;
 import com.storevo.backend.admin.repository.StoreRepository;
 import com.storevo.backend.admin.service.StoreSettingsService;
 import com.storevo.backend.config.tenant.TenantContext; // Ajusta el paquete si tu TenantContext está en otra ruta
+import com.storevo.backend.tenant.service.CartManager;
 import com.storevo.backend.tenant.service.CategoryService;
 import com.storevo.backend.tenant.service.ProductService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,27 +25,27 @@ public class StoreFrontController {
     private final StoreSettingsService storeSettingsService;
     private final ProductService productService;
     private final CategoryService categoryService;
+    private final CartManager cartManager;
 
 
     @ModelAttribute
     public void loadStoreData(@PathVariable String slug, Model model, HttpServletRequest request) {
-        // 1. Obtenemos la tienda que el TenantFilter ya cargó desde la base maestra
         Store store = (Store) request.getAttribute("currentStore");
 
         if (store == null) {
             throw new RuntimeException("CRÍTICO: El TenantFilter no cargó la tienda para el slug: " + slug);
         }
 
-        // 2. PRIMERO leemos los settings (estando en storevo_admin)
         model.addAttribute("store", store);
         model.addAttribute("settings", storeSettingsService.getSettingsByStore(store));
         model.addAttribute("slug", slug);
 
-        // 3. SEGUNDO bajamos el switch a la base del cliente
         TenantContext.setCurrentTenant(store.getSchemaName());
 
-        // 4. AHORA cargamos las categorías desde la tabla del cliente
         model.addAttribute("categories", categoryService.getAllCategories());
+
+        // <-- AÑADIDO: Ahora el contador de la bolsa funcionará en Inicio, Catálogo y Detalles
+        model.addAttribute("cartCount", cartManager.getCartCount(slug));
     }
 
     @GetMapping
