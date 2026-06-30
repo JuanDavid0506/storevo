@@ -10,11 +10,19 @@ import java.util.*;
 @SessionScope
 public class CartManager {
 
-    // Mapa: Slug de la Tienda -> Lista de productos en el carrito
     private final Map<String, List<CartItemDto>> storeCarts = new HashMap<>();
 
     public List<CartItemDto> getCart(String slug) {
         return storeCarts.computeIfAbsent(slug, k -> new ArrayList<>());
+    }
+
+    // NUEVO MÉTODO: Saber cuántas unidades de un producto ya están en la bolsa
+    public int getItemQuantity(String slug, Long productId) {
+        return getCart(slug).stream()
+                .filter(item -> item.getProductId().equals(productId))
+                .mapToInt(CartItemDto::getQuantity)
+                .findFirst()
+                .orElse(0);
     }
 
     public void addItem(String slug, CartItemDto newItem) {

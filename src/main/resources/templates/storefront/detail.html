@@ -94,9 +94,9 @@
               <button type="button" onclick="document.getElementById('qty').stepUp()" class="text-slate-400 hover:text-brand font-bold text-lg">+</button>
             </div>
 
-            <button type="button" th:data-slug="${slug}" th:data-id="${product.id}" onclick="addToCartWithQty(this, this.getAttribute('data-slug'), this.getAttribute('data-id'))" class="flex-1 bg-white border-2 border-brand text-brand hover:bg-brand hover:text-white font-black uppercase tracking-wider py-4 rounded-xl transition-colors flex items-center justify-center gap-2">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
-              Agregar a la Bolsa
+            <button type="button" th:data-slug="${slug}" th:data-id="${product.id}" onclick="addToCartWithQty(this, this.getAttribute('data-slug'), this.getAttribute('data-id'))" class="flex-1 bg-white border-2 border-brand text-brand hover:bg-brand hover:text-white font-black uppercase tracking-wider py-4 rounded-xl transition-all duration-300 flex items-center justify-center gap-2">
+              <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+              <span class="btn-text">Agregar a la Bolsa</span>
             </button>
           </div>
 
@@ -138,15 +138,12 @@
 
   <script>
     function changeMainImage(btn) {
-        const imgUrl = btn.querySelector('img').src;
-        document.getElementById('mainImage').src = imgUrl;
-
+        document.getElementById('mainImage').src = btn.querySelector('img').src;
         document.querySelectorAll('.thumb-btn').forEach(b => {
             b.classList.remove('border-brand');
             b.classList.add('border-transparent');
         });
-        btn.classList.remove('border-transparent');
-        btn.classList.add('border-brand');
+        btn.classList.replace('border-transparent', 'border-brand');
     }
 
     function addToCartWithQty(btn, slug, productId) {
@@ -155,16 +152,35 @@
         formData.append('productId', productId);
         formData.append('quantity', qty);
 
-        const originalHTML = btn.innerHTML;
-        btn.innerHTML = '¡Agregado con éxito!';
-        btn.classList.add('bg-brand', 'text-white');
+        const textSpan = btn.querySelector('.btn-text');
+        const originalHTML = textSpan.innerHTML;
 
-        fetch(`/s/${slug}/cart/add`, { method: 'POST', body: formData })
-            .then(() => {
-                if(typeof updateCartGlobalCounter === 'function') updateCartGlobalCounter(parseInt(qty));
+        // Efecto visual de carga
+        btn.classList.add('opacity-75', 'pointer-events-none');
+        textSpan.innerHTML = 'Procesando...';
+
+        fetch(`/s/${slug}/cart/add-ajax`, { method: 'POST', body: formData })
+            .then(res => res.json())
+            .then(data => {
+                btn.classList.remove('opacity-75', 'pointer-events-none');
+
+                if(data.success) {
+                    textSpan.innerHTML = '¡Agregado!';
+                    // Rellenamos el botón sin romper el layout
+                    btn.classList.replace('bg-white', 'bg-brand');
+                    btn.classList.replace('text-brand', 'text-white');
+
+                    if(typeof updateCartGlobalCounter === 'function') updateCartGlobalCounter(data.cartCount, true);
+                    if(typeof showToast === 'function') showToast(data.message, data.isWarning ? 'warning' : 'success');
+                } else {
+                    textSpan.innerHTML = 'Sin Stock';
+                    if(typeof showToast === 'function') showToast(data.message, 'error');
+                }
+
                 setTimeout(() => {
-                    btn.innerHTML = originalHTML;
-                    btn.classList.remove('bg-brand', 'text-white');
+                    textSpan.innerHTML = originalHTML;
+                    btn.classList.replace('bg-brand', 'bg-white');
+                    btn.classList.replace('text-white', 'text-brand');
                 }, 2000);
             });
     }
@@ -175,8 +191,12 @@
         formData.append('productId', productId);
         formData.append('quantity', qty);
 
-        fetch(`/s/${slug}/cart/add`, { method: 'POST', body: formData })
-            .then(() => { window.location.href = `/s/${slug}/cart`; });
+        fetch(`/s/${slug}/cart/add-ajax`, { method: 'POST', body: formData })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) window.location.href = `/s/${slug}/cart`;
+                else if(typeof showToast === 'function') showToast(data.message, 'error');
+            });
     }
   </script>
 </div>
