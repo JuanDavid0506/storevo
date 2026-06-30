@@ -11,43 +11,74 @@
         <a th:href="@{|/dashboard/${slug}/categories|}" class="text-slate-400 hover:text-white transition bg-slate-800 p-2 rounded-lg">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
         </a>
-        <h2 class="text-2xl font-bold text-white" th:text="${category.id != null ? 'Editar Categoría' : 'Nueva Categoría'}">Título</h2>
+        <h2 class="text-2xl font-black tracking-tight text-white" th:text="${category.id != null ? 'Editar Categoría' : 'Nueva Categoría'}">Título</h2>
     </div>
 
-    <form th:action="@{|/dashboard/${slug}/categories|}" th:object="${category}" method="POST" class="bg-slate-900 border border-slate-800 rounded-xl shadow-sm p-8 space-y-6">
+    <form th:action="@{|/dashboard/${slug}/categories|}" th:object="${category}" method="POST" class="bg-slate-900 border border-slate-800 rounded-2xl shadow-sm p-8 space-y-6">
         <input type="hidden" th:field="*{id}">
 
-        <div th:replace="~{components/ui/fragments :: input('name', 'Nombre de la Categoría (*)', 'text', 'Ej: Camisas', *{name})}"></div>
+        <div th:if="${category.id == null}">
+            <div th:if="${parentCategory != null}" class="p-4 bg-storevo-500/10 border border-storevo-500/20 rounded-xl mb-6 flex items-center gap-4">
+                <div class="bg-storevo-500/20 p-2 rounded-lg text-storevo-400">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+                </div>
+                <div>
+                    <p class="text-xs text-storevo-400 font-bold uppercase tracking-wide">Creando subcategoría dentro de:</p>
+                    <p class="text-white font-bold text-lg" th:text="${parentCategory.name}"></p>
+                </div>
+                <input type="hidden" th:field="*{parentId}">
+            </div>
 
-        <!-- NUEVO: Selector de Padre -->
-        <div>
-            <label for="parentId" class="block text-sm font-medium text-slate-300 mb-1">Categoría Principal (Opcional)</label>
-            <select id="parentId" th:field="*{parentId}" class="w-full px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-storevo-500 cursor-pointer">
-                <option value="">Ninguna (Es Categoría Principal)</option>
-                <option th:each="c : ${allCategories}" th:if="${c.id != category.id}" th:value="${c.id}" th:text="${c.name}"></option>
+            <div th:if="${parentCategory == null}" class="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl mb-6 flex items-center gap-4">
+                <div class="bg-blue-500/20 p-2 rounded-lg text-blue-400">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2l2 2h8a2 2 0 012 2v2M4 6v12a2 2 0 002 2h12a2 2 0 002-2V10"></path></svg>
+                </div>
+                <div>
+                    <p class="text-xs text-blue-400 font-bold uppercase tracking-wide">Nivel en el catálogo</p>
+                    <p class="text-white font-bold text-lg">Categoría Principal (Raíz)</p>
+                </div>
+                <input type="hidden" th:field="*{parentId}">
+            </div>
+        </div>
+
+        <div th:if="${category.id != null}" class="p-5 border border-slate-800 rounded-xl bg-slate-950">
+            <label for="parentId" class="block text-sm font-bold text-slate-300 mb-2">Ubicación en el árbol (Mover categoría)</label>
+            <select id="parentId" th:field="*{parentId}" class="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-storevo-500 cursor-pointer">
+                <option value="">Convertir en Categoría Principal (Raíz)</option>
+                <option th:each="c : ${allRootCategories}" th:if="${c.id != category.id}" th:value="${c.id}" th:text="'Mover dentro de: ' + ${c.name}"></option>
             </select>
         </div>
 
-        <div th:replace="~{components/ui/fragments :: textarea('description', 'Descripción (Opcional)', 'Breve descripción...', *{description}, '3')}"></div>
-        <div th:replace="~{components/ui/fragments :: input('displayOrder', 'Orden de Visualización', 'number', '0', *{displayOrder})}"></div>
+        <div th:replace="~{components/ui/fragments :: input('name', 'Nombre de la Categoría (*)', 'text', 'Ej: Camisas', *{name})}"></div>
+        <div th:replace="~{components/ui/fragments :: textarea('description', 'Descripción (Opcional)', 'Breve descripción...', *{description}, '2')}"></div>
 
-        <div class="space-y-3 pt-2">
-            <!-- Checkbox Estado -->
-            <div class="flex items-center gap-3">
-                <input type="checkbox" id="isActive" th:field="*{isActive}" class="w-5 h-5 rounded border-slate-700 bg-slate-950 text-storevo-500 focus:ring-storevo-500 cursor-pointer">
-                <label for="isActive" class="text-sm font-medium text-slate-300 cursor-pointer">Categoría Activa (Habilita compras en esta sección)</label>
-            </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+            <label class="flex items-start gap-3 cursor-pointer p-4 border border-slate-800 rounded-xl hover:bg-slate-800/50 transition">
+                <div class="flex items-center h-5">
+                    <input type="checkbox" id="isActive" th:field="*{isActive}" class="w-5 h-5 rounded border-slate-700 bg-slate-950 text-storevo-500 focus:ring-storevo-500">
+                </div>
+                <div>
+                    <p class="text-sm font-bold text-white">Categoría Activa</p>
+                    <p class="text-xs text-slate-400 mt-0.5">Permite a los clientes ver y comprar en esta sección.</p>
+                </div>
+            </label>
 
-            <!-- NUEVO: Checkbox Navbar -->
-            <div class="flex items-center gap-3">
-                <input type="checkbox" id="showInNav" th:field="*{showInNav}" class="w-5 h-5 rounded border-slate-700 bg-slate-950 text-storevo-500 focus:ring-storevo-500 cursor-pointer">
-                <label for="showInNav" class="text-sm font-medium text-slate-300 cursor-pointer">Mostrar enlace en el Menú Principal (Navbar)</label>
-            </div>
+            <label class="flex items-start gap-3 cursor-pointer p-4 border border-slate-800 rounded-xl hover:bg-slate-800/50 transition">
+                <div class="flex items-center h-5">
+                    <input type="checkbox" id="showInNav" th:field="*{showInNav}" class="w-5 h-5 rounded border-slate-700 bg-slate-950 text-storevo-500 focus:ring-storevo-500">
+                </div>
+                <div>
+                    <p class="text-sm font-bold text-white">Mostrar en Navbar</p>
+                    <p class="text-xs text-slate-400 mt-0.5">Agrega el enlace directo en el menú principal de la tienda.</p>
+                </div>
+            </label>
         </div>
 
         <div class="pt-6 border-t border-slate-800 flex justify-end gap-4">
-            <a th:href="@{|/dashboard/${slug}/categories|}" class="bg-slate-800 hover:bg-slate-700 text-white font-medium py-2 px-6 rounded-lg border border-slate-700 transition duration-200">Cancelar</a>
-            <div th:replace="~{components/ui/fragments :: btn-primary('Guardar Categoría', 'submit')}"></div>
+            <a th:href="@{|/dashboard/${slug}/categories|}" class="bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 px-6 rounded-xl border border-slate-700 transition">Cancelar</a>
+            <button type="submit" class="bg-storevo-500 hover:bg-storevo-600 text-white font-bold py-2.5 px-8 rounded-xl shadow-lg shadow-storevo-500/30 transition">
+                Guardar Cambios
+            </button>
         </div>
     </form>
 </div>

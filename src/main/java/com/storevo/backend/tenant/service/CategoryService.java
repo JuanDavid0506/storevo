@@ -19,6 +19,11 @@ public class CategoryService {
         return categoryRepository.findAllByOrderByDisplayOrderAsc();
     }
 
+    // Obtenemos el árbol base para el Dashboard
+    public List<Category> getRootCategories() {
+        return categoryRepository.findAllRootCategories();
+    }
+
     public List<Category> getNavCategories() {
         return categoryRepository.findRootNavCategories();
     }
@@ -43,7 +48,6 @@ public class CategoryService {
         category.setShowInNav(dto.getShowInNav() != null ? dto.getShowInNav() : false);
         category.setDisplayOrder(dto.getDisplayOrder() != null ? dto.getDisplayOrder() : 0);
 
-        // Vinculación de categoría padre (Jerarquía)
         if (dto.getParentId() != null) {
             category.setParentCategory(getCategoryById(dto.getParentId()));
         } else {

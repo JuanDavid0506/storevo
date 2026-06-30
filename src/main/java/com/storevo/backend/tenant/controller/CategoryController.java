@@ -31,21 +31,27 @@ public class CategoryController {
 
     @GetMapping
     public String listCategories(Model model) {
-        model.addAttribute("categories", categoryService.getAllCategories());
-        model.addAttribute("pageTitle", "Categorías");
+        // Solo mandamos la raíz, Thymeleaf se encarga de dibujar las hijas automáticamente
+        model.addAttribute("rootCategories", categoryService.getRootCategories());
+        model.addAttribute("pageTitle", "Organización del Catálogo");
         return "dashboard/categories/index";
     }
 
     @GetMapping("/new")
-    public String showCreateForm(Model model) {
+    public String showCreateForm(@RequestParam(required = false) Long parentId, Model model) {
         CategoryDto dto = new CategoryDto();
         dto.setIsActive(true);
         dto.setShowInNav(true);
         dto.setDisplayOrder(0);
 
+        // Si viene un ID padre en la URL, lo pre-configuramos
+        if (parentId != null) {
+            dto.setParentId(parentId);
+            model.addAttribute("parentCategory", categoryService.getCategoryById(parentId));
+        }
+
         model.addAttribute("category", dto);
-        model.addAttribute("allCategories", categoryService.getAllCategories());
-        model.addAttribute("pageTitle", "Nueva Categoría");
+        model.addAttribute("pageTitle", parentId != null ? "Nueva Subcategoría" : "Nueva Categoría Principal");
         return "dashboard/categories/form";
     }
 
@@ -63,7 +69,7 @@ public class CategoryController {
                 .build();
 
         model.addAttribute("category", dto);
-        model.addAttribute("allCategories", categoryService.getAllCategories());
+        model.addAttribute("allRootCategories", categoryService.getRootCategories()); // Para poder moverla en edición
         model.addAttribute("pageTitle", "Editar Categoría");
         return "dashboard/categories/form";
     }
