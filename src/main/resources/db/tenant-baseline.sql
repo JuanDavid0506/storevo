@@ -6,13 +6,16 @@
 -- Tabla de Categorías
 CREATE TABLE categories (
     id            BIGINT AUTO_INCREMENT PRIMARY KEY,
+    parent_id     BIGINT        NULL,
     name          VARCHAR(100)  NOT NULL,
     description   TEXT,
     image_url     VARCHAR(500),
     is_active     BOOLEAN       NOT NULL DEFAULT TRUE,
+    show_in_nav   BOOLEAN       NOT NULL DEFAULT TRUE,
     display_order INT           NOT NULL DEFAULT 0,
     created_at    TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
-    updated_at    TIMESTAMP     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at    TIMESTAMP     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (parent_id) REFERENCES categories(id) ON DELETE SET NULL
 );
 
 -- Tabla de Productos

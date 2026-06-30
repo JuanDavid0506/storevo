@@ -29,13 +29,47 @@
 <body class="bg-slate-50 text-slate-900 font-sans antialiased min-h-screen flex flex-col">
 
 <nav class="bg-white shadow-sm sticky top-0 z-50">
+    <style>
+        .nav-parent:hover .nav-dropdown {
+            opacity: 1 !important;
+            visibility: visible !important;
+            transform: translateY(0) !important;
+        }
+        .nav-parent:hover .nav-arrow {
+            transform: rotate(-180deg) !important;
+        }
+    </style>
+
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16 items-center">
+
             <a th:href="@{/s/{slug}(slug=${slug})}" class="text-2xl font-black text-brand tracking-tight" th:text="${settings.storeName}">Mi Tienda</a>
 
-            <div class="hidden md:flex space-x-8">
-                <a th:href="@{/s/{slug}(slug=${slug})}" class="text-slate-600 hover:text-brand font-medium transition">Inicio</a>
-                <a th:href="@{/s/{slug}/catalog(slug=${slug})}" class="text-slate-600 hover:text-brand font-medium transition">Catálogo</a>
+            <div class="hidden md:flex space-x-6 items-center z-50">
+                <a th:href="@{/s/{slug}(slug=${slug})}" class="text-slate-600 hover:text-brand font-medium transition py-4 cursor-pointer">Inicio</a>
+                <a th:href="@{/s/{slug}/catalog(slug=${slug})}" class="text-slate-600 hover:text-brand font-medium transition py-4 cursor-pointer">Todo el Catálogo</a>
+
+                <div th:each="cat : ${navCategories}" class="relative nav-parent">
+
+                    <a th:href="@{/s/{slug}/catalog(slug=${slug}, category=${cat.id})}"
+                       class="flex items-center gap-1 text-slate-600 hover:text-brand font-medium transition py-5 cursor-pointer">
+                        <span th:text="${cat.name}"></span>
+                        <svg th:if="${not #lists.isEmpty(cat.subCategories)}" class="nav-arrow w-4 h-4 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </a>
+
+                    <div th:if="${not #lists.isEmpty(cat.subCategories)}"
+                         class="nav-dropdown absolute top-[100%] left-0 w-56 bg-white border border-slate-100 shadow-xl rounded-xl opacity-0 invisible transform -translate-y-3 transition-all duration-300 z-50">
+                        <div class="py-2 flex flex-col">
+
+                            <a th:each="sub : ${cat.subCategories}"
+                               th:if="${sub.isActive}"
+                               th:href="@{/s/{slug}/catalog(slug=${slug}, category=${sub.id})}"
+                               class="px-5 py-2.5 text-sm font-medium text-slate-600 hover:text-brand hover:bg-slate-50 transition"
+                               th:text="${sub.name}">Subcategoría</a>
+
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div>
@@ -44,6 +78,7 @@
                     <span class="absolute -top-2 -right-2 bg-brand text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full" th:text="${cartCount != null ? cartCount : 0}">0</span>
                 </a>
             </div>
+
         </div>
     </div>
 </nav>

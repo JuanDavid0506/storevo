@@ -11,9 +11,11 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class CategoryDto {
     private Long id;
+    private Long parentId;
     private String name;
     private String description;
     private String imageUrl;
     private Boolean isActive;
+    private Boolean showInNav;
     private Integer displayOrder;
 }

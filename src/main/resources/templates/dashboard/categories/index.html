@@ -7,11 +7,10 @@
 </head>
 <body>
 <div layout:fragment="content" class="space-y-6">
-
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
             <h2 class="text-2xl font-bold text-white">Categorías</h2>
-            <p class="text-sm text-slate-400 mt-1">Gestiona las agrupaciones de tus productos en el catálogo.</p>
+            <p class="text-sm text-slate-400 mt-1">Organiza tu catálogo. Las subcategorías aparecerán como desplegables en el menú.</p>
         </div>
         <a th:href="@{|/dashboard/${slug}/categories/new|}" class="px-4 py-2 bg-storevo-500 hover:bg-storevo-600 text-white text-sm font-medium rounded-lg transition-colors shadow-sm">
             + Nueva Categoría
@@ -25,48 +24,40 @@
                 <tr>
                     <th scope="col" class="px-6 py-4 font-medium">Nombre de la Categoría</th>
                     <th scope="col" class="px-6 py-4 font-medium text-center">Orden</th>
-                    <th scope="col" class="px-6 py-4 font-medium text-center">Estado</th>
+                    <th scope="col" class="px-6 py-4 font-medium text-center">Estado / Menú</th>
                     <th scope="col" class="px-6 py-4 font-medium text-right">Acciones</th>
                 </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-800/60">
-
                 <tr th:if="${#lists.isEmpty(categories)}">
                     <td colspan="4" class="px-6 py-10 text-center text-slate-500">
                         No tienes categorías configuradas. Crea la primera para organizar tu tienda.
                     </td>
                 </tr>
-
                 <tr th:each="cat : ${categories}" class="hover:bg-slate-800/30 transition-colors">
                     <td class="px-6 py-4">
-                        <span class="font-medium text-white" th:text="${cat.name}">Nombre Categoría</span>
+                        <div class="flex items-center gap-2">
+                            <span class="font-medium text-white" th:text="${cat.name}">Nombre</span>
+                            <!-- Etiqueta de Subcategoría -->
+                            <span th:if="${cat.parentCategory != null}" class="px-2 py-0.5 text-[10px] uppercase font-bold bg-storevo-500/10 text-storevo-400 rounded border border-storevo-500/20" th:text="'SubCategoria de: ' + ${cat.parentCategory.name}"></span>
+                        </div>
                         <p class="text-xs text-slate-500 mt-0.5 truncate max-w-xs" th:text="${cat.description} ?: 'Sin descripción'"></p>
                     </td>
+                    <td class="px-6 py-4 text-center text-slate-300 font-medium" th:text="${cat.displayOrder}">0</td>
+                    <td class="px-6 py-4 text-center flex items-center justify-center gap-2">
+                        <span th:if="${cat.isActive}" class="px-2.5 py-1 text-xs font-medium bg-green-500/10 text-green-400 rounded-full border border-green-500/20">Activa</span>
+                        <span th:unless="${cat.isActive}" class="px-2.5 py-1 text-xs font-medium bg-slate-500/10 text-slate-400 rounded-full border border-slate-500/20">Inactiva</span>
 
-                    <td class="px-6 py-4 text-center text-slate-300 font-medium" th:text="${cat.displayOrder}">
-                        0
+                        <!-- Icono si está en el menú -->
+                        <span th:if="${cat.showInNav}" title="Visible en Menú" class="px-2.5 py-1 text-xs font-medium bg-blue-500/10 text-blue-400 rounded-full border border-blue-500/20">Navbar</span>
                     </td>
-
-                    <td class="px-6 py-4 text-center">
-                        <span th:if="${cat.isActive}" class="px-2.5 py-1 text-xs font-medium bg-green-500/10 text-green-400 rounded-full border border-green-500/20">
-                            Activa
-                        </span>
-                        <span th:unless="${cat.isActive}" class="px-2.5 py-1 text-xs font-medium bg-slate-500/10 text-slate-400 rounded-full border border-slate-500/20">
-                            Inactiva
-                        </span>
-                    </td>
-
                     <td class="px-6 py-4 text-right">
                         <div class="flex items-center justify-end gap-3">
                             <form th:action="@{|/dashboard/${slug}/categories/${cat.id}/toggle|}" method="post" class="inline">
-                                <button type="submit" class="text-xs text-slate-400 hover:text-white transition-colors" th:text="${cat.isActive ? 'Desactivar' : 'Activar'}">
-                                    Toggle
-                                </button>
+                                <button type="submit" class="text-xs text-slate-400 hover:text-white transition-colors" th:text="${cat.isActive ? 'Desactivar' : 'Activar'}"></button>
                             </form>
                             <span class="text-slate-700">|</span>
-                            <a th:href="@{|/dashboard/${slug}/categories/${cat.id}/edit|}" class="text-xs font-medium text-storevo-400 hover:text-storevo-300 transition-colors">
-                                Editar
-                            </a>
+                            <a th:href="@{|/dashboard/${slug}/categories/${cat.id}/edit|}" class="text-xs font-medium text-storevo-400 hover:text-storevo-300 transition-colors">Editar</a>
                         </div>
                     </td>
                 </tr>

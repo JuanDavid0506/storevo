@@ -43,7 +43,7 @@ public class StoreFrontController {
         TenantContext.setCurrentTenant(store.getSchemaName());
 
         model.addAttribute("categories", categoryService.getAllCategories());
-
+        model.addAttribute("navCategories", categoryService.getNavCategories());
         // <-- AÑADIDO: Ahora el contador de la bolsa funcionará en Inicio, Catálogo y Detalles
         model.addAttribute("cartCount", cartManager.getCartCount(slug));
     }

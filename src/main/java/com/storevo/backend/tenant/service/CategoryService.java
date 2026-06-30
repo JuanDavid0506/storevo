@@ -19,6 +19,10 @@ public class CategoryService {
         return categoryRepository.findAllByOrderByDisplayOrderAsc();
     }
 
+    public List<Category> getNavCategories() {
+        return categoryRepository.findRootNavCategories();
+    }
+
     public Category getCategoryById(Long id) {
         return categoryRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Categoría no encontrada"));
@@ -28,25 +32,29 @@ public class CategoryService {
     public void saveCategory(CategoryDto dto) {
         Category category;
         if (dto.getId() != null) {
-            category = getCategoryById(dto.getId()); // Actualizar
+            category = getCategoryById(dto.getId());
         } else {
-            category = new Category(); // Crear nueva
+            category = new Category();
         }
 
         category.setName(dto.getName());
         category.setDescription(dto.getDescription());
-        // category.setImageUrl(dto.getImageUrl()); // TODO: Fase de subida de archivos
-
-        // Manejo de nulos desde los checkboxes del formulario HTML
         category.setIsActive(dto.getIsActive() != null ? dto.getIsActive() : false);
+        category.setShowInNav(dto.getShowInNav() != null ? dto.getShowInNav() : false);
         category.setDisplayOrder(dto.getDisplayOrder() != null ? dto.getDisplayOrder() : 0);
+
+        // Vinculación de categoría padre (Jerarquía)
+        if (dto.getParentId() != null) {
+            category.setParentCategory(getCategoryById(dto.getParentId()));
+        } else {
+            category.setParentCategory(null);
+        }
 
         categoryRepository.save(category);
     }
 
     @Transactional
     public void deleteCategory(Long id) {
-        // En el futuro, aquí validaremos que la categoría no tenga productos antes de borrarla
         categoryRepository.deleteById(id);
     }
 

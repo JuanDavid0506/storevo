@@ -24,12 +24,8 @@ public class CategoryController {
         if (store == null) {
             throw new RuntimeException("Tienda no encontrada en la petición");
         }
-
-        // 1. Pasamos la data básica
         model.addAttribute("store", store);
         model.addAttribute("slug", slug);
-
-        // 2. Bajamos el switch
         TenantContext.setCurrentTenant(store.getSchemaName());
     }
 
@@ -44,9 +40,11 @@ public class CategoryController {
     public String showCreateForm(Model model) {
         CategoryDto dto = new CategoryDto();
         dto.setIsActive(true);
+        dto.setShowInNav(true);
         dto.setDisplayOrder(0);
 
         model.addAttribute("category", dto);
+        model.addAttribute("allCategories", categoryService.getAllCategories());
         model.addAttribute("pageTitle", "Nueva Categoría");
         return "dashboard/categories/form";
     }
@@ -56,13 +54,16 @@ public class CategoryController {
         Category category = categoryService.getCategoryById(id);
         CategoryDto dto = CategoryDto.builder()
                 .id(category.getId())
+                .parentId(category.getParentCategory() != null ? category.getParentCategory().getId() : null)
                 .name(category.getName())
                 .description(category.getDescription())
                 .isActive(category.getIsActive())
+                .showInNav(category.getShowInNav())
                 .displayOrder(category.getDisplayOrder())
                 .build();
 
         model.addAttribute("category", dto);
+        model.addAttribute("allCategories", categoryService.getAllCategories());
         model.addAttribute("pageTitle", "Editar Categoría");
         return "dashboard/categories/form";
     }
