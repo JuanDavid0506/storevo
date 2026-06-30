@@ -646,6 +646,10 @@ video {
   top: 1rem;
 }
 
+.left-3 {
+  left: 0.75rem;
+}
+
 .\!z-\[99999\] {
   z-index: 99999 !important;
 }
@@ -2389,6 +2393,11 @@ video {
   .sm\:text-4xl {
     font-size: 2.25rem;
     line-height: 2.5rem;
+  }
+
+  .sm\:text-xs {
+    font-size: 0.75rem;
+    line-height: 1rem;
   }
 }
 
