@@ -24,6 +24,7 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
+    private final CategoryService categoryService;
 
     public List<Product> getAllProducts() {
         return productRepository.findAllByOrderByIdDesc();
@@ -33,17 +34,7 @@ public class ProductService {
         if (categoryId == null) {
             return productRepository.findAllByIsActiveTrueOrderByIdDesc();
         }
-        Category category = categoryRepository.findById(categoryId).orElse(null);
-        if (category == null) {
-            return productRepository.findAllByIsActiveTrueOrderByIdDesc();
-        }
-        List<Long> categoryIds = new ArrayList<>();
-        categoryIds.add(category.getId());
-        if (category.getSubCategories() != null) {
-            for (Category sub : category.getSubCategories()) {
-                categoryIds.add(sub.getId());
-            }
-        }
+        List<Long> categoryIds = categoryService.getCategoryAndDescendantIds(categoryId);
         return productRepository.findActiveProductsByCategoryIds(categoryIds);
     }
 
@@ -134,7 +125,13 @@ public class ProductService {
         // 2. Inyectamos el Sort dentro del Pageable que venía del controlador
         Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
 
-        // 3. Ejecutamos la búsqueda en el repositorio
-        return productRepository.searchProducts(q, categoryId, isActive, sortedPageable);
+        // 3. Si hay categoría seleccionada, resolvemos su id + el de todas sus
+        // subcategorías (los 3 niveles), para que filtrar por una categoría
+        // padre (ej. "Hombres") también traiga los productos de sus hijas.
+        List<Long> categoryIds = (categoryId != null) ? categoryService.getCategoryAndDescendantIds(categoryId) : null;
+
+        // 4. Ejecutamos la búsqueda en el repositorio
+        return productRepository.searchProducts(q, categoryIds, isActive, sortedPageable);
     }
+
 }

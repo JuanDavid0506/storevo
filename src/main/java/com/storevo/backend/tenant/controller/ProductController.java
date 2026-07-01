@@ -3,10 +3,12 @@ package com.storevo.backend.tenant.controller;
 import com.storevo.backend.admin.model.Store;
 import com.storevo.backend.admin.service.StoreSettingsService;
 import com.storevo.backend.config.tenant.TenantContext;
+import com.storevo.backend.tenant.dto.CategoryTreeDto;
 import com.storevo.backend.tenant.dto.ProductDto;
 import com.storevo.backend.tenant.model.Product;
 import com.storevo.backend.tenant.service.CategoryService;
 import com.storevo.backend.tenant.service.ProductService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
@@ -27,6 +29,7 @@ public class ProductController {
     private final ProductService productService;
     private final CategoryService categoryService;
     private final StoreSettingsService storeSettingsService;
+    private final ObjectMapper objectMapper;
 
     @ModelAttribute
     public void setupTenant(@PathVariable String slug, Model model, HttpServletRequest request) {
@@ -127,10 +130,22 @@ public class ProductController {
 
         // 3. Enviamos los datos a la vista
         model.addAttribute("products", productsPage);
-        model.addAttribute("categories", categoryService.getAllCategories()); // Para llenar el <select>
+        model.addAttribute("categories", categoryService.getAllCategories()); // Usado en el form de producto
+        model.addAttribute("categoryTreeJson", getCategoryTreeJson());
         model.addAttribute("pageTitle", "Productos");
 
         return "dashboard/products/index";
+    }
+
+    // Serializa el árbol de categorías a JSON para el combobox del frontend.
+    // Si algo falla, devolvemos un array vacío en vez de romper la página.
+    private String getCategoryTreeJson() {
+        try {
+            List<CategoryTreeDto> tree = categoryService.getCategoryTree();
+            return objectMapper.writeValueAsString(tree);
+        } catch (Exception e) {
+            return "[]";
+        }
     }
 
 }

@@ -1,12 +1,14 @@
 package com.storevo.backend.tenant.service;
 
 import com.storevo.backend.tenant.dto.CategoryDto;
+import com.storevo.backend.tenant.dto.CategoryTreeDto;
 import com.storevo.backend.tenant.model.Category;
 import com.storevo.backend.tenant.repository.CategoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -30,6 +32,53 @@ public class CategoryService {
     public Category getCategoryById(Long id) {
         return categoryRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Categoría no encontrada"));
+    }
+
+    // Devuelve el id de la categoría + los ids de TODOS sus descendientes
+    // (subcategorías y sub-subcategorías), recorriendo el árbol completo.
+    // Se usa para que al filtrar por una categoría padre (ej. "Hombres")
+    // también se incluyan los productos asignados a sus hijas.
+    public List<Long> getCategoryAndDescendantIds(Long categoryId) {
+        Category category = getCategoryById(categoryId);
+        List<Long> ids = new ArrayList<>();
+        collectIdsRecursive(category, ids);
+        return ids;
+    }
+
+    private void collectIdsRecursive(Category category, List<Long> ids) {
+        ids.add(category.getId());
+        if (category.getSubCategories() != null) {
+            for (Category sub : category.getSubCategories()) {
+                collectIdsRecursive(sub, ids);
+            }
+        }
+    }
+
+    // Arma el árbol completo de categorías (raíces + descendientes) como DTOs
+    // livianos, listos para serializar a JSON y alimentar el combobox del
+    // frontend. No depende de cuántas categorías tenga la tienda: funciona
+    // igual con 3 categorías que con 300.
+    public List<CategoryTreeDto> getCategoryTree() {
+        List<Category> roots = getRootCategories();
+        List<CategoryTreeDto> tree = new ArrayList<>();
+        for (Category root : roots) {
+            tree.add(toTreeDto(root));
+        }
+        return tree;
+    }
+
+    private CategoryTreeDto toTreeDto(Category category) {
+        List<CategoryTreeDto> children = new ArrayList<>();
+        if (category.getSubCategories() != null) {
+            for (Category sub : category.getSubCategories()) {
+                children.add(toTreeDto(sub));
+            }
+        }
+        return CategoryTreeDto.builder()
+                .id(category.getId())
+                .name(category.getName())
+                .children(children)
+                .build();
     }
 
     // Calcula el nivel actual en el árbol (1 = Raíz, 2 = Nivel 2, 3 = Nivel 3)
