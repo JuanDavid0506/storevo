@@ -61,11 +61,22 @@
                          class="nav-dropdown absolute top-[100%] left-0 w-56 bg-white border border-slate-100 shadow-xl rounded-xl opacity-0 invisible transform -translate-y-3 transition-all duration-300 z-50">
                         <div class="py-2 flex flex-col">
 
-                            <a th:each="sub : ${cat.subCategories}"
-                               th:if="${sub.isActive}"
-                               th:href="@{/s/{slug}/catalog(slug=${slug}, category=${sub.id})}"
-                               class="px-5 py-2.5 text-sm font-medium text-slate-600 hover:text-brand hover:bg-slate-50 transition"
-                               th:text="${sub.name}">Subcategoría</a>
+                            <th:block th:each="sub : ${cat.subCategories}">
+                                <a th:if="${sub.isActive}"
+                                   th:href="@{/s/{slug}/catalog(slug=${slug}, category=${sub.id})}"
+                                   class="px-5 py-2.5 text-sm font-bold text-slate-700 hover:text-brand hover:bg-slate-50 transition"
+                                   th:text="${sub.name}">Subcategoría</a>
+
+                                <th:block th:if="${not #lists.isEmpty(sub.subCategories)}">
+                                    <a th:each="subsub : ${sub.subCategories}"
+                                       th:if="${subsub.isActive}"
+                                       th:href="@{/s/{slug}/catalog(slug=${slug}, category=${subsub.id})}"
+                                       class="px-5 py-1.5 pl-8 text-xs font-medium text-slate-500 hover:text-brand hover:bg-slate-50 transition flex items-center gap-2">
+                                        <span class="w-1 h-1 rounded-full bg-slate-300"></span>
+                                        <span th:text="${subsub.name}">Sub-Subcategoría</span>
+                                    </a>
+                                </th:block>
+                            </th:block>
 
                         </div>
                     </div>

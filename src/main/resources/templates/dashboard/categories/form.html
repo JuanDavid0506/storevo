@@ -23,7 +23,7 @@
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
                 </div>
                 <div>
-                    <p class="text-xs text-storevo-400 font-bold uppercase tracking-wide">Creando subcategoría dentro de:</p>
+                    <p class="text-xs text-storevo-400 font-bold uppercase tracking-wide">Creando categoría dentro de:</p>
                     <p class="text-white font-bold text-lg" th:text="${parentCategory.name}"></p>
                 </div>
                 <input type="hidden" th:field="*{parentId}">
@@ -34,19 +34,28 @@
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2l2 2h8a2 2 0 012 2v2M4 6v12a2 2 0 002 2h12a2 2 0 002-2V10"></path></svg>
                 </div>
                 <div>
-                    <p class="text-xs text-blue-400 font-bold uppercase tracking-wide">Nivel en el catálogo</p>
-                    <p class="text-white font-bold text-lg">Categoría Principal (Raíz)</p>
+                    <p class="text-xs text-blue-400 font-bold uppercase tracking-wide">Ubicación</p>
+                    <p class="text-white font-bold text-lg">Categoría principal</p>
                 </div>
                 <input type="hidden" th:field="*{parentId}">
             </div>
         </div>
 
         <div th:if="${category.id != null}" class="p-5 border border-slate-800 rounded-xl bg-slate-950">
-            <label for="parentId" class="block text-sm font-bold text-slate-300 mb-2">Ubicación en el árbol (Mover categoría)</label>
+            <label for="parentId" class="block text-sm font-bold text-slate-300 mb-2">¿Dónde quieres ubicar esta categoría?</label>
             <select id="parentId" th:field="*{parentId}" class="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-storevo-500 cursor-pointer">
-                <option value="">Convertir en Categoría Principal (Raíz)</option>
-                <option th:each="c : ${allRootCategories}" th:if="${c.id != category.id}" th:value="${c.id}" th:text="'Mover dentro de: ' + ${c.name}"></option>
+                <option value="">Categoría principal</option>
+
+                <th:block th:each="c1 : ${allRootCategories}">
+                    <option th:if="${c1.id != category.id}" th:value="${c1.id}" th:text="${c1.name}"></option>
+
+                    <th:block th:each="c2 : ${c1.subCategories}">
+                        <option th:if="${c1.id != category.id and c2.id != category.id}" th:value="${c2.id}" th:text="${c1.name} + ' → ' + ${c2.name}"></option>
+                    </th:block>
+                </th:block>
+
             </select>
+            <p class="text-xs text-slate-500 mt-2">Atención: No se pueden superar 3 niveles de jerarquía (Ej: Hombres → Calzado → Deportivo).</p>
         </div>
 
         <div th:replace="~{components/ui/fragments :: input('name', 'Nombre de la Categoría (*)', 'text', 'Ej: Camisas', *{name})}"></div>

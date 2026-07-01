@@ -22,21 +22,20 @@
     <div th:if="${#lists.isEmpty(rootCategories)}" class="text-center py-16 bg-slate-900 border border-slate-800 rounded-2xl border-dashed">
         <svg class="mx-auto h-12 w-12 text-slate-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6a2 2 0 012-2h2l2 2h8a2 2 0 012 2v2M4 6v12a2 2 0 002 2h12a2 2 0 002-2V10"></path></svg>
         <h3 class="text-lg font-bold text-white">Tu catálogo está vacío</h3>
-        <p class="text-slate-400 mt-1">Comienza creando tu primera categoría principal (Ej: Hombre, Mujer, Hogar).</p>
+        <p class="text-slate-400 mt-1">Comienza creando tu primera categoría principal (Ej: Hombres, Mujeres, Hogar).</p>
     </div>
 
     <div class="space-y-4">
         <details th:each="cat : ${rootCategories}" class="group bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-sm transition-all open:border-storevo-500/50" open>
 
             <summary class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 bg-slate-900 hover:bg-slate-800/80 cursor-pointer list-none transition-colors">
-
                 <div class="flex items-center gap-4">
                     <div class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 group-open:text-storevo-400 group-open:bg-storevo-500/10 transition-colors">
                         <svg class="w-5 h-5 transition-transform duration-300 group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                     </div>
                     <div>
                         <div class="flex items-center gap-3">
-                            <span class="text-lg font-black text-white tracking-tight" th:text="${cat.name}">Hombre</span>
+                            <span class="text-lg font-black text-white tracking-tight" th:text="${cat.name}">Hombres</span>
                             <span th:unless="${cat.isActive}" class="px-2 py-0.5 text-[10px] font-bold uppercase bg-slate-800 text-slate-500 rounded border border-slate-700">Oculta</span>
                         </div>
                         <p class="text-sm text-slate-500 mt-0.5" th:text="${cat.description} ?: 'Categoría Principal'"></p>
@@ -46,7 +45,7 @@
                 <div class="flex items-center gap-2 pl-12 sm:pl-0" onclick="event.stopPropagation();">
                     <a th:href="@{|/dashboard/${slug}/categories/new?parentId=${cat.id}|}" class="text-xs font-bold px-3 py-1.5 bg-storevo-500/10 text-storevo-400 hover:bg-storevo-500/20 rounded-lg transition-colors border border-storevo-500/20 flex items-center gap-1">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-                        Subcategoría
+                        Agregar subcategoría
                     </a>
                     <a th:href="@{|/dashboard/${slug}/categories/${cat.id}/edit|}" class="p-1.5 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors" title="Editar">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
@@ -60,32 +59,63 @@
             </summary>
 
             <div class="border-t border-slate-800 bg-slate-900/50 p-4">
-
                 <div th:if="${#lists.isEmpty(cat.subCategories)}" class="pl-12 py-3 text-sm text-slate-500 flex items-center gap-2">
                     <div class="w-1.5 h-1.5 rounded-full bg-slate-700"></div> No hay subcategorías en esta sección.
                 </div>
 
-                <div th:if="${not #lists.isEmpty(cat.subCategories)}" class="space-y-2 pl-4 sm:pl-12 relative border-l border-slate-800 ml-4 sm:ml-8 my-2">
+                <div th:if="${not #lists.isEmpty(cat.subCategories)}" class="space-y-3 pl-4 sm:pl-12 relative border-l border-slate-800 ml-4 sm:ml-8 my-2">
 
-                    <div th:each="sub : ${cat.subCategories}" class="flex items-center justify-between p-3 bg-slate-900 border border-slate-800 rounded-xl hover:border-slate-700 transition-colors relative">
-                        <div class="absolute -left-4 top-1/2 w-4 border-t border-slate-800"></div>
+                    <div th:each="sub : ${cat.subCategories}" class="relative group/sub">
+                        <div class="flex items-center justify-between p-3 bg-slate-900 border border-slate-800 rounded-xl hover:border-slate-700 transition-colors relative z-10">
+                            <div class="absolute -left-4 top-1/2 w-4 border-t border-slate-800"></div>
 
-                        <div class="flex items-center gap-3">
-                            <span class="font-bold text-slate-300" th:text="${sub.name}">Camisas</span>
-                            <span th:if="${sub.showInNav}" class="px-2 py-0.5 text-[10px] uppercase font-bold bg-blue-500/10 text-blue-400 rounded border border-blue-500/20">Menú Navbar</span>
-                            <span th:unless="${sub.isActive}" class="px-2 py-0.5 text-[10px] uppercase font-bold bg-slate-800 text-slate-500 rounded border border-slate-700">Inactiva</span>
+                            <div class="flex items-center gap-3">
+                                <span class="font-bold text-slate-300" th:text="${sub.name}">Camisetas</span>
+                                <span th:if="${sub.showInNav}" class="px-2 py-0.5 text-[10px] uppercase font-bold bg-blue-500/10 text-blue-400 rounded border border-blue-500/20">Menú Navbar</span>
+                                <span th:unless="${sub.isActive}" class="px-2 py-0.5 text-[10px] uppercase font-bold bg-slate-800 text-slate-500 rounded border border-slate-700">Inactiva</span>
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <a th:href="@{|/dashboard/${slug}/categories/new?parentId=${sub.id}|}" class="text-[10px] font-bold px-2.5 py-1.5 bg-storevo-500/10 text-storevo-400 hover:bg-storevo-500/20 rounded-lg md:mr-2 transition-colors border border-storevo-500/20 flex items-center gap-1" title="Agregar subcategoría">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                                    <span class="hidden sm:inline">Agregar subcategoría</span>
+                                    <span class="sm:hidden">Subcategoría</span>
+                                </a>
+                                <a th:href="@{|/dashboard/${slug}/categories/${sub.id}/edit|}" class="p-1.5 text-slate-400 hover:text-storevo-400 transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                </a>
+                                <form th:action="@{|/dashboard/${slug}/categories/${sub.id}/toggle|}" method="post" class="m-0 p-0">
+                                    <button type="submit" class="p-1.5 text-slate-400 hover:text-white transition-colors">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+                                    </button>
+                                </form>
+                            </div>
                         </div>
 
-                        <div class="flex items-center gap-2">
-                            <a th:href="@{|/dashboard/${slug}/categories/${sub.id}/edit|}" class="p-1.5 text-slate-400 hover:text-storevo-400 transition-colors">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                            </a>
-                            <form th:action="@{|/dashboard/${slug}/categories/${sub.id}/toggle|}" method="post">
-                                <button type="submit" class="p-1.5 text-slate-400 hover:text-white transition-colors">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
-                                </button>
-                            </form>
+                        <div th:if="${not #lists.isEmpty(sub.subCategories)}" class="space-y-2 pl-6 sm:pl-10 relative border-l border-slate-800 ml-4 sm:ml-6 my-2 mt-3">
+                            <div th:each="subsub : ${sub.subCategories}" class="flex items-center justify-between p-3 bg-slate-900 border border-slate-800 rounded-xl hover:border-slate-700 transition-colors relative">
+
+                                <div class="absolute -left-6 top-1/2 w-6 border-t border-slate-800"></div>
+
+                                <div class="flex items-center gap-3">
+                                    <span class="font-bold text-slate-400" th:text="${subsub.name}">Camiseta Deportiva</span>
+                                    <span th:if="${subsub.showInNav}" class="px-2 py-0.5 text-[10px] uppercase font-bold bg-blue-500/10 text-blue-400 rounded border border-blue-500/20">Menú Navbar</span>
+                                    <span th:unless="${subsub.isActive}" class="px-2 py-0.5 text-[10px] uppercase font-bold bg-slate-800 text-slate-500 rounded border border-slate-700">Inactiva</span>
+                                </div>
+
+                                <div class="flex items-center gap-2">
+                                    <a th:href="@{|/dashboard/${slug}/categories/${subsub.id}/edit|}" class="p-1.5 text-slate-400 hover:text-storevo-400 transition-colors" title="Editar">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                    </a>
+                                    <form th:action="@{|/dashboard/${slug}/categories/${subsub.id}/toggle|}" method="post" class="m-0 p-0">
+                                        <button type="submit" class="p-1.5 text-slate-400 hover:text-white transition-colors" th:title="${subsub.isActive ? 'Desactivar' : 'Activar'}">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
                         </div>
+
                     </div>
                 </div>
             </div>
