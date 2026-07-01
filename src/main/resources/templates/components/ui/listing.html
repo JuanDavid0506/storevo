@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<div th:fragment="search(placeholder)" class="relative w-full sm:max-w-xs">
+  <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+  </svg>
+  <input type="text" name="q" th:value="${param.q}" th:placeholder="${placeholder}"
+         class="w-full pl-9 pr-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:border-storevo-500 focus:ring-1 focus:ring-storevo-500 transition-colors">
+</div>
+
+<div th:fragment="filter-select(name, defaultText, options, valueField, textField)">
+  <select th:name="${name}" onchange="this.form.submit()"
+          class="w-full sm:w-auto px-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-300 focus:border-storevo-500 focus:ring-1 focus:ring-storevo-500 cursor-pointer appearance-none pr-8">
+    <option value="" th:text="${defaultText}"></option>
+    <option th:each="opt : ${options}"
+            th:value="${opt[valueField]}"
+            th:text="${opt[textField]}"
+            th:selected="${param.get(name) != null and param.get(name)[0] == opt[valueField].toString()}">
+    </option>
+  </select>
+</div>
+
+<div th:fragment="sort(optionsMap)">
+  <div class="flex items-center gap-2">
+    <label class="text-xs font-bold text-slate-500 uppercase hidden md:block">Ordenar:</label>
+    <select name="sort" onchange="this.form.submit()"
+            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-300 focus:border-storevo-500 focus:ring-1 focus:ring-storevo-500 cursor-pointer appearance-none pr-8">
+      <option th:each="opt : ${optionsMap}"
+              th:value="${opt.key}"
+              th:text="${opt.value}"
+              th:selected="${param.sort != null and param.sort[0] == opt.key}">
+      </option>
+    </select>
+  </div>
+</div>
+
+<div th:fragment="page-size()">
+  <select name="size" onchange="this.form.submit()"
+          class="px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-400 focus:border-storevo-500 focus:ring-1 focus:ring-storevo-500 cursor-pointer appearance-none pr-8">
+    <option value="10" th:selected="${param.size == null or param.size[0] == '10'}">10 / pág</option>
+    <option value="20" th:selected="${param.size != null and param.size[0] == '20'}">20 / pág</option>
+    <option value="50" th:selected="${param.size != null and param.size[0] == '50'}">50 / pág</option>
+    <option value="100" th:selected="${param.size != null and param.size[0] == '100'}">100 / pág</option>
+  </select>
+</div>
+
+<div th:fragment="pagination(page)" th:if="${page.totalPages > 0}" class="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6 pt-6 border-t border-slate-800">
+  <div th:with="currentEnd=${(page.number + 1) * page.size}, total=${page.totalElements}" class="text-sm text-slate-400">
+    Mostrando <span class="font-bold text-white" th:text="${page.number * page.size + 1}"></span> a
+    <span class="font-bold text-white" th:text="${currentEnd < total ? currentEnd : total}"></span>
+    de <span class="font-bold text-white" th:text="${total}"></span> resultados
+  </div>
+
+  <div class="flex items-center gap-1 bg-slate-900 border border-slate-800 rounded-xl p-1">
+    <button type="button" th:disabled="${page.first}" th:onclick="|StorevoListing.goToPage(${page.number - 1})|"
+            class="px-3 py-1.5 text-sm font-medium rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 disabled:opacity-50 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-colors">
+      Anterior
+    </button>
+
+    <div class="hidden sm:flex items-center">
+        <span class="px-4 py-1.5 text-sm font-bold text-storevo-400 bg-storevo-500/10 rounded-lg border border-storevo-500/20"
+              th:text="${'Página ' + (page.number + 1) + ' de ' + page.totalPages}"></span>
+    </div>
+
+    <button type="button" th:disabled="${page.last}" th:onclick="|StorevoListing.goToPage(${page.number + 1})|"
+            class="px-3 py-1.5 text-sm font-medium rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 disabled:opacity-50 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-colors">
+      Siguiente
+    </button>
+  </div>
+</div>
+
+<div th:fragment="empty-state(title, message, svgPath, clearUrl)" class="text-center py-16 px-4 bg-slate-900/50 border border-slate-800 border-dashed rounded-2xl">
+  <svg class="mx-auto h-12 w-12 text-slate-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" th:d="${svgPath}"></path>
+  </svg>
+  <h3 class="text-lg font-black text-white" th:text="${title}"></h3>
+  <p class="text-slate-400 mt-2 text-sm max-w-sm mx-auto" th:text="${message}"></p>
+
+  <a th:href="${clearUrl}" th:if="${not #strings.isEmpty(param.q) or not #strings.isEmpty(param.sort) or not #strings.isEmpty(param.size)}"
+     class="inline-block mt-4 text-sm font-bold text-storevo-400 hover:text-storevo-300 transition-colors">
+    Limpiar todos los filtros
+  </a>
+</div>
+<a th:fragment="clear-filters(clearUrl, showCondition)"
+   th:href="${clearUrl}"
+   th:if="${showCondition}"
+   class="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-bold rounded-xl border border-slate-700 transition-colors whitespace-nowrap shadow-sm"
+   title="Borrar todos los filtros">
+  <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+  <span class="hidden sm:inline">Limpiar</span>
+</a>
+<div th:fragment="scripts">
+  <script>
+    const StorevoListing = {
+        goToPage: function(pageNumber) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('page', pageNumber);
+            window.location.href = url.toString();
+        }
+    };
+  </script>
+</div>
+
+</body>
+</html>

@@ -12,6 +12,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,12 +42,6 @@ public class ProductController {
         TenantContext.setCurrentTenant(store.getSchemaName());
     }
 
-    @GetMapping
-    public String listProducts(Model model) {
-        model.addAttribute("products", productService.getAllProducts());
-        model.addAttribute("pageTitle", "Productos");
-        return "dashboard/products/index";
-    }
 
     @GetMapping("/new")
     public String showCreateForm(Model model) {
@@ -111,4 +108,29 @@ public class ProductController {
         productService.deleteProduct(id);
         return "redirect:/dashboard/" + slug + "/products?deleted=true";
     }
+    @GetMapping
+    public String listProducts(
+            @PathVariable String slug,
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) Boolean isActive,
+            @RequestParam(defaultValue = "newest") String sort,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            Model model) {
+
+        // 1. Configuramos la paginación base
+        Pageable pageable = PageRequest.of(page, size);
+
+        // 2. Llamamos al servicio pasando todos los filtros
+        Page<Product> productsPage = productService.searchProducts(q, categoryId, isActive, sort, pageable);
+
+        // 3. Enviamos los datos a la vista
+        model.addAttribute("products", productsPage);
+        model.addAttribute("categories", categoryService.getAllCategories()); // Para llenar el <select>
+        model.addAttribute("pageTitle", "Productos");
+
+        return "dashboard/products/index";
+    }
+
 }

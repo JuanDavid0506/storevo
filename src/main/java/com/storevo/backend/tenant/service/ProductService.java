@@ -8,6 +8,10 @@ import com.storevo.backend.tenant.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -105,5 +109,32 @@ public class ProductService {
         Product product = getProductById(id);
         product.setIsActive(!product.getIsActive());
         productRepository.save(product);
+    }
+
+    public Page<Product> searchProducts(String q, Long categoryId, Boolean isActive, String sortStr, Pageable pageable) {
+
+        // 1. Convertimos el String del frontend a un objeto Sort de Spring
+        Sort sort;
+        switch (sortStr) {
+            case "price_asc":
+                sort = Sort.by("price").ascending();
+                break;
+            case "price_desc":
+                sort = Sort.by("price").descending();
+                break;
+            case "stock_asc":
+                sort = Sort.by("stock").ascending();
+                break;
+            case "newest":
+            default:
+                sort = Sort.by("id").descending(); // Asumiendo que el ID mayor es el más reciente (o usa "createdAt")
+                break;
+        }
+
+        // 2. Inyectamos el Sort dentro del Pageable que venía del controlador
+        Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+
+        // 3. Ejecutamos la búsqueda en el repositorio
+        return productRepository.searchProducts(q, categoryId, isActive, sortedPageable);
     }
 }
