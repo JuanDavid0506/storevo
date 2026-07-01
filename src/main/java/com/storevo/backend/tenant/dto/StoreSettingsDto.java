@@ -18,4 +18,8 @@ public class StoreSettingsDto {
     private String tiktok;
     private String primaryColor;
     private String secondaryColor;
+    private Boolean showShippingPolicy;
+    private String shippingPolicyText;
+    private Boolean showReturnPolicy;
+    private String returnPolicyText;
 }

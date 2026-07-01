@@ -58,6 +58,18 @@ public class StoreSettings {
     @Column(name = "email_contact", length = 150)
     private String emailContact;
 
+    @Column(name = "show_shipping_policy", columnDefinition = "boolean default true")
+    private Boolean showShippingPolicy;
+
+    @Column(name = "shipping_policy_text", columnDefinition = "TEXT")
+    private String shippingPolicyText;
+
+    @Column(name = "show_return_policy", columnDefinition = "boolean default true")
+    private Boolean showReturnPolicy;
+
+    @Column(name = "return_policy_text", columnDefinition = "TEXT")
+    private String returnPolicyText;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 

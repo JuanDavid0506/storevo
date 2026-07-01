@@ -20,8 +20,8 @@ public class StoreSettingsService {
         StoreSettings settings = storeSettingsRepository.findByStoreId(store.getId())
                 .orElse(StoreSettings.builder()
                         .store(store)
-                        .primaryColor("#000000") // Tu color por defecto
-                        .secondaryColor("#FFFFFF") // Tu color secundario
+                        .primaryColor("#0F172A") // Color oficial neutro del MVP
+                        .secondaryColor("#FFFFFF")
                         .build());
 
         return StoreSettingsDto.builder()
@@ -33,6 +33,13 @@ public class StoreSettingsService {
                 .tiktok(settings.getTiktok())
                 .primaryColor(settings.getPrimaryColor())
                 .secondaryColor(settings.getSecondaryColor())
+
+                // MAPEO DE POLÍTICAS (Lectura BD -> Vista)
+                // Se valida contra null por si es una tienda antigua creada antes de la migración
+                .showShippingPolicy(settings.getShowShippingPolicy() != null ? settings.getShowShippingPolicy() : true)
+                .shippingPolicyText(settings.getShippingPolicyText())
+                .showReturnPolicy(settings.getShowReturnPolicy() != null ? settings.getShowReturnPolicy() : true)
+                .returnPolicyText(settings.getReturnPolicyText())
                 .build();
     }
 
@@ -46,16 +53,22 @@ public class StoreSettingsService {
         StoreSettings settings = storeSettingsRepository.findByStoreId(store.getId())
                 .orElse(StoreSettings.builder().store(store).build());
 
-        // 3. Actualizamos los valores
+        // 3. Actualizamos los valores generales
         settings.setEmailContact(dto.getEmailContact());
         settings.setWhatsapp(dto.getWhatsapp());
         settings.setInstagram(dto.getInstagram());
         settings.setFacebook(dto.getFacebook());
         settings.setTiktok(dto.getTiktok());
 
-        // Validamos que no vengan nulos para no romper los colores por defecto
         if (dto.getPrimaryColor() != null) settings.setPrimaryColor(dto.getPrimaryColor());
         if (dto.getSecondaryColor() != null) settings.setSecondaryColor(dto.getSecondaryColor());
+
+        // 4. MAPEO DE POLÍTICAS (Guardado Formulario -> BD)
+        // Spring MVC manda nulo si un checkbox no está marcado, por lo que asignamos false en ese caso
+        settings.setShowShippingPolicy(dto.getShowShippingPolicy() != null ? dto.getShowShippingPolicy() : false);
+        settings.setShippingPolicyText(dto.getShippingPolicyText());
+        settings.setShowReturnPolicy(dto.getShowReturnPolicy() != null ? dto.getShowReturnPolicy() : false);
+        settings.setReturnPolicyText(dto.getReturnPolicyText());
 
         storeSettingsRepository.save(settings);
     }

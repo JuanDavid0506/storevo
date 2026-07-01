@@ -146,16 +146,25 @@
         </div>
       </details>
 
-      <details class="group bg-slate-50 rounded-xl border border-slate-100 open:bg-white open:shadow-md transition-all duration-300">
+      <details th:if="${settings.showShippingPolicy}" class="group bg-slate-50 rounded-xl border border-slate-100 open:bg-white open:shadow-md transition-all duration-300">
         <summary class="flex justify-between items-center font-bold cursor-pointer list-none [&::-webkit-details-marker]:hidden text-lg text-slate-800 p-6">
-          Envíos y devoluciones
+          Envíos
           <span class="transition-transform duration-300 group-open:rotate-180 text-slate-400">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                 </span>
         </summary>
-        <div class="px-6 pb-6 pt-2 text-sm text-slate-600 space-y-3 leading-relaxed">
-          <p><strong>Envíos:</strong> Los tiempos de entrega varían según tu ubicación en el país. Te notificaremos al correo electrónico una vez que tu pedido sea empacado y despachado.</p>
-          <p><strong>Devoluciones:</strong> Cuentas con garantía y soporte directo. Tienes 30 días para solicitar cambios si el producto presenta fallas de fábrica o no es la talla correcta, siempre y cuando conserve sus etiquetas.</p>
+        <div class="px-6 pb-6 pt-2 text-sm text-slate-600 space-y-3 leading-relaxed whitespace-pre-wrap" th:text="${settings.shippingPolicyText}">
+        </div>
+      </details>
+
+      <details th:if="${settings.showReturnPolicy}" class="group bg-slate-50 rounded-xl border border-slate-100 open:bg-white open:shadow-md transition-all duration-300">
+        <summary class="flex justify-between items-center font-bold cursor-pointer list-none [&::-webkit-details-marker]:hidden text-lg text-slate-800 p-6">
+          Devoluciones
+          <span class="transition-transform duration-300 group-open:rotate-180 text-slate-400">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </span>
+        </summary>
+        <div class="px-6 pb-6 pt-2 text-sm text-slate-600 space-y-3 leading-relaxed whitespace-pre-wrap" th:text="${settings.returnPolicyText}">
         </div>
       </details>
     </div>

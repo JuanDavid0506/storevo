@@ -56,6 +56,52 @@
                 <div th:replace="~{components/ui/fragments :: input('tiktok', 'Usuario de TikTok', 'text', '@modaurbana', *{tiktok})}"></div>
             </div>
         </div>
+        <details class="group bg-slate-900 border border-slate-800 rounded-xl shadow-sm overflow-hidden">
+            <summary class="px-6 py-5 cursor-pointer list-none [&::-webkit-details-marker]:hidden flex justify-between items-center hover:bg-slate-800/50 transition-colors">
+                <div>
+                    <h3 class="text-lg font-medium text-white">Políticas de la Tienda</h3>
+                    <p class="text-sm text-slate-400 mt-1">Configura las políticas de envíos y devoluciones que verán tus clientes en cada producto.</p>
+                </div>
+                <span class="transition-transform duration-300 group-open:rotate-180 text-slate-500 group-hover:text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </span>
+            </summary>
+
+            <div class="px-6 py-6 space-y-6 border-t border-slate-800">
+                <div class="border border-slate-800 rounded-lg p-5 bg-slate-800/50">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h4 class="text-white font-medium">Política de Envíos</h4>
+                            <p class="text-xs text-slate-400">Mostrar información de envíos en la página del producto</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" th:field="*{showShippingPolicy}" class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand"></div>
+                        </label>
+                    </div>
+                    <div>
+                        <textarea th:field="*{shippingPolicyText}" rows="3" class="w-full bg-slate-950 border border-slate-700 rounded-lg text-slate-300 p-3 text-sm focus:border-brand focus:ring-1 focus:ring-brand outline-none transition-all" placeholder="Escribe aquí tu política de envíos..."></textarea>
+                    </div>
+                </div>
+
+                <div class="border border-slate-800 rounded-lg p-5 bg-slate-800/50">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h4 class="text-white font-medium">Política de Devoluciones</h4>
+                            <p class="text-xs text-slate-400">Mostrar información de devoluciones en la página del producto</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" th:field="*{showReturnPolicy}" class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand"></div>
+                        </label>
+                    </div>
+                    <div>
+                        <textarea th:field="*{returnPolicyText}" rows="3" class="w-full bg-slate-950 border border-slate-700 rounded-lg text-slate-300 p-3 text-sm focus:border-brand focus:ring-1 focus:ring-brand outline-none transition-all" placeholder="Escribe aquí tu política de devoluciones..."></textarea>
+                    </div>
+                </div>
+            </div>
+        </details>
+
 
         <div class="flex justify-end gap-4">
             <a th:href="@{|/dashboard/${slug}|}" class="bg-slate-800 hover:bg-slate-700 text-white font-medium py-2 px-6 rounded-lg border border-slate-700 transition duration-200">Descartar</a>
