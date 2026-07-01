@@ -30,6 +30,7 @@
 
 <nav class="bg-white shadow-sm sticky top-0 z-50">
     <style>
+        /* Despliegue hacia abajo (Nivel 2) */
         .nav-parent:hover .nav-dropdown {
             opacity: 1 !important;
             visibility: visible !important;
@@ -37,6 +38,13 @@
         }
         .nav-parent:hover .nav-arrow {
             transform: rotate(-180deg) !important;
+        }
+
+        /* Despliegue lateral (Nivel 3) */
+        .nav-flyout-parent:hover .nav-flyout {
+            opacity: 1 !important;
+            visibility: visible !important;
+            transform: translateX(0) !important;
         }
     </style>
 
@@ -61,22 +69,27 @@
                          class="nav-dropdown absolute top-[100%] left-0 w-56 bg-white border border-slate-100 shadow-xl rounded-xl opacity-0 invisible transform -translate-y-3 transition-all duration-300 z-50">
                         <div class="py-2 flex flex-col">
 
-                            <th:block th:each="sub : ${cat.subCategories}">
-                                <a th:if="${sub.isActive}"
-                                   th:href="@{/s/{slug}/catalog(slug=${slug}, category=${sub.id})}"
-                                   class="px-5 py-2.5 text-sm font-bold text-slate-700 hover:text-brand hover:bg-slate-50 transition"
-                                   th:text="${sub.name}">Subcategoría</a>
+                            <div th:each="sub : ${cat.subCategories}" th:if="${sub.isActive}" class="relative nav-flyout-parent group/item">
 
-                                <th:block th:if="${not #lists.isEmpty(sub.subCategories)}">
-                                    <a th:each="subsub : ${sub.subCategories}"
-                                       th:if="${subsub.isActive}"
-                                       th:href="@{/s/{slug}/catalog(slug=${slug}, category=${subsub.id})}"
-                                       class="px-5 py-1.5 pl-8 text-xs font-medium text-slate-500 hover:text-brand hover:bg-slate-50 transition flex items-center gap-2">
-                                        <span class="w-1 h-1 rounded-full bg-slate-300"></span>
-                                        <span th:text="${subsub.name}">Sub-Subcategoría</span>
-                                    </a>
-                                </th:block>
-                            </th:block>
+                                <a th:href="@{/s/{slug}/catalog(slug=${slug}, category=${sub.id})}"
+                                   class="px-5 py-2.5 text-sm font-medium text-slate-600 hover:text-brand hover:bg-slate-50 transition flex justify-between items-center w-full">
+                                    <span th:text="${sub.name}">Subcategoría</span>
+
+                                    <svg th:if="${not #lists.isEmpty(sub.subCategories)}" class="w-4 h-4 text-slate-400 group-hover/item:text-brand transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                                </a>
+
+                                <div th:if="${not #lists.isEmpty(sub.subCategories)}"
+                                     class="nav-flyout absolute top-0 left-full w-56 bg-white border border-slate-100 shadow-xl rounded-xl opacity-0 invisible transform -translate-x-2 transition-all duration-300 z-50">
+                                    <div class="py-2 flex flex-col">
+                                        <a th:each="subsub : ${sub.subCategories}"
+                                           th:if="${subsub.isActive}"
+                                           th:href="@{/s/{slug}/catalog(slug=${slug}, category=${subsub.id})}"
+                                           class="px-5 py-2.5 text-sm font-medium text-slate-600 hover:text-brand hover:bg-slate-50 transition"
+                                           th:text="${subsub.name}">Sub-subcategoría</a>
+                                    </div>
+                                </div>
+
+                            </div>
 
                         </div>
                     </div>
@@ -139,7 +152,6 @@
     function showToast(message, type = 'success') {
         const toast = document.createElement('div');
 
-        // Definir colores según el tipo de alerta (éxito, error, advertencia)
         let bgColor = 'bg-slate-900';
         let icon = `<svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
 
@@ -155,11 +167,7 @@
         toast.innerHTML = `${icon} <span>${message}</span>`;
 
         document.body.appendChild(toast);
-
-        // Animación de entrada
         setTimeout(() => toast.classList.remove('translate-y-full', 'opacity-0'), 10);
-
-        // Animación de salida (Desaparece a los 3 segundos)
         setTimeout(() => {
             toast.classList.add('translate-y-full', 'opacity-0');
             setTimeout(() => toast.remove(), 300);
@@ -175,12 +183,10 @@
         const formData = new FormData();
         formData.append('productId', productId);
 
-        // Bloquear doble clic rápido
         if(btn.classList.contains('pointer-events-none')) return;
         btn.classList.add('pointer-events-none');
 
         if (isAdded) {
-            // Eliminar del carrito
             fetch(`/s/${slug}/cart/remove-ajax`, { method: 'POST', body: formData })
                 .then(r => r.json())
                 .then(data => {
@@ -194,7 +200,6 @@
                     }
                 }).finally(() => btn.classList.remove('pointer-events-none'));
         } else {
-            // Agregar al carrito
             formData.append('quantity', 1);
             fetch(`/s/${slug}/cart/add-ajax`, { method: 'POST', body: formData })
                 .then(r => r.json())
@@ -213,7 +218,7 @@
         }
     }
 
-    // 3. Comprar Directamente (Desde Catálogo)
+    // 3. Comprar Directamente
     function buyNowFast(slug, productId) {
         const formData = new FormData();
         formData.append('productId', productId);
@@ -227,7 +232,7 @@
             });
     }
 
-    // 4. Actualizar el Número de la Bolsa en el Navbar
+    // 4. Actualizar Counter Carrito
     function updateCartGlobalCounter(value, isAbsolute = false) {
         const badge = document.getElementById('navCartCounter');
         if (badge) {
@@ -241,42 +246,42 @@
         }
     }
 
-    // 5. Toggle Inteligente de Lista de Deseos
-        function toggleWishlistItem(btn, slug, productId) {
-            if(btn.classList.contains('pointer-events-none')) return;
-            btn.classList.add('pointer-events-none');
+    // 5. Toggle Favoritos
+    function toggleWishlistItem(btn, slug, productId) {
+        if(btn.classList.contains('pointer-events-none')) return;
+        btn.classList.add('pointer-events-none');
 
-            const emptyIcon = btn.querySelector('.icon-heart-empty');
-            const filledIcon = btn.querySelector('.icon-heart-filled');
-            const formData = new FormData();
-            formData.append('productId', productId);
+        const emptyIcon = btn.querySelector('.icon-heart-empty');
+        const filledIcon = btn.querySelector('.icon-heart-filled');
+        const formData = new FormData();
+        formData.append('productId', productId);
 
-            fetch(`/s/${slug}/wishlist/toggle-ajax`, { method: 'POST', body: formData })
-                .then(r => r.json())
-                .then(data => {
-                    if(data.success) {
-                        if(data.added) {
-                            emptyIcon.classList.add('hidden');
-                            filledIcon.classList.remove('hidden');
-                            btn.classList.remove('bg-white/90', 'text-slate-400');
-                            btn.classList.add('bg-white', 'border-red-500', 'text-red-500');
-                        } else {
-                            filledIcon.classList.add('hidden');
-                            emptyIcon.classList.remove('hidden');
-                            btn.classList.remove('bg-white', 'border-red-500', 'text-red-500');
-                            btn.classList.add('bg-white/90', 'text-slate-400');
-                        }
-                        updateWishlistGlobalCounter(data.wishlistCount);
-                        showToast(data.message, 'success');
+        fetch(`/s/${slug}/wishlist/toggle-ajax`, { method: 'POST', body: formData })
+            .then(r => r.json())
+            .then(data => {
+                if(data.success) {
+                    if(data.added) {
+                        emptyIcon.classList.add('hidden');
+                        filledIcon.classList.remove('hidden');
+                        btn.classList.remove('bg-white/90', 'text-slate-400');
+                        btn.classList.add('bg-white', 'border-red-500', 'text-red-500');
+                    } else {
+                        filledIcon.classList.add('hidden');
+                        emptyIcon.classList.remove('hidden');
+                        btn.classList.remove('bg-white', 'border-red-500', 'text-red-500');
+                        btn.classList.add('bg-white/90', 'text-slate-400');
                     }
-                }).finally(() => btn.classList.remove('pointer-events-none'));
-        }
+                    updateWishlistGlobalCounter(data.wishlistCount);
+                    showToast(data.message, 'success');
+                }
+            }).finally(() => btn.classList.remove('pointer-events-none'));
+    }
 
-        // 6. Actualizar Contador de Favoritos
-        function updateWishlistGlobalCounter(value) {
-            const badge = document.getElementById('navWishlistCounter');
-            if (badge) badge.textContent = value;
-        }
+    // 6. Actualizar Contador Favoritos
+    function updateWishlistGlobalCounter(value) {
+        const badge = document.getElementById('navWishlistCounter');
+        if (badge) badge.textContent = value;
+    }
 </script>
 </body>
 </html>
