@@ -110,10 +110,11 @@ public class ProductService {
     }
 
     @Transactional
-    public void toggleStatus(Long id) {
+    public boolean toggleStatus(Long id) {
         Product product = getProductById(id);
         product.setIsActive(!product.getIsActive());
         productRepository.save(product);
+        return product.getIsActive(); // Retornamos el nuevo estado
     }
 
     public Page<Product> searchProducts(String q, Long categoryId, Boolean isActive, Boolean isDeleted, String sortStr, Pageable pageable) {

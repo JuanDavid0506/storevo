@@ -116,8 +116,12 @@ public class ProductController {
 
     @PostMapping("/{id}/toggle")
     public String toggleStatus(@PathVariable String slug, @PathVariable Long id) {
-        productService.toggleStatus(id);
-        return "redirect:/dashboard/" + slug + "/products";
+        boolean isNowActive = productService.toggleStatus(id);
+        if (isNowActive) {
+            return "redirect:/dashboard/" + slug + "/products?activated=true";
+        } else {
+            return "redirect:/dashboard/" + slug + "/products?deactivated=true";
+        }
     }
 
     @PostMapping("/{id}/delete")
