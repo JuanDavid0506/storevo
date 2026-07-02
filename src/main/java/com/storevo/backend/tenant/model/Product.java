@@ -54,7 +54,16 @@ public class Product {
     private Double weight;
 
     @Column(name = "is_active", nullable = false)
+    @Builder.Default
     private Boolean isActive = true;
+
+    // --- AGREGAR ESTE BLOQUE ---
+    @Column(name = "is_deleted", nullable = false, columnDefinition = "boolean default false")
+    @Builder.Default
+    private Boolean isDeleted = false;
+    // ---------------------------
+
+
 
     // --- CAMPOS DINÁMICOS JSON (La magia de Storevo) ---
 

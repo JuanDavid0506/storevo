@@ -125,25 +125,43 @@ public class ProductController {
         productService.deleteProduct(id);
         return "redirect:/dashboard/" + slug + "/products?deleted=true";
     }
+    @PostMapping("/{id}/restore")
+    public String restoreProduct(@PathVariable String slug, @PathVariable Long id) {
+        productService.restoreProduct(id);
+        return "redirect:/dashboard/" + slug + "/products?restored=true";
+    }
+    @PostMapping("/{id}/hard-delete")
+    public String hardDeleteProduct(@PathVariable String slug, @PathVariable Long id) {
+        productService.hardDeleteProduct(id);
+        return "redirect:/dashboard/" + slug + "/products?hard_deleted=true";
+    }
 
     @GetMapping
     public String listProducts(
             @PathVariable String slug,
             @RequestParam(required = false) String q,
             @RequestParam(required = false) Long categoryId,
-            @RequestParam(required = false) Boolean isActive,
+            @RequestParam(required = false) String status, // <--- Cambio a String
             @RequestParam(defaultValue = "newest") String sort,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             Model model) {
 
-        // 1. Configuramos la paginación base
         Pageable pageable = PageRequest.of(page, size);
 
-        // 2. Llamamos al servicio pasando todos los filtros
-        Page<Product> productsPage = productService.searchProducts(q, categoryId, isActive, sort, pageable);
+        // Mapeo lógico del filtro status
+        Boolean isActiveFilter = null;
+        Boolean isDeletedFilter = false; // Ocultar papelera por defecto
 
-        // 3. Enviamos los datos a la vista
+        if ("active".equals(status)) isActiveFilter = true;
+        else if ("inactive".equals(status)) isActiveFilter = false;
+        else if ("deleted".equals(status)) {
+            isActiveFilter = null;
+            isDeletedFilter = true; // Mostrar SOLO papelera
+        }
+
+        Page<Product> productsPage = productService.searchProducts(q, categoryId, isActiveFilter, isDeletedFilter, sort, pageable);
+
         model.addAttribute("products", productsPage);
         model.addAttribute("categories", categoryService.getAllCategories());
         model.addAttribute("categoryTreeJson", getCategoryTreeJson());

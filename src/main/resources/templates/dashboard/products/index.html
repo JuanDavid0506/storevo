@@ -33,8 +33,7 @@
         <div th:replace="~{components/ui/listing :: search('Buscar por nombre o SKU...')}"></div>
 
         <div th:replace="~{components/ui/listing :: category-combobox('categoryId', 'Todas las categorías', ${categoryTreeJson})}"></div>
-        <div th:replace="~{components/ui/listing :: filter-select('isActive', 'Cualquier estado', ${ {'true':'Activos', 'false':'Inactivos'} }, 'key', 'value')}"></div>
-
+        <div th:replace="~{components/ui/listing :: filter-select('status', 'Todos (Sin papelera)', ${ {'active':'Activos', 'inactive':'Inactivos', 'deleted':'Papelera (Eliminados)'} }, 'key', 'value')}"></div>
         <div th:replace="~{components/ui/listing :: clear-filters(${clearFiltersUrl}, ${hasActiveFilters})}"></div>
       </div>
 
@@ -96,15 +95,25 @@
             <span th:unless="${prod.isActive}" class="bg-slate-500/10 text-slate-400 text-xs font-medium px-2 py-1 rounded-full border border-green-500/20">Inactivo</span>
           </td>
           <td class="px-6 py-4 text-right">
-            <div class="flex justify-end gap-3">
+            <div th:if="${!prod.isDeleted}" class="flex justify-end gap-3">
               <form th:action="@{|/dashboard/${slug}/products/${prod.id}/toggle|}" method="POST" class="m-0">
-                <button type="submit" class="text-slate-400 hover:text-white transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg></button>
+                <button type="submit" class="text-slate-400 hover:text-white transition" title="Activar/Desactivar"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg></button>
               </form>
+              <a th:href="@{|/dashboard/${slug}/products/${prod.id}/edit|}" class="text-blue-400 hover:text-blue-300 transition" title="Editar"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg></a>
+              <form th:action="@{|/dashboard/${slug}/products/${prod.id}/delete|}" method="POST" class="m-0"
+                    data-confirm="¿Mover este producto a la papelera? Podrás restaurarlo más adelante.">
+                <button type="submit" class="text-orange-400 hover:text-orange-300 transition" title="Mover a papelera">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                </button>
+              </form>
+            </div>
 
-              <a th:href="@{|/dashboard/${slug}/products/${prod.id}/edit|}" class="text-blue-400 hover:text-blue-300 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg></a>
-
-              <form th:action="@{|/dashboard/${slug}/products/${prod.id}/delete|}" method="POST" class="m-0" data-confirm="¿Estás seguro de que deseas eliminar este producto? Esta acción no se puede deshacer.">
-                <button type="submit" class="text-red-400 hover:text-red-300 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+            <div th:if="${prod.isDeleted}" class="flex justify-end gap-3">
+              <form th:action="@{|/dashboard/${slug}/products/${prod.id}/restore|}" method="POST" class="m-0" data-confirm="¿Restaurar producto?">
+                <button type="submit" class="text-blue-400 hover:text-blue-300 flex items-center gap-1 text-xs font-bold transition" title="Restaurar"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg> Restaurar</button>
+              </form>
+              <form th:action="@{|/dashboard/${slug}/products/${prod.id}/hard-delete|}" method="POST" class="m-0" data-confirm="¿Borrar definitivamente? Esta acción no se puede deshacer.">
+                <button type="submit" class="text-red-500 hover:text-red-400 flex items-center gap-1 text-xs font-bold transition" title="Destruir para siempre"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
               </form>
             </div>
           </td>

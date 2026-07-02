@@ -46,16 +46,25 @@ public class WishlistController {
     public String viewWishlist(@PathVariable String slug, Model model) {
         Set<Long> productIds = wishlistManager.getWishlist(slug);
         List<Product> products = new ArrayList<>();
+        List<Long> deletedProductIds = new ArrayList<>();
 
-        // Buscamos la info completa de cada producto guardado
         for (Long id : productIds) {
             try {
                 Product p = productService.getProductById(id);
-                if(p.getIsActive()) products.add(p);
-            } catch (Exception ignored) {} // Ignoramos si fue eliminado
+                products.add(p); // Lo agregamos a la lista para mostrar su tarjeta
+
+                // Si está eliminado (Soft Delete) o inactivo, lo marcamos
+                if (p.getIsDeleted() || !p.getIsActive()) {
+                    deletedProductIds.add(id);
+                }
+            } catch (Exception ignored) {
+                // Si fue borrado físicamente antes de implementar el soft delete
+                deletedProductIds.add(id);
+            }
         }
 
         model.addAttribute("products", products);
+        model.addAttribute("deletedProductIds", deletedProductIds); // Enviamos lista de inválidos
         model.addAttribute("pageTitle", "Mis Favoritos");
         return "storefront/wishlist";
     }
@@ -63,6 +72,14 @@ public class WishlistController {
     @PostMapping("/toggle-ajax")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> toggleWishlistAjax(@PathVariable String slug, @RequestParam Long productId) {
+
+        // --- AGREGAR SEGURIDAD: Evitar agregar productos eliminados ---
+        Product product = productService.getProductById(productId);
+        if (product.getIsDeleted()) {
+            return ResponseEntity.ok(Map.of("success", false, "message", "Este producto ha sido retirado del catálogo."));
+        }
+        // --------------------------------------------------------------
+
         boolean isAdded = wishlistManager.toggleItem(slug, productId);
 
         Map<String, Object> response = new HashMap<>();

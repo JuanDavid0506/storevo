@@ -27,12 +27,12 @@ public class ProductService {
     private final CategoryService categoryService;
 
     public List<Product> getAllProducts() {
-        return productRepository.findAllByOrderByIdDesc();
+        return productRepository.findByIsDeletedFalseOrderByIdDesc();
     }
 
     public List<Product> getPublicCatalog(Long categoryId) {
         if (categoryId == null) {
-            return productRepository.findAllByIsActiveTrueOrderByIdDesc();
+            return productRepository.findByIsActiveTrueAndIsDeletedFalseOrderByIdDesc();
         }
         List<Long> categoryIds = categoryService.getCategoryAndDescendantIds(categoryId);
         return productRepository.findActiveProductsByCategoryIds(categoryIds);
@@ -92,6 +92,20 @@ public class ProductService {
 
     @Transactional
     public void deleteProduct(Long id) {
+        Product product = getProductById(id);
+        product.setIsDeleted(true);
+        product.setIsActive(false); // Inactivar por seguridad
+        productRepository.save(product);
+    }
+    @Transactional
+    public void restoreProduct(Long id) {
+        Product product = getProductById(id);
+        product.setIsDeleted(false);
+        // Se mantiene inactivo para que el admin lo revise antes de publicarlo
+        productRepository.save(product);
+    }
+    @Transactional
+    public void hardDeleteProduct(Long id) {
         productRepository.deleteById(id);
     }
 
@@ -102,8 +116,7 @@ public class ProductService {
         productRepository.save(product);
     }
 
-    public Page<Product> searchProducts(String q, Long categoryId, Boolean isActive, String sortStr, Pageable pageable) {
-
+    public Page<Product> searchProducts(String q, Long categoryId, Boolean isActive, Boolean isDeleted, String sortStr, Pageable pageable) {
         // 1. Convertimos el String del frontend a un objeto Sort de Spring
         Sort sort;
         switch (sortStr) {
@@ -129,9 +142,7 @@ public class ProductService {
         // subcategorías (los 3 niveles), para que filtrar por una categoría
         // padre (ej. "Hombres") también traiga los productos de sus hijas.
         List<Long> categoryIds = (categoryId != null) ? categoryService.getCategoryAndDescendantIds(categoryId) : null;
-
         // 4. Ejecutamos la búsqueda en el repositorio
-        return productRepository.searchProducts(q, categoryIds, isActive, sortedPageable);
-    }
+        return productRepository.searchProducts(q, categoryIds, isActive, isDeleted, sortedPageable);    }
 
 }

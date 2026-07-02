@@ -85,6 +85,9 @@ public class StoreFrontController {
     @GetMapping("/p/{id}")
     public String productDetail(@PathVariable String slug, @PathVariable Long id, Model model) {
         Product product = productService.getProductById(id);
+        if (product.getIsDeleted()) {
+            return "redirect:/s/" + slug + "/catalog";
+        }
         model.addAttribute("product", product);
 
         // Lógica de Productos Relacionados (Misma categoría, máximo 4, excluyendo el actual)

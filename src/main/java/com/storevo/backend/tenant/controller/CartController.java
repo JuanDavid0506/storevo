@@ -45,7 +45,24 @@ public class CartController {
 
     @GetMapping
     public String viewCart(@PathVariable String slug, Model model) {
-        model.addAttribute("cartItems", cartManager.getCart(slug));
+        java.util.List<CartItemDto> cart = cartManager.getCart(slug);
+
+        // Verificar si algún producto de la bolsa fue eliminado o inactivado
+        java.util.List<Long> deletedProductIds = new java.util.ArrayList<>();
+        for (CartItemDto item : cart) {
+            try {
+                Product p = productService.getProductById(item.getProductId());
+                if (p.getIsDeleted() || !p.getIsActive()) {
+                    deletedProductIds.add(p.getId());
+                }
+            } catch (Exception e) {
+                // Si el producto no existe en BD, lo consideramos eliminado
+                deletedProductIds.add(item.getProductId());
+            }
+        }
+
+        model.addAttribute("cartItems", cart);
+        model.addAttribute("deletedProductIds", deletedProductIds); // Enviamos la lista de IDs inválidos
         model.addAttribute("cartTotal", cartManager.getTotal(slug));
         model.addAttribute("pageTitle", "Mi Bolsa");
         return "storefront/cart";
@@ -64,6 +81,9 @@ public class CartController {
 
         Map<String, Object> response = new HashMap<>();
         Product product = productService.getProductById(productId);
+        if (product.getIsDeleted()) {
+            return ResponseEntity.ok(Map.of("success", false, "message", "Este producto ha sido retirado del catálogo."));
+        }
 
         // REGLA DE NEGOCIO: Validar inventario existente vs. el carrito
         int currentQtyInCart = cartManager.getItemQuantity(slug, productId);

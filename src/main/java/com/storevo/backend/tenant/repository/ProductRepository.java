@@ -13,23 +13,27 @@ import java.util.List;
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
-    // Para el Dashboard: Trae todo el inventario (activos e inactivos)
-    List<Product> findAllByOrderByIdDesc();
 
-    // Para la Tienda Pública (Sin filtro): Trae solo los productos activos
-    List<Product> findAllByIsActiveTrueOrderByIdDesc();
+    // Dashboard: Trae todo el inventario que NO esté en la papelera
+    List<Product> findByIsDeletedFalseOrderByIdDesc();
 
-    // Para la Tienda Pública (Con filtro): Trae productos activos que pertenezcan a las categorías enviadas
-    @Query("SELECT p FROM Product p WHERE p.category.id IN :categoryIds AND p.isActive = true ORDER BY p.id DESC")
+    // Tienda Pública: Solo activos y NO eliminados
+    List<Product> findByIsActiveTrueAndIsDeletedFalseOrderByIdDesc();
+
+    // Tienda Pública (Filtro Categoría): Activos y NO eliminados
+    @Query("SELECT p FROM Product p WHERE p.category.id IN :categoryIds AND p.isActive = true AND p.isDeleted = false ORDER BY p.id DESC")
     List<Product> findActiveProductsByCategoryIds(@Param("categoryIds") List<Long> categoryIds);
 
+    // Dashboard: Búsqueda con soporte para la Papelera
     @Query("SELECT p FROM Product p WHERE " +
             "(:q IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(p.sku) LIKE LOWER(CONCAT('%', :q, '%'))) AND " +
             "(:categoryIds IS NULL OR p.category.id IN :categoryIds) AND " +
-            "(:isActive IS NULL OR p.isActive = :isActive)")
+            "(:isActive IS NULL OR p.isActive = :isActive) AND " +
+            "(p.isDeleted = :isDeleted)") // <--- Condición agregada
     Page<Product> searchProducts(
             @Param("q") String q,
             @Param("categoryIds") List<Long> categoryIds,
             @Param("isActive") Boolean isActive,
+            @Param("isDeleted") Boolean isDeleted, // <--- Parámetro agregado
             Pageable pageable);
 }
