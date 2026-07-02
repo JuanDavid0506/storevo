@@ -30,22 +30,9 @@
 
 <nav class="bg-white shadow-sm sticky top-0 z-50">
     <style>
-        /* Despliegue hacia abajo (Nivel 2) */
-        .nav-parent:hover .nav-dropdown {
-            opacity: 1 !important;
-            visibility: visible !important;
-            transform: translateY(0) !important;
-        }
-        .nav-parent:hover .nav-arrow {
-            transform: rotate(-180deg) !important;
-        }
-
-        /* Despliegue lateral (Nivel 3) */
-        .nav-flyout-parent:hover .nav-flyout {
-            opacity: 1 !important;
-            visibility: visible !important;
-            transform: translateX(0) !important;
-        }
+        .nav-parent:hover .nav-dropdown { opacity: 1 !important; visibility: visible !important; transform: translateY(0) !important; }
+        .nav-parent:hover .nav-arrow { transform: rotate(-180deg) !important; }
+        .nav-flyout-parent:hover .nav-flyout { opacity: 1 !important; visibility: visible !important; transform: translateX(0) !important; }
     </style>
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -58,39 +45,24 @@
                 <a th:href="@{/s/{slug}/catalog(slug=${slug})}" class="text-slate-600 hover:text-brand font-medium transition py-4 cursor-pointer">Todo el Catálogo</a>
 
                 <div th:each="cat : ${navCategories}" class="relative nav-parent">
-
                     <a th:href="@{/s/{slug}/catalog(slug=${slug}, category=${cat.id})}"
                        class="flex items-center gap-1 text-slate-600 hover:text-brand font-medium transition py-5 cursor-pointer">
                         <span th:text="${cat.name}"></span>
                         <svg th:if="${not #lists.isEmpty(cat.subCategories)}" class="nav-arrow w-4 h-4 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </a>
-
-                    <div th:if="${not #lists.isEmpty(cat.subCategories)}"
-                         class="nav-dropdown absolute top-[100%] left-0 w-56 bg-white border border-slate-100 shadow-xl rounded-xl opacity-0 invisible transform -translate-y-3 transition-all duration-300 z-50">
+                    <div th:if="${not #lists.isEmpty(cat.subCategories)}" class="nav-dropdown absolute top-[100%] left-0 w-56 bg-white border border-slate-100 shadow-xl rounded-xl opacity-0 invisible transform -translate-y-3 transition-all duration-300 z-50">
                         <div class="py-2 flex flex-col">
-
                             <div th:each="sub : ${cat.subCategories}" th:if="${sub.isActive}" class="relative nav-flyout-parent group/item">
-
-                                <a th:href="@{/s/{slug}/catalog(slug=${slug}, category=${sub.id})}"
-                                   class="px-5 py-2.5 text-sm font-medium text-slate-600 hover:text-brand hover:bg-slate-50 transition flex justify-between items-center w-full">
+                                <a th:href="@{/s/{slug}/catalog(slug=${slug}, category=${sub.id})}" class="px-5 py-2.5 text-sm font-medium text-slate-600 hover:text-brand hover:bg-slate-50 transition flex justify-between items-center w-full">
                                     <span th:text="${sub.name}">Subcategoría</span>
-
                                     <svg th:if="${not #lists.isEmpty(sub.subCategories)}" class="w-4 h-4 text-slate-400 group-hover/item:text-brand transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                                 </a>
-
-                                <div th:if="${not #lists.isEmpty(sub.subCategories)}"
-                                     class="nav-flyout absolute top-0 left-full w-56 bg-white border border-slate-100 shadow-xl rounded-xl opacity-0 invisible transform -translate-x-2 transition-all duration-300 z-50">
+                                <div th:if="${not #lists.isEmpty(sub.subCategories)}" class="nav-flyout absolute top-0 left-full w-56 bg-white border border-slate-100 shadow-xl rounded-xl opacity-0 invisible transform -translate-x-2 transition-all duration-300 z-50">
                                     <div class="py-2 flex flex-col">
-                                        <a th:each="subsub : ${sub.subCategories}"
-                                           th:if="${subsub.isActive}"
-                                           th:href="@{/s/{slug}/catalog(slug=${slug}, category=${subsub.id})}"
-                                           class="px-5 py-2.5 text-sm font-medium text-slate-600 hover:text-brand hover:bg-slate-50 transition"
-                                           th:text="${subsub.name}">Sub-subcategoría</a>
+                                        <a th:each="subsub : ${sub.subCategories}" th:if="${subsub.isActive}" th:href="@{/s/{slug}/catalog(slug=${slug}, category=${subsub.id})}" class="px-5 py-2.5 text-sm font-medium text-slate-600 hover:text-brand hover:bg-slate-50 transition" th:text="${subsub.name}">Sub-sub</a>
                                     </div>
                                 </div>
-
                             </div>
-
                         </div>
                     </div>
                 </div>
@@ -101,16 +73,40 @@
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
                     <span id="navWishlistCounter" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full" th:text="${wishlistCount != null ? wishlistCount : 0}">0</span>
                 </a>
-
                 <a th:href="@{/s/{slug}/cart(slug=${slug})}" class="flex items-center gap-2 text-slate-600 hover:text-brand transition relative">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
                     <span id="navCartCounter" class="absolute -top-2 -right-2 bg-brand text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full" th:text="${cartCount != null ? cartCount : 0}">0</span>
                 </a>
-            </div>
 
+                <button type="button" id="mobile-menu-btn" class="md:hidden text-slate-600 hover:text-brand transition p-1">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="mobile-menu-backdrop" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[60] hidden opacity-0 transition-opacity duration-300 md:hidden"></div>
+    <div id="mobile-menu" class="fixed top-0 left-0 h-full w-4/5 max-w-sm bg-white shadow-2xl z-[70] transform -translate-x-full transition-transform duration-300 flex flex-col overflow-y-auto md:hidden">
+        <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+            <span class="font-black text-brand text-lg" th:text="${settings.storeName}">Mi Tienda</span>
+            <button type="button" id="mobile-menu-close" class="text-slate-400 hover:text-red-500 p-2">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        <div class="p-4 flex flex-col gap-2">
+            <a th:href="@{/s/{slug}(slug=${slug})}" class="font-bold text-slate-700 py-3 border-b border-slate-50">Inicio</a>
+            <a th:href="@{/s/{slug}/catalog(slug=${slug})}" class="font-bold text-slate-700 py-3 border-b border-slate-50">Todo el Catálogo</a>
+            <div th:each="cat : ${navCategories}">
+                <a th:href="@{/s/{slug}/catalog(slug=${slug}, category=${cat.id})}" class="font-bold text-slate-700 py-3 border-b border-slate-50 block" th:text="${cat.name}">Cat</a>
+                <div th:if="${not #lists.isEmpty(cat.subCategories)}" class="pl-4 flex flex-col mt-2 gap-2 border-b border-slate-50 pb-2">
+                    <a th:each="sub : ${cat.subCategories}" th:if="${sub.isActive}" th:href="@{/s/{slug}/catalog(slug=${slug}, category=${sub.id})}" class="text-sm font-medium text-slate-600 py-2 block" th:text="${sub.name}">Sub</a>
+                </div>
+            </div>
         </div>
     </div>
 </nav>
+
+<!--  Main y Footer  -->
 <main class="flex-1 flex flex-col">
     <div class="flex-1 w-full">
         <div layout:fragment="content"></div>
@@ -136,152 +132,25 @@
         </div>
     </div>
 </footer>
+
 <div th:if="${cartSuccess}" id="server-toast"
      class="fixed top-20 right-6 bg-brand text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 !z-[99999] opacity-100"
      style="z-index: 99999 !important; pointer-events: none;">
-
     <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
     </svg>
-
     <span class="font-bold text-sm" th:text="${cartSuccess}"></span>
 </div>
 
-<script>
-    // 1. Notificaciones Premium (Toasts)
-    function showToast(message, type = 'success') {
-        const toast = document.createElement('div');
+<!-- Core & Módulos (En orden de dependencia) -->
+<script th:src="@{/js/storevo.js}"></script>
+<script th:src="@{/js/ui/toast.js}"></script>
+<script th:src="@{/js/ui/navbar.js}"></script>
+<script th:src="@{/js/ui/form.js}"></script>
+<script th:src="@{/js/modules/cart.js}"></script>
+<script th:src="@{/js/modules/wishlist.js}"></script>
+<script th:src="@{/js/storevo.js}"></script>
+<script th:src="@{/js/ui/modal.js}"></script>
 
-        let bgColor = 'bg-slate-900';
-        let icon = `<svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
-
-        if (type === 'error') {
-            bgColor = 'bg-red-500';
-            icon = `<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>`;
-        } else if (type === 'warning') {
-            bgColor = 'bg-orange-500';
-            icon = `<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>`;
-        }
-
-        toast.className = `fixed bottom-6 right-6 ${bgColor} text-white px-5 py-4 rounded-xl shadow-2xl z-[100] transform transition-all duration-300 translate-y-full opacity-0 flex items-center gap-3 text-sm font-bold`;
-        toast.innerHTML = `${icon} <span>${message}</span>`;
-
-        document.body.appendChild(toast);
-        setTimeout(() => toast.classList.remove('translate-y-full', 'opacity-0'), 10);
-        setTimeout(() => {
-            toast.classList.add('translate-y-full', 'opacity-0');
-            setTimeout(() => toast.remove(), 300);
-        }, 3000);
-    }
-
-    // 2. Tarjetas de Producto: Icono de Carrito Toggle
-    function toggleCartItem(btn, slug, productId) {
-        const emptyIcon = btn.querySelector('.icon-empty');
-        const filledIcon = btn.querySelector('.icon-filled');
-        const isAdded = !filledIcon.classList.contains('hidden');
-
-        const formData = new FormData();
-        formData.append('productId', productId);
-
-        if(btn.classList.contains('pointer-events-none')) return;
-        btn.classList.add('pointer-events-none');
-
-        if (isAdded) {
-            fetch(`/s/${slug}/cart/remove-ajax`, { method: 'POST', body: formData })
-                .then(r => r.json())
-                .then(data => {
-                    if(data.success) {
-                        filledIcon.classList.add('hidden');
-                        emptyIcon.classList.remove('hidden');
-                        btn.classList.remove('bg-white', 'border-brand');
-                        btn.classList.add('bg-white/90');
-                        updateCartGlobalCounter(data.cartCount, true);
-                        showToast(data.message, 'success');
-                    }
-                }).finally(() => btn.classList.remove('pointer-events-none'));
-        } else {
-            formData.append('quantity', 1);
-            fetch(`/s/${slug}/cart/add-ajax`, { method: 'POST', body: formData })
-                .then(r => r.json())
-                .then(data => {
-                    if(data.success) {
-                        emptyIcon.classList.add('hidden');
-                        filledIcon.classList.remove('hidden');
-                        btn.classList.remove('bg-white/90');
-                        btn.classList.add('bg-white', 'border-brand');
-                        updateCartGlobalCounter(data.cartCount, true);
-                        showToast(data.message, data.isWarning ? 'warning' : 'success');
-                    } else {
-                        showToast(data.message, 'error');
-                    }
-                }).finally(() => btn.classList.remove('pointer-events-none'));
-        }
-    }
-
-    // 3. Comprar Directamente
-    function buyNowFast(slug, productId) {
-        const formData = new FormData();
-        formData.append('productId', productId);
-        formData.append('quantity', 1);
-
-        fetch(`/s/${slug}/cart/add-ajax`, { method: 'POST', body: formData })
-            .then(res => res.json())
-            .then(data => {
-                if(data.success) window.location.href = `/s/${slug}/cart/checkout`;
-                else showToast(data.message, 'error');
-            });
-    }
-
-    // 4. Actualizar Counter Carrito
-    function updateCartGlobalCounter(value, isAbsolute = false) {
-        const badge = document.getElementById('navCartCounter');
-        if (badge) {
-            if (isAbsolute) {
-                badge.textContent = value;
-            } else {
-                let current = parseInt(badge.textContent) || 0;
-                let newVal = current + value;
-                badge.textContent = newVal < 0 ? 0 : newVal;
-            }
-        }
-    }
-
-    // 5. Toggle Favoritos
-    function toggleWishlistItem(btn, slug, productId) {
-        if(btn.classList.contains('pointer-events-none')) return;
-        btn.classList.add('pointer-events-none');
-
-        const emptyIcon = btn.querySelector('.icon-heart-empty');
-        const filledIcon = btn.querySelector('.icon-heart-filled');
-        const formData = new FormData();
-        formData.append('productId', productId);
-
-        fetch(`/s/${slug}/wishlist/toggle-ajax`, { method: 'POST', body: formData })
-            .then(r => r.json())
-            .then(data => {
-                if(data.success) {
-                    if(data.added) {
-                        emptyIcon.classList.add('hidden');
-                        filledIcon.classList.remove('hidden');
-                        btn.classList.remove('bg-white/90', 'text-slate-400');
-                        btn.classList.add('bg-white', 'border-red-500', 'text-red-500');
-                    } else {
-                        filledIcon.classList.add('hidden');
-                        emptyIcon.classList.remove('hidden');
-                        btn.classList.remove('bg-white', 'border-red-500', 'text-red-500');
-                        btn.classList.add('bg-white/90', 'text-slate-400');
-                    }
-                    updateWishlistGlobalCounter(data.wishlistCount);
-                    showToast(data.message, 'success');
-                }
-            }).finally(() => btn.classList.remove('pointer-events-none'));
-    }
-
-    // 6. Actualizar Contador Favoritos
-    function updateWishlistGlobalCounter(value) {
-        const badge = document.getElementById('navWishlistCounter');
-        if (badge) badge.textContent = value;
-    }
-</script>
 </body>
 </html>

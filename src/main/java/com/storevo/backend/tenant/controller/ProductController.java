@@ -96,6 +96,20 @@ public class ProductController {
 
     @PostMapping
     public String saveProduct(@PathVariable String slug, @ModelAttribute ProductDto productDto) {
+
+        // --- RED DE SEGURIDAD BACKEND ---
+        // Evita el Error 500 (SQLIntegrityConstraintViolationException) si llegan campos nulos
+        if (productDto.getStock() == null) {
+            productDto.setStock(0);
+        }
+        if (productDto.getPrice() == null) {
+            productDto.setPrice(0.0);
+        }
+        if (productDto.getWeight() == null) {
+            productDto.setWeight(0.0);
+        }
+        // --------------------------------
+
         productService.saveProduct(productDto);
         return "redirect:/dashboard/" + slug + "/products?success=true";
     }
@@ -111,6 +125,7 @@ public class ProductController {
         productService.deleteProduct(id);
         return "redirect:/dashboard/" + slug + "/products?deleted=true";
     }
+
     @GetMapping
     public String listProducts(
             @PathVariable String slug,
@@ -130,7 +145,7 @@ public class ProductController {
 
         // 3. Enviamos los datos a la vista
         model.addAttribute("products", productsPage);
-        model.addAttribute("categories", categoryService.getAllCategories()); // Usado en el form de producto
+        model.addAttribute("categories", categoryService.getAllCategories());
         model.addAttribute("categoryTreeJson", getCategoryTreeJson());
         model.addAttribute("pageTitle", "Productos");
 
@@ -138,7 +153,6 @@ public class ProductController {
     }
 
     // Serializa el árbol de categorías a JSON para el combobox del frontend.
-    // Si algo falla, devolvemos un array vacío en vez de romper la página.
     private String getCategoryTreeJson() {
         try {
             List<CategoryTreeDto> tree = categoryService.getCategoryTree();
@@ -147,5 +161,4 @@ public class ProductController {
             return "[]";
         }
     }
-
 }

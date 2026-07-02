@@ -15,7 +15,7 @@
 </div>
 
 <div th:fragment="filter-select(name, defaultText, options, valueField, textField)">
-  <select th:name="${name}" onchange="this.form.submit()" data-filter="true"
+  <select th:name="${name}" data-auto-submit="true" data-filter="true"
           class="w-full sm:w-auto px-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-300 focus:border-storevo-500 focus:ring-1 focus:ring-storevo-500 cursor-pointer appearance-none pr-8">
     <option value="" th:text="${defaultText}"></option>
     <option th:each="opt : ${options}"
@@ -66,9 +66,8 @@
 <div th:fragment="sort(optionsMap)">
   <div class="flex items-center gap-2">
     <label class="text-xs font-bold text-slate-500 uppercase hidden md:block">Ordenar:</label>
-    <select name="sort" onchange="this.form.submit()"
-            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-300 focus:border-storevo-500 focus:ring-1 focus:ring-storevo-500 cursor-pointer appearance-none pr-8">
-      <option th:each="opt : ${optionsMap}"
+    <select name="sort" data-auto-submit="true"
+            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-300 focus:border-storevo-500 focus:ring-1 focus:ring-storevo-500 cursor-pointer appearance-none pr-8"><option th:each="opt : ${optionsMap}"
               th:value="${opt.key}"
               th:text="${opt.value}"
               th:selected="${param.sort != null and param.sort[0] == opt.key}">
@@ -78,9 +77,8 @@
 </div>
 
 <div th:fragment="page-size()">
-  <select name="size" onchange="this.form.submit()"
-          class="px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-400 focus:border-storevo-500 focus:ring-1 focus:ring-storevo-500 cursor-pointer appearance-none pr-8">
-    <option value="10" th:selected="${param.size == null or param.size[0] == '10'}">10 / pág</option>
+  <select name="size" data-auto-submit="true"
+          class="px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-400 focus:border-storevo-500 focus:ring-1 focus:ring-storevo-500 cursor-pointer appearance-none pr-8"><option value="10" th:selected="${param.size == null or param.size[0] == '10'}">10 / pág</option>
     <option value="20" th:selected="${param.size != null and param.size[0] == '20'}">20 / pág</option>
     <option value="50" th:selected="${param.size != null and param.size[0] == '50'}">50 / pág</option>
     <option value="100" th:selected="${param.size != null and param.size[0] == '100'}">100 / pág</option>
@@ -140,6 +138,10 @@
   <script th:src="@{/js/storevo.js}"></script>
   <script th:src="@{/js/modules/listing.js}"></script>
 </div>
-
+<div th:fragment="scripts">
+  <script th:src="@{/js/storevo.js}"></script>
+  <script th:src="@{/js/ui/form.js}"></script>
+  <script th:src="@{/js/modules/listing.js}"></script>
+</div>
 </body>
 </html>

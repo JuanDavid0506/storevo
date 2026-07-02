@@ -47,7 +47,6 @@ Storevo.Listing = {
             chipsContainer.appendChild(chip);
         });
 
-        // Muestra/oculta la "x" dentro del buscador
         const searchClearBtn = form.querySelector('[data-clear-field="q"]');
         const searchInput = form.querySelector('input[name="q"]');
         if (searchClearBtn && searchInput) {
@@ -58,7 +57,10 @@ Storevo.Listing = {
 
     initSearchDebounce: function(delay = 700) {
         const searchInput = document.querySelector('#listing-form input[name="q"]');
-        if (!searchInput) return;
+
+        // FIX: Evitar doble asignación de eventos al input (Idempotencia)
+        if (!searchInput || searchInput.dataset.debounceInitialized) return;
+        searchInput.dataset.debounceInitialized = 'true';
 
         let timeout;
         searchInput.addEventListener('input', () => {
@@ -84,6 +86,11 @@ Storevo.Listing = {
 
     initCategoryCombobox: function() {
         document.querySelectorAll('[data-category-combobox]').forEach(root => {
+
+            // FIX: Prevenir que el listener del clic se agregue dos veces y cancele la apertura
+            if (root.dataset.comboboxInitialized) return;
+            root.dataset.comboboxInitialized = 'true';
+
             let tree = [];
             try { tree = JSON.parse(root.dataset.tree || '[]'); } catch (e) { tree = []; }
 
@@ -266,4 +273,11 @@ Storevo.Listing = {
     }
 };
 
-document.addEventListener('DOMContentLoaded', Storevo.Listing.initListingUX);
+// --- SOLUCIÓN: Inicialización robusta ---
+if (document.readyState === 'loading') {
+    // Si el DOM aún está cargando, esperamos al evento
+    document.addEventListener('DOMContentLoaded', Storevo.Listing.initListingUX);
+} else {
+    // Si el DOM ya cargó completamente, ejecutamos de inmediato
+    Storevo.Listing.initListingUX();
+}
