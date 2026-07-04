@@ -1,15 +1,27 @@
 window.Storevo = window.Storevo || {};
 
 Storevo.ProductDetail = {
-    changeMainImage: function(btn) {
-        document.getElementById('mainImage').src = btn.querySelector('img').src;
-        document.querySelectorAll('.thumb-btn').forEach(b => {
-            b.classList.remove('border-brand');
-            b.classList.add('border-transparent');
+    changeImage: function(btn) {
+        const mainImg = document.getElementById('main-product-image');
+        if (!mainImg || !btn) return;
+
+        // 1. Efecto de transición suave (Fade)
+        const newSrc = btn.getAttribute('data-src');
+        mainImg.style.opacity = '0.5';
+
+        setTimeout(() => {
+            mainImg.src = newSrc;
+            mainImg.style.opacity = '1';
+        }, 150);
+
+        // 2. Actualizar estado visual de los botones (Remover focus de todos)
+        document.querySelectorAll('.product-thumbnail').forEach(t => {
+            t.classList.remove('border-brand', 'shadow-md', 'ring-2', 'ring-brand/20');
+            t.classList.add('border-transparent', 'opacity-70');
         });
-        btn.classList.replace('border-transparent', 'border-brand');
+
+        // 3. Añadir focus al seleccionado
+        btn.classList.remove('border-transparent', 'opacity-70');
+        btn.classList.add('border-brand', 'shadow-md', 'ring-2', 'ring-brand/20');
     }
 };
-
-// Puente de Retrocompatibilidad
-window.changeMainImage = Storevo.ProductDetail.changeMainImage;

@@ -111,8 +111,8 @@ Storevo.ProductForm = {
         const row = document.createElement('div');
         row.className = 'flex gap-3 mb-3';
         row.innerHTML = `
-            <input type="text" name="attrKeys" placeholder="Atributo (Ej: Material)" class="w-1/2 px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:ring-storevo-500">
-            <input type="text" name="attrValues" placeholder="Valor (Ej: Algodón)" class="w-1/2 px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:ring-storevo-500">
+            <input type="text" name="attrKeys" placeholder="Atributo" class="w-1/2 px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:ring-storevo-500">
+            <input type="text" name="attrValues" placeholder="Valor" class="w-1/2 px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:ring-storevo-500">
             <button type="button" onclick="this.parentElement.remove()" class="p-2 text-slate-500 hover:text-red-500 transition">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
             </button>
@@ -120,23 +120,7 @@ Storevo.ProductForm = {
         container.appendChild(row);
     },
 
-    initImagePreview: function() {
-        const inputUrl = document.getElementById('mainImageUrl');
-        const previewImg = document.getElementById('mainImagePreview');
-        if (!inputUrl || !previewImg) return;
-
-        let timeout;
-        inputUrl.addEventListener('input', function() {
-            clearTimeout(timeout);
-            timeout = setTimeout(() => {
-                const newUrl = this.value.trim();
-                previewImg.src = newUrl !== '' ? newUrl : 'https://placehold.co/400x400/0f172a/94a3b8?text=Sin+Imagen';
-            }, 500);
-        });
-    },
-
     initValidation: function() {
-        // EL FIX CLAVE: Apuntamos exactamente al ID del formulario de productos
         const form = document.getElementById('product-form');
         if (!form) return;
 
@@ -145,12 +129,20 @@ Storevo.ProductForm = {
             if (stockInput) {
                 const stockVal = parseInt(stockInput.value);
                 if (isNaN(stockVal) || stockVal <= 0) {
-                    e.preventDefault(); // Detiene el envío
-                    Storevo.UI.Toast.show('No se puede publicar un producto sin stock.', 'error');
+                    e.preventDefault();
+                    if (Storevo.UI && Storevo.UI.Toast) Storevo.UI.Toast.show('No se puede publicar un producto sin stock.', 'error');
 
                     stockInput.focus();
                     stockInput.classList.add('border-red-500', 'ring-1', 'ring-red-500');
                     setTimeout(() => stockInput.classList.remove('border-red-500', 'ring-1', 'ring-red-500'), 3000);
+
+                    // Resetear botón si falló validación
+                    const btn = document.getElementById('btn-save-product');
+                    if (btn) {
+                        btn.innerHTML = `<span>Guardar Producto</span>`;
+                        btn.classList.remove('opacity-75', 'cursor-not-allowed');
+                        btn.disabled = false;
+                    }
                 }
             }
         });
@@ -159,8 +151,8 @@ Storevo.ProductForm = {
 
 document.addEventListener("DOMContentLoaded", () => {
     Storevo.ProductForm.initCategories();
-    Storevo.ProductForm.initImagePreview();
     Storevo.ProductForm.initValidation();
+    if (Storevo.ProductImages) Storevo.ProductImages.init();
 });
 
 window.addSpecRow = Storevo.ProductForm.addSpecRow;

@@ -47,7 +47,6 @@ public class CartController {
     public String viewCart(@PathVariable String slug, Model model) {
         java.util.List<CartItemDto> cart = cartManager.getCart(slug);
 
-        // Verificar si algún producto de la bolsa fue eliminado o inactivado
         java.util.List<Long> deletedProductIds = new java.util.ArrayList<>();
         for (CartItemDto item : cart) {
             try {
@@ -56,21 +55,16 @@ public class CartController {
                     deletedProductIds.add(p.getId());
                 }
             } catch (Exception e) {
-                // Si el producto no existe en BD, lo consideramos eliminado
                 deletedProductIds.add(item.getProductId());
             }
         }
 
         model.addAttribute("cartItems", cart);
-        model.addAttribute("deletedProductIds", deletedProductIds); // Enviamos la lista de IDs inválidos
+        model.addAttribute("deletedProductIds", deletedProductIds);
         model.addAttribute("cartTotal", cartManager.getTotal(slug));
         model.addAttribute("pageTitle", "Mi Bolsa");
         return "storefront/cart";
     }
-
-    // ---------------------------------------------------------
-    // ENDPOINTS AJAX (Para respuestas asíncronas con JavaScript)
-    // ---------------------------------------------------------
 
     @PostMapping("/add-ajax")
     @ResponseBody
@@ -85,12 +79,10 @@ public class CartController {
             return ResponseEntity.ok(Map.of("success", false, "message", "Este producto ha sido retirado del catálogo."));
         }
 
-        // REGLA DE NEGOCIO: Validar inventario existente vs. el carrito
         int currentQtyInCart = cartManager.getItemQuantity(slug, productId);
         int availableStock = product.getStock();
         int remainingStock = availableStock - currentQtyInCart;
 
-        // CASO 1: Ya no hay más stock para agregar
         if (remainingStock <= 0) {
             response.put("success", false);
             response.put("message", "Límite alcanzado. Solo disponemos de " + availableStock + " unidad(es).");
@@ -98,7 +90,6 @@ public class CartController {
             return ResponseEntity.ok(response);
         }
 
-        // CASO 2: Solo puede agregar una parte de lo solicitado
         int qtyToAdd = Math.min(quantity, remainingStock);
 
         CartItemDto item = CartItemDto.builder()
@@ -106,7 +97,7 @@ public class CartController {
                 .name(product.getName())
                 .price(product.getDiscountPrice() != null && product.getDiscountPrice() > 0 ? product.getDiscountPrice() : product.getPrice())
                 .quantity(qtyToAdd)
-                .imageUrl(product.getImages() != null && !product.getImages().isEmpty() ? product.getImages().get(0) : null)
+                .imageUrl(product.getMainImageUrl()) // MÉTOD SEGURO NUEVO
                 .build();
 
         cartManager.addItem(slug, item);
@@ -115,7 +106,7 @@ public class CartController {
 
         if (qtyToAdd < quantity) {
             response.put("message", "Solo pudimos agregar " + qtyToAdd + " unidad(es) por límite de stock.");
-            response.put("isWarning", true); // Para que el Toast salga amarillo/naranja
+            response.put("isWarning", true);
         } else {
             response.put("message", "¡Agregado a tu bolsa de compras!");
             response.put("isWarning", false);
@@ -134,10 +125,6 @@ public class CartController {
         response.put("cartCount", cartManager.getCartCount(slug));
         return ResponseEntity.ok(response);
     }
-
-    // ---------------------------------------------------------
-    // ENDPOINTS TRADICIONALES (Para formularios síncronos)
-    // ---------------------------------------------------------
 
     @PostMapping("/remove")
     public String removeFromCart(@PathVariable String slug, @RequestParam Long productId, RedirectAttributes redirectAttributes) {

@@ -9,6 +9,7 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -39,8 +40,6 @@ public class Product {
     @Column(nullable = false)
     private Integer stock;
 
-    // Relación con la Categoría (Fase 4)
-    // Relación con la Categoría (Cambiado a EAGER por apagar OSIV)
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "category_id")
     private Category category;
@@ -57,29 +56,24 @@ public class Product {
     @Builder.Default
     private Boolean isActive = true;
 
-    // --- AGREGAR ESTE BLOQUE ---
     @Column(name = "is_deleted", nullable = false, columnDefinition = "boolean default false")
     @Builder.Default
     private Boolean isDeleted = false;
-    // ---------------------------
 
+    // --- NUEVO SISTEMA RELACIONAL DE IMÁGENES ---
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("sortPosition ASC")
+    @Builder.Default
+    private List<ProductImage> images = new ArrayList<>();
 
-
-    // --- CAMPOS DINÁMICOS JSON (La magia de Storevo) ---
-
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "images_json", columnDefinition = "json")
-    private List<String> images; // Array de URLs de imágenes
-
+    // --- CAMPOS DINÁMICOS JSON RESTANTES ---
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "attributes_json", columnDefinition = "json")
-    private Map<String, String> attributes; // Ej: {"Material": "Algodón", "Estilo": "Urbano"}
+    private Map<String, String> attributes;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "variants_json", columnDefinition = "json")
-    private List<Map<String, Object>> variants; // Ej: [{"talla": "M", "color": "Rojo", "stock": 5}]
-
-    // ---------------------------------------------------
+    private List<Map<String, Object>> variants;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -96,5 +90,17 @@ public class Product {
     @PreUpdate
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
+    }
+
+    // HELPER METHOD: Mantiene compatibles los templates de Thymeleaf y el Carrito.
+    public String getMainImageUrl() {
+        if (this.images == null || this.images.isEmpty()) {
+            return null;
+        }
+        return this.images.stream()
+                .filter(ProductImage::getIsPrimary)
+                .findFirst()
+                .orElse(this.images.get(0))
+                .getFilePath();
     }
 }

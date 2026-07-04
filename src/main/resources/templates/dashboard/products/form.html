@@ -23,7 +23,7 @@
         </div>
     </div>
 
-    <form id="product-form" th:action="@{|/dashboard/${slug}/products|}" th:object="${product}" method="POST" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <form id="product-form" th:action="@{|/dashboard/${slug}/products|}" th:object="${product}" method="POST" enctype="multipart/form-data" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <input type="hidden" th:field="*{id}">
 
         <div class="lg:col-span-2 space-y-6">
@@ -54,7 +54,7 @@
                 </div>
                 <div id="catSummaryBox" class="hidden mt-4 p-4 bg-storevo-500/10 border border-storevo-500/20 rounded-xl flex items-center gap-4 transition-all">
                     <div class="bg-storevo-500/20 p-2 rounded-lg text-storevo-400">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg>
                     </div>
                     <div>
                         <p class="text-[11px] text-storevo-400 font-bold uppercase tracking-wider mb-0.5">Destino en el Catálogo Público</p>
@@ -88,8 +88,8 @@
 
                 <div id="specsContainer" class="space-y-3">
                     <div th:if="${product.attrKeys != null}" th:each="key, stat : ${product.attrKeys}" class="flex gap-3">
-                        <input type="text" name="attrKeys" th:value="${key}" placeholder="Atributo (Ej: Material)" class="w-1/2 px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:ring-storevo-500">
-                        <input type="text" name="attrValues" th:value="${product.attrValues[stat.index]}" placeholder="Valor (Ej: Algodón)" class="w-1/2 px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:ring-storevo-500">
+                        <input type="text" name="attrKeys" th:value="${key}" placeholder="Atributo" class="w-1/2 px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:ring-storevo-500">
+                        <input type="text" name="attrValues" th:value="${product.attrValues[stat.index]}" placeholder="Valor" class="w-1/2 px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:ring-storevo-500">
                         <button type="button" onclick="this.parentElement.remove()" class="p-2 text-slate-500 hover:text-red-500 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
                     </div>
                 </div>
@@ -103,14 +103,36 @@
 
         <div class="space-y-6">
             <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm">
-                <div class="flex items-center gap-2 border-b border-slate-800 pb-3 mb-4">
-                    <span class="bg-slate-800 text-slate-400 w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold">5</span>
-                    <h3 class="text-lg font-bold text-white">Apariencia</h3>
+                <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+                    <div class="flex items-center gap-2">
+                        <span class="bg-slate-800 text-slate-400 w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold">5</span>
+                        <h3 class="text-lg font-bold text-white">Imágenes</h3>
+                    </div>
+                    <span class="text-xs text-slate-500 font-medium"><span id="img-count">0</span>/10</span>
                 </div>
-                <div class="mb-4 rounded-xl overflow-hidden border border-slate-800 aspect-square bg-slate-950 flex items-center justify-center">
-                    <img id="mainImagePreview" th:src="${product.mainImageUrl != null and !product.mainImageUrl.isEmpty() ? product.mainImageUrl : 'https://placehold.co/400x400/0f172a/94a3b8?text=Sin+Imagen'}" alt="Vista previa" class="object-cover w-full h-full">
+
+                <div id="image-dropzone" class="border-2 border-dashed border-slate-700 bg-slate-950/50 rounded-xl p-6 text-center hover:border-storevo-500 hover:bg-slate-900 transition-all cursor-pointer relative group overflow-hidden">
+                    <input type="file" id="file-upload" multiple accept="image/jpeg, image/png, image/webp" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                    <div class="pointer-events-none relative z-0">
+                        <div class="w-12 h-12 mx-auto bg-slate-800 rounded-full flex items-center justify-center mb-3 group-hover:bg-storevo-500/20 group-hover:text-storevo-400 transition-colors text-slate-400">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                        </div>
+                        <p class="text-sm text-slate-300 font-bold">Arrastra o haz clic aquí</p>
+                        <p class="text-xs text-slate-500 mt-1">JPG, PNG, WEBP (Max. 10MB)</p>
+                    </div>
                 </div>
-                <div th:replace="~{components/ui/fragments :: input('mainImageUrl', 'URL de la Imagen Principal', 'url', 'https://...', *{mainImageUrl})}"></div>
+
+                <div id="image-preview-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4 empty:hidden"></div>
+
+                <div id="image-hidden-inputs"></div>
+
+                <input type="file" name="newImages" id="real-file-input" multiple class="hidden">
+
+                <div id="initial-image-data" class="hidden">
+                    <input th:if="${product.existingImages != null}" th:each="img : ${product.existingImages}" type="hidden" class="init-existing" th:value="${img}">
+                    <input th:if="${product.imageOrder != null}" th:each="ord : ${product.imageOrder}" type="hidden" class="init-order" th:value="${ord}">
+                    <input type="hidden" id="init-main" th:value="${product.mainImageRef}">
+                </div>
             </div>
 
             <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
@@ -129,8 +151,8 @@
             </div>
 
             <div class="pt-2 flex flex-col gap-3">
-                <button type="submit" class="w-full bg-storevo-500 hover:bg-storevo-600 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg shadow-storevo-500/30 transition-all text-center">
-                    Guardar Producto
+                <button type="submit" id="btn-save-product" class="w-full bg-storevo-500 hover:bg-storevo-600 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg shadow-storevo-500/30 transition-all text-center flex items-center justify-center gap-2">
+                    <span>Guardar Producto</span>
                 </button>
                 <a th:href="@{|/dashboard/${slug}/products|}" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 px-6 rounded-xl border border-slate-700 transition-all text-center">
                     Cancelar
@@ -139,8 +161,7 @@
         </div>
     </form>
 
-    <script th:src="@{/js/storevo.js}"></script>
-    <script th:src="@{/js/ui/toast.js}"></script>
+    <script th:src="@{/js/modules/productImages.js}"></script>
     <script th:src="@{/js/modules/productForm.js}"></script>
 </div>
 </body>

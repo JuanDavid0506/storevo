@@ -3,7 +3,7 @@ spring:
     name: storevo
 
   datasource:
-    url: ${DB_URL:jdbc:mysql://localhost:3306/storevo_admin?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC}
+    url: ${DB_URL:jdbc:mysql://localhost:3306/storevo_admin?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:juan123}
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -22,6 +22,13 @@ spring:
     cache: false
     mode: HTML
     encoding: UTF-8
+
+  # --- CONFIGURACIÓN PARA SUBIDA DE IMÁGENES FÍSICAS ---
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 100MB
 
 server:
   forward-headers-strategy: native

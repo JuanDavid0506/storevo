@@ -24,7 +24,7 @@
 
                 <div class="relative aspect-[4/5] overflow-hidden bg-slate-50 flex-shrink-0">
                     <a th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${p.id})}">
-                        <img th:src="${p.images != null and !p.images.isEmpty() ? p.images[0] : '/img/placeholder.jpg'}" th:alt="${p.name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                        <img th:src="${p.mainImageUrl != null ? p.mainImageUrl : '/img/placeholder.jpg'}">
                     </a>
 
                     <div th:if="${p.discountPrice != null and p.discountPrice > 0}" class="absolute top-3 left-3 bg-red-500 text-white text-[10px] sm:text-xs font-black uppercase px-2.5 py-1 rounded-full shadow-md z-10 pointer-events-none">

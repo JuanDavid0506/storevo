@@ -6,6 +6,7 @@ import com.storevo.backend.config.tenant.TenantContext;
 import com.storevo.backend.tenant.dto.CategoryTreeDto;
 import com.storevo.backend.tenant.dto.ProductDto;
 import com.storevo.backend.tenant.model.Product;
+import com.storevo.backend.tenant.model.ProductImage;
 import com.storevo.backend.tenant.service.CategoryService;
 import com.storevo.backend.tenant.service.ProductService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -45,7 +46,6 @@ public class ProductController {
         TenantContext.setCurrentTenant(store.getSchemaName());
     }
 
-
     @GetMapping("/new")
     public String showCreateForm(Model model) {
         ProductDto dto = new ProductDto();
@@ -71,6 +71,22 @@ public class ProductController {
             });
         }
 
+        // --- NUEVO: Mapeo de la entidad ProductImage al DTO para edición ---
+        List<String> existingImages = new ArrayList<>();
+        List<String> imageOrder = new ArrayList<>();
+        String mainImageRef = "";
+
+        if (product.getImages() != null) {
+            for (ProductImage img : product.getImages()) {
+                existingImages.add(img.getFilePath());
+                imageOrder.add(img.getFilePath());
+                if (img.getIsPrimary()) {
+                    mainImageRef = img.getFilePath();
+                }
+            }
+        }
+        // ------------------------------------------------------------------
+
         ProductDto dto = ProductDto.builder()
                 .id(product.getId())
                 .name(product.getName())
@@ -83,7 +99,10 @@ public class ProductController {
                 .sku(product.getSku())
                 .weight(product.getWeight())
                 .isActive(product.getIsActive())
-                .mainImageUrl(product.getImages() != null && !product.getImages().isEmpty() ? product.getImages().get(0) : "")
+                // Inyectamos los datos para el Drag & Drop en el frontend
+                .existingImages(existingImages)
+                .imageOrder(imageOrder)
+                .mainImageRef(mainImageRef)
                 .attrKeys(keys)
                 .attrValues(values)
                 .build();
@@ -98,16 +117,9 @@ public class ProductController {
     public String saveProduct(@PathVariable String slug, @ModelAttribute ProductDto productDto) {
 
         // --- RED DE SEGURIDAD BACKEND ---
-        // Evita el Error 500 (SQLIntegrityConstraintViolationException) si llegan campos nulos
-        if (productDto.getStock() == null) {
-            productDto.setStock(0);
-        }
-        if (productDto.getPrice() == null) {
-            productDto.setPrice(0.0);
-        }
-        if (productDto.getWeight() == null) {
-            productDto.setWeight(0.0);
-        }
+        if (productDto.getStock() == null) productDto.setStock(0);
+        if (productDto.getPrice() == null) productDto.setPrice(0.0);
+        if (productDto.getWeight() == null) productDto.setWeight(0.0);
         // --------------------------------
 
         productService.saveProduct(productDto);
@@ -129,11 +141,13 @@ public class ProductController {
         productService.deleteProduct(id);
         return "redirect:/dashboard/" + slug + "/products?deleted=true";
     }
+
     @PostMapping("/{id}/restore")
     public String restoreProduct(@PathVariable String slug, @PathVariable Long id) {
         productService.restoreProduct(id);
         return "redirect:/dashboard/" + slug + "/products?restored=true";
     }
+
     @PostMapping("/{id}/hard-delete")
     public String hardDeleteProduct(@PathVariable String slug, @PathVariable Long id) {
         productService.hardDeleteProduct(id);
@@ -145,7 +159,7 @@ public class ProductController {
             @PathVariable String slug,
             @RequestParam(required = false) String q,
             @RequestParam(required = false) Long categoryId,
-            @RequestParam(required = false) String status, // <--- Cambio a String
+            @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "newest") String sort,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -153,15 +167,14 @@ public class ProductController {
 
         Pageable pageable = PageRequest.of(page, size);
 
-        // Mapeo lógico del filtro status
         Boolean isActiveFilter = null;
-        Boolean isDeletedFilter = false; // Ocultar papelera por defecto
+        Boolean isDeletedFilter = false;
 
         if ("active".equals(status)) isActiveFilter = true;
         else if ("inactive".equals(status)) isActiveFilter = false;
         else if ("deleted".equals(status)) {
             isActiveFilter = null;
-            isDeletedFilter = true; // Mostrar SOLO papelera
+            isDeletedFilter = true;
         }
 
         Page<Product> productsPage = productService.searchProducts(q, categoryId, isActiveFilter, isDeletedFilter, sort, pageable);
@@ -174,7 +187,6 @@ public class ProductController {
         return "dashboard/products/index";
     }
 
-    // Serializa el árbol de categorías a JSON para el combobox del frontend.
     private String getCategoryTreeJson() {
         try {
             List<CategoryTreeDto> tree = categoryService.getCategoryTree();

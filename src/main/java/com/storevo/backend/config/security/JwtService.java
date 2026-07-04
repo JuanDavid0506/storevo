@@ -1,14 +1,19 @@
 package com.storevo.backend.config.security;
 
-import com.auth0.jwt.JWT;
-import com.auth0.jwt.algorithms.Algorithm;
-import com.auth0.jwt.exceptions.JWTVerificationException;
-import com.auth0.jwt.interfaces.DecodedJWT;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
+import java.security.Key;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Function;
 
 @Service
 public class JwtService {
@@ -21,37 +26,60 @@ public class JwtService {
     private static final long EXPIRATION_TIME = 86400000;
 
     public String generateToken(UserDetails userDetails) {
-        Algorithm algorithm = Algorithm.HMAC256(secretKey);
-        return JWT.create()
-                .withSubject(userDetails.getUsername()) // Guardamos el email como identificador principal
-                .withIssuedAt(new Date())
-                .withExpiresAt(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
-                .sign(algorithm);
+        return generateToken(new HashMap<>(), userDetails);
+    }
+
+    public String generateToken(Map<String, Object> extraClaims, UserDetails userDetails) {
+        return Jwts.builder()
+                .setClaims(extraClaims)
+                .setSubject(userDetails.getUsername())
+                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
+                .signWith(getSignInKey(), SignatureAlgorithm.HS256)
+                .compact();
     }
 
     public String extractUsername(String token) {
-        try {
-            DecodedJWT decodedJWT = verifyToken(token);
-            return decodedJWT.getSubject();
-        } catch (JWTVerificationException exception) {
-            return null; // Si el token es inválido o expiró
+        return extractClaim(token, Claims::getSubject);
+    }
+
+    public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
+        final Claims claims = extractAllClaims(token);
+        if (claims == null) {
+            return null;
         }
+        return claimsResolver.apply(claims);
     }
 
     public boolean isTokenValid(String token, UserDetails userDetails) {
-        String username = extractUsername(token);
+        final String username = extractUsername(token);
         return (username != null && username.equals(userDetails.getUsername()) && !isTokenExpired(token));
     }
 
     private boolean isTokenExpired(String token) {
-        DecodedJWT decodedJWT = verifyToken(token);
-        return decodedJWT.getExpiresAt().before(new Date());
+        Date expiration = extractExpiration(token);
+        return expiration != null && expiration.before(new Date());
     }
 
-    private DecodedJWT verifyToken(String token) {
-        Algorithm algorithm = Algorithm.HMAC256(secretKey);
-        return JWT.require(algorithm)
-                .build()
-                .verify(token);
+    private Date extractExpiration(String token) {
+        return extractClaim(token, Claims::getExpiration);
+    }
+
+    private Claims extractAllClaims(String token) {
+        try {
+            return Jwts.parserBuilder()
+                    .setSigningKey(getSignInKey())
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private Key getSignInKey() {
+        // Debes asegurarte de que tu secretKey en base64 tenga la longitud adecuada para HS256
+        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
+        return Keys.hmacShaKeyFor(keyBytes);
     }
 }

@@ -1,8 +1,10 @@
 package com.storevo.backend.tenant.service;
 
+import com.storevo.backend.config.tenant.TenantContext;
 import com.storevo.backend.tenant.dto.ProductDto;
 import com.storevo.backend.tenant.model.Category;
 import com.storevo.backend.tenant.model.Product;
+import com.storevo.backend.tenant.model.ProductImage;
 import com.storevo.backend.tenant.repository.CategoryRepository;
 import com.storevo.backend.tenant.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +27,7 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
     private final CategoryService categoryService;
+    private final ImageStorageService imageStorageService; // NUEVO SERVICIO
 
     public List<Product> getAllProducts() {
         return productRepository.findByIsDeletedFalseOrderByIdDesc();
@@ -46,12 +49,15 @@ public class ProductService {
     @Transactional
     public void saveProduct(ProductDto dto) {
         Product product;
-        if (dto.getId() != null) {
+        boolean isNew = dto.getId() == null;
+
+        if (!isNew) {
             product = getProductById(dto.getId());
         } else {
             product = new Product();
         }
 
+        // 1. Mapeo de datos básicos
         product.setName(dto.getName());
         product.setDescription(dto.getDescription());
         product.setPrice(dto.getPrice());
@@ -62,10 +68,6 @@ public class ProductService {
         product.setWeight(dto.getWeight());
         product.setIsActive(dto.getIsActive() != null ? dto.getIsActive() : false);
 
-        if (dto.getMainImageUrl() != null && !dto.getMainImageUrl().isBlank()) {
-            product.setImages(List.of(dto.getMainImageUrl()));
-        }
-
         if (dto.getCategoryId() != null) {
             Category category = categoryRepository.findById(dto.getCategoryId())
                     .orElseThrow(() -> new RuntimeException("Categoría inválida"));
@@ -74,7 +76,6 @@ public class ProductService {
             product.setCategory(null);
         }
 
-        // NUEVO: Empaquetar las listas en un Map JSON
         Map<String, String> attributes = new HashMap<>();
         if (dto.getAttrKeys() != null && dto.getAttrValues() != null) {
             for (int i = 0; i < dto.getAttrKeys().size(); i++) {
@@ -87,6 +88,63 @@ public class ProductService {
         }
         product.setAttributes(attributes.isEmpty() ? null : attributes);
 
+        // 2. Guardar el producto primero si es nuevo para obtener el ID (necesario para las carpetas de imágenes)
+        if (isNew) {
+            product = productRepository.save(product);
+        }
+
+        // 3. ORQUESTACIÓN DE IMÁGENES
+        String tenantSchema = TenantContext.getCurrentTenant();
+
+        // A. Eliminar imágenes físicas que el usuario borró en la edición
+        if (!isNew && product.getImages() != null) {
+            List<String> existingUrlsFromDto = dto.getExistingImages() != null ? dto.getExistingImages() : new ArrayList<>();
+            for (ProductImage oldImage : product.getImages()) {
+                if (!existingUrlsFromDto.contains(oldImage.getFilePath())) {
+                    imageStorageService.deletePhysicalImage(oldImage.getFilePath());
+                }
+            }
+            product.getImages().clear(); // Limpiamos la colección actual, el orphanRemoval se encarga de la BD
+        } else if (product.getImages() == null) {
+            product.setImages(new ArrayList<>());
+        }
+
+        // B. Guardar nuevas imágenes físicamente y convertirlas a WebP
+        Map<String, String> newUploadedUrls = imageStorageService.saveProductImages(tenantSchema, product.getId(), dto.getNewImages());
+
+        // C. Reconstruir la colección de imágenes con el orden exacto (Drag & Drop)
+        if (dto.getImageOrder() != null) {
+            int position = 0;
+            for (String ref : dto.getImageOrder()) {
+                // Si la referencia es un archivo nuevo, buscamos su nueva URL pública
+                String finalUrl = newUploadedUrls.containsKey(ref) ? newUploadedUrls.get(ref) : ref;
+
+                // Determinar si es la principal
+                boolean isPrimary = false;
+                if (dto.getMainImageRef() != null && (dto.getMainImageRef().equals(ref) || dto.getMainImageRef().equals(finalUrl))) {
+                    isPrimary = true;
+                }
+
+                // Extraer nombre del archivo de la URL
+                String fileName = finalUrl.substring(finalUrl.lastIndexOf("/") + 1);
+
+                ProductImage imgEntity = ProductImage.builder()
+                        .product(product)
+                        .fileName(fileName)
+                        .filePath(finalUrl)
+                        .isPrimary(isPrimary)
+                        .sortPosition(position++)
+                        .build();
+
+                product.getImages().add(imgEntity);
+            }
+        }
+
+        // Si no hay ninguna imagen principal definida por error, marcamos la primera por defecto
+        if (!product.getImages().isEmpty() && product.getImages().stream().noneMatch(ProductImage::getIsPrimary)) {
+            product.getImages().get(0).setIsPrimary(true);
+        }
+
         productRepository.save(product);
     }
 
@@ -94,19 +152,22 @@ public class ProductService {
     public void deleteProduct(Long id) {
         Product product = getProductById(id);
         product.setIsDeleted(true);
-        product.setIsActive(false); // Inactivar por seguridad
+        product.setIsActive(false);
         productRepository.save(product);
     }
+
     @Transactional
     public void restoreProduct(Long id) {
         Product product = getProductById(id);
         product.setIsDeleted(false);
-        // Se mantiene inactivo para que el admin lo revise antes de publicarlo
         productRepository.save(product);
     }
+
     @Transactional
     public void hardDeleteProduct(Long id) {
-        productRepository.deleteById(id);
+        String tenantSchema = TenantContext.getCurrentTenant();
+        imageStorageService.deleteProductFolder(tenantSchema, id); // Limpia los archivos físicos primero
+        productRepository.deleteById(id); // Destruye la BD
     }
 
     @Transactional
@@ -114,36 +175,21 @@ public class ProductService {
         Product product = getProductById(id);
         product.setIsActive(!product.getIsActive());
         productRepository.save(product);
-        return product.getIsActive(); // Retornamos el nuevo estado
+        return product.getIsActive();
     }
 
     public Page<Product> searchProducts(String q, Long categoryId, Boolean isActive, Boolean isDeleted, String sortStr, Pageable pageable) {
-        // 1. Convertimos el String del frontend a un objeto Sort de Spring
         Sort sort;
         switch (sortStr) {
-            case "price_asc":
-                sort = Sort.by("price").ascending();
-                break;
-            case "price_desc":
-                sort = Sort.by("price").descending();
-                break;
-            case "stock_asc":
-                sort = Sort.by("stock").ascending();
-                break;
+            case "price_asc": sort = Sort.by("price").ascending(); break;
+            case "price_desc": sort = Sort.by("price").descending(); break;
+            case "stock_asc": sort = Sort.by("stock").ascending(); break;
             case "newest":
-            default:
-                sort = Sort.by("id").descending(); // Asumiendo que el ID mayor es el más reciente (o usa "createdAt")
-                break;
+            default: sort = Sort.by("id").descending(); break;
         }
 
-        // 2. Inyectamos el Sort dentro del Pageable que venía del controlador
         Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
-
-        // 3. Si hay categoría seleccionada, resolvemos su id + el de todas sus
-        // subcategorías (los 3 niveles), para que filtrar por una categoría
-        // padre (ej. "Hombres") también traiga los productos de sus hijas.
         List<Long> categoryIds = (categoryId != null) ? categoryService.getCategoryAndDescendantIds(categoryId) : null;
-        // 4. Ejecutamos la búsqueda en el repositorio
-        return productRepository.searchProducts(q, categoryIds, isActive, isDeleted, sortedPageable);    }
-
+        return productRepository.searchProducts(q, categoryIds, isActive, isDeleted, sortedPageable);
+    }
 }
