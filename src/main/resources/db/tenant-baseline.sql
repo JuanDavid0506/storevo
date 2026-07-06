@@ -18,7 +18,7 @@ CREATE TABLE categories (
     FOREIGN KEY (parent_id) REFERENCES categories(id) ON DELETE SET NULL
 );
 
--- Tabla de Productos (Estructura Actualizada)
+-- Tabla de Productos
 CREATE TABLE products (
     id             BIGINT AUTO_INCREMENT PRIMARY KEY,
     category_id    BIGINT,
@@ -33,16 +33,17 @@ CREATE TABLE products (
     attributes_json JSON,
     variants_json  JSON,
     is_active      BOOLEAN         NOT NULL DEFAULT TRUE,
-    is_deleted     BOOLEAN         NOT NULL DEFAULT FALSE, -- ¡NUEVA COLUMNA AGREGADA!
+    is_deleted     BOOLEAN         NOT NULL DEFAULT FALSE,
     created_at     TIMESTAMP       DEFAULT CURRENT_TIMESTAMP,
     updated_at     TIMESTAMP       DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (category_id) REFERENCES categories(id)
 );
 
--- ¡NUEVA TABLA PARA EL SISTEMA PROFESIONAL DE IMÁGENES!
+-- Tabla de Imágenes de Productos (ACTUALIZADA)
 CREATE TABLE product_images (
     id             BIGINT AUTO_INCREMENT PRIMARY KEY,
     product_id     BIGINT          NOT NULL,
+    variant_id     BIGINT          NULL, -- ¡NUEVA COLUMNA AGREGADA!
     file_name      VARCHAR(255)    NOT NULL,
     file_path      VARCHAR(500)    NOT NULL,
     is_primary     BOOLEAN         NOT NULL DEFAULT FALSE,

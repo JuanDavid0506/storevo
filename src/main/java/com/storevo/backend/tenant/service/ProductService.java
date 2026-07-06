@@ -1,6 +1,7 @@
 package com.storevo.backend.tenant.service;
 
 import com.storevo.backend.config.tenant.TenantContext;
+import com.storevo.backend.tenant.dto.ImageMetadataDto;
 import com.storevo.backend.tenant.dto.ProductDto;
 import com.storevo.backend.tenant.model.Category;
 import com.storevo.backend.tenant.model.Product;
@@ -19,6 +20,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -27,7 +29,7 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
     private final CategoryService categoryService;
-    private final ImageStorageService imageStorageService; // NUEVO SERVICIO
+    private final ImageStorage imageStorage; // Inyectando la Interfaz Pura
 
     public List<Product> getAllProducts() {
         return productRepository.findByIsDeletedFalseOrderByIdDesc();
@@ -57,7 +59,6 @@ public class ProductService {
             product = new Product();
         }
 
-        // 1. Mapeo de datos básicos
         product.setName(dto.getName());
         product.setDescription(dto.getDescription());
         product.setPrice(dto.getPrice());
@@ -88,59 +89,84 @@ public class ProductService {
         }
         product.setAttributes(attributes.isEmpty() ? null : attributes);
 
-        // 2. Guardar el producto primero si es nuevo para obtener el ID (necesario para las carpetas de imágenes)
+        // 2. Validación de Límites Backend
+        int existingCount = dto.getExistingImages() != null ? dto.getExistingImages().size() : 0;
+        int newCount = (dto.getNewImages() != null && !dto.getNewImages().isEmpty() && dto.getNewImages().get(0).getSize() > 0) ? dto.getNewImages().size() : 0;
+
+        if ((existingCount + newCount) > ImageStorage.MAX_IMAGES_PER_PRODUCT) {
+            throw new RuntimeException("Límite excedido. Un producto solo puede tener " + ImageStorage.MAX_IMAGES_PER_PRODUCT + " imágenes.");
+        }
+
         if (isNew) {
             product = productRepository.save(product);
         }
 
-        // 3. ORQUESTACIÓN DE IMÁGENES
+        // 4. ORQUESTACIÓN DE IMÁGENES
         String tenantSchema = TenantContext.getCurrentTenant();
+        List<String> existingUrlsFromDto = dto.getExistingImages() != null ? dto.getExistingImages() : new ArrayList<>();
+        List<ProductImage> oldImagesList = product.getImages() != null ? new ArrayList<>(product.getImages()) : new ArrayList<>();
 
-        // A. Eliminar imágenes físicas que el usuario borró en la edición
-        if (!isNew && product.getImages() != null) {
-            List<String> existingUrlsFromDto = dto.getExistingImages() != null ? dto.getExistingImages() : new ArrayList<>();
-            for (ProductImage oldImage : product.getImages()) {
-                if (!existingUrlsFromDto.contains(oldImage.getFilePath())) {
-                    imageStorageService.deletePhysicalImage(oldImage.getFilePath());
-                }
+        if (product.getImages() == null) product.setImages(new ArrayList<>());
+
+        for (ProductImage oldImg : oldImagesList) {
+            if (!existingUrlsFromDto.contains(oldImg.getFilePath())) {
+                imageStorage.deleteImage(oldImg.getFilePath());
             }
-            product.getImages().clear(); // Limpiamos la colección actual, el orphanRemoval se encarga de la BD
-        } else if (product.getImages() == null) {
-            product.setImages(new ArrayList<>());
+        }
+        product.getImages().clear();
+
+        List<ImageMetadataDto> newMetadataList = imageStorage.saveImages(tenantSchema, dto.getNewImages());
+
+        Map<String, ImageMetadataDto> newImagesMap = new HashMap<>();
+        for(ImageMetadataDto meta : newMetadataList) {
+            newImagesMap.put(meta.getOriginalFilename(), meta);
         }
 
-        // B. Guardar nuevas imágenes físicamente y convertirlas a WebP
-        Map<String, String> newUploadedUrls = imageStorageService.saveProductImages(tenantSchema, product.getId(), dto.getNewImages());
-
-        // C. Reconstruir la colección de imágenes con el orden exacto (Drag & Drop)
         if (dto.getImageOrder() != null) {
             int position = 0;
             for (String ref : dto.getImageOrder()) {
-                // Si la referencia es un archivo nuevo, buscamos su nueva URL pública
-                String finalUrl = newUploadedUrls.containsKey(ref) ? newUploadedUrls.get(ref) : ref;
 
-                // Determinar si es la principal
                 boolean isPrimary = false;
-                if (dto.getMainImageRef() != null && (dto.getMainImageRef().equals(ref) || dto.getMainImageRef().equals(finalUrl))) {
-                    isPrimary = true;
+                ProductImage imgEntity = null;
+
+                if (existingUrlsFromDto.contains(ref)) {
+                    if (dto.getMainImageRef() != null && dto.getMainImageRef().equals(ref)) isPrimary = true;
+
+                    ProductImage oldMatch = oldImagesList.stream()
+                            .filter(img -> img.getFilePath().equals(ref)).findFirst().orElse(null);
+
+                    if (oldMatch != null) {
+                        imgEntity = ProductImage.builder()
+                                .product(product)
+                                .fileName(oldMatch.getFileName())
+                                .filePath(oldMatch.getFilePath())
+                                .variantId(oldMatch.getVariantId()) // Conserva mapeo a variante si lo hubiese
+                                .isPrimary(isPrimary)
+                                .sortPosition(position++)
+                                .build();
+                    }
+                } else if (newImagesMap.containsKey(ref)) {
+                    ImageMetadataDto meta = newImagesMap.get(ref);
+
+                    if (dto.getMainImageRef() != null && (dto.getMainImageRef().equals(ref) || dto.getMainImageRef().equals(meta.getPublicUrl()))) {
+                        isPrimary = true;
+                    }
+
+                    imgEntity = ProductImage.builder()
+                            .product(product)
+                            .fileName(meta.getNewFilename())
+                            .filePath(meta.getPublicUrl())
+                            .isPrimary(isPrimary)
+                            .sortPosition(position++)
+                            .build();
                 }
 
-                // Extraer nombre del archivo de la URL
-                String fileName = finalUrl.substring(finalUrl.lastIndexOf("/") + 1);
-
-                ProductImage imgEntity = ProductImage.builder()
-                        .product(product)
-                        .fileName(fileName)
-                        .filePath(finalUrl)
-                        .isPrimary(isPrimary)
-                        .sortPosition(position++)
-                        .build();
-
-                product.getImages().add(imgEntity);
+                if (imgEntity != null) {
+                    product.getImages().add(imgEntity);
+                }
             }
         }
 
-        // Si no hay ninguna imagen principal definida por error, marcamos la primera por defecto
         if (!product.getImages().isEmpty() && product.getImages().stream().noneMatch(ProductImage::getIsPrimary)) {
             product.getImages().get(0).setIsPrimary(true);
         }
@@ -165,9 +191,13 @@ public class ProductService {
 
     @Transactional
     public void hardDeleteProduct(Long id) {
-        String tenantSchema = TenantContext.getCurrentTenant();
-        imageStorageService.deleteProductFolder(tenantSchema, id); // Limpia los archivos físicos primero
-        productRepository.deleteById(id); // Destruye la BD
+        Product product = getProductById(id);
+        // Borrar archivos uno por uno
+        List<String> urlsToDelete = product.getImages().stream()
+                .map(ProductImage::getFilePath).collect(Collectors.toList());
+        imageStorage.deleteImages(urlsToDelete);
+
+        productRepository.deleteById(id);
     }
 
     @Transactional

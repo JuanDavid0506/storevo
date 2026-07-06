@@ -23,6 +23,10 @@ public class ProductImage {
     @EqualsAndHashCode.Exclude
     private Product product;
 
+    // PREPARACIÓN PARA FUTURO SISTEMA DE VARIANTES (Ej: Talla, Color)
+    @Column(name = "variant_id", nullable = true)
+    private Long variantId;
+
     @Column(nullable = false, length = 255)
     private String fileName;
 
@@ -43,5 +47,12 @@ public class ProductImage {
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
+    }
+
+    // --- MAGIA DE CONVENCIÓN ---
+    // Deriva la ruta del thumbnail al vuelo sin usar una columna extra en la base de datos.
+    public String getThumbnailUrl() {
+        if (this.filePath == null) return null;
+        return this.filePath.replace(".webp", "_thumb.webp");
     }
 }

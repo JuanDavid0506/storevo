@@ -60,14 +60,11 @@ public class Product {
     @Builder.Default
     private Boolean isDeleted = false;
 
-    // --- NUEVO SISTEMA RELACIONAL DE IMÁGENES ---
-    // SOLUCIÓN: Agregamos fetch = FetchType.EAGER para que las imágenes siempre estén disponibles para Thymeleaf
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     @OrderBy("sortPosition ASC")
     @Builder.Default
     private List<ProductImage> images = new ArrayList<>();
 
-    // --- CAMPOS DINÁMICOS JSON RESTANTES ---
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "attributes_json", columnDefinition = "json")
     private Map<String, String> attributes;
@@ -93,15 +90,14 @@ public class Product {
         this.updatedAt = LocalDateTime.now();
     }
 
-    // HELPER METHOD: Extrae la URL pública de la imagen seleccionada como principal
     public String getMainImageUrl() {
-        if (this.images == null || this.images.isEmpty()) {
-            return null;
-        }
-        return this.images.stream()
-                .filter(ProductImage::getIsPrimary)
-                .findFirst()
-                .orElse(this.images.get(0))
-                .getFilePath();
+        if (this.images == null || this.images.isEmpty()) return null;
+        return this.images.stream().filter(ProductImage::getIsPrimary).findFirst().orElse(this.images.get(0)).getFilePath();
+    }
+
+    // NUEVO: Devuelve la versión ultraligera para las tablas del panel de control
+    public String getMainImageThumbnailUrl() {
+        if (this.images == null || this.images.isEmpty()) return null;
+        return this.images.stream().filter(ProductImage::getIsPrimary).findFirst().orElse(this.images.get(0)).getThumbnailUrl();
     }
 }
