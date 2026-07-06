@@ -3,12 +3,12 @@ package com.storevo.backend.config.security;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
@@ -18,11 +18,9 @@ import java.util.function.Function;
 @Service
 public class JwtService {
 
-    // Inyectamos la clave secreta desde el application.yml
     @Value("${security.jwt.secret:StorevoSuperSecretKey2026_CambiarEnProduccion}")
     private String secretKey;
 
-    // Tiempo de expiración del token (Ejemplo: 24 horas)
     private static final long EXPIRATION_TIME = 86400000;
 
     public String generateToken(UserDetails userDetails) {
@@ -78,8 +76,9 @@ public class JwtService {
     }
 
     private Key getSignInKey() {
-        // Debes asegurarte de que tu secretKey en base64 tenga la longitud adecuada para HS256
-        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
+        // SOLUCIÓN: Usamos UTF-8 directamente para no depender de decodificadores estrictos de Base64.
+        // Esto permite que el String en application.yml contenga _, -, letras y números normalmente.
+        byte[] keyBytes = secretKey.getBytes(StandardCharsets.UTF_8);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 }

@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -28,6 +30,9 @@ public class User implements UserDetails {
     // Relación con la tienda que este usuario administra
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "store_id")
+    // ¡ESTO ES VITAL PARA QUE SPRING SECURITY NO FALLE AL LOGUEAR!
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private Store store;
 
     @Column(nullable = false, length = 150)

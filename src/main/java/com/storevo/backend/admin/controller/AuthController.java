@@ -22,10 +22,11 @@ public class AuthController {
         try {
             AuthResponse authResponse = authService.register(request);
             setJwtCookie(response, authResponse.getToken());
-            // Redirigimos usando el slug que viene en la respuesta del AuthService
             return "redirect:/dashboard/" + authResponse.getStoreSlug();
         } catch (Exception e) {
-            return "redirect:/auth/register?error=true";
+            System.err.println("❌ ERROR DURANTE EL REGISTRO:");
+            e.printStackTrace(); // ESTO ES ORO: Te dirá exactamente qué explotó.
+            return "redirect:/register?error=true";
         }
     }
 
@@ -34,10 +35,11 @@ public class AuthController {
         try {
             AuthResponse authResponse = authService.login(request);
             setJwtCookie(response, authResponse.getToken());
-            // Redirigimos usando el slug que viene en la respuesta del AuthService
             return "redirect:/dashboard/" + authResponse.getStoreSlug();
         } catch (Exception e) {
-            return "redirect:/auth/login?error=true";
+            System.err.println("❌ ERROR DURANTE EL LOGIN:");
+            e.printStackTrace();
+            return "redirect:/login?error=true";
         }
     }
 

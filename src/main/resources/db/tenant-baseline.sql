@@ -1,6 +1,6 @@
 -- ============================================================
 -- STOREVO — Baseline Schema por Tenant
--- Sincronizado con los Entity Java (Order, Product, Category, OrderItem)
+-- Sincronizado con los Entity Java (Order, Product, Category, OrderItem, ProductImage)
 -- ============================================================
 
 -- Tabla de Categorías
@@ -18,25 +18,37 @@ CREATE TABLE categories (
     FOREIGN KEY (parent_id) REFERENCES categories(id) ON DELETE SET NULL
 );
 
--- Tabla de Productos
+-- Tabla de Productos (Estructura Actualizada)
 CREATE TABLE products (
     id             BIGINT AUTO_INCREMENT PRIMARY KEY,
     category_id    BIGINT,
     name           VARCHAR(150)    NOT NULL,
     description    TEXT,
-    price          DOUBLE          NOT NULL, -- Ajustado a DOUBLE para coincidir con tu Java
+    price          DOUBLE          NOT NULL,
     discount_price DOUBLE          DEFAULT 0.00,
     stock          INT             NOT NULL DEFAULT 0,
-    brand          VARCHAR(100),   -- Dejado en 100 como marca tu @Column en Java
+    brand          VARCHAR(100),
     sku            VARCHAR(50),
     weight         DOUBLE,
-    images_json    JSON,
     attributes_json JSON,
     variants_json  JSON,
     is_active      BOOLEAN         NOT NULL DEFAULT TRUE,
+    is_deleted     BOOLEAN         NOT NULL DEFAULT FALSE, -- ¡NUEVA COLUMNA AGREGADA!
     created_at     TIMESTAMP       DEFAULT CURRENT_TIMESTAMP,
     updated_at     TIMESTAMP       DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (category_id) REFERENCES categories(id)
+);
+
+-- ¡NUEVA TABLA PARA EL SISTEMA PROFESIONAL DE IMÁGENES!
+CREATE TABLE product_images (
+    id             BIGINT AUTO_INCREMENT PRIMARY KEY,
+    product_id     BIGINT          NOT NULL,
+    file_name      VARCHAR(255)    NOT NULL,
+    file_path      VARCHAR(500)    NOT NULL,
+    is_primary     BOOLEAN         NOT NULL DEFAULT FALSE,
+    sort_position  INT             NOT NULL DEFAULT 0,
+    created_at     TIMESTAMP       DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
 );
 
 -- Tabla de Pedidos
@@ -58,7 +70,7 @@ CREATE TABLE order_items (
     id           BIGINT AUTO_INCREMENT PRIMARY KEY,
     order_id     BIGINT         NOT NULL,
     product_id   BIGINT         NOT NULL,
-    product_name VARCHAR(150)   NOT NULL, -- Mantenido el límite estricto
+    product_name VARCHAR(150)   NOT NULL,
     price        DOUBLE         NOT NULL,
     quantity     INT            NOT NULL,
     subtotal     DOUBLE         NOT NULL,

@@ -5,6 +5,7 @@ import com.storevo.backend.admin.dto.LoginRequest;
 import com.storevo.backend.admin.dto.RegisterRequest;
 import com.storevo.backend.admin.model.Store;
 import com.storevo.backend.admin.model.User;
+import com.storevo.backend.admin.repository.StoreRepository;
 import com.storevo.backend.admin.repository.UserRepository;
 import com.storevo.backend.config.security.JwtService;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final StoreRepository storeRepository; // Añadimos esto para validar el slug
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
@@ -26,8 +28,14 @@ public class AuthService {
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
+        // Validación 1: Correo duplicado
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new RuntimeException("El email ya está registrado");
+        }
+
+        // Validación 2: Slug/Enlace duplicado (Evita el error SQL 1062)
+        if (storeRepository.findBySlug(request.getSlug()).isPresent()) {
+            throw new RuntimeException("El enlace de la tienda ya está en uso");
         }
 
         // Creación neutra de la tienda
@@ -57,6 +65,7 @@ public class AuthService {
 
     @Transactional
     public AuthResponse login(LoginRequest request) {
+        // Si la contraseña está mal, esta línea lanza excepción y redirige al ?error=true
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.getEmail(),
@@ -64,13 +73,15 @@ public class AuthService {
                 )
         );
 
+        // Si pasó la autenticación, buscamos al usuario para generarle el JWT
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow();
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
         String jwtToken = jwtService.generateToken(user);
 
         return AuthResponse.builder()
                 .token(jwtToken)
+                // Usar getters explícitos evita los bloqueos de Hibernate Lazy Loading
                 .storeSlug(user.getStore().getSlug())
                 .build();
     }

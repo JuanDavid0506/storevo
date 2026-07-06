@@ -61,7 +61,8 @@ public class Product {
     private Boolean isDeleted = false;
 
     // --- NUEVO SISTEMA RELACIONAL DE IMÁGENES ---
-    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    // SOLUCIÓN: Agregamos fetch = FetchType.EAGER para que las imágenes siempre estén disponibles para Thymeleaf
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     @OrderBy("sortPosition ASC")
     @Builder.Default
     private List<ProductImage> images = new ArrayList<>();
@@ -92,7 +93,7 @@ public class Product {
         this.updatedAt = LocalDateTime.now();
     }
 
-    // HELPER METHOD: Mantiene compatibles los templates de Thymeleaf y el Carrito.
+    // HELPER METHOD: Extrae la URL pública de la imagen seleccionada como principal
     public String getMainImageUrl() {
         if (this.images == null || this.images.isEmpty()) {
             return null;
