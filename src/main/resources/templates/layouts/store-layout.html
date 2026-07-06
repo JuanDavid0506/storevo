@@ -13,13 +13,10 @@
             --brand-color: [[${settings.primaryColor != null ? settings.primaryColor : '#000000'}]];
             --brand-secondary: [[${settings.secondaryColor != null ? settings.secondaryColor : '#ffffff'}]];
         }
-        /* Clases de Color Primario */
         .bg-brand { background-color: var(--brand-color) !important; }
         .text-brand { color: var(--brand-color) !important; }
         .border-brand { border-color: var(--brand-color) !important; }
         .hover-bg-brand:hover { filter: brightness(0.9); background-color: var(--brand-color) !important; }
-
-        /* Clases de Color Secundario */
         .bg-secondary { background-color: var(--brand-secondary) !important; }
         .text-secondary { color: var(--brand-secondary) !important; }
         .border-secondary { border-color: var(--brand-secondary) !important; }
@@ -34,16 +31,12 @@
         .nav-parent:hover .nav-arrow { transform: rotate(-180deg) !important; }
         .nav-flyout-parent:hover .nav-flyout { opacity: 1 !important; visibility: visible !important; transform: translateX(0) !important; }
     </style>
-
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16 items-center">
-
             <a th:href="@{/s/{slug}(slug=${slug})}" class="text-2xl font-black text-brand tracking-tight" th:text="${settings.storeName}">Mi Tienda</a>
-
             <div class="hidden md:flex space-x-6 items-center z-50">
                 <a th:href="@{/s/{slug}(slug=${slug})}" class="text-slate-600 hover:text-brand font-medium transition py-4 cursor-pointer">Inicio</a>
                 <a th:href="@{/s/{slug}/catalog(slug=${slug})}" class="text-slate-600 hover:text-brand font-medium transition py-4 cursor-pointer">Todo el Catálogo</a>
-
                 <div th:each="cat : ${navCategories}" class="relative nav-parent">
                     <a th:href="@{/s/{slug}/catalog(slug=${slug}, category=${cat.id})}"
                        class="flex items-center gap-1 text-slate-600 hover:text-brand font-medium transition py-5 cursor-pointer">
@@ -67,7 +60,6 @@
                     </div>
                 </div>
             </div>
-
             <div class="flex items-center gap-5">
                 <a th:href="@{/s/{slug}/wishlist(slug=${slug})}" class="flex items-center gap-2 text-slate-600 hover:text-red-500 transition relative">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
@@ -77,14 +69,12 @@
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
                     <span id="navCartCounter" class="absolute -top-2 -right-2 bg-brand text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full" th:text="${cartCount != null ? cartCount : 0}">0</span>
                 </a>
-
                 <button type="button" id="mobile-menu-btn" class="md:hidden text-slate-600 hover:text-brand transition p-1">
                     <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
                 </button>
             </div>
         </div>
     </div>
-
     <div id="mobile-menu-backdrop" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[60] hidden opacity-0 transition-opacity duration-300 md:hidden"></div>
     <div id="mobile-menu" class="fixed top-0 left-0 h-full w-4/5 max-w-sm bg-white shadow-2xl z-[70] transform -translate-x-full transition-transform duration-300 flex flex-col overflow-y-auto md:hidden">
         <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
@@ -106,7 +96,6 @@
     </div>
 </nav>
 
-<!--  Main y Footer  -->
 <main class="flex-1 flex flex-col">
     <div class="flex-1 w-full">
         <div layout:fragment="content"></div>
@@ -133,24 +122,40 @@
     </div>
 </footer>
 
-<div th:if="${cartSuccess}" id="server-toast"
-     class="fixed top-20 right-6 bg-brand text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 !z-[99999] opacity-100"
-     style="z-index: 99999 !important; pointer-events: none;">
-    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-    </svg>
-    <span class="font-bold text-sm" th:text="${cartSuccess}"></span>
-</div>
-
-<!-- Core & Módulos (En orden de dependencia) -->
 <script th:src="@{/js/storevo.js}"></script>
 <script th:src="@{/js/ui/toast.js}"></script>
 <script th:src="@{/js/ui/navbar.js}"></script>
 <script th:src="@{/js/ui/form.js}"></script>
 <script th:src="@{/js/modules/cart.js}"></script>
 <script th:src="@{/js/modules/wishlist.js}"></script>
-<script th:src="@{/js/storevo.js}"></script>
 <script th:src="@{/js/ui/modal.js}"></script>
+
+<script>
+    window.Storevo = window.Storevo || {};
+    Storevo.Gallery = {
+        next: function(e, btn) {
+            e.preventDefault(); e.stopPropagation();
+            let imgEl = document.getElementById(btn.getAttribute('data-target'));
+            let images = btn.getAttribute('data-images').split(',');
+            if (images.length <= 1) return;
+            let currentIndex = images.indexOf(imgEl.getAttribute('src'));
+            let nextIndex = (currentIndex + 1) % images.length;
+            imgEl.setAttribute('src', images[nextIndex]);
+        },
+        prev: function(e, btn) {
+            e.preventDefault(); e.stopPropagation();
+            let imgEl = document.getElementById(btn.getAttribute('data-target'));
+            let images = btn.getAttribute('data-images').split(',');
+            if (images.length <= 1) return;
+            let currentIndex = images.indexOf(imgEl.getAttribute('src'));
+            if (currentIndex === -1) currentIndex = 0;
+            let prevIndex = (currentIndex - 1 + images.length) % images.length;
+            imgEl.setAttribute('src', images[prevIndex]);
+        }
+    };
+</script>
+
+<th:block layout:fragment="scripts"></th:block>
 
 </body>
 </html>

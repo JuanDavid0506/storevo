@@ -22,16 +22,26 @@
         <div th:unless="${#lists.isEmpty(products)}" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
             <div th:each="p : ${products}" class="group relative bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-100 flex flex-col h-full">
 
-                <div class="relative aspect-[4/5] overflow-hidden bg-slate-50 flex-shrink-0">
-                    <a th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${p.id})}">
-                        <img th:src="${p.mainImageUrl != null ? p.mainImageUrl : '/img/placeholder.jpg'}" th:alt="${p.name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                <div class="relative aspect-[4/5] overflow-hidden bg-slate-50 flex-shrink-0 group/gallery" th:with="hasMultiple=${p.images != null and p.images.size() > 1}">
+
+                    <a th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${p.id})}" class="block w-full h-full">
+                        <img th:id="'gallery-img-' + ${p.id}" th:src="${p.mainImageUrl != null ? p.mainImageUrl : '/img/placeholder.jpg'}" th:alt="${p.name}" class="w-full h-full object-cover group-hover/gallery:scale-105 transition-transform duration-500">
                     </a>
 
-                    <div th:if="${p.discountPrice != null and p.discountPrice > 0}" class="absolute top-3 left-3 bg-red-500 text-white text-[10px] sm:text-xs font-black uppercase px-2.5 py-1 rounded-full shadow-md z-10 pointer-events-none">
+                    <div th:if="${hasMultiple}" class="absolute inset-0 flex items-center justify-between px-2 opacity-0 group-hover/gallery:opacity-100 transition-opacity duration-300 pointer-events-none z-20">
+                        <button type="button" th:data-target="'gallery-img-' + ${p.id}" th:data-images="${#strings.listJoin(p.images.![filePath], ',')}" onclick="Storevo.Gallery.prev(event, this)" class="w-8 h-8 rounded-full bg-white/90 hover:bg-white text-slate-800 flex items-center justify-center shadow-lg pointer-events-auto transition-transform hover:scale-110">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path></svg>
+                        </button>
+                        <button type="button" th:data-target="'gallery-img-' + ${p.id}" th:data-images="${#strings.listJoin(p.images.![filePath], ',')}" onclick="Storevo.Gallery.next(event, this)" class="w-8 h-8 rounded-full bg-white/90 hover:bg-white text-slate-800 flex items-center justify-center shadow-lg pointer-events-auto transition-transform hover:scale-110">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
+                        </button>
+                    </div>
+
+                    <div th:if="${p.discountPrice != null and p.discountPrice > 0}" class="absolute top-3 left-3 bg-red-500 text-white text-[10px] sm:text-xs font-black uppercase px-2.5 py-1 rounded-full shadow-md z-30 pointer-events-none">
                         Oferta
                     </div>
 
-                    <div class="absolute top-3 right-3 flex flex-col gap-2 z-10">
+                    <div class="absolute top-3 right-3 flex flex-col gap-2 z-30">
                         <button type="button" th:data-slug="${slug}" th:data-id="${p.id}" onclick="toggleCartItem(this, this.getAttribute('data-slug'), this.getAttribute('data-id'))" class="p-2.5 bg-white/90 backdrop-blur text-slate-400 hover:text-brand rounded-full shadow-lg transition-all duration-300" title="Agregar al carrito">
                             <svg class="w-5 h-5 icon-empty" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
                             <svg class="w-5 h-5 icon-filled hidden text-brand" fill="currentColor" viewBox="0 0 24 24"><path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path><path fill="white" d="M10.5 15.5l-3-3 1.4-1.4 1.6 1.6 4.6-4.6 1.4 1.4-6 6z"></path></svg>
