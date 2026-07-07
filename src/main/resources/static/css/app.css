@@ -912,6 +912,10 @@ video {
   display: inline-block;
 }
 
+.inline {
+  display: inline;
+}
+
 .flex {
   display: flex;
 }
@@ -2596,6 +2600,10 @@ video {
   border-color: rgb(99 102 241 / var(--tw-border-opacity, 1));
 }
 
+.hover\:border-storevo-500\/50:hover {
+  border-color: rgb(99 102 241 / 0.5);
+}
+
 .hover\:bg-red-600:hover {
   --tw-bg-opacity: 1;
   background-color: rgb(220 38 38 / var(--tw-bg-opacity, 1));
@@ -2673,6 +2681,10 @@ video {
 
 .hover\:bg-white\/20:hover {
   background-color: rgb(255 255 255 / 0.2);
+}
+
+.hover\:bg-storevo-500\/10:hover {
+  background-color: rgb(99 102 241 / 0.1);
 }
 
 .hover\:from-storevo-500:hover {
