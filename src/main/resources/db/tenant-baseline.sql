@@ -39,17 +39,31 @@ CREATE TABLE products (
     FOREIGN KEY (category_id) REFERENCES categories(id)
 );
 
--- Tabla de Imágenes de Productos (ACTUALIZADA)
+-- Tabla de Imágenes de Productos (PREPARADA PARA ESCALAR E IA)
 CREATE TABLE product_images (
-    id             BIGINT AUTO_INCREMENT PRIMARY KEY,
-    product_id     BIGINT          NOT NULL,
-    variant_id     BIGINT          NULL, -- ¡NUEVA COLUMNA AGREGADA!
-    file_name      VARCHAR(255)    NOT NULL,
-    file_path      VARCHAR(500)    NOT NULL,
-    is_primary     BOOLEAN         NOT NULL DEFAULT FALSE,
-    sort_position  INT             NOT NULL DEFAULT 0,
-    created_at     TIMESTAMP       DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+    id                 BIGINT AUTO_INCREMENT PRIMARY KEY,
+    product_id         BIGINT          NOT NULL,
+    variant_id         BIGINT          NULL,
+
+    file_name          VARCHAR(255)    NOT NULL,
+    original_file_name VARCHAR(255)    NOT NULL, -- Auditoría
+    file_path          VARCHAR(500)    NOT NULL,
+
+    file_hash          VARCHAR(64)     NULL,
+    alt_text           VARCHAR(255)    NULL,
+    width              INT             NULL,
+    height             INT             NULL,
+    mime_type          VARCHAR(50)     NULL,
+    file_size          BIGINT          NULL,
+    ai_tags            JSON            NULL, -- Preparación IA
+
+    is_primary         BOOLEAN         NOT NULL DEFAULT FALSE,
+    sort_position      INT             NOT NULL DEFAULT 0,
+    created_at         TIMESTAMP       DEFAULT CURRENT_TIMESTAMP,
+    updated_at         TIMESTAMP       DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    INDEX idx_file_hash (file_hash) -- Mejora de rendimiento para caché/CDNs/Duplicados
 );
 
 -- Tabla de Pedidos

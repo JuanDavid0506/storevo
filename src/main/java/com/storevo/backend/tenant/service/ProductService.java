@@ -139,8 +139,16 @@ public class ProductService {
                         imgEntity = ProductImage.builder()
                                 .product(product)
                                 .fileName(oldMatch.getFileName())
+                                .originalFileName(oldMatch.getOriginalFileName()) // Mantiene el original
                                 .filePath(oldMatch.getFilePath())
-                                .variantId(oldMatch.getVariantId()) // Conserva mapeo a variante si lo hubiese
+                                .fileHash(oldMatch.getFileHash())
+                                .width(oldMatch.getWidth())
+                                .height(oldMatch.getHeight())
+                                .mimeType(oldMatch.getMimeType())
+                                .fileSize(oldMatch.getFileSize())
+                                .aiTags(oldMatch.getAiTags())       // Mantiene los tags de IA si los hay
+                                .altText(oldMatch.getAltText())     // Mantiene el texto alternativo
+                                .variantId(oldMatch.getVariantId())
                                 .isPrimary(isPrimary)
                                 .sortPosition(position++)
                                 .build();
@@ -155,7 +163,13 @@ public class ProductService {
                     imgEntity = ProductImage.builder()
                             .product(product)
                             .fileName(meta.getNewFilename())
+                            .originalFileName(meta.getOriginalFilename()) // NUEVO: Extraído del procesador
                             .filePath(meta.getPublicUrl())
+                            .fileHash(meta.getFileHash())
+                            .width(meta.getWidth())
+                            .height(meta.getHeight())
+                            .mimeType(meta.getMimeType())
+                            .fileSize(meta.getSizeBytes())
                             .isPrimary(isPrimary)
                             .sortPosition(position++)
                             .build();

@@ -15,4 +15,9 @@ public class ImageMetadataDto {
     private String publicUrl;
     private Long sizeBytes;
     private String mimeType;
+
+    // Nuevos campos
+    private String fileHash;
+    private Integer width;
+    private Integer height;
 }
