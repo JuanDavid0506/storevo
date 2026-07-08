@@ -6,6 +6,8 @@ import com.storevo.backend.config.tenant.TenantContext;
 import com.storevo.backend.tenant.dto.CartItemDto;
 import com.storevo.backend.tenant.model.Order;
 import com.storevo.backend.tenant.model.Product;
+import com.storevo.backend.tenant.model.ProductVariant;
+import com.storevo.backend.tenant.repository.ProductVariantRepository;
 import com.storevo.backend.tenant.service.CartManager;
 import com.storevo.backend.tenant.service.OrderService;
 import com.storevo.backend.tenant.service.ProductService;
@@ -13,12 +15,14 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional; // <-- NUEVA IMPORTACIÓN
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/s/{slug}/cart")
@@ -29,6 +33,7 @@ public class CartController {
     private final ProductService productService;
     private final StoreSettingsService storeSettingsService;
     private final OrderService orderService;
+    private final ProductVariantRepository variantRepository;
 
     @ModelAttribute
     public void setupTenant(@PathVariable String slug, Model model, HttpServletRequest request) {
@@ -43,44 +48,84 @@ public class CartController {
         model.addAttribute("cartCount", cartManager.getCartCount(slug));
     }
 
+    // NUEVO: Agregamos la transacción de lectura para que Hibernate traiga las relaciones lazy
     @GetMapping
+    @Transactional(readOnly = true)
     public String viewCart(@PathVariable String slug, Model model) {
         java.util.List<CartItemDto> cart = cartManager.getCart(slug);
 
-        java.util.List<Long> deletedProductIds = new java.util.ArrayList<>();
+        java.util.List<String> invalidItemKeys = new java.util.ArrayList<>();
         for (CartItemDto item : cart) {
             try {
                 Product p = productService.getProductById(item.getProductId());
                 if (p.getIsDeleted() || !p.getIsActive()) {
-                    deletedProductIds.add(p.getId());
+                    invalidItemKeys.add(item.getProductId() + "-" + item.getVariantId());
+                    continue;
+                }
+                if (item.getVariantId() != null) {
+                    ProductVariant v = variantRepository.findById(item.getVariantId()).orElse(null);
+                    if (v == null || !v.getIsActive()) {
+                        invalidItemKeys.add(item.getProductId() + "-" + item.getVariantId());
+                    }
                 }
             } catch (Exception e) {
-                deletedProductIds.add(item.getProductId());
+                invalidItemKeys.add(item.getProductId() + "-" + item.getVariantId());
             }
         }
 
         model.addAttribute("cartItems", cart);
-        model.addAttribute("deletedProductIds", deletedProductIds);
+        model.addAttribute("invalidItemKeys", invalidItemKeys);
         model.addAttribute("cartTotal", cartManager.getTotal(slug));
         model.addAttribute("pageTitle", "Mi Bolsa");
         return "storefront/cart";
     }
 
+    // NUEVO: Agregamos la transacción de lectura para las imágenes de la variante
     @PostMapping("/add-ajax")
     @ResponseBody
+    @Transactional(readOnly = true)
     public ResponseEntity<Map<String, Object>> addToCartAjax(
             @PathVariable String slug,
             @RequestParam Long productId,
+            @RequestParam(required = false) Long variantId,
             @RequestParam(defaultValue = "1") Integer quantity) {
 
         Map<String, Object> response = new HashMap<>();
         Product product = productService.getProductById(productId);
-        if (product.getIsDeleted()) {
-            return ResponseEntity.ok(Map.of("success", false, "message", "Este producto ha sido retirado del catálogo."));
+        if (product.getIsDeleted() || !product.getIsActive()) {
+            return ResponseEntity.ok(Map.of("success", false, "message", "Producto no disponible."));
         }
 
-        int currentQtyInCart = cartManager.getItemQuantity(slug, productId);
         int availableStock = product.getStock();
+        Double itemPrice = product.getDiscountPrice() != null && product.getDiscountPrice() > 0 ? product.getDiscountPrice() : product.getPrice();
+        String itemVariantText = null;
+        String imageUrl = product.getMainImageUrl();
+
+        if (variantId != null && product.getHasVariants()) {
+            ProductVariant variant = variantRepository.findById(variantId)
+                    .orElseThrow(() -> new RuntimeException("Variante no encontrada"));
+
+            if (!variant.getIsActive()) {
+                return ResponseEntity.ok(Map.of("success", false, "message", "Esta combinación no está disponible."));
+            }
+
+            availableStock = variant.getStock();
+            itemPrice = variant.getPrice() != null && variant.getPrice() > 0 ? variant.getPrice() : itemPrice;
+
+            itemVariantText = variant.getOptionValues().stream()
+                    .map(ov -> ov.getValueName())
+                    .collect(Collectors.joining(" • "));
+
+            // Gracias al @Transactional superior, esta llamada getImages() funcionará perfectamente
+            if (variant.getImages() != null && !variant.getImages().isEmpty()) {
+                imageUrl = variant.getImages().get(0).getThumbnailUrl();
+                if (imageUrl == null) imageUrl = variant.getImages().get(0).getFilePath();
+            }
+        } else if (product.getHasVariants()) {
+            return ResponseEntity.ok(Map.of("success", false, "message", "Debe seleccionar las opciones del producto."));
+        }
+
+        int currentQtyInCart = cartManager.getItemQuantity(slug, productId, variantId);
         int remainingStock = availableStock - currentQtyInCart;
 
         if (remainingStock <= 0) {
@@ -94,10 +139,12 @@ public class CartController {
 
         CartItemDto item = CartItemDto.builder()
                 .productId(product.getId())
+                .variantId(variantId)
                 .name(product.getName())
-                .price(product.getDiscountPrice() != null && product.getDiscountPrice() > 0 ? product.getDiscountPrice() : product.getPrice())
+                .variantText(itemVariantText)
+                .price(itemPrice)
                 .quantity(qtyToAdd)
-                .imageUrl(product.getMainImageUrl()) // MÉTOD SEGURO NUEVO
+                .imageUrl(imageUrl)
                 .build();
 
         cartManager.addItem(slug, item);
@@ -117,8 +164,12 @@ public class CartController {
 
     @PostMapping("/remove-ajax")
     @ResponseBody
-    public ResponseEntity<Map<String, Object>> removeFromCartAjax(@PathVariable String slug, @RequestParam Long productId) {
-        cartManager.removeItem(slug, productId);
+    public ResponseEntity<Map<String, Object>> removeFromCartAjax(
+            @PathVariable String slug,
+            @RequestParam Long productId,
+            @RequestParam(required = false) Long variantId) {
+
+        cartManager.removeItem(slug, productId, variantId);
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
         response.put("message", "Producto retirado de la bolsa.");
@@ -127,8 +178,13 @@ public class CartController {
     }
 
     @PostMapping("/remove")
-    public String removeFromCart(@PathVariable String slug, @RequestParam Long productId, RedirectAttributes redirectAttributes) {
-        cartManager.removeItem(slug, productId);
+    public String removeFromCart(
+            @PathVariable String slug,
+            @RequestParam Long productId,
+            @RequestParam(required = false) Long variantId,
+            RedirectAttributes redirectAttributes) {
+
+        cartManager.removeItem(slug, productId, variantId);
         redirectAttributes.addFlashAttribute("cartSuccess", "Producto eliminado de la bolsa");
         return "redirect:/s/" + slug + "/cart";
     }

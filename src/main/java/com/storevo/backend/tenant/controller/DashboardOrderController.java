@@ -2,7 +2,6 @@ package com.storevo.backend.tenant.controller;
 
 import com.storevo.backend.admin.model.Store;
 import com.storevo.backend.config.tenant.TenantContext;
-import com.storevo.backend.tenant.model.Order;
 import com.storevo.backend.tenant.model.OrderStatus;
 import com.storevo.backend.tenant.repository.OrderRepository;
 import com.storevo.backend.tenant.service.OrderService;
@@ -27,17 +26,15 @@ public class DashboardOrderController {
             throw new RuntimeException("Tienda no encontrada en la petición");
         }
 
-        // 1. Pasamos la data básica
         model.addAttribute("store", store);
         model.addAttribute("slug", slug);
-
-        // 2. Bajamos el switch
         TenantContext.setCurrentTenant(store.getSchemaName());
     }
 
     @GetMapping
     public String listOrders(Model model) {
-        model.addAttribute("orders", orderRepository.findAllByOrderByCreatedAtDesc());
+        // ACTUALIZADO: Usamos el Service para evitar el Lazy Initialization en Thymeleaf
+        model.addAttribute("orders", orderService.getAllOrders());
         model.addAttribute("orderStatuses", OrderStatus.values());
         model.addAttribute("pageTitle", "Gestión de Pedidos");
         return "dashboard/orders/index";

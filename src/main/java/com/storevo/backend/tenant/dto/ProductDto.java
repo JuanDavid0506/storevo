@@ -5,8 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.util.List;
+import java.util.Map;
 
 @Data
 @Builder
@@ -25,13 +25,34 @@ public class ProductDto {
     private Double weight;
     private Boolean isActive;
 
-    // --- SISTEMA DE IMÁGENES FÍSICAS ---
-    private List<MultipartFile> newImages; // Archivos subidos en el input
-    private List<String> existingImages;   // URLs de las imágenes que ya existían y no fueron borradas
-    private List<String> imageOrder;       // Array con el orden exacto (mezcla URLs existentes y nombres de archivos nuevos)
-    private String mainImageRef;           // Referencia a la imagen elegida con la estrella (⭐)
+    // --- NUEVO: SOPORTE HÍBRIDO ---
+    private Boolean hasVariants;
+    private List<OptionDto> options;
+    private List<VariantDto> variants;
+    // ------------------------------
 
-    // Ficha técnica
     private List<String> attrKeys;
     private List<String> attrValues;
+    private List<MultipartFile> newImages;
+    private List<String> existingImages;
+    private List<String> imageOrder;
+    private String mainImageRef;
+
+    // Subclases internas para mantener el transporte limpio
+    @Data @NoArgsConstructor @AllArgsConstructor
+    public static class OptionDto {
+        private String name;
+        private List<String> values; // Ej: ["S", "M", "L"]
+    }
+
+    @Data @NoArgsConstructor @AllArgsConstructor
+    public static class VariantDto {
+        private String sku;
+        private String barcode;
+        private Double price;
+        private Integer stock;
+        private Double weight;
+        private Map<String, String> combination; // Ej: {"Color": "Rojo", "Talla": "S"}
+        private String imageRef;
+    }
 }

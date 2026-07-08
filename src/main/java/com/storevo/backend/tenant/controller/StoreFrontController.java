@@ -20,7 +20,11 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/s/{slug}")
@@ -48,14 +52,14 @@ public class StoreFrontController {
         model.addAttribute("categories", categoryService.getAllCategories());
         model.addAttribute("navCategories", categoryService.getNavCategories());
         model.addAttribute("cartCount", cartManager.getCartCount(slug));
-
         model.addAttribute("wishlistCount", wishlistManager.getWishlistCount(slug));
+
+        // Wishlist sigue soportando solo ProductId por compatibilidad (tal cual lo pediste)
         model.addAttribute("wishlistProductIds", wishlistManager.getWishlist(slug));
     }
 
     @GetMapping
     public String home(Model model) {
-        // En el inicio, pasamos null para que traiga todos los productos que estén activos
         model.addAttribute("products", productService.getPublicCatalog(null));
         model.addAttribute("pageTitle", "Inicio");
         return "storefront/home";
@@ -63,14 +67,11 @@ public class StoreFrontController {
 
     @GetMapping("/catalog")
     public String catalog(@RequestParam(required = false) Long category, Model model) {
-        // Filtramos inteligentemente usando el nuevo método del servicio
         model.addAttribute("products", productService.getPublicCatalog(category));
-
-        // Cambiamos el título de la página si están viendo una categoría específica
         if (category != null) {
             try {
                 Category currentCat = categoryService.getCategoryById(category);
-                model.addAttribute("currentCategory", currentCat); // Por si deseas usarlo en HTML más adelante
+                model.addAttribute("currentCategory", currentCat);
                 model.addAttribute("pageTitle", currentCat.getName());
             } catch (Exception e) {
                 model.addAttribute("pageTitle", "Catálogo");
@@ -78,7 +79,6 @@ public class StoreFrontController {
         } else {
             model.addAttribute("pageTitle", "Catálogo");
         }
-
         return "storefront/catalog";
     }
 
@@ -90,16 +90,42 @@ public class StoreFrontController {
         }
         model.addAttribute("product", product);
 
-        // Lógica de Productos Relacionados (Misma categoría, máximo 4, excluyendo el actual)
+        // --- MAGIA FASE 2.5: EMPAQUETADO LIGERO DE VARIANTES PARA JS ---
+        List<Map<String, Object>> variantsJson = new ArrayList<>();
+        if (product.getHasVariants() != null && product.getHasVariants()) {
+            for (com.storevo.backend.tenant.model.ProductVariant v : product.getVariantsList()) {
+                if (v.getIsActive() != null && v.getIsActive()) {
+                    Map<String, Object> vMap = new HashMap<>();
+                    vMap.put("id", v.getId());
+                    vMap.put("price", v.getPrice());
+                    vMap.put("stock", v.getStock());
+                    vMap.put("sku", v.getSku());
+
+                    String imageRef = (v.getImages() != null && !v.getImages().isEmpty())
+                            ? v.getImages().get(0).getFilePath() : null;
+                    vMap.put("imageRef", imageRef);
+
+                    String sig = v.getOptionValues().stream()
+                            .map(ov -> ov.getOption().getName() + ":" + ov.getValueName())
+                            .sorted()
+                            .collect(Collectors.joining("|"));
+                    vMap.put("signature", sig);
+                    variantsJson.add(vMap);
+                }
+            }
+        }
+        model.addAttribute("variantsData", variantsJson);
+        // ----------------------------------------------------------------
+
         Long categoryId = product.getCategory() != null ? product.getCategory().getId() : null;
         List<Product> allActive = productService.getPublicCatalog(categoryId);
 
-        List<Product> relatedProducts = new java.util.ArrayList<>();
+        List<Product> relatedProducts = new ArrayList<>();
         for (Product p : allActive) {
             if (!p.getId().equals(product.getId())) {
                 relatedProducts.add(p);
             }
-            if (relatedProducts.size() == 4) break; // Solo mostramos 4 recomendaciones
+            if (relatedProducts.size() == 4) break;
         }
 
         model.addAttribute("relatedProducts", relatedProducts);

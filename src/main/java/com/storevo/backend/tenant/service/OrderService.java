@@ -5,9 +5,7 @@ import com.storevo.backend.tenant.dto.CartItemDto;
 import com.storevo.backend.tenant.model.Order;
 import com.storevo.backend.tenant.model.OrderItem;
 import com.storevo.backend.tenant.model.OrderStatus;
-import com.storevo.backend.tenant.model.Product;
 import com.storevo.backend.tenant.repository.OrderRepository;
-import com.storevo.backend.tenant.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -22,8 +20,19 @@ import java.util.stream.Collectors;
 public class OrderService {
 
     private final OrderRepository orderRepository;
-    private final ProductRepository productRepository;
     private final CartManager cartManager;
+    private final InventoryService inventoryService;
+
+    // --- SOLUCIÓN LAZY INITIALIZATION PARA EL DASHBOARD ---
+    @Transactional(readOnly = true)
+    public List<Order> getAllOrders() {
+        List<Order> orders = orderRepository.findAllByOrderByCreatedAtDesc();
+        // Magia Anti-Lazy: Forzamos a Hibernate a traer los items de cada pedido
+        // mientras la sesión de BD sigue abierta.
+        orders.forEach(order -> order.getItems().size());
+        return orders;
+    }
+    // ------------------------------------------------------
 
     @Transactional
     public Order createOrderFromCart(String slug, String customerName, String customerPhone, String address, String city, String notes) {
@@ -42,24 +51,23 @@ public class OrderService {
                 .city(city)
                 .notes(notes)
                 .total(total)
-                .status(OrderStatus.PENDING) // 1. Nace como PENDIENTE. ¡No tocamos el inventario aquí!
+                .status(OrderStatus.PENDING)
                 .build();
 
         List<OrderItem> items = cartItems.stream().map(dto -> {
 
-            // Hacemos una validación rápida para advertir al usuario si el producto se agotó antes de llegar aquí
-            Product product = productRepository.findById(dto.getProductId())
-                    .orElseThrow(() -> new RuntimeException("Producto no encontrado: " + dto.getName()));
-
-            if (product.getStock() < dto.getQuantity()) {
-                throw new RuntimeException("Lo sentimos, no hay stock suficiente en este instante para: " + product.getName());
+            if (!inventoryService.isAvailable(dto.getProductId(), dto.getVariantId(), dto.getQuantity())) {
+                throw new RuntimeException("Lo sentimos, no hay stock suficiente en este instante para: " + dto.getName() +
+                        (dto.getVariantText() != null ? " (" + dto.getVariantText() + ")" : ""));
             }
 
-            // Retornamos el item para la orden, pero NO hacemos product.setStock(...)
+            String finalName = dto.getName() + (dto.getVariantText() != null ? " - " + dto.getVariantText() : "");
+
             return OrderItem.builder()
                     .order(order)
                     .productId(dto.getProductId())
-                    .productName(dto.getName())
+                    .variantId(dto.getVariantId())
+                    .productName(finalName)
                     .price(dto.getPrice())
                     .quantity(dto.getQuantity())
                     .subtotal(dto.getSubtotal())
@@ -69,9 +77,7 @@ public class OrderService {
         order.setItems(items);
         Order savedOrder = orderRepository.save(order);
 
-        // Vaciamos el carrito de este usuario
         cartManager.clearCart(slug);
-
         return savedOrder;
     }
 
@@ -82,44 +88,27 @@ public class OrderService {
 
         OrderStatus oldStatus = order.getStatus();
 
-        // 2. EL MOMENTO DE LA VERDAD: Si Wompi aprueba el pago, descontamos la bolsa.
         if (oldStatus == OrderStatus.PENDING && newStatus == OrderStatus.PAID) {
             deductOrderStock(order);
         }
 
-        // 3. REEMBOLSOS: Si la orden ya estaba pagada (bolsa descontada) y tú decides cancelarla después, devuelves la bolsa.
         if (oldStatus == OrderStatus.PAID && newStatus == OrderStatus.CANCELLED) {
             restoreOrderStock(order);
         }
-
-        // Nota: Si una orden PENDING pasa a CANCELLED (Wompi la rechazó), el sistema no hace nada con el inventario
-        // porque sabe perfectamente que nunca lo descontó.
 
         order.setStatus(newStatus);
         orderRepository.save(order);
     }
 
-    // Método que ejecuta el descuento real cuando Wompi aprueba (PAID)
     private void deductOrderStock(Order order) {
         for (OrderItem item : order.getItems()) {
-            productRepository.findById(item.getProductId()).ifPresent(product -> {
-                // Tu regla: Nunca bajar de 0.
-                // Math.max elegirá el número mayor entre 0 y el resultado de la resta.
-                int nuevoStock = Math.max(0, product.getStock() - item.getQuantity());
-
-                product.setStock(nuevoStock);
-                productRepository.save(product);
-            });
+            inventoryService.deductStock(item.getProductId(), item.getVariantId(), item.getQuantity());
         }
     }
 
-    // Método que devuelve la bolsa al estante digital
     private void restoreOrderStock(Order order) {
         for (OrderItem item : order.getItems()) {
-            productRepository.findById(item.getProductId()).ifPresent(product -> {
-                product.setStock(product.getStock() + item.getQuantity());
-                productRepository.save(product);
-            });
+            inventoryService.restoreStock(item.getProductId(), item.getVariantId(), item.getQuantity());
         }
     }
 
@@ -128,25 +117,19 @@ public class OrderService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
 
-        // 🛡️ 1. IDEMPOTENCIA: Si el pedido ya no está en PENDING, significa que
-        // el Webhook o el Redirect ya lo procesaron hace milisegundos. Cortamos aquí.
         if (order.getStatus() != OrderStatus.PENDING) {
             System.out.println("Idempotencia: Pedido " + orderId + " ya procesado. Estado actual: " + order.getStatus());
             return;
         }
 
-        // 🔍 2. SOURCE OF TRUTH: Consultamos a Wompi directamente desde el backend
         try {
             RestTemplate restTemplate = new RestTemplate();
-            // Nota: Cambia "sandbox.wompi.co" por "production.wompi.co" cuando salgas a producción
             String wompiUrl = "https://sandbox.wompi.co/v1/transactions/" + wompiTransactionId;
             ResponseEntity<JsonNode> response = restTemplate.getForEntity(wompiUrl, JsonNode.class);
 
             if (response.getBody() != null && response.getStatusCode().is2xxSuccessful()) {
                 String definitiveStatus = response.getBody().get("data").get("status").asText();
-                System.out.println("API Wompi dice que el estado real es: " + definitiveStatus);
 
-                // 3. Ejecutamos el descuento de stock delegando a nuestro método ya creado
                 if ("APPROVED".equals(definitiveStatus)) {
                     updateOrderStatus(orderId, OrderStatus.PAID);
                 } else if ("DECLINED".equals(definitiveStatus) || "ERROR".equals(definitiveStatus) || "VOIDED".equals(definitiveStatus)) {

@@ -3,9 +3,7 @@ package com.storevo.backend.tenant.service;
 import com.storevo.backend.config.tenant.TenantContext;
 import com.storevo.backend.tenant.dto.ImageMetadataDto;
 import com.storevo.backend.tenant.dto.ProductDto;
-import com.storevo.backend.tenant.model.Category;
-import com.storevo.backend.tenant.model.Product;
-import com.storevo.backend.tenant.model.ProductImage;
+import com.storevo.backend.tenant.model.*;
 import com.storevo.backend.tenant.repository.CategoryRepository;
 import com.storevo.backend.tenant.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
@@ -16,10 +14,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,7 +24,7 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
     private final CategoryService categoryService;
-    private final ImageStorage imageStorage; // Inyectando la Interfaz Pura
+    private final ImageStorage imageStorage;
 
     public List<Product> getAllProducts() {
         return productRepository.findByIsDeletedFalseOrderByIdDesc();
@@ -43,10 +38,29 @@ public class ProductService {
         return productRepository.findActiveProductsByCategoryIds(categoryIds);
     }
 
+    // --- SOLUCIÓN A LAZY INITIALIZATION EXCEPTION ---
+    @Transactional(readOnly = true)
     public Product getProductById(Long id) {
-        return productRepository.findById(id)
+        Product product = productRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
+
+        // MAGIA ANTI-LAZY: Forzamos a Hibernate a inicializar las listas relacionales
+        // mientras la sesión de la base de datos sigue abierta.
+        if (product.getHasVariants() != null && product.getHasVariants()) {
+            product.getOptions().size();
+            for (ProductOption opt : product.getOptions()) {
+                opt.getValues().size();
+            }
+
+            product.getVariantsList().size();
+            for (ProductVariant var : product.getVariantsList()) {
+                var.getImages().size();
+            }
+        }
+
+        return product;
     }
+    // ------------------------------------------------
 
     @Transactional
     public void saveProduct(ProductDto dto) {
@@ -61,13 +75,10 @@ public class ProductService {
 
         product.setName(dto.getName());
         product.setDescription(dto.getDescription());
-        product.setPrice(dto.getPrice());
-        product.setDiscountPrice(dto.getDiscountPrice());
-        product.setStock(dto.getStock());
         product.setBrand(dto.getBrand());
         product.setSku(dto.getSku());
-        product.setWeight(dto.getWeight());
         product.setIsActive(dto.getIsActive() != null ? dto.getIsActive() : false);
+        product.setHasVariants(dto.getHasVariants() != null ? dto.getHasVariants() : false);
 
         if (dto.getCategoryId() != null) {
             Category category = categoryRepository.findById(dto.getCategoryId())
@@ -89,10 +100,23 @@ public class ProductService {
         }
         product.setAttributes(attributes.isEmpty() ? null : attributes);
 
-        // 2. Validación de Límites Backend
+        if (!product.getHasVariants()) {
+            product.setPrice(dto.getPrice() != null ? dto.getPrice() : 0.0);
+            product.setDiscountPrice(dto.getDiscountPrice());
+            product.setStock(dto.getStock() != null ? dto.getStock() : 0);
+            product.setWeight(dto.getWeight());
+
+            product.getOptions().clear();
+            product.getVariantsList().clear();
+        } else {
+            if (isNew) {
+                product.setPrice(0.0);
+                product.setStock(0);
+            }
+        }
+
         int existingCount = dto.getExistingImages() != null ? dto.getExistingImages().size() : 0;
         int newCount = (dto.getNewImages() != null && !dto.getNewImages().isEmpty() && dto.getNewImages().get(0).getSize() > 0) ? dto.getNewImages().size() : 0;
-
         if ((existingCount + newCount) > ImageStorage.MAX_IMAGES_PER_PRODUCT) {
             throw new RuntimeException("Límite excedido. Un producto solo puede tener " + ImageStorage.MAX_IMAGES_PER_PRODUCT + " imágenes.");
         }
@@ -101,11 +125,9 @@ public class ProductService {
             product = productRepository.save(product);
         }
 
-        // 4. ORQUESTACIÓN DE IMÁGENES
         String tenantSchema = TenantContext.getCurrentTenant();
         List<String> existingUrlsFromDto = dto.getExistingImages() != null ? dto.getExistingImages() : new ArrayList<>();
         List<ProductImage> oldImagesList = product.getImages() != null ? new ArrayList<>(product.getImages()) : new ArrayList<>();
-
         if (product.getImages() == null) product.setImages(new ArrayList<>());
 
         for (ProductImage oldImg : oldImagesList) {
@@ -116,7 +138,6 @@ public class ProductService {
         product.getImages().clear();
 
         List<ImageMetadataDto> newMetadataList = imageStorage.saveImages(tenantSchema, dto.getNewImages());
-
         Map<String, ImageMetadataDto> newImagesMap = new HashMap<>();
         for(ImageMetadataDto meta : newMetadataList) {
             newImagesMap.put(meta.getOriginalFilename(), meta);
@@ -125,45 +146,40 @@ public class ProductService {
         if (dto.getImageOrder() != null) {
             int position = 0;
             for (String ref : dto.getImageOrder()) {
-
                 boolean isPrimary = false;
                 ProductImage imgEntity = null;
 
                 if (existingUrlsFromDto.contains(ref)) {
                     if (dto.getMainImageRef() != null && dto.getMainImageRef().equals(ref)) isPrimary = true;
-
-                    ProductImage oldMatch = oldImagesList.stream()
-                            .filter(img -> img.getFilePath().equals(ref)).findFirst().orElse(null);
+                    ProductImage oldMatch = oldImagesList.stream().filter(img -> img.getFilePath().equals(ref)).findFirst().orElse(null);
 
                     if (oldMatch != null) {
                         imgEntity = ProductImage.builder()
                                 .product(product)
                                 .fileName(oldMatch.getFileName())
-                                .originalFileName(oldMatch.getOriginalFileName()) // Mantiene el original
+                                .originalFileName(oldMatch.getOriginalFileName())
                                 .filePath(oldMatch.getFilePath())
                                 .fileHash(oldMatch.getFileHash())
                                 .width(oldMatch.getWidth())
                                 .height(oldMatch.getHeight())
                                 .mimeType(oldMatch.getMimeType())
                                 .fileSize(oldMatch.getFileSize())
-                                .aiTags(oldMatch.getAiTags())       // Mantiene los tags de IA si los hay
-                                .altText(oldMatch.getAltText())     // Mantiene el texto alternativo
-                                .variantId(oldMatch.getVariantId())
+                                .aiTags(oldMatch.getAiTags())
+                                .altText(oldMatch.getAltText())
+                                .variantId(null)
                                 .isPrimary(isPrimary)
                                 .sortPosition(position++)
                                 .build();
                     }
                 } else if (newImagesMap.containsKey(ref)) {
                     ImageMetadataDto meta = newImagesMap.get(ref);
-
                     if (dto.getMainImageRef() != null && (dto.getMainImageRef().equals(ref) || dto.getMainImageRef().equals(meta.getPublicUrl()))) {
                         isPrimary = true;
                     }
-
                     imgEntity = ProductImage.builder()
                             .product(product)
                             .fileName(meta.getNewFilename())
-                            .originalFileName(meta.getOriginalFilename()) // NUEVO: Extraído del procesador
+                            .originalFileName(meta.getOriginalFilename())
                             .filePath(meta.getPublicUrl())
                             .fileHash(meta.getFileHash())
                             .width(meta.getWidth())
@@ -180,12 +196,128 @@ public class ProductService {
                 }
             }
         }
-
         if (!product.getImages().isEmpty() && product.getImages().stream().noneMatch(ProductImage::getIsPrimary)) {
             product.getImages().get(0).setIsPrimary(true);
         }
 
-        productRepository.save(product);
+        if (product.getHasVariants() && dto.getOptions() != null && dto.getVariants() != null) {
+
+            Map<String, ProductVariant> existingVariants = new HashMap<>();
+            for (ProductVariant oldVar : product.getVariantsList()) {
+                if (oldVar.getOptionValues() != null && !oldVar.getOptionValues().isEmpty()) {
+                    String sig = oldVar.getOptionValues().stream()
+                            .map(ov -> ov.getOption().getName() + ":" + ov.getValueName())
+                            .sorted()
+                            .collect(Collectors.joining("|"));
+                    existingVariants.put(sig, oldVar);
+                }
+            }
+
+            List<ProductOption> newOptions = new ArrayList<>();
+            Map<String, ProductOptionValue> optionValueLookup = new HashMap<>();
+
+            int optPos = 0;
+            for (ProductDto.OptionDto optDto : dto.getOptions()) {
+                ProductOption option = ProductOption.builder()
+                        .product(product)
+                        .name(optDto.getName())
+                        .sortPosition(optPos++)
+                        .build();
+
+                List<ProductOptionValue> values = new ArrayList<>();
+                int valPos = 0;
+                for (String valName : optDto.getValues()) {
+                    ProductOptionValue val = ProductOptionValue.builder()
+                            .option(option)
+                            .valueName(valName)
+                            .sortPosition(valPos++)
+                            .build();
+                    values.add(val);
+                    optionValueLookup.put(optDto.getName() + ":" + valName, val);
+                }
+                option.setValues(values);
+                newOptions.add(option);
+            }
+            product.getOptions().clear();
+            product.getOptions().addAll(newOptions);
+
+            List<ProductVariant> newVariantsList = new ArrayList<>();
+            double minPrice = Double.MAX_VALUE;
+            int totalStock = 0;
+
+            for (ProductDto.VariantDto varDto : dto.getVariants()) {
+                if (varDto.getCombination() == null || varDto.getCombination().isEmpty()) continue;
+
+                String sig = varDto.getCombination().entrySet().stream()
+                        .map(e -> e.getKey() + ":" + e.getValue())
+                        .sorted()
+                        .collect(Collectors.joining("|"));
+
+                ProductVariant variant = existingVariants.get(sig);
+                if (variant == null) {
+                    variant = new ProductVariant();
+                    variant.setProduct(product);
+                }
+
+                variant.setSku(varDto.getSku());
+                variant.setBarcode(varDto.getBarcode());
+                variant.setPrice(varDto.getPrice() != null ? varDto.getPrice() : 0.0);
+                variant.setStock(varDto.getStock() != null ? varDto.getStock() : 0);
+                variant.setWeight(varDto.getWeight());
+
+                List<ProductOptionValue> linkedValues = new ArrayList<>();
+                for (Map.Entry<String, String> entry : varDto.getCombination().entrySet()) {
+                    ProductOptionValue pov = optionValueLookup.get(entry.getKey() + ":" + entry.getValue());
+                    if (pov != null) linkedValues.add(pov);
+                }
+                variant.setOptionValues(linkedValues);
+
+                newVariantsList.add(variant);
+
+                if (variant.getPrice() < minPrice) minPrice = variant.getPrice();
+                totalStock += variant.getStock();
+            }
+
+            product.getVariantsList().clear();
+            product.getVariantsList().addAll(newVariantsList);
+
+            product.setPrice(minPrice == Double.MAX_VALUE ? 0.0 : minPrice);
+            product.setStock(totalStock);
+        }
+
+        product = productRepository.save(product);
+
+        if (product.getHasVariants() && dto.getVariants() != null) {
+            List<ProductDto.VariantDto> validDtos = dto.getVariants().stream()
+                    .filter(v -> v.getCombination() != null && !v.getCombination().isEmpty())
+                    .collect(Collectors.toList());
+
+            for (ProductDto.VariantDto vDto : validDtos) {
+                if (vDto.getImageRef() != null && !vDto.getImageRef().isEmpty()) {
+                    String sig = vDto.getCombination().entrySet().stream()
+                            .map(e -> e.getKey() + ":" + e.getValue())
+                            .sorted()
+                            .collect(Collectors.joining("|"));
+
+                    ProductVariant savedVariant = product.getVariantsList().stream()
+                            .filter(v -> {
+                                String vSig = v.getOptionValues().stream()
+                                        .map(ov -> ov.getOption().getName() + ":" + ov.getValueName())
+                                        .sorted()
+                                        .collect(Collectors.joining("|"));
+                                return vSig.equals(sig);
+                            }).findFirst().orElse(null);
+
+                    if (savedVariant != null) {
+                        product.getImages().stream()
+                                .filter(img -> img.getFilePath().equals(vDto.getImageRef()))
+                                .findFirst()
+                                .ifPresent(img -> img.setVariantId(savedVariant.getId()));
+                    }
+                }
+            }
+            productRepository.save(product);
+        }
     }
 
     @Transactional
@@ -206,7 +338,6 @@ public class ProductService {
     @Transactional
     public void hardDeleteProduct(Long id) {
         Product product = getProductById(id);
-        // Borrar archivos uno por uno
         List<String> urlsToDelete = product.getImages().stream()
                 .map(ProductImage::getFilePath).collect(Collectors.toList());
         imageStorage.deleteImages(urlsToDelete);

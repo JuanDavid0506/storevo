@@ -64,7 +64,8 @@
                     </div>
 
                     <div class="mt-auto pt-3 border-t border-slate-50">
-                        <div class="flex items-center gap-2 mb-3">
+                        <div class="flex items-center gap-1.5 mb-3">
+                            <span th:if="${p.hasVariants}" class="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">Desde</span>
                             <span class="text-lg font-black text-slate-900" th:text="${'$ ' + #numbers.formatDecimal((p.discountPrice != null and p.discountPrice > 0 ? p.discountPrice : p.price), 1, 'POINT', 0, 'COMMA')}">$0</span>
                             <span th:if="${p.discountPrice != null and p.discountPrice > 0}" class="text-xs text-slate-400 line-through font-medium" th:text="${'$ ' + #numbers.formatDecimal(p.price, 1, 'POINT', 0, 'COMMA')}">$0</span>
                         </div>
@@ -73,9 +74,14 @@
                             <a th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${p.id})}" class="flex items-center justify-center px-2 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors text-center">
                                 Ver detalles
                             </a>
-                            <button type="button" th:data-slug="${slug}" th:data-id="${p.id}" onclick="buyNowFast(this.getAttribute('data-slug'), this.getAttribute('data-id'))" class="flex items-center justify-center px-2 py-2 text-xs font-bold text-white bg-brand hover:bg-brand/90 rounded-lg transition-colors shadow-md shadow-brand/20 text-center">
+
+                            <button th:if="${!p.hasVariants}" type="button" th:data-slug="${slug}" th:data-id="${p.id}" onclick="buyNowFast(this.getAttribute('data-slug'), this.getAttribute('data-id'))" class="flex items-center justify-center px-2 py-2 text-xs font-bold text-white bg-brand hover:bg-brand/90 rounded-lg transition-colors shadow-md shadow-brand/20 text-center">
                                 Comprar
                             </button>
+
+                            <a th:if="${p.hasVariants}" th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${p.id})}" class="flex items-center justify-center px-2 py-2 text-xs font-bold text-white bg-slate-800 hover:bg-slate-900 rounded-lg transition-colors shadow-md shadow-slate-900/20 text-center">
+                                Ver opciones
+                            </a>
                         </div>
                     </div>
                 </div>

@@ -60,6 +60,21 @@ public class Product {
     @Builder.Default
     private Boolean isDeleted = false;
 
+    // --- NUEVO: SOPORTE HÍBRIDO (Fase 2) ---
+    @Column(name = "has_variants", nullable = false)
+    @Builder.Default
+    private Boolean hasVariants = false;
+
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("sortPosition ASC")
+    @Builder.Default
+    private List<ProductOption> options = new ArrayList<>();
+
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<ProductVariant> variantsList = new ArrayList<>();
+    // --------------------------------------
+
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     @OrderBy("sortPosition ASC")
     @Builder.Default
@@ -68,10 +83,6 @@ public class Product {
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "attributes_json", columnDefinition = "json")
     private Map<String, String> attributes;
-
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "variants_json", columnDefinition = "json")
-    private List<Map<String, Object>> variants;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -95,7 +106,6 @@ public class Product {
         return this.images.stream().filter(ProductImage::getIsPrimary).findFirst().orElse(this.images.get(0)).getFilePath();
     }
 
-    // NUEVO: Devuelve la versión ultraligera para las tablas del panel de control
     public String getMainImageThumbnailUrl() {
         if (this.images == null || this.images.isEmpty()) return null;
         return this.images.stream().filter(ProductImage::getIsPrimary).findFirst().orElse(this.images.get(0)).getThumbnailUrl();

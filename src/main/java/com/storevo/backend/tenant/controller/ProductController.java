@@ -20,7 +20,10 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/dashboard/{slug}/products")
@@ -50,6 +53,7 @@ public class ProductController {
     public String showCreateForm(Model model) {
         ProductDto dto = new ProductDto();
         dto.setIsActive(true);
+        dto.setHasVariants(false); // Por defecto es un producto simple
 
         model.addAttribute("product", dto);
         model.addAttribute("categories", categoryService.getAllCategories());
@@ -71,7 +75,7 @@ public class ProductController {
             });
         }
 
-        // --- NUEVO: Mapeo de la entidad ProductImage al DTO para edición ---
+        // Mapeo de la entidad ProductImage al DTO para edición
         List<String> existingImages = new ArrayList<>();
         List<String> imageOrder = new ArrayList<>();
         String mainImageRef = "";
@@ -85,7 +89,57 @@ public class ProductController {
                 }
             }
         }
-        // ------------------------------------------------------------------
+
+        // --- MAPEO FASE 2: VARIANTES Y OPCIONES ---
+        Boolean hasVariants = product.getHasVariants() != null ? product.getHasVariants() : false;
+        List<ProductDto.OptionDto> optionDtos = new ArrayList<>();
+        List<ProductDto.VariantDto> variantDtos = new ArrayList<>();
+
+        if (hasVariants) {
+            // Mapear Opciones (Ej: Color -> Rojo, Azul)
+            if (product.getOptions() != null) {
+                optionDtos = product.getOptions().stream().map(opt -> {
+                    ProductDto.OptionDto optDto = new ProductDto.OptionDto();
+                    optDto.setName(opt.getName());
+                    if (opt.getValues() != null) {
+                        optDto.setValues(opt.getValues().stream()
+                                .map(val -> val.getValueName())
+                                .collect(Collectors.toList()));
+                    } else {
+                        optDto.setValues(new ArrayList<>());
+                    }
+                    return optDto;
+                }).collect(Collectors.toList());
+            }
+
+            // Mapear Combinaciones y Valores Anteriores
+            if (product.getVariantsList() != null) {
+                variantDtos = product.getVariantsList().stream().map(var -> {
+                    ProductDto.VariantDto varDto = new ProductDto.VariantDto();
+                    varDto.setSku(var.getSku());
+                    varDto.setPrice(var.getPrice());
+                    varDto.setStock(var.getStock());
+                    varDto.setBarcode(var.getBarcode());
+                    varDto.setWeight(var.getWeight());
+
+                    // Construir el diccionario de la combinación
+                    Map<String, String> combo = new HashMap<>();
+                    if (var.getOptionValues() != null) {
+                        var.getOptionValues().forEach(val ->
+                                combo.put(val.getOption().getName(), val.getValueName())
+                        );
+                    }
+                    varDto.setCombination(combo);
+
+                    // Mapear imagen si la tiene vinculada
+                    if (var.getImages() != null && !var.getImages().isEmpty()) {
+                        varDto.setImageRef(var.getImages().get(0).getFilePath());
+                    }
+                    return varDto;
+                }).collect(Collectors.toList());
+            }
+        }
+        // ------------------------------------------
 
         ProductDto dto = ProductDto.builder()
                 .id(product.getId())
@@ -99,12 +153,16 @@ public class ProductController {
                 .sku(product.getSku())
                 .weight(product.getWeight())
                 .isActive(product.getIsActive())
-                // Inyectamos los datos para el Drag & Drop en el frontend
+                // Datos de la Fase 1
                 .existingImages(existingImages)
                 .imageOrder(imageOrder)
                 .mainImageRef(mainImageRef)
                 .attrKeys(keys)
                 .attrValues(values)
+                // Datos de la Fase 2
+                .hasVariants(hasVariants)
+                .options(optionDtos)
+                .variants(variantDtos)
                 .build();
 
         model.addAttribute("product", dto);

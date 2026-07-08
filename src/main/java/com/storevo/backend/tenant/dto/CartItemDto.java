@@ -11,6 +11,12 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class CartItemDto {
     private Long productId;
+
+    // --- FASE 2: VARIANTES ---
+    private Long variantId;
+    private String variantText; // Ej: "Rojo • M"
+    // -------------------------
+
     private String name;
     private Double price;
     private Integer quantity;
