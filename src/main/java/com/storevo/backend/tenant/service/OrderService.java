@@ -36,10 +36,21 @@ public class OrderService {
     public Order getOrderById(Long id) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new OrderNotFoundException(id));
+
+        // Evitamos LazyInitializationException "despertando" las colecciones
         order.getItems().size();
         order.getHistory().size();
         order.getInternalNotes().size();
         order.getShipments().size();
+
+        // --- NUEVO FIX: Despertar la transportadora de cada envío ---
+        order.getShipments().forEach(shipment -> {
+            if (shipment.getCarrier() != null) {
+                shipment.getCarrier().getName();
+            }
+        });
+        // -----------------------------------------------------------
+
         return order;
     }
 
