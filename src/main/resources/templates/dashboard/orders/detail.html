@@ -24,7 +24,7 @@
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- COLUMNA IZQUIERDA: Info Comercial, Logística y Notas -->
+        <!-- COLUMNA IZQUIERDA -->
         <div class="lg:col-span-2 space-y-6">
 
             <!-- Productos -->
@@ -44,14 +44,13 @@
                         </div>
                     </div>
                 </div>
-
                 <div class="mt-6 pt-4 border-t border-slate-800 flex justify-between items-center">
                     <span class="text-slate-400 font-medium">Total cobrado</span>
                     <span class="text-2xl font-black text-storevo-400" th:text="${order.total != null ? '$ ' + #numbers.formatDecimal(order.total, 1, 'POINT', 0, 'COMMA') : '$ 0'}"></span>
                 </div>
             </div>
 
-            <!-- FASE 3.2: TARJETA DE LOGÍSTICA Y ENVÍOS -->
+            <!-- FASE 3.2: TARJETA DE LOGÍSTICA -->
             <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
                 <div class="flex justify-between items-center mb-4 border-b border-slate-800 pb-3">
                     <h3 class="text-base font-bold text-white flex items-center gap-2">
@@ -59,20 +58,18 @@
                         Logística y Envíos
                     </h3>
 
-                    <!-- Botón Dinámico: Solo aparece si el estado es PACKED (Empacado) -->
+                    <!-- Botón Dinámico -->
                     <button th:if="${order.status.name() == 'PACKED'}" onclick="Storevo.OrderManagement.openShipmentModal()" class="bg-storevo-500 hover:bg-storevo-600 text-white font-bold py-1.5 px-4 rounded-lg transition text-xs shadow-md flex items-center gap-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
                         Despachar Pedido
                     </button>
                 </div>
 
-                <!-- Empty State -->
                 <div th:if="${#lists.isEmpty(order.shipments)}" class="text-center py-6">
                     <p class="text-sm text-slate-500">Aún no se han generado guías de envío (Shipments) para este pedido.</p>
                     <p th:if="${order.status.name() != 'PACKED'}" class="text-xs text-slate-600 mt-2 italic">Avanza el pedido hasta estado "Empacado" para habilitar la opción de Despacho.</p>
                 </div>
 
-                <!-- Lista de Paquetes -->
                 <div th:unless="${#lists.isEmpty(order.shipments)}" class="space-y-4">
                     <div th:each="shipment : ${order.shipments}" class="bg-slate-950 border border-slate-800 rounded-lg p-4">
                         <div class="flex justify-between items-start mb-3">
@@ -85,7 +82,6 @@
                         <div class="flex items-center flex-wrap gap-x-4 gap-y-2 mt-3 pt-3 border-t border-slate-800/50">
                             <span class="text-sm text-slate-400">Guía: <strong class="text-slate-200 font-mono tracking-wide" th:text="${shipment.trackingNumber != null and !shipment.trackingNumber.isEmpty() ? shipment.trackingNumber : 'Sin número de guía'}"></strong></span>
 
-                            <!-- Link autogenerado -->
                             <a th:if="${shipment.getDynamicTrackingUrl() != null}" th:href="${shipment.getDynamicTrackingUrl()}" target="_blank" class="text-storevo-400 hover:text-storevo-300 text-sm font-medium flex items-center gap-1 bg-storevo-500/10 px-2 py-1 rounded">
                                 Rastrear en línea <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
                             </a>
@@ -96,7 +92,6 @@
 
             <!-- Cliente y Logística Básico -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Información del Cliente (Igual que antes) -->
                 <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
                     <h3 class="text-base font-bold text-white mb-4 flex items-center gap-2">
                         <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
@@ -104,7 +99,6 @@
                     </h3>
                     <p class="font-bold text-slate-300" th:text="${order.customerName}"></p>
                     <p class="text-sm text-slate-400 mt-1" th:text="${order.customerPhone}"></p>
-
                     <div class="mt-4 pt-4 border-t border-slate-800">
                         <p class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Método de Pago</p>
                         <p class="text-sm text-slate-300 font-medium flex items-center gap-2">
@@ -121,7 +115,6 @@
                     </h3>
                     <p class="font-bold text-slate-300" th:text="${order.city}"></p>
                     <p class="text-sm text-slate-400 mt-1" th:text="${order.address}"></p>
-
                     <div th:if="${order.notes != null and !order.notes.isEmpty()}" class="mt-4 p-3 bg-storevo-500/10 border border-storevo-500/20 rounded-lg">
                         <p class="text-xs font-bold uppercase tracking-wider text-storevo-400 mb-1">Nota del cliente</p>
                         <p class="text-sm text-slate-300 italic" th:text="${order.notes}"></p>
@@ -141,7 +134,6 @@
                         </button>
                     </div>
                 </form>
-
                 <div id="notes-container" class="space-y-3">
                     <div th:each="note : ${order.internalNotes}" class="bg-slate-950 p-4 rounded-lg border border-slate-800/50">
                         <p class="text-sm text-slate-300 mb-2" th:text="${note.note}"></p>
@@ -163,20 +155,20 @@
                     <input type="hidden" id="order-id" th:value="${order.id}">
                     <input type="hidden" id="store-slug" th:value="${slug}">
 
-                    <!-- FASE 3.2: Doble Validación en Frontend (Máquina de Estados + Restricción Logística) -->
+                    <!-- LA SOLUCIÓN DEL BLOQUEO -->
                     <select id="new-status" name="status" class="w-full bg-slate-950 border border-slate-700 text-slate-300 text-sm font-medium rounded-lg focus:ring-storevo-500 px-3 py-3 outline-none disabled:opacity-50">
                         <option th:each="state : ${orderStatuses}"
-                                th:value="${state}"
+                                th:value="${state.name()}"
                                 th:text="${state.getDisplayName()}"
                                 th:selected="${state == order.status}"
-                                th:disabled="${!order.status.canTransitionTo(state) or (state.name() == 'SHIPPED' and #lists.isEmpty(order.shipments))}">
+                                th:disabled="${(!order.status.canTransitionTo(state) and state != order.status) or (state.name() == 'SHIPPED' and #lists.isEmpty(order.shipments))}">
                         </option>
                     </select>
 
                     <button type="submit" class="w-full bg-storevo-500 hover:bg-storevo-600 text-white px-4 py-3 rounded-lg font-bold transition shadow-md shadow-storevo-500/20 flex items-center justify-center gap-2">
                         <span>Actualizar Flujo</span>
                     </button>
-                    <p class="text-[10px] text-slate-500 text-center mt-1">Para pasar a estado <strong>Enviado</strong>, debes utilizar el botón <strong>Despachar Pedido</strong> de la izquierda.</p>
+                    <p class="text-[10px] text-slate-500 text-center mt-1">El sistema bloquea saltos lógicos no permitidos.</p>
                 </form>
             </div>
 
@@ -200,7 +192,7 @@
         </div>
     </div>
 
-    <!-- MODAL DE DESPACHO (Nativo en Tailwind) -->
+    <!-- MODAL DE DESPACHO -->
     <div id="shipment-modal" class="fixed inset-0 z-50 hidden bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
         <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg shadow-2xl transform scale-95 transition-transform duration-300" id="shipment-modal-content">
             <div class="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-800/30 rounded-t-2xl">
@@ -248,7 +240,7 @@
 </div>
 
 <th:block layout:fragment="scripts">
-    <script th:src="@{/js/modules/orderManagement.js}"></script>
+    <script th:src="@{/js/modules/orderManagement.js?v=3.3}"></script>
 </th:block>
 </body>
 </html>

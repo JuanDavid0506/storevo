@@ -29,13 +29,11 @@ Storevo.OrderManagement = {
         return `/dashboard/${slug}/orders/${orderId}`;
     },
 
-    // --- LÓGICA DEL MODAL DE DESPACHO (FASE 3.2) ---
     openShipmentModal: function() {
         const modal = document.getElementById('shipment-modal');
         const content = document.getElementById('shipment-modal-content');
 
         modal.classList.remove('hidden');
-        // Pequeño delay para permitir que el display:block se aplique antes de animar opacidad
         setTimeout(() => {
             modal.classList.remove('opacity-0');
             content.classList.remove('scale-95');
@@ -54,7 +52,7 @@ Storevo.OrderManagement = {
         setTimeout(() => {
             modal.classList.add('hidden');
             document.getElementById('shipment-form').reset();
-        }, 300); // Tiempo de la transición Tailwind
+        }, 300);
     },
 
     handleShipmentSubmit: async function(e) {
@@ -81,25 +79,25 @@ Storevo.OrderManagement = {
             if (data.success) {
                 if(Storevo.UI && Storevo.UI.Toast) Storevo.UI.Toast.show(data.message, 'success');
                 this.closeShipmentModal();
-
-                // Recarga limpia para inyectar la tarjeta de logística, el timeline y el nuevo estado
                 setTimeout(() => window.location.reload(), 1500);
             } else {
                 if(Storevo.UI && Storevo.UI.Toast) Storevo.UI.Toast.show(data.message, 'error');
             }
         } catch (error) {
+            console.error(error);
             if(Storevo.UI && Storevo.UI.Toast) Storevo.UI.Toast.show('Error de conexión', 'error');
         } finally {
             this.setLoading(submitBtn, false, 'Generar Envío Seguro');
         }
     },
-    // -----------------------------------------------
 
     handleStatusUpdate: async function(e) {
         e.preventDefault();
-        const submitBtn = e.target.querySelector('button[type="submit"]');
-        const statusSelect = document.getElementById('new-status');
-        const statusVal = statusSelect.value;
+        const form = e.target;
+        const submitBtn = form.querySelector('button[type="submit"]');
+
+        const formData = new FormData(form);
+        const statusVal = formData.get('status');
 
         this.setLoading(submitBtn, true);
 
@@ -115,20 +113,17 @@ Storevo.OrderManagement = {
             if (data.success) {
                 if(Storevo.UI && Storevo.UI.Toast) Storevo.UI.Toast.show(data.message, 'success');
 
-                const badge = document.getElementById('main-status-badge');
-                if(badge && data.newBadge && data.newName) {
-                    badge.className = `text-xs uppercase tracking-wider font-bold px-3 py-1 rounded-full border ${data.newBadge}`;
-                    badge.textContent = data.newName;
-                }
-
-                this.prependToTimeline(data.history);
-
-                setTimeout(() => window.location.reload(), 1200);
+                // Recarga limpia a la URL base sin parámetros ?status=
+                setTimeout(() => {
+                    const cleanUrl = window.location.href.split('?')[0];
+                    window.location.href = cleanUrl;
+                }, 1200);
 
             } else {
                 if(Storevo.UI && Storevo.UI.Toast) Storevo.UI.Toast.show(data.message, 'error');
             }
         } catch (error) {
+            console.error(error);
             if(Storevo.UI && Storevo.UI.Toast) Storevo.UI.Toast.show('Error de conexión', 'error');
         } finally {
             this.setLoading(submitBtn, false, '<span>Actualizar Flujo</span>');
@@ -165,6 +160,7 @@ Storevo.OrderManagement = {
                 if(Storevo.UI && Storevo.UI.Toast) Storevo.UI.Toast.show(data.message, 'error');
             }
         } catch (error) {
+            console.error(error);
             if(Storevo.UI && Storevo.UI.Toast) Storevo.UI.Toast.show('Error al guardar la nota', 'error');
         } finally {
             this.setLoading(submitBtn, false, 'Guardar Nota');

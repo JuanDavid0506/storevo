@@ -36,11 +36,10 @@ public class OrderService {
     public Order getOrderById(Long id) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new OrderNotFoundException(id));
-        // Prevención del LazyInitializationException
         order.getItems().size();
         order.getHistory().size();
         order.getInternalNotes().size();
-        order.getShipments().size(); // <-- ESTA ES LA LÍNEA MÁGICA QUE FALTABA
+        order.getShipments().size();
         return order;
     }
 
@@ -80,10 +79,19 @@ public class OrderService {
         }).collect(Collectors.toList());
 
         order.setItems(items);
+
+        OrderHistory historyObj = OrderHistory.builder()
+                .order(order)
+                .eventType(OrderHistoryType.SYSTEM_EVENT)
+                .origin(EventOrigin.WEB)
+                .oldStatus(null)
+                .newStatus(OrderStatus.PENDING)
+                .description("Pedido creado por el cliente.")
+                .userId(null)
+                .build();
+        order.getHistory().add(historyObj);
+
         Order savedOrder = orderRepository.save(order);
-
-        logHistory(savedOrder, OrderHistoryType.SYSTEM_EVENT, EventOrigin.WEB, null, OrderStatus.PENDING, "Pedido creado por el cliente.", null);
-
         cartManager.clearCart(slug);
         return savedOrder;
     }
@@ -111,9 +119,21 @@ public class OrderService {
         }
 
         order.setStatus(newStatus);
-        Order savedOrder = orderRepository.save(order);
 
-        return logHistory(savedOrder, OrderHistoryType.STATE_CHANGE, origin, oldStatus, newStatus, "El estado cambió a " + newStatus.getDisplayName(), userId);
+        OrderHistory historyObj = OrderHistory.builder()
+                .order(order)
+                .eventType(OrderHistoryType.STATE_CHANGE)
+                .origin(origin)
+                .oldStatus(oldStatus)
+                .newStatus(newStatus)
+                .description("El estado cambió a " + newStatus.getDisplayName())
+                .userId(userId)
+                .build();
+
+        order.getHistory().add(historyObj);
+        orderRepository.save(order); // Guardado explícito forzado
+
+        return historyObj;
     }
 
     @Transactional
@@ -130,20 +150,6 @@ public class OrderService {
         orderRepository.save(order);
 
         return internalNote;
-    }
-
-    private OrderHistory logHistory(Order order, OrderHistoryType type, EventOrigin origin, OrderStatus oldStatus, OrderStatus newStatus, String description, Long userId) {
-        OrderHistory historyObj = OrderHistory.builder()
-                .order(order)
-                .eventType(type)
-                .origin(origin)
-                .oldStatus(oldStatus)
-                .newStatus(newStatus)
-                .description(description)
-                .userId(userId)
-                .build();
-        order.getHistory().add(historyObj);
-        return historyObj;
     }
 
     private void deductOrderStock(Order order) {

@@ -66,6 +66,8 @@ public class DashboardOrderController {
 
         Long currentUserId = 1L; // Temporal
 
+        System.out.println("🚀 [ADMIN] Solicitud de cambio de estado recibida. Nuevo estado: " + status.name());
+
         Map<String, Object> response = new HashMap<>();
         try {
             OrderHistory history = orderService.updateOrderStatus(id, status, EventOrigin.ADMIN, currentUserId);
@@ -75,6 +77,8 @@ public class DashboardOrderController {
             response.put("history", mapHistoryToDto(history));
             response.put("newBadge", status.getBadgeClasses());
             response.put("newName", status.getDisplayName());
+
+            System.out.println("✅ [ADMIN] Estado guardado en BD exitosamente.");
 
         } catch (ShipmentRequiredException e) {
             response.put("success", false);

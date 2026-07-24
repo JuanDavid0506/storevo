@@ -22,7 +22,6 @@ public enum OrderStatus {
     public String getDisplayName() { return displayName; }
     public String getBadgeClasses() { return badgeClasses; }
 
-    // MÁQUINA DE ESTADOS: Valida transiciones permitidas
     public boolean canTransitionTo(OrderStatus nextStatus) {
         if (this == nextStatus) return false;
 
@@ -30,9 +29,9 @@ public enum OrderStatus {
             case PENDING:
                 return nextStatus == PAID || nextStatus == CANCELLED;
             case PAID:
-                return nextStatus == CONFIRMED || nextStatus == REFUNDED;
+                return nextStatus == CONFIRMED || nextStatus == PREPARING || nextStatus == REFUNDED;
             case CONFIRMED:
-                return nextStatus == PREPARING;
+                return nextStatus == PREPARING || nextStatus == PACKED;
             case PREPARING:
                 return nextStatus == PACKED;
             case PACKED:
@@ -42,7 +41,7 @@ public enum OrderStatus {
             case DELIVERED:
             case CANCELLED:
             case REFUNDED:
-                return false; // Estados finales, no pueden salir de aquí
+                return false;
             default:
                 return false;
         }
