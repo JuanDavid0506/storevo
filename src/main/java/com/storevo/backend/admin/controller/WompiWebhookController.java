@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.storevo.backend.admin.model.Store;
 import com.storevo.backend.admin.repository.StoreRepository;
 import com.storevo.backend.config.tenant.TenantContext;
+import com.storevo.backend.tenant.model.EventOrigin;
 import com.storevo.backend.tenant.model.OrderStatus;
 import com.storevo.backend.tenant.service.OrderService;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +22,6 @@ import java.util.Optional;
 public class WompiWebhookController {
 
     private final StoreRepository storeRepository;
-    // 1. Inyectamos OrderService en lugar de OrderRepository
     private final OrderService orderService;
 
     @Value("${wompi.events-secret}")
@@ -68,12 +68,12 @@ public class WompiWebhookController {
             try {
                 TenantContext.setCurrentTenant(storeOpt.get().getSchemaName());
 
-                // 2. ¡EL CAMBIO CRÍTICO! Delegamos al OrderService para que él descuente el stock
+                // Se envían 4 parámetros: orderId, status, origin (WEBHOOK) y userId (null)
                 if ("APPROVED".equals(status)) {
-                    orderService.updateOrderStatus(orderId, OrderStatus.PAID);
+                    orderService.updateOrderStatus(orderId, OrderStatus.PAID, EventOrigin.WEBHOOK, null);
                     System.out.println("✅ PAGO APROBADO: Orden " + orderId + " marcada como PAGADA y stock descontado.");
                 } else if ("DECLINED".equals(status) || "ERROR".equals(status) || "VOIDED".equals(status)) {
-                    orderService.updateOrderStatus(orderId, OrderStatus.CANCELLED);
+                    orderService.updateOrderStatus(orderId, OrderStatus.CANCELLED, EventOrigin.WEBHOOK, null);
                     System.out.println("❌ PAGO RECHAZADO: Orden " + orderId + " marcada como CANCELADA y stock restaurado (si aplica).");
                 }
 

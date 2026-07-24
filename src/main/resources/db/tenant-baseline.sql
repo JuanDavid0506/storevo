@@ -1,6 +1,6 @@
 -- ============================================================
 -- STOREVO — Baseline Schema por Tenant
--- Sincronizado con Fase 2: Arquitectura Híbrida de Variantes
+-- Sincronizado con Fase 3.2: Logística y Envíos
 -- ============================================================
 
 CREATE TABLE categories (
@@ -38,7 +38,7 @@ CREATE TABLE products (
     FOREIGN KEY (category_id) REFERENCES categories(id)
 );
 
--- NUEVO: Opciones Relacionales
+-- Opciones Relacionales
 CREATE TABLE product_options (
     id             BIGINT AUTO_INCREMENT PRIMARY KEY,
     product_id     BIGINT          NOT NULL,
@@ -47,7 +47,7 @@ CREATE TABLE product_options (
     FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
 );
 
--- NUEVO: Valores de Opciones
+-- Valores de Opciones
 CREATE TABLE product_option_values (
     id             BIGINT AUTO_INCREMENT PRIMARY KEY,
     option_id      BIGINT          NOT NULL,
@@ -56,7 +56,7 @@ CREATE TABLE product_option_values (
     FOREIGN KEY (option_id) REFERENCES product_options(id) ON DELETE CASCADE
 );
 
--- NUEVO: Variantes (Super Entidad Preparada)
+-- Variantes (Super Entidad Preparada)
 CREATE TABLE product_variants (
     id               BIGINT AUTO_INCREMENT PRIMARY KEY,
     product_id       BIGINT          NOT NULL,
@@ -74,7 +74,7 @@ CREATE TABLE product_variants (
     FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
 );
 
--- NUEVO: Tabla Intermedia (Combinaciones estrictamente relacionales)
+-- Tabla Intermedia (Combinaciones estrictamente relacionales)
 CREATE TABLE product_variant_values (
     variant_id       BIGINT NOT NULL,
     option_value_id  BIGINT NOT NULL,
@@ -107,7 +107,10 @@ CREATE TABLE product_images (
     INDEX idx_file_hash (file_hash)
 );
 
--- Pedidos
+-- ============================================================
+-- OMS: MÓDULO DE PEDIDOS Y GESTIÓN (FASE 3.1)
+-- ============================================================
+
 CREATE TABLE orders (
     id                    BIGINT AUTO_INCREMENT PRIMARY KEY,
     customer_name         VARCHAR(150)   NOT NULL,
@@ -116,33 +119,95 @@ CREATE TABLE orders (
     city                  VARCHAR(100)   NOT NULL,
     notes                 TEXT,
     total                 DOUBLE         NOT NULL DEFAULT 0,
-    status                VARCHAR(20)    NOT NULL DEFAULT 'PENDING',
-    wompi_transaction_id  VARCHAR(100),
-    created_at            TIMESTAMP      DEFAULT CURRENT_TIMESTAMP
+    status                VARCHAR(30)    NOT NULL DEFAULT 'PENDING',
+    payment_method        VARCHAR(50)    DEFAULT 'Wompi / Tarjeta',
+    created_at            TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
+    updated_at            TIMESTAMP      DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
--- Preparado para Variantes
+CREATE TABLE order_history (
+    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+    order_id        BIGINT         NOT NULL,
+    event_type      VARCHAR(30)    NOT NULL,
+    origin          VARCHAR(30)    NOT NULL,
+    old_status      VARCHAR(30),
+    new_status      VARCHAR(30),
+    description     TEXT,
+    user_id         BIGINT,
+    created_at      TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+);
+
+CREATE TABLE order_notes (
+    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+    order_id        BIGINT         NOT NULL,
+    note            TEXT           NOT NULL,
+    user_id         BIGINT,
+    created_at      TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+);
+
 CREATE TABLE order_items (
     id           BIGINT AUTO_INCREMENT PRIMARY KEY,
     order_id     BIGINT         NOT NULL,
     product_id   BIGINT         NOT NULL,
-    variant_id   BIGINT         NULL,  -- PREPARADO
+    variant_id   BIGINT         NULL,
     product_name VARCHAR(150)   NOT NULL,
     price        DOUBLE         NOT NULL,
     quantity     INT            NOT NULL,
     subtotal     DOUBLE         NOT NULL,
-    FOREIGN KEY (order_id) REFERENCES orders(id),
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
     FOREIGN KEY (variant_id) REFERENCES product_variants(id) ON DELETE SET NULL
 );
 
--- Carrito Preparado
+-- ============================================================
+-- CARRITO
+-- ============================================================
+
 CREATE TABLE cart_items (
     id           BIGINT AUTO_INCREMENT PRIMARY KEY,
     product_id   BIGINT         NOT NULL,
-    variant_id   BIGINT         NULL,  -- PREPARADO
+    variant_id   BIGINT         NULL,
     quantity     INT            NOT NULL,
     session_id   VARCHAR(255)   NOT NULL,
     created_at   TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (product_id) REFERENCES products(id),
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
     FOREIGN KEY (variant_id) REFERENCES product_variants(id) ON DELETE SET NULL
+);
+
+-- ============================================================
+-- FASE 3.2: LOGÍSTICA Y ENVÍOS
+-- ============================================================
+
+CREATE TABLE carriers (
+    id                    BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name                  VARCHAR(100) NOT NULL,
+    code                  VARCHAR(50)  NOT NULL UNIQUE,
+    tracking_url_template VARCHAR(500),
+    is_active             BOOLEAN      NOT NULL DEFAULT TRUE,
+    created_at            TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+    updated_at            TIMESTAMP    DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- Inserción de Transportadoras por Defecto para Colombia
+INSERT INTO carriers (name, code, tracking_url_template) VALUES
+('Coordinadora', 'COORDINADORA', 'https://www.coordinadora.com/portafolio-de-servicios/servicios-en-linea/rastrear-guias/?guia={trackingNumber}'),
+('Servientrega', 'SERVIENTREGA', 'https://www.servientrega.com/wps/portal/Colombia/transacciones-personas/rastreo-envios/detalle?tracking={trackingNumber}'),
+('Inter Rapidísimo', 'INTER_RAPIDISIMO', 'https://www.interrapidisimo.com/sigue-tu-envio/?numeroDeGuia={trackingNumber}'),
+('Entrega Propia / Otro', 'CUSTOM', null);
+
+CREATE TABLE shipments (
+    id                   BIGINT AUTO_INCREMENT PRIMARY KEY,
+    order_id             BIGINT       NOT NULL,
+    carrier_id           BIGINT       NOT NULL,
+    tracking_number      VARCHAR(100),
+    external_shipment_id VARCHAR(100),
+    status               VARCHAR(50)  NOT NULL DEFAULT 'CREATED',
+    package_number       INT          NOT NULL DEFAULT 1,
+    weight               DOUBLE,
+    dimensions           VARCHAR(50),
+    created_at           TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+    updated_at           TIMESTAMP    DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+    FOREIGN KEY (carrier_id) REFERENCES carriers(id)
 );

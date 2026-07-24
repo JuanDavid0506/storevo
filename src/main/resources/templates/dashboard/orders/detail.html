@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/dashboard-layout}">
+<head>
+    <title th:text="${pageTitle}">Detalle del Pedido</title>
+</head>
+<body>
+<div layout:fragment="content" class="max-w-6xl mx-auto">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+        <div class="flex items-center gap-4">
+            <a th:href="@{|/dashboard/${slug}/orders|}" class="bg-slate-800 p-2 rounded-lg text-slate-400 hover:text-white transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            </a>
+            <div>
+                <h2 class="text-2xl font-black text-white flex items-center gap-3">
+                    Pedido #<span th:text="${order.id}"></span>
+                    <span id="main-status-badge" th:text="${order.status.getDisplayName()}" th:class="'text-xs uppercase tracking-wider font-bold px-3 py-1 rounded-full border ' + ${order.status.getBadgeClasses()}"></span>
+                </h2>
+                <p class="text-sm text-slate-400 mt-1" th:text="${#temporals.format(order.createdAt, 'dd MMMM yyyy, HH:mm')}"></p>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- COLUMNA IZQUIERDA: Info Comercial, Logística y Notas -->
+        <div class="lg:col-span-2 space-y-6">
+
+            <!-- Productos -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
+                <h3 class="text-lg font-bold text-white mb-4">Artículos comprados</h3>
+                <div class="space-y-4">
+                    <div th:each="item : ${order.items}" class="flex gap-4 items-start py-3 border-b border-slate-800/50 last:border-0">
+                        <div class="w-16 h-16 bg-slate-800 rounded-lg flex items-center justify-center font-bold text-slate-600 border border-slate-700 flex-shrink-0 shadow-inner">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+                        </div>
+                        <div class="flex-1">
+                            <p class="font-bold text-white text-base leading-tight" th:text="${item.productName}">Producto</p>
+                            <p class="text-sm text-slate-400 mt-1" th:text="${item.price != null ? '$' + #numbers.formatDecimal(item.price, 1, 'POINT', 0, 'COMMA') + ' x ' + item.quantity : '$0'}"></p>
+                        </div>
+                        <div class="text-right font-black text-white text-lg">
+                            <span th:text="${item.subtotal != null ? '$' + #numbers.formatDecimal(item.subtotal, 1, 'POINT', 0, 'COMMA') : '$0'}"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 pt-4 border-t border-slate-800 flex justify-between items-center">
+                    <span class="text-slate-400 font-medium">Total cobrado</span>
+                    <span class="text-2xl font-black text-storevo-400" th:text="${order.total != null ? '$ ' + #numbers.formatDecimal(order.total, 1, 'POINT', 0, 'COMMA') : '$ 0'}"></span>
+                </div>
+            </div>
+
+            <!-- FASE 3.2: TARJETA DE LOGÍSTICA Y ENVÍOS -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
+                <div class="flex justify-between items-center mb-4 border-b border-slate-800 pb-3">
+                    <h3 class="text-base font-bold text-white flex items-center gap-2">
+                        <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
+                        Logística y Envíos
+                    </h3>
+
+                    <!-- Botón Dinámico: Solo aparece si el estado es PACKED (Empacado) -->
+                    <button th:if="${order.status.name() == 'PACKED'}" onclick="Storevo.OrderManagement.openShipmentModal()" class="bg-storevo-500 hover:bg-storevo-600 text-white font-bold py-1.5 px-4 rounded-lg transition text-xs shadow-md flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                        Despachar Pedido
+                    </button>
+                </div>
+
+                <!-- Empty State -->
+                <div th:if="${#lists.isEmpty(order.shipments)}" class="text-center py-6">
+                    <p class="text-sm text-slate-500">Aún no se han generado guías de envío (Shipments) para este pedido.</p>
+                    <p th:if="${order.status.name() != 'PACKED'}" class="text-xs text-slate-600 mt-2 italic">Avanza el pedido hasta estado "Empacado" para habilitar la opción de Despacho.</p>
+                </div>
+
+                <!-- Lista de Paquetes -->
+                <div th:unless="${#lists.isEmpty(order.shipments)}" class="space-y-4">
+                    <div th:each="shipment : ${order.shipments}" class="bg-slate-950 border border-slate-800 rounded-lg p-4">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <span class="text-xs font-bold uppercase tracking-wider text-slate-500" th:text="'Paquete ' + ${shipment.packageNumber}"></span>
+                                <h4 class="font-bold text-white text-base mt-0.5" th:text="${shipment.carrier.name}">Transportadora</h4>
+                            </div>
+                            <span th:text="${shipment.status.getDisplayName()}" th:class="'text-[10px] uppercase tracking-wider font-bold px-3 py-1 rounded-full border ' + ${shipment.status.getBadgeClasses()}"></span>
+                        </div>
+                        <div class="flex items-center flex-wrap gap-x-4 gap-y-2 mt-3 pt-3 border-t border-slate-800/50">
+                            <span class="text-sm text-slate-400">Guía: <strong class="text-slate-200 font-mono tracking-wide" th:text="${shipment.trackingNumber != null and !shipment.trackingNumber.isEmpty() ? shipment.trackingNumber : 'Sin número de guía'}"></strong></span>
+
+                            <!-- Link autogenerado -->
+                            <a th:if="${shipment.getDynamicTrackingUrl() != null}" th:href="${shipment.getDynamicTrackingUrl()}" target="_blank" class="text-storevo-400 hover:text-storevo-300 text-sm font-medium flex items-center gap-1 bg-storevo-500/10 px-2 py-1 rounded">
+                                Rastrear en línea <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cliente y Logística Básico -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Información del Cliente (Igual que antes) -->
+                <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
+                    <h3 class="text-base font-bold text-white mb-4 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                        Información del Cliente
+                    </h3>
+                    <p class="font-bold text-slate-300" th:text="${order.customerName}"></p>
+                    <p class="text-sm text-slate-400 mt-1" th:text="${order.customerPhone}"></p>
+
+                    <div class="mt-4 pt-4 border-t border-slate-800">
+                        <p class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Método de Pago</p>
+                        <p class="text-sm text-slate-300 font-medium flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                            <span th:text="${order.paymentMethod}">Wompi</span>
+                        </p>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
+                    <h3 class="text-base font-bold text-white mb-4 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg>
+                        Dirección de Envío
+                    </h3>
+                    <p class="font-bold text-slate-300" th:text="${order.city}"></p>
+                    <p class="text-sm text-slate-400 mt-1" th:text="${order.address}"></p>
+
+                    <div th:if="${order.notes != null and !order.notes.isEmpty()}" class="mt-4 p-3 bg-storevo-500/10 border border-storevo-500/20 rounded-lg">
+                        <p class="text-xs font-bold uppercase tracking-wider text-storevo-400 mb-1">Nota del cliente</p>
+                        <p class="text-sm text-slate-300 italic" th:text="${order.notes}"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notas Internas -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
+                <h3 class="text-base font-bold text-white mb-1">Notas Internas</h3>
+                <p class="text-xs text-slate-500 mb-4">Solo visibles para el personal de la tienda.</p>
+                <form id="internal-note-form" class="mb-6">
+                    <div class="relative">
+                        <textarea id="internal-note-text" rows="2" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-sm text-white placeholder-slate-500 focus:ring-storevo-500 focus:border-storevo-500 outline-none resize-none" placeholder="Escribe un recordatorio o detalle para el equipo..."></textarea>
+                        <button type="submit" class="absolute bottom-3 right-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-bold py-1.5 px-4 rounded-md transition text-xs">
+                            Guardar Nota
+                        </button>
+                    </div>
+                </form>
+
+                <div id="notes-container" class="space-y-3">
+                    <div th:each="note : ${order.internalNotes}" class="bg-slate-950 p-4 rounded-lg border border-slate-800/50">
+                        <p class="text-sm text-slate-300 mb-2" th:text="${note.note}"></p>
+                        <p class="text-xs font-mono text-slate-500" th:text="${#temporals.format(note.createdAt, 'dd/MM/yyyy HH:mm')} + ' • Admin (ID: ' + ${note.userId} + ')'"></p>
+                    </div>
+                    <div th:if="${#lists.isEmpty(order.internalNotes)}" id="no-notes-msg" class="text-center py-4 text-sm text-slate-600">
+                        No hay notas internas en este pedido.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- COLUMNA DERECHA: Flujo de Estados y Timeline -->
+        <div class="space-y-6">
+            <!-- Actualizar Estado -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
+                <h3 class="text-base font-bold text-white mb-3">Actualizar Estado</h3>
+                <form id="status-update-form" class="flex flex-col gap-3">
+                    <input type="hidden" id="order-id" th:value="${order.id}">
+                    <input type="hidden" id="store-slug" th:value="${slug}">
+
+                    <!-- FASE 3.2: Doble Validación en Frontend (Máquina de Estados + Restricción Logística) -->
+                    <select id="new-status" name="status" class="w-full bg-slate-950 border border-slate-700 text-slate-300 text-sm font-medium rounded-lg focus:ring-storevo-500 px-3 py-3 outline-none disabled:opacity-50">
+                        <option th:each="state : ${orderStatuses}"
+                                th:value="${state}"
+                                th:text="${state.getDisplayName()}"
+                                th:selected="${state == order.status}"
+                                th:disabled="${!order.status.canTransitionTo(state) or (state.name() == 'SHIPPED' and #lists.isEmpty(order.shipments))}">
+                        </option>
+                    </select>
+
+                    <button type="submit" class="w-full bg-storevo-500 hover:bg-storevo-600 text-white px-4 py-3 rounded-lg font-bold transition shadow-md shadow-storevo-500/20 flex items-center justify-center gap-2">
+                        <span>Actualizar Flujo</span>
+                    </button>
+                    <p class="text-[10px] text-slate-500 text-center mt-1">Para pasar a estado <strong>Enviado</strong>, debes utilizar el botón <strong>Despachar Pedido</strong> de la izquierda.</p>
+                </form>
+            </div>
+
+            <!-- TIMELINE -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
+                <h3 class="text-base font-bold text-white mb-6">Línea de Tiempo</h3>
+
+                <div class="relative border-l-2 border-slate-800 ml-3" id="timeline-container">
+                    <div th:each="event : ${order.history}" class="mb-8 ml-6 relative timeline-item">
+                        <span th:if="${event.eventType.name() == 'SYSTEM_EVENT'}" class="absolute flex items-center justify-center w-6 h-6 bg-slate-900 rounded-full -left-[35px] ring-4 ring-slate-900 text-slate-400 border border-slate-700"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg></span>
+                        <span th:if="${event.eventType.name() == 'STATE_CHANGE'}" class="absolute flex items-center justify-center w-6 h-6 bg-slate-900 rounded-full -left-[35px] ring-4 ring-slate-900 text-storevo-400 border border-storevo-500/50"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></span>
+
+                        <div class="flex flex-col">
+                            <span class="text-xs text-slate-500 font-medium mb-1" th:text="${#temporals.format(event.createdAt, 'dd/MM/yyyy HH:mm')} + ' • Origen: ' + ${event.origin.name()}">Fecha</span>
+                            <h4 class="text-sm font-bold text-white mb-0.5" th:text="${event.eventType.name() == 'SYSTEM_EVENT' ? 'Sistema' : 'Estado Actualizado'}"></h4>
+                            <p class="text-sm text-slate-400" th:text="${event.description}"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE DESPACHO (Nativo en Tailwind) -->
+    <div id="shipment-modal" class="fixed inset-0 z-50 hidden bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg shadow-2xl transform scale-95 transition-transform duration-300" id="shipment-modal-content">
+            <div class="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-800/30 rounded-t-2xl">
+                <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                    <svg class="w-6 h-6 text-storevo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                    Despachar Pedido
+                </h3>
+                <button type="button" onclick="Storevo.OrderManagement.closeShipmentModal()" class="text-slate-500 hover:text-white transition bg-slate-800 p-1.5 rounded-lg">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <form id="shipment-form" class="p-6 space-y-5">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Transportadora *</label>
+                    <select name="carrierId" id="shipment-carrier" required class="w-full bg-slate-950 border border-slate-700 text-slate-300 text-sm rounded-lg focus:ring-storevo-500 focus:border-storevo-500 px-4 py-3 outline-none">
+                        <option value="" disabled selected>Selecciona una transportadora</option>
+                        <option th:each="c : ${carriers}" th:value="${c.id}" th:text="${c.name}"></option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Número de Guía (Tracking) *</label>
+                    <input type="text" name="trackingNumber" id="shipment-tracking" required class="w-full bg-slate-950 border border-slate-700 text-slate-300 text-sm rounded-lg focus:ring-storevo-500 focus:border-storevo-500 px-4 py-3 outline-none font-mono tracking-widest uppercase" placeholder="Ej: 9028347592">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Peso Opcional (kg)</label>
+                        <input type="number" step="0.01" name="weight" id="shipment-weight" class="w-full bg-slate-950 border border-slate-700 text-slate-300 text-sm rounded-lg focus:ring-storevo-500 focus:border-storevo-500 px-4 py-3 outline-none" placeholder="0.5">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Dimensiones Opcionales</label>
+                        <input type="text" name="dimensions" id="shipment-dimensions" class="w-full bg-slate-950 border border-slate-700 text-slate-300 text-sm rounded-lg focus:ring-storevo-500 focus:border-storevo-500 px-4 py-3 outline-none" placeholder="20x20x15">
+                    </div>
+                </div>
+
+                <div class="mt-6 pt-5 border-t border-slate-800 flex justify-end gap-3">
+                    <button type="button" onclick="Storevo.OrderManagement.closeShipmentModal()" class="px-5 py-2.5 text-sm font-bold text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition">Cancelar</button>
+                    <button type="submit" class="bg-storevo-500 hover:bg-storevo-600 text-white px-6 py-2.5 rounded-lg font-bold transition shadow-md shadow-storevo-500/20 flex items-center gap-2">
+                        <span>Generar Envío Seguro</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<th:block layout:fragment="scripts">
+    <script th:src="@{/js/modules/orderManagement.js}"></script>
+</th:block>
+</body>
+</html>

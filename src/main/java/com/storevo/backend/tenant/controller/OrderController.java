@@ -3,10 +3,11 @@ package com.storevo.backend.tenant.controller;
 import com.storevo.backend.admin.model.Store;
 import com.storevo.backend.admin.service.StoreSettingsService;
 import com.storevo.backend.config.tenant.TenantContext;
+import com.storevo.backend.tenant.exception.OrderNotFoundException;
 import com.storevo.backend.tenant.model.Order;
 import com.storevo.backend.tenant.model.OrderStatus;
 import com.storevo.backend.tenant.repository.OrderRepository;
-import com.storevo.backend.tenant.service.OrderService; // ¡Importante, lo hemos añadido!
+import com.storevo.backend.tenant.service.OrderService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,7 +25,7 @@ public class OrderController {
 
     private final OrderRepository orderRepository;
     private final StoreSettingsService storeSettingsService;
-    private final OrderService orderService; // <--- Inyectamos el servicio
+    private final OrderService orderService;
 
     @Value("${wompi.public-key}")
     private String wompiPublicKey;
@@ -50,14 +51,14 @@ public class OrderController {
 
     @GetMapping("/{id}/success")
     public String orderSuccess(@PathVariable String slug, @PathVariable Long id, HttpServletRequest request, Model model) {
+        // ACTUALIZADO: Usamos la excepción de Dominio
         Order order = orderRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
+                .orElseThrow(() -> new OrderNotFoundException(id));
 
+        // Generamos la referencia de Wompi.
+        // YA NO SE GUARDA EN BD, ya que el Webhook es capaz de extraer el ID de este String.
         String wompiReference = slug + "__" + order.getId() + "__" + System.currentTimeMillis();
         long amountInCents = Math.round(order.getTotal() * 100);
-
-        order.setWompiTransactionId(wompiReference);
-        orderRepository.save(order);
 
         String cleanPublicKey = this.wompiPublicKey.trim();
         String cleanIntegritySecret = this.wompiIntegritySecret.trim();
@@ -114,7 +115,7 @@ public class OrderController {
 
         // 2. Volvemos a consultar la base de datos para obtener el estado ACTUALIZADO
         Order order = orderRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
+                .orElseThrow(() -> new OrderNotFoundException(id));
 
         model.addAttribute("order", order);
         model.addAttribute("wompiTransactionId", wompiTransactionId);
@@ -122,7 +123,7 @@ public class OrderController {
         // 3. Verificamos el estado para decidir qué pantalla mostrar
         if (order.getStatus() == OrderStatus.CANCELLED) {
             model.addAttribute("pageTitle", "Pago Rechazado");
-            return "storefront/order-failed"; // <--- Nueva vista HTML
+            return "storefront/order-failed";
         }
 
         // Si fue exitoso o sigue pendiente

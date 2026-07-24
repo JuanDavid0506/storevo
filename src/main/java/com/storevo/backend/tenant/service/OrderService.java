@@ -2,9 +2,11 @@ package com.storevo.backend.tenant.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.storevo.backend.tenant.dto.CartItemDto;
-import com.storevo.backend.tenant.model.Order;
-import com.storevo.backend.tenant.model.OrderItem;
-import com.storevo.backend.tenant.model.OrderStatus;
+import com.storevo.backend.tenant.exception.InsufficientStockException;
+import com.storevo.backend.tenant.exception.InvalidOrderStatusException;
+import com.storevo.backend.tenant.exception.OrderNotFoundException;
+import com.storevo.backend.tenant.exception.ShipmentRequiredException;
+import com.storevo.backend.tenant.model.*;
 import com.storevo.backend.tenant.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -23,26 +25,32 @@ public class OrderService {
     private final CartManager cartManager;
     private final InventoryService inventoryService;
 
-    // --- SOLUCIÓN LAZY INITIALIZATION PARA EL DASHBOARD ---
     @Transactional(readOnly = true)
     public List<Order> getAllOrders() {
         List<Order> orders = orderRepository.findAllByOrderByCreatedAtDesc();
-        // Magia Anti-Lazy: Forzamos a Hibernate a traer los items de cada pedido
-        // mientras la sesión de BD sigue abierta.
         orders.forEach(order -> order.getItems().size());
         return orders;
     }
-    // ------------------------------------------------------
+
+    @Transactional(readOnly = true)
+    public Order getOrderById(Long id) {
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new OrderNotFoundException(id));
+        // Prevención del LazyInitializationException
+        order.getItems().size();
+        order.getHistory().size();
+        order.getInternalNotes().size();
+        order.getShipments().size(); // <-- ESTA ES LA LÍNEA MÁGICA QUE FALTABA
+        return order;
+    }
 
     @Transactional
     public Order createOrderFromCart(String slug, String customerName, String customerPhone, String address, String city, String notes) {
         List<CartItemDto> cartItems = cartManager.getCart(slug);
 
         if (cartItems.isEmpty()) {
-            throw new RuntimeException("El carrito está vacío");
+            throw new IllegalArgumentException("El carrito está vacío");
         }
-
-        Double total = cartManager.getTotal(slug);
 
         Order order = Order.builder()
                 .customerName(customerName)
@@ -50,24 +58,21 @@ public class OrderService {
                 .address(address)
                 .city(city)
                 .notes(notes)
-                .total(total)
+                .total(cartManager.getTotal(slug))
                 .status(OrderStatus.PENDING)
                 .build();
 
         List<OrderItem> items = cartItems.stream().map(dto -> {
-
             if (!inventoryService.isAvailable(dto.getProductId(), dto.getVariantId(), dto.getQuantity())) {
-                throw new RuntimeException("Lo sentimos, no hay stock suficiente en este instante para: " + dto.getName() +
-                        (dto.getVariantText() != null ? " (" + dto.getVariantText() + ")" : ""));
+                String finalName = dto.getName() + (dto.getVariantText() != null ? " (" + dto.getVariantText() + ")" : "");
+                throw new InsufficientStockException(finalName);
             }
-
-            String finalName = dto.getName() + (dto.getVariantText() != null ? " - " + dto.getVariantText() : "");
-
+            String receiptName = dto.getName() + (dto.getVariantText() != null ? " - " + dto.getVariantText() : "");
             return OrderItem.builder()
                     .order(order)
                     .productId(dto.getProductId())
                     .variantId(dto.getVariantId())
-                    .productName(finalName)
+                    .productName(receiptName)
                     .price(dto.getPrice())
                     .quantity(dto.getQuantity())
                     .subtotal(dto.getSubtotal())
@@ -77,27 +82,68 @@ public class OrderService {
         order.setItems(items);
         Order savedOrder = orderRepository.save(order);
 
+        logHistory(savedOrder, OrderHistoryType.SYSTEM_EVENT, EventOrigin.WEB, null, OrderStatus.PENDING, "Pedido creado por el cliente.", null);
+
         cartManager.clearCart(slug);
         return savedOrder;
     }
 
     @Transactional
-    public void updateOrderStatus(Long orderId, OrderStatus newStatus) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
-
+    public OrderHistory updateOrderStatus(Long orderId, OrderStatus newStatus, EventOrigin origin, Long userId) {
+        Order order = orderRepository.findById(orderId).orElseThrow(() -> new OrderNotFoundException(orderId));
         OrderStatus oldStatus = order.getStatus();
+
+        if (!oldStatus.canTransitionTo(newStatus)) {
+            throw new InvalidOrderStatusException(oldStatus, newStatus);
+        }
+
+        if (newStatus == OrderStatus.SHIPPED && order.getShipments().isEmpty()) {
+            throw new ShipmentRequiredException(orderId);
+        }
 
         if (oldStatus == OrderStatus.PENDING && newStatus == OrderStatus.PAID) {
             deductOrderStock(order);
         }
 
-        if (oldStatus == OrderStatus.PAID && newStatus == OrderStatus.CANCELLED) {
+        if ((oldStatus == OrderStatus.PAID || oldStatus == OrderStatus.CONFIRMED || oldStatus == OrderStatus.PREPARING || oldStatus == OrderStatus.PACKED)
+                && (newStatus == OrderStatus.CANCELLED || newStatus == OrderStatus.REFUNDED)) {
             restoreOrderStock(order);
         }
 
         order.setStatus(newStatus);
+        Order savedOrder = orderRepository.save(order);
+
+        return logHistory(savedOrder, OrderHistoryType.STATE_CHANGE, origin, oldStatus, newStatus, "El estado cambió a " + newStatus.getDisplayName(), userId);
+    }
+
+    @Transactional
+    public OrderNote addInternalNote(Long orderId, String note, Long userId) {
+        Order order = orderRepository.findById(orderId).orElseThrow(() -> new OrderNotFoundException(orderId));
+
+        OrderNote internalNote = OrderNote.builder()
+                .order(order)
+                .note(note)
+                .userId(userId)
+                .build();
+
+        order.getInternalNotes().add(internalNote);
         orderRepository.save(order);
+
+        return internalNote;
+    }
+
+    private OrderHistory logHistory(Order order, OrderHistoryType type, EventOrigin origin, OrderStatus oldStatus, OrderStatus newStatus, String description, Long userId) {
+        OrderHistory historyObj = OrderHistory.builder()
+                .order(order)
+                .eventType(type)
+                .origin(origin)
+                .oldStatus(oldStatus)
+                .newStatus(newStatus)
+                .description(description)
+                .userId(userId)
+                .build();
+        order.getHistory().add(historyObj);
+        return historyObj;
     }
 
     private void deductOrderStock(Order order) {
@@ -114,30 +160,24 @@ public class OrderService {
 
     @Transactional
     public void verifyTransactionWithWompi(Long orderId, String wompiTransactionId) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
-
-        if (order.getStatus() != OrderStatus.PENDING) {
-            System.out.println("Idempotencia: Pedido " + orderId + " ya procesado. Estado actual: " + order.getStatus());
-            return;
-        }
+        Order order = orderRepository.findById(orderId).orElse(null);
+        if (order == null || order.getStatus() != OrderStatus.PENDING) return;
 
         try {
             RestTemplate restTemplate = new RestTemplate();
-            String wompiUrl = "https://sandbox.wompi.co/v1/transactions/" + wompiTransactionId;
-            ResponseEntity<JsonNode> response = restTemplate.getForEntity(wompiUrl, JsonNode.class);
+            ResponseEntity<JsonNode> response = restTemplate.getForEntity("https://sandbox.wompi.co/v1/transactions/" + wompiTransactionId, JsonNode.class);
 
             if (response.getBody() != null && response.getStatusCode().is2xxSuccessful()) {
                 String definitiveStatus = response.getBody().get("data").get("status").asText();
 
                 if ("APPROVED".equals(definitiveStatus)) {
-                    updateOrderStatus(orderId, OrderStatus.PAID);
+                    updateOrderStatus(orderId, OrderStatus.PAID, EventOrigin.WEBHOOK, null);
                 } else if ("DECLINED".equals(definitiveStatus) || "ERROR".equals(definitiveStatus) || "VOIDED".equals(definitiveStatus)) {
-                    updateOrderStatus(orderId, OrderStatus.CANCELLED);
+                    updateOrderStatus(orderId, OrderStatus.CANCELLED, EventOrigin.WEBHOOK, null);
                 }
             }
         } catch (Exception e) {
-            System.out.println("Error crítico comunicándose con la API de Wompi: " + e.getMessage());
+            System.out.println("Error API Wompi: " + e.getMessage());
         }
     }
 }
