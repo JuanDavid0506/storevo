@@ -9,6 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long> {
@@ -36,4 +37,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             @Param("isActive") Boolean isActive,
             @Param("isDeleted") Boolean isDeleted, // <--- Parámetro agregado
             Pageable pageable);
+
+    // NUEVO: Obtiene el último producto creado para calcular el siguiente SKU
+    Optional<Product> findTopByOrderByIdDesc();
 }

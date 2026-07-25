@@ -4,12 +4,17 @@ import com.storevo.backend.admin.model.Store;
 import com.storevo.backend.config.tenant.TenantContext;
 import com.storevo.backend.tenant.dto.CategoryDto;
 import com.storevo.backend.tenant.model.Category;
+import com.storevo.backend.tenant.repository.CategoryRepository;
 import com.storevo.backend.tenant.service.CategoryService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @Controller
 @RequestMapping("/dashboard/{slug}/categories")
@@ -17,6 +22,9 @@ import org.springframework.web.bind.annotation.*;
 public class CategoryController {
 
     private final CategoryService categoryService;
+
+    // Inyectamos el repositorio para el endpoint de guardado rápido (AJAX)
+    private final CategoryRepository categoryRepository;
 
     @ModelAttribute
     public void setupTenant(@PathVariable String slug, Model model, HttpServletRequest request) {
@@ -41,13 +49,15 @@ public class CategoryController {
     public String showCreateForm(@RequestParam(required = false) Long parentId, Model model) {
         CategoryDto dto = new CategoryDto();
         dto.setIsActive(true);
-        dto.setShowInNav(true);
         dto.setDisplayOrder(0);
 
         // Si viene un ID padre en la URL, lo pre-configuramos
         if (parentId != null) {
             dto.setParentId(parentId);
+            dto.setShowInNav(false); // ❌ Las subcategorías NO van al navbar
             model.addAttribute("parentCategory", categoryService.getCategoryById(parentId));
+        } else {
+            dto.setShowInNav(true);  // ✅ Las principales SÍ van al navbar
         }
 
         model.addAttribute("category", dto);
@@ -78,6 +88,48 @@ public class CategoryController {
     public String saveCategory(@PathVariable String slug, @ModelAttribute CategoryDto categoryDto) {
         categoryService.saveCategory(categoryDto);
         return "redirect:/dashboard/" + slug + "/categories?success=true";
+    }
+
+    // ==========================================
+    // ENDPOINT PARA CREACIÓN RÁPIDA (AJAX)
+    // ==========================================
+    @PostMapping("/api/quick-add")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> quickAddCategory(
+            @PathVariable String slug,
+            @RequestBody Map<String, String> payload) {
+
+        try {
+            // 1. Usamos el DTO para que tu CategoryService aplique TODA la lógica de negocio
+            // (Limpieza de caché, generación de slugs, multi-tenant, etc.)
+            CategoryDto dto = new CategoryDto();
+            dto.setName(payload.get("name"));
+            dto.setIsActive(true);
+            dto.setShowInNav(true);
+            dto.setDisplayOrder(0);
+
+            if (payload.get("parentId") != null && !payload.get("parentId").trim().isEmpty()) {
+                dto.setParentId(Long.parseLong(payload.get("parentId")));
+            }
+
+            // 2. Delegamos el guardado a tu servicio principal
+            categoryService.saveCategory(dto);
+
+            // 3. Recuperamos la categoría recién creada para obtener su ID real
+            Category createdCategory = categoryRepository.findTopByOrderByIdDesc()
+                    .orElseThrow(() -> new RuntimeException("No se encontró la categoría creada"));
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("id", createdCategory.getId());
+            response.put("name", createdCategory.getName());
+            response.put("parentId", createdCategory.getParentCategory() != null ? createdCategory.getParentCategory().getId() : null);
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     @PostMapping("/{id}/toggle")

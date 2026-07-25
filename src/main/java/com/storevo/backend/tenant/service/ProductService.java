@@ -64,6 +64,32 @@ public class ProductService {
 
     @Transactional
     public void saveProduct(ProductDto dto) {
+
+        // ==========================================
+        // INICIO - MOTOR AUTOGENERADOR DE SKU
+        // ==========================================
+        // 1. Autogenerar SKU para el producto principal si viene vacío
+        if (dto.getSku() == null || dto.getSku().trim().isEmpty()) {
+            long nextNumber = productRepository.findTopByOrderByIdDesc()
+                    .map(p -> p.getId() + 1)
+                    .orElse(1L);
+            dto.setSku(String.format("PROD-%04d", nextNumber));
+        }
+
+        // 2. Autogenerar SKU para las variantes si vienen vacías
+        if (Boolean.TRUE.equals(dto.getHasVariants()) && dto.getVariants() != null) {
+            int variantCounter = 1;
+            for (ProductDto.VariantDto variant : dto.getVariants()) {
+                if (variant.getSku() == null || variant.getSku().trim().isEmpty()) {
+                    variant.setSku(dto.getSku() + "-" + variantCounter);
+                }
+                variantCounter++;
+            }
+        }
+        // ==========================================
+        // FIN - MOTOR AUTOGENERADOR DE SKU
+        // ==========================================
+
         Product product;
         boolean isNew = dto.getId() == null;
 

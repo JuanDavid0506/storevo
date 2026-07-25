@@ -172,7 +172,9 @@ public class ProductController {
     }
 
     @PostMapping
-    public String saveProduct(@PathVariable String slug, @ModelAttribute ProductDto productDto) {
+    public String saveProduct(@PathVariable String slug,
+                              @ModelAttribute ProductDto productDto,
+                              @RequestParam(required = false) String action) {
 
         // --- RED DE SEGURIDAD BACKEND ---
         if (productDto.getStock() == null) productDto.setStock(0);
@@ -181,6 +183,12 @@ public class ProductController {
         // --------------------------------
 
         productService.saveProduct(productDto);
+
+        // FASE 3: Flujo de Productividad
+        if ("save_and_new".equals(action)) {
+            return "redirect:/dashboard/" + slug + "/products/new?success=true&continue=true";
+        }
+
         return "redirect:/dashboard/" + slug + "/products?success=true";
     }
 

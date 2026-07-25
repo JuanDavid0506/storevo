@@ -117,10 +117,12 @@ public class CategoryService {
         category.setName(dto.getName());
         category.setDescription(dto.getDescription());
         category.setIsActive(dto.getIsActive() != null ? dto.getIsActive() : false);
-        category.setShowInNav(dto.getShowInNav() != null ? dto.getShowInNav() : false);
         category.setDisplayOrder(dto.getDisplayOrder() != null ? dto.getDisplayOrder() : 0);
 
         if (dto.getParentId() != null) {
+            // CANDADO DE SEGURIDAD: Las subcategorías NUNCA van en el Navbar principal
+            category.setShowInNav(false);
+
             Category parent = getCategoryById(dto.getParentId());
 
             // 1. Validar el límite estricto de 3 niveles
@@ -142,6 +144,8 @@ public class CategoryService {
 
             category.setParentCategory(parent);
         } else {
+            // Si es una categoría principal, respetamos la opción del usuario para el Navbar
+            category.setShowInNav(dto.getShowInNav() != null ? dto.getShowInNav() : false);
             category.setParentCategory(null);
         }
 

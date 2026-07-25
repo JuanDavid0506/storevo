@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface CategoryRepository extends JpaRepository<Category, Long> {
@@ -20,4 +21,7 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
     // Trae las principales activas para el Navbar público
     @Query("SELECT c FROM Category c WHERE c.isActive = true AND c.showInNav = true AND c.parentCategory IS NULL ORDER BY c.displayOrder ASC")
     List<Category> findRootNavCategories();
+
+    // NUEVO: Para encontrar la categoría que acabamos de crear al vuelo
+    Optional<Category> findTopByOrderByIdDesc();
 }
