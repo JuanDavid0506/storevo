@@ -1935,6 +1935,10 @@ video {
   background-color: rgb(2 6 23 / 0.9);
 }
 
+.bg-storevo-500\/5 {
+  background-color: rgb(99 102 241 / 0.05);
+}
+
 .bg-gradient-to-r {
   background-image: linear-gradient(to right, var(--tw-gradient-stops));
 }

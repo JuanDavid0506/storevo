@@ -110,6 +110,16 @@ Storevo.VariantBuilder = {
         }
     },
 
+    showTemplates: function() {
+        document.getElementById('vb-help-banner').classList.add('hidden');
+        document.getElementById('vb-templates-panel').classList.remove('hidden');
+    },
+
+    hideTemplates: function() {
+        document.getElementById('vb-templates-panel').classList.add('hidden');
+        document.getElementById('vb-help-banner').classList.remove('hidden');
+    },
+
     // --- PLANTILLAS ---
     renderTemplates: function() {
         const grid = document.getElementById('vb-templates-grid');
@@ -135,6 +145,8 @@ Storevo.VariantBuilder = {
         this.renderOptions();
 
         if (Storevo.UI && Storevo.UI.Toast) Storevo.UI.Toast.show(`Plantilla "${template.label}" aplicada. Ajusta los valores si hace falta.`, 'success');
+
+        this.hideTemplates();
     },
 
     // --- ALGORITMOS CORE ---
