@@ -97,6 +97,9 @@ Storevo.ProductDetail = {
         const qtyInput = document.querySelector('input[name="quantity"]');
         const mainImg = document.getElementById('main-product-image');
 
+        // Actualizar la ficha técnica con la selección actual (Progessive Disclosure)
+        this.updateTechnicalSheet(this.state.selectedOptions, variant);
+
         if (variant) {
             // Actualizar Precio de forma fluida
             priceDisplay.classList.add('opacity-0');
@@ -105,7 +108,7 @@ Storevo.ProductDetail = {
                 priceDisplay.classList.remove('opacity-0');
             }, 150);
 
-            // Actualizar SKU si existe
+            // Actualizar SKU si existe (El de la cabecera)
             if(skuDisplay) {
                 if(variant.sku) {
                     skuDisplay.textContent = 'SKU: ' + variant.sku;
@@ -164,6 +167,43 @@ Storevo.ProductDetail = {
             btnCart.classList.remove('bg-brand', 'hover:bg-brand/90');
             btnCart.classList.add('bg-slate-300', 'cursor-not-allowed');
             btnCart.innerHTML = `<span>No disponible</span>`;
+        }
+    },
+
+    updateTechnicalSheet: function(selectedOptions, variant) {
+        const specsList = document.getElementById('specs-list');
+        if (!specsList) return;
+
+        // 1. Limpiar dinámicos anteriores
+        document.querySelectorAll('.dynamic-spec').forEach(el => el.remove());
+
+        // 2. Inyectar lo que el usuario escogió (Clases EXACTAMENTE IGUALES a las estáticas)
+        Object.entries(selectedOptions).forEach(([key, value]) => {
+            const row = document.createElement('div');
+            // Eliminamos el bg-brand, el px-3 y el borde redondeado para igualar alineación
+            row.className = 'flex justify-between py-2 border-b border-slate-200/60 dynamic-spec opacity-0 transition-opacity duration-300';
+            row.innerHTML = `
+                <span class="text-slate-500 font-medium">${key}</span>
+                <span class="text-slate-900 font-bold text-right">${value}</span>
+            `;
+            specsList.appendChild(row);
+
+            // Disparar la transición suave
+            setTimeout(() => row.classList.remove('opacity-0'), 10);
+        });
+
+        // 3. Inyectar SKU de la variante seleccionada si la trae del backend
+        if (variant && variant.sku) {
+            const skuRow = document.createElement('div');
+            row.className = 'flex justify-between py-2 border-b border-slate-200/60 dynamic-spec opacity-0 transition-opacity duration-300';
+            skuRow.innerHTML = `
+                <span class="text-slate-500 font-medium">SKU</span>
+                <span class="text-slate-900 font-mono font-bold text-sm text-right">${variant.sku}</span>
+            `;
+            specsList.appendChild(skuRow);
+
+            // Disparar la transición suave
+            setTimeout(() => skuRow.classList.remove('opacity-0'), 10);
         }
     }
 };

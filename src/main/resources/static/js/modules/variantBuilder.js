@@ -38,10 +38,25 @@ Storevo.VariantBuilder = {
     },
 
     init: function() {
-        if (window.INITIAL_OPTIONS && window.INITIAL_OPTIONS.length > 0) {
+        // SOLUCIÓN A LA CONDICIÓN DE CARRERA:
+        if (this.state.options && this.state.options.length > 0) {
+            // 1. Ya fue inicializado por ProductWizard, no hacemos nada para no pisarlo
+        } else if (window.INITIAL_OPTIONS && window.INITIAL_OPTIONS.length > 0) {
+            // 2. Viene de Spring Boot (Edición de producto existente)
             this.state.options = window.INITIAL_OPTIONS;
         } else {
-            this.state.options = [{ name: 'Talla', values: [] }];
+            // 3. Producto Nuevo: Verificamos si en la memoria quedó guardada una plantilla
+            const savedTemplate = localStorage.getItem('storevo_product_template');
+            const lastMode = localStorage.getItem('storevo_product_mode');
+            const isNewProduct = typeof window.IS_NEW_PRODUCT !== 'undefined' ? window.IS_NEW_PRODUCT : true;
+
+            if (isNewProduct && savedTemplate && lastMode === 'options' && this.TEMPLATES[savedTemplate]) {
+                const template = this.TEMPLATES[savedTemplate];
+                this.state.options = template.options.map(o => ({ name: o.name, values: [...o.values] }));
+            } else {
+                // 4. Estado por defecto si no hay nada de nada
+                this.state.options = [{ name: 'Talla', values: [] }];
+            }
         }
 
         if (window.INITIAL_VARIANTS && window.INITIAL_VARIANTS.length > 0) {
@@ -70,17 +85,24 @@ Storevo.VariantBuilder = {
             form.addEventListener('submit', () => this.syncHiddenInputs());
         }
 
-        // Se renderiza, pero el Wizard de ProductWizard es quien decide si lo muestra o no.
         this.renderOptions();
     },
 
-    applyTemplate: function(key) {
+    applyTemplate: function(key, silent = false) {
         const template = this.TEMPLATES[key];
         if (!template) return;
+
         this.state.options = template.options.map(o => ({ name: o.name, values: [...o.values] }));
         this.state.collapsedGroups = {};
         this.renderOptions();
-        if (Storevo.UI && Storevo.UI.Toast) Storevo.UI.Toast.show(`Plantilla "${template.label}" aplicada.`, 'success');
+
+        if (Storevo.ProductForm && Storevo.ProductForm.prefillSpecs) {
+            Storevo.ProductForm.prefillSpecs(key);
+        }
+
+        if (!silent && Storevo.UI && Storevo.UI.Toast) {
+            Storevo.UI.Toast.show(`Plantilla "${template.label}" aplicada.`, 'success');
+        }
     },
 
     generateSignatureFromMap: function(comboMap) {
@@ -413,7 +435,6 @@ Storevo.VariantBuilder = {
         if (!container) return;
         container.innerHTML = '';
 
-        // El checkbox maestro le dice a Spring Boot si debe procesar o ignorar la data
         if (!document.getElementById('hasVariantsToggle').checked) return;
 
         const validOptions = this.getValidOptions();
@@ -442,5 +463,8 @@ Storevo.VariantBuilder = {
     }
 };
 
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => Storevo.VariantBuilder.init());
-else Storevo.VariantBuilder.init();
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => Storevo.VariantBuilder.init());
+} else {
+    Storevo.VariantBuilder.init();
+}

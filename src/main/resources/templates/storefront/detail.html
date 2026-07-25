@@ -104,15 +104,37 @@
           </div>
         </form>
 
-        <div th:if="${product.attributes != null and !product.attributes.isEmpty()}" class="mt-12 pt-8 border-t border-slate-100">
-          <h3 class="text-lg font-bold text-slate-900 mb-4">Especificaciones</h3>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
-            <div th:each="attr : ${product.attributes}" class="flex justify-between py-2 border-b border-slate-50">
-              <span class="text-slate-500 font-medium" th:text="${attr.key}">Atributo</span>
-              <span class="text-slate-900 font-bold" th:text="${attr.value}">Valor</span>
+        <!-- SECCIÓN DE ESPECIFICACIONES (Acordeón Desplegable) -->
+        <div th:if="${(product.attributes != null and !product.attributes.isEmpty()) or product.hasVariants}" class="mt-8 border-t border-slate-100">
+          <button type="button"
+                  onclick="document.getElementById('specs-content').classList.toggle('hidden'); document.getElementById('specs-icon').classList.toggle('rotate-180');"
+                  class="w-full flex justify-between items-center py-5 group transition-colors">
+            <h3 class="text-lg font-bold text-slate-900 group-hover:text-brand transition-colors">Especificaciones Técnicas</h3>
+            <span class="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center group-hover:bg-brand/10 transition-colors">
+              <svg id="specs-icon" class="w-5 h-5 text-slate-500 group-hover:text-brand transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            </span>
+          </button>
+
+          <!-- Contenedor Oculto por defecto (hidden) -->
+          <div id="specs-content" class="pb-6 hidden transition-all duration-300">
+            <div class="bg-slate-50/50 p-5 sm:p-6 rounded-xl border border-slate-100">
+              <div id="specs-list" class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2">
+                <!-- Globales (Protegidos contra valores vacíos) -->
+                <th:block th:if="${product.attributes != null}">
+                  <div th:each="attr : ${product.attributes}"
+                       th:if="${attr.value != null and !attr.value.trim().isEmpty()}"
+                       class="flex justify-between py-2 border-b border-slate-200/60">
+                    <span class="text-slate-500 font-medium" th:text="${attr.key}">Atributo</span>
+                    <span class="text-slate-900 font-bold text-right" th:text="${attr.value}">Valor</span>
+                  </div>
+                </th:block>
+                <!-- Los dinámicos (Color, Talla, SKU) caerán aquí mediante el JS -->
+              </div>
             </div>
           </div>
         </div>
+        <!-- FIN DE ESPECIFICACIONES -->
+
       </div>
     </div>
   </div>

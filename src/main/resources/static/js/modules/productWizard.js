@@ -4,24 +4,36 @@ Storevo.ProductWizard = {
     init: function() {
         this.renderTemplates();
 
-        // 1. GESTIÓN DEL DRAFT CONTEXT (La nueva arquitectura)
         const urlParams = new URLSearchParams(window.location.search);
         const isContinue = urlParams.get('continue') === 'true';
+        const savedTemplate = localStorage.getItem('storevo_product_template');
 
-        if (isContinue && window.IS_NEW_PRODUCT) {
-            // Si viene de "Crear otro", restauramos la memoria antes de renderizar
+        const hasInitialData = (window.INITIAL_OPTIONS && window.INITIAL_OPTIONS.length > 0);
+        const isNewProduct = typeof window.IS_NEW_PRODUCT !== 'undefined' ? window.IS_NEW_PRODUCT : true;
+
+        if (isContinue && isNewProduct) {
             if(Storevo.ProductDraft) Storevo.ProductDraft.restoreContext();
-        } else if (!isContinue) {
-            // Si es una visita limpia, matamos cualquier memoria vieja para evitar fantasmas
-            if(Storevo.ProductDraft) Storevo.ProductDraft.clearContext();
-            localStorage.setItem('storevo_product_mode', 'simple'); // Por defecto simple
+
+            if (savedTemplate && Storevo.VariantBuilder && !hasInitialData) {
+                Storevo.VariantBuilder.applyTemplate(savedTemplate, true);
+            }
+        } else if (!isContinue && isNewProduct) {
+            const lastMode = localStorage.getItem('storevo_product_mode');
+
+            if (lastMode === 'options' && savedTemplate && !hasInitialData) {
+                if (Storevo.VariantBuilder) {
+                    Storevo.VariantBuilder.applyTemplate(savedTemplate, true);
+                }
+            } else if (!hasInitialData) {
+                if(Storevo.ProductDraft) Storevo.ProductDraft.clearContext();
+                localStorage.setItem('storevo_product_mode', 'simple');
+                localStorage.removeItem('storevo_product_template');
+            }
         }
 
-        // 2. INTERCEPTAR EL ENVÍO DEL FORMULARIO
         const form = document.getElementById('product-form');
         if (form) {
             form.addEventListener('submit', (e) => {
-                // e.submitter es el botón exacto que disparó el submit
                 if (e.submitter && e.submitter.value === 'save_and_new') {
                     if(Storevo.ProductDraft) Storevo.ProductDraft.saveContext();
                 } else {
@@ -30,11 +42,10 @@ Storevo.ProductWizard = {
             });
         }
 
-        // 3. DESPLIEGUE VISUAL
-        if (window.IS_NEW_PRODUCT) {
+        if (isNewProduct) {
             const lastMode = localStorage.getItem('storevo_product_mode');
             if (lastMode === 'options') {
-                this.chooseManual(false); // Autodespliegue silencioso
+                this.chooseManual(false);
             } else if (lastMode === 'simple') {
                 this.chooseSimple(false);
             }
@@ -65,10 +76,10 @@ Storevo.ProductWizard = {
     },
 
     applyTemplate: function(key) {
+        localStorage.setItem('storevo_product_template', key);
         if (Storevo.VariantBuilder) {
-            Storevo.VariantBuilder.applyTemplate(key);
+            Storevo.VariantBuilder.applyTemplate(key, false);
         }
-        // Tras aplicar la plantilla, lo mandamos al constructor
         this.chooseManual();
     },
 
@@ -76,20 +87,19 @@ Storevo.ProductWizard = {
         this.switchState('options-empty-state');
         document.getElementById('hasVariantsToggle').checked = false;
         localStorage.setItem('storevo_product_mode', 'simple');
+        localStorage.removeItem('storevo_product_template');
 
-        // Limpiamos el constructor por si se arrepiente
         if (Storevo.VariantBuilder) {
             Storevo.VariantBuilder.state.options = [{ name: 'Talla', values: [] }];
             Storevo.VariantBuilder.renderOptions();
         }
+        if (Storevo.ProductForm && Storevo.ProductForm.clearTemplateSpecs) {
+            Storevo.ProductForm.clearTemplateSpecs();
+        }
     },
 
-    // Utilidad Inteligente: Cambia entre los paneles manejando las transiciones sin choques
     switchState: function(targetId, animate = true) {
         const els = ['options-empty-state', 'options-wizard-state', 'vb-templates-panel', 'variant-builder-container'];
-
-        // 1. Ocultamos TODOS los demás paneles de forma INMEDIATA
-        // Esto elimina el "empujón" y el rebote feo en la página
         els.forEach(id => {
             if (id !== targetId) {
                 const el = document.getElementById(id);
@@ -100,29 +110,22 @@ Storevo.ProductWizard = {
             }
         });
 
-        // 2. Mostramos el panel objetivo
         const target = document.getElementById(targetId);
         if (target) {
-            target.classList.remove('hidden'); // Lo metemos al DOM
-
+            target.classList.remove('hidden');
             if (animate) {
-                // Forzamos estado inicial transparente
                 target.classList.add('opacity-0');
-
-                // Un retardo milimétrico para permitir un fade-in suave sin alterar la altura
                 setTimeout(() => {
                     target.classList.remove('opacity-0', '-translate-y-2');
                     target.classList.add('opacity-100', 'translate-y-0');
                 }, 30);
             } else {
-                // Aparición sin animación (para cuando recarga la memoria)
                 target.classList.remove('opacity-0', '-translate-y-2');
                 target.classList.add('opacity-100', 'translate-y-0');
             }
         }
     },
 
-    // Rellena la cuadrícula leyendo del diccionario de VariantBuilder
     renderTemplates: function() {
         const grid = document.getElementById('vb-templates-grid');
         if (!grid || !Storevo.VariantBuilder) return;
@@ -140,4 +143,8 @@ Storevo.ProductWizard = {
     }
 };
 
-document.addEventListener('DOMContentLoaded', () => Storevo.ProductWizard.init());
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => Storevo.ProductWizard.init());
+} else {
+    Storevo.ProductWizard.init();
+}

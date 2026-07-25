@@ -1,23 +1,108 @@
 window.Storevo = window.Storevo || {};
 
 Storevo.ProductForm = {
+    // Atributos sugeridos de Ficha Técnica según la plantilla elegida en el constructor de opciones.
+    // El vendedor solo debe escribir el valor; si lo deja vacío, ProductService ya lo descarta
+    // al guardar, así que nunca se muestra en la ficha pública.
+    // Atributos sugeridos de Ficha Técnica según la plantilla.
+    // Atributos esenciales predeterminados por plantilla (Killer Attributes)
+    SPEC_TEMPLATES: {
+        ropa: [
+            'Marca', 'Material', 'Talla', 'Color', 'Género'
+        ],
+        calzado: [
+            'Marca', 'Material', 'Talla', 'Color', 'Tipo de suela'
+        ],
+        perfume: [
+            'Marca', 'Contenido (ml)', 'Familia olfativa', 'Género'
+        ],
+        accesorios: [
+            'Marca', 'Material', 'Color', 'Dimensiones'
+        ],
+        tecnologia: [
+            'Marca', 'Modelo', 'Estado', 'Garantía'
+        ],
+        personalizado: []
+    },
+
     init: function() {
         this.initCategories();
     },
 
+    // NUEVA FUNCIÓN: Hace que la caja crezca sola según el texto
+    autoResize: function(el) {
+        el.style.height = 'auto'; // Resetea la altura
+        el.style.height = el.scrollHeight + 'px'; // Ajusta al contenido exacto
+    },
+
+    // Precarga los atributos sugeridos de la plantilla
+    prefillSpecs: function(templateKey) {
+        this.clearTemplateSpecs();
+
+        const suggestedKeys = this.SPEC_TEMPLATES[templateKey];
+        if (!suggestedKeys || suggestedKeys.length === 0) return;
+
+        const container = document.getElementById('specsContainer');
+        if (!container) return;
+
+        const existingKeys = Array.from(container.querySelectorAll('textarea[name="attrKeys"], input[name="attrKeys"]'))
+            .map(input => input.value.trim().toLowerCase());
+
+        let firstNewValueInput = null;
+
+        suggestedKeys.forEach(key => {
+            if (existingKeys.includes(key.toLowerCase())) return;
+
+            const row = document.createElement('div');
+            row.className = 'flex gap-3 mb-3 items-start';
+            row.dataset.templateRow = 'true';
+
+            // Usamos textarea con rows="1", resize-none, y el evento oninput para el auto-crecimiento
+            row.innerHTML = `
+                <textarea name="attrKeys" rows="1" placeholder="Atributo" oninput="Storevo.ProductForm.autoResize(this)" class="w-1/3 px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:ring-storevo-500 text-sm resize-none overflow-hidden min-h-[42px] leading-relaxed">${key}</textarea>
+                <textarea name="attrValues" rows="1" placeholder="Escribe el valor..." oninput="Storevo.ProductForm.autoResize(this)" class="flex-1 px-4 py-2 bg-slate-950 border border-storevo-500/40 rounded-lg text-white focus:ring-storevo-500 text-sm resize-none overflow-hidden min-h-[42px] leading-relaxed"></textarea>
+                <button type="button" onclick="this.parentElement.remove()" class="p-2 text-slate-500 hover:text-red-500 transition mt-1">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                </button>
+            `;
+            container.appendChild(row);
+
+            // Auto-ajustar inmediatamente por si la "key" sugerida es muy larga
+            const keyInput = row.querySelector('textarea[name="attrKeys"]');
+            this.autoResize(keyInput);
+
+            if (!firstNewValueInput) firstNewValueInput = row.querySelector('textarea[name="attrValues"]');
+        });
+
+        if (firstNewValueInput) firstNewValueInput.focus();
+    },
+
+    // Agrega una fila vacía manualmente
     addSpecRow: function() {
         const container = document.getElementById('specsContainer');
         if (!container) return;
 
         const row = document.createElement('div');
-        row.className = 'flex gap-3 mb-3';
+        row.className = 'flex gap-3 mb-3 items-start';
+
         row.innerHTML = `
-            <input type="text" name="attrKeys" placeholder="Atributo" class="w-1/2 px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:ring-storevo-500 text-sm">
-            <input type="text" name="attrValues" placeholder="Valor" class="w-1/2 px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:ring-storevo-500 text-sm">
-            <button type="button" onclick="this.parentElement.remove()" class="p-2 text-slate-500 hover:text-red-500 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+            <textarea name="attrKeys" rows="1" placeholder="Atributo" oninput="Storevo.ProductForm.autoResize(this)" class="w-1/3 px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:ring-storevo-500 text-sm resize-none overflow-hidden min-h-[42px] leading-relaxed"></textarea>
+            <textarea name="attrValues" rows="1" placeholder="Valor" oninput="Storevo.ProductForm.autoResize(this)" class="flex-1 px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:ring-storevo-500 text-sm resize-none overflow-hidden min-h-[42px] leading-relaxed"></textarea>
+            <button type="button" onclick="this.parentElement.remove()" class="p-2 text-slate-500 hover:text-red-500 transition mt-1">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+            </button>
         `;
         container.appendChild(row);
     },
+
+    // Elimina únicamente las filas que dejó una plantilla (nunca las que el vendedor agregó a mano)
+    clearTemplateSpecs: function() {
+        const container = document.getElementById('specsContainer');
+        if (!container) return;
+        container.querySelectorAll('[data-template-row="true"]').forEach(row => row.remove());
+    },
+
+
 
     initCategories: function() {
         const bridge = document.getElementById('categoryDataBridge');
