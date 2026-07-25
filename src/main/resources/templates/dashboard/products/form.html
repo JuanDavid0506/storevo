@@ -94,6 +94,12 @@
                 </div>
 
                 <div id="variant-builder-container" class="hidden space-y-5 animate-fade-in-up">
+
+                    <div id="vb-templates-panel" class="bg-slate-950 border border-slate-800 rounded-xl p-4">
+                        <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Empezar desde una plantilla (opcional)</p>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2" id="vb-templates-grid"></div>
+                    </div>
+
                     <div class="bg-storevo-500/10 border border-storevo-500/20 rounded-xl p-4">
                         <h4 class="text-sm font-bold text-storevo-400 mb-1 flex items-center gap-2">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
@@ -109,11 +115,40 @@
                         </button>
                     </div>
 
+                    <div id="vb-bulk-panel" class="hidden bg-slate-950 border border-slate-800 rounded-xl p-4">
+                        <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                            Aplicar a todas las variantes
+                        </p>
+                        <div class="flex flex-col sm:flex-row gap-3">
+                            <div class="relative flex-1">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-sm">$</span>
+                                <input type="number" step="0.01" id="vb-bulk-price" placeholder="Precio para todas" class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg text-sm pl-7 pr-2 py-2.5 focus:ring-storevo-500 transition-colors">
+                            </div>
+                            <button type="button" onclick="Storevo.VariantBuilder.applyBulk('price')" class="bg-slate-800 hover:bg-storevo-500 hover:border-storevo-500 text-white text-sm font-bold px-4 py-2.5 rounded-lg border border-slate-700 transition-colors whitespace-nowrap">Aplicar precio</button>
+
+                            <div class="relative flex-1">
+                                <input type="number" id="vb-bulk-stock" placeholder="Stock para todas" class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg text-sm px-3 py-2.5 focus:ring-storevo-500 transition-colors">
+                            </div>
+                            <button type="button" onclick="Storevo.VariantBuilder.applyBulk('stock')" class="bg-slate-800 hover:bg-storevo-500 hover:border-storevo-500 text-white text-sm font-bold px-4 py-2.5 rounded-lg border border-slate-700 transition-colors whitespace-nowrap">Aplicar stock</button>
+                        </div>
+                        <p class="text-[11px] text-slate-600 mt-2">Esto sobrescribe el valor en todas las filas de la tabla de abajo. Luego puedes ajustar filas individuales si lo necesitas.</p>
+
+                        <div class="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-slate-800">
+                            <span class="text-[11px] text-slate-500 font-bold uppercase mr-1">Ajustar precio actual:</span>
+                            <button type="button" onclick="Storevo.VariantBuilder.applyPercentAdjust(10)" class="text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 bg-slate-900 text-emerald-400 hover:border-emerald-500 transition-colors">+10%</button>
+                            <button type="button" onclick="Storevo.VariantBuilder.applyPercentAdjust(-10)" class="text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 bg-slate-900 text-red-400 hover:border-red-500 transition-colors">-10%</button>
+                            <button type="button" onclick="Storevo.VariantBuilder.applyAmountAdjust(5000)" class="text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 bg-slate-900 text-emerald-400 hover:border-emerald-500 transition-colors">+$5.000</button>
+                            <button type="button" onclick="Storevo.VariantBuilder.applyAmountAdjust(-3000)" class="text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 bg-slate-900 text-red-400 hover:border-red-500 transition-colors">-$3.000</button>
+                        </div>
+                    </div>
+
                     <div id="vb-table-container" class="border border-slate-800 rounded-xl overflow-hidden hidden bg-slate-950">
                         <div class="overflow-x-auto">
                             <table class="w-full text-left text-sm text-slate-400">
                                 <thead class="bg-slate-800 text-xs uppercase text-slate-300">
                                 <tr>
+                                    <th class="px-4 py-3 font-bold w-14 text-center">Incluir</th>
                                     <th class="px-4 py-3 font-bold w-12 text-center">Img</th>
                                     <th class="px-4 py-3 font-bold">Variante</th>
                                     <th class="px-4 py-3 font-bold w-32">Precio ($)</th>
@@ -125,6 +160,7 @@
                                 </tbody>
                             </table>
                         </div>
+                        <p id="vb-table-summary" class="text-xs text-slate-500 font-medium px-4 py-2.5 border-t border-slate-800 bg-slate-900/50"></p>
                     </div>
                 </div>
 
