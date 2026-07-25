@@ -23,7 +23,38 @@
         window.INITIAL_HAS_VARIANTS = /*[[${product.hasVariants}]]*/ false;
         window.INITIAL_OPTIONS = /*[[${product.options}]]*/ [];
         window.INITIAL_VARIANTS = /*[[${product.variants}]]*/ [];
+        window.IS_NEW_PRODUCT = /*[[${product.id == null}]]*/ true;
     </script>
+
+    <!-- ASISTENTE DE CREACIÓN: solo aparece para productos nuevos, antes de que el formulario sea interactivo -->
+    <div id="product-wizard-overlay" class="hidden fixed inset-0 z-[70] bg-slate-950/90 backdrop-blur-sm items-center justify-center p-4 transition-opacity duration-200">
+        <div id="product-wizard-content" class="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl p-6 sm:p-8 max-h-[90vh] overflow-y-auto">
+
+            <p class="text-xs font-bold text-storevo-400 uppercase tracking-wider mb-1">Antes de empezar</p>
+            <h3 class="text-2xl font-black text-white mb-1">¿Qué vas a vender?</h3>
+            <p class="text-sm text-slate-500 mb-6">Elige la opción que mejor describa tu producto.</p>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <button type="button" id="wizard-card-simple" onclick="Storevo.ProductWizard.chooseSimple()" class="text-left bg-slate-950 border-2 border-slate-800 hover:border-storevo-500 rounded-xl p-5 transition-all">
+                    <span class="text-3xl block mb-2">📦</span>
+                    <span class="block font-bold text-white mb-1">Producto simple</span>
+                    <span class="block text-xs text-slate-500">Ideal para vender un único artículo.<br>Ej: un perfume, una gorra o un reloj.</span>
+                </button>
+                <button type="button" id="wizard-card-options" onclick="Storevo.ProductWizard.chooseVariants()" class="text-left bg-slate-950 border-2 border-slate-800 hover:border-storevo-500 rounded-xl p-5 transition-all">
+                    <span class="text-3xl block mb-2">👕</span>
+                    <span class="block font-bold text-white mb-1">Producto con opciones</span>
+                    <span class="block text-xs text-slate-500">Color, talla o presentación.<br>Ej: ropa, zapatos o perfumes.</span>
+                </button>
+            </div>
+
+            <div id="wizard-templates-section" class="hidden mt-6 pt-6 border-t border-slate-800 animate-fade-in-up">
+                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Selecciona una plantilla</p>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3" id="wizard-templates-grid"></div>
+            </div>
+
+            <button type="button" onclick="Storevo.ProductWizard.skip()" class="block mx-auto mt-6 text-xs text-slate-600 hover:text-slate-400 transition-colors">Prefiero ver el formulario completo</button>
+        </div>
+    </div>
 
     <form id="product-form" th:action="@{|/dashboard/${slug}/products|}" th:object="${product}" method="POST" enctype="multipart/form-data" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <input type="hidden" th:field="*{id}">
@@ -73,7 +104,7 @@
                     </div>
 
                     <label class="flex items-center gap-3 cursor-pointer group bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800 hover:border-storevo-500/50 transition-colors">
-                        <span class="text-sm font-bold text-slate-400 group-hover:text-storevo-400 transition-colors">Este producto tiene variantes</span>
+                        <span class="text-sm font-bold text-slate-400 group-hover:text-storevo-400 transition-colors">Este producto tiene opciones (color, talla, presentación...)</span>
                         <div class="relative">
                             <input type="checkbox" id="hasVariantsToggle" th:field="*{hasVariants}" class="peer sr-only">
                             <div class="block bg-slate-800 w-10 h-6 rounded-full border border-slate-700 peer-checked:bg-storevo-500 transition-colors"></div>
@@ -260,6 +291,7 @@
     <script th:src="@{/js/modules/productImages.js}"></script>
     <script th:src="@{/js/modules/productForm.js}"></script>
     <script th:src="@{/js/modules/variantBuilder.js}"></script>
+    <script th:src="@{/js/modules/productWizard.js}"></script>
 </div>
 </body>
 </html>
