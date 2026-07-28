@@ -1,12 +1,97 @@
 window.Storevo = window.Storevo || {};
 
 Storevo.Listing = {
+    // === MOTOR AJAX TIPO REACT ===
+    submitForm: function() {
+        const form = document.getElementById('listing-form');
+        if (!form) return;
+
+        const formData = new FormData(form);
+        const params = new URLSearchParams();
+
+        // Solo metemos en la URL los filtros que tengan valor
+        for (const [key, value] of formData.entries()) {
+            if (value && value.trim() !== '') {
+                params.append(key, value);
+            }
+        }
+
+        const url = `${window.location.pathname}?${params.toString()}`;
+        Storevo.Listing.fetchResults(url);
+    },
+
     goToPage: function(pageNumber) {
         const url = new URL(window.location.href);
         url.searchParams.set('page', pageNumber);
-        window.location.href = url.toString();
+        Storevo.Listing.fetchResults(url.toString());
     },
 
+    fetchResults: function(url, isPopState = false) {
+        const container = document.getElementById('listing-results-container');
+        const formContainer = document.getElementById('listing-form'); // <-- Capturamos el formulario entero
+        const counter = document.getElementById('total-items-counter');
+
+        // 1. Efecto visual de carga
+        if (container) {
+            container.style.opacity = '0.4';
+            container.style.pointerEvents = 'none';
+        }
+        if (formContainer) {
+            formContainer.style.opacity = '0.7';
+            formContainer.style.pointerEvents = 'none';
+        }
+
+        // 2. Traer HTML en segundo plano
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(response => response.text())
+            .then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+
+                // 3. Reemplazo quirúrgico en el DOM
+                const newContainer = doc.getElementById('listing-results-container');
+                if (newContainer && container) container.innerHTML = newContainer.innerHTML;
+
+                // <-- REEMPLAZAMOS EL FORMULARIO ENTERO (Para actualizar Pills y Botón Limpiar)
+                const newForm = doc.getElementById('listing-form');
+                if (newForm && formContainer) formContainer.innerHTML = newForm.innerHTML;
+
+                const newCounter = doc.getElementById('total-items-counter');
+                if (newCounter && counter) counter.textContent = newCounter.textContent;
+
+                // 4. Actualizar barra del navegador (History API)
+                if (!isPopState) {
+                    window.history.pushState({path: url}, '', url);
+                }
+
+                // 5. Quitar efecto de carga
+                if (container) {
+                    container.style.opacity = '1';
+                    container.style.pointerEvents = 'auto';
+                }
+                if (formContainer) {
+                    formContainer.style.opacity = '1';
+                    formContainer.style.pointerEvents = 'auto';
+                }
+
+                // 6. Reiniciar TODOS los componentes en el HTML nuevo
+                Storevo.Listing.initListingUX();
+
+                if (window.Storevo.ProductsList) {
+                    Storevo.ProductsList.initSelection();
+                    Storevo.ProductsList.loadStatistics();
+                    const savedView = localStorage.getItem('storevo_admin_products_view') || 'cards';
+                    Storevo.ProductsList.setView(savedView);
+                }
+            })
+            .catch(err => {
+                console.error("Error cargando listado, recargando de forma nativa...", err);
+                // Si falla por seguridad o red, caemos de pie a una recarga normal
+                window.location.href = url;
+            });
+    },
+
+    // --- COMPONENTES ORIGINALES ADAPTADOS ---
     initFilterChips: function() {
         const form = document.getElementById('listing-form');
         const chipsContainer = document.getElementById('active-filters-chips');
@@ -35,12 +120,11 @@ Storevo.Listing = {
 
             const removeBtn = document.createElement('button');
             removeBtn.type = 'button';
-            removeBtn.title = 'Quitar este filtro';
             removeBtn.className = 'hover:text-white transition-colors';
             removeBtn.innerHTML = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>';
             removeBtn.onclick = () => {
                 field.value = '';
-                form.submit();
+                Storevo.Listing.submitForm();
             };
 
             chip.appendChild(removeBtn);
@@ -51,14 +135,15 @@ Storevo.Listing = {
         const searchInput = form.querySelector('input[name="q"]');
         if (searchClearBtn && searchInput) {
             searchClearBtn.classList.toggle('hidden', !searchInput.value);
-            searchClearBtn.onclick = () => { searchInput.value = ''; form.submit(); };
+            searchClearBtn.onclick = () => {
+                searchInput.value = '';
+                Storevo.Listing.submitForm();
+            };
         }
     },
 
     initSearchDebounce: function(delay = 700) {
         const searchInput = document.querySelector('#listing-form input[name="q"]');
-
-        // FIX: Evitar doble asignación de eventos al input (Idempotencia)
         if (!searchInput || searchInput.dataset.debounceInitialized) return;
         searchInput.dataset.debounceInitialized = 'true';
 
@@ -67,7 +152,7 @@ Storevo.Listing = {
             clearTimeout(timeout);
             timeout = setTimeout(() => {
                 sessionStorage.setItem('storevo:searchFocus', '1');
-                searchInput.form.submit();
+                Storevo.Listing.submitForm();
             }, delay);
         });
     },
@@ -86,8 +171,6 @@ Storevo.Listing = {
 
     initCategoryCombobox: function() {
         document.querySelectorAll('[data-category-combobox]').forEach(root => {
-
-            // FIX: Prevenir que el listener del clic se agregue dos veces y cancele la apertura
             if (root.dataset.comboboxInitialized) return;
             root.dataset.comboboxInitialized = 'true';
 
@@ -106,7 +189,6 @@ Storevo.Listing = {
             if (!hiddenInput || !trigger || !panel || !treeContainer || !labelEl) return;
 
             const defaultLabel = labelEl.textContent.trim();
-            const form = hiddenInput.form;
 
             function findNodePath(nodes, id, path) {
                 for (const node of nodes) {
@@ -131,7 +213,7 @@ Storevo.Listing = {
                 const displayLabel = isRoot ? ('Todo ' + node.name) : node.name;
                 setSelection(node.id, displayLabel);
                 closePanel();
-                if (form) form.submit();
+                Storevo.Listing.submitForm();
             }
 
             function nodeMatchesQuery(node, query) {
@@ -170,26 +252,21 @@ Storevo.Listing = {
                 selectBtn.textContent = displayText;
                 selectBtn.onclick = () => selectNode(node, isRoot);
                 row.appendChild(selectBtn);
-
                 wrapper.appendChild(row);
 
                 if (hasChildren) {
                     const childrenContainer = document.createElement('div');
                     childrenContainer.className = 'pl-4 border-l border-slate-800 ml-3' + (forceOpen ? '' : ' hidden');
-
                     node.children.forEach(child => {
                         if (query && !nodeMatchesQuery(child, query)) return;
                         childrenContainer.appendChild(renderNode(child, false, query, selectedId));
                     });
-
                     wrapper.appendChild(childrenContainer);
-
                     chevronBtn.onclick = () => {
                         const nowHidden = childrenContainer.classList.toggle('hidden');
                         chevronBtn.classList.toggle('rotate-90', !nowHidden);
                     };
                 }
-
                 return wrapper;
             }
 
@@ -237,7 +314,7 @@ Storevo.Listing = {
                 clearBtn.addEventListener('click', () => {
                     setSelection('', '');
                     closePanel();
-                    if (form) form.submit();
+                    Storevo.Listing.submitForm();
                 });
             }
 
@@ -245,7 +322,7 @@ Storevo.Listing = {
                 quickClear.addEventListener('click', (e) => {
                     e.stopPropagation();
                     setSelection('', '');
-                    if (form) form.submit();
+                    Storevo.Listing.submitForm();
                 });
             }
 
@@ -270,14 +347,35 @@ Storevo.Listing = {
         Storevo.Listing.initFilterChips();
         Storevo.Listing.initSearchDebounce();
         Storevo.Listing.restoreSearchFocus();
+
+        // Escuchar el Enter natural del formulario
+        const form = document.getElementById('listing-form');
+        if (form && !form.dataset.ajaxInitialized) {
+            form.dataset.ajaxInitialized = 'true';
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                Storevo.Listing.submitForm();
+            });
+        }
     }
 };
 
-// --- SOLUCIÓN: Inicialización robusta ---
+// Escuchar el botón de "Atrás" del navegador para navegar sin recargar
+window.addEventListener('popstate', function(e) {
+    if (e.state && e.state.path) {
+        Storevo.Listing.fetchResults(e.state.path, true);
+    } else {
+        Storevo.Listing.fetchResults(window.location.href, true);
+    }
+});
+
+// Registrar el estado inicial del History API
+if (!window.history.state) {
+    window.history.replaceState({path: window.location.href}, '', window.location.href);
+}
+
 if (document.readyState === 'loading') {
-    // Si el DOM aún está cargando, esperamos al evento
     document.addEventListener('DOMContentLoaded', Storevo.Listing.initListingUX);
 } else {
-    // Si el DOM ya cargó completamente, ejecutamos de inmediato
     Storevo.Listing.initListingUX();
 }

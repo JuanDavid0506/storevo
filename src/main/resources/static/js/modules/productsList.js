@@ -46,7 +46,7 @@ Storevo.ProductsList = {
         const select = document.querySelector('select[name="status"]');
         if (select) {
             select.value = statusValue;
-            select.form.submit();
+            Storevo.Listing.submitForm(); // Magia AJAX 🔥
         }
     },
 
@@ -56,16 +56,29 @@ Storevo.ProductsList = {
         const selectAllCb = document.getElementById('select-all-checkbox');
 
         checkboxes.forEach(cb => {
-            cb.addEventListener('change', (e) => this.handleSelectionChange(e.target));
+            cb.addEventListener('change', (e) => {
+                // Sincronizar el mismo producto en las vistas ocultas (magia UX)
+                const id = e.target.value;
+                const isChecked = e.target.checked;
+                document.querySelectorAll(`.product-checkbox[value="${id}"]`).forEach(sibling => {
+                    sibling.checked = isChecked;
+                });
+                this.handleSelectionChange(e.target);
+            });
         });
 
         if (selectAllCb) {
             selectAllCb.addEventListener('change', (e) => {
                 const isChecked = e.target.checked;
-                checkboxes.forEach(cb => {
-                    cb.checked = isChecked;
-                    this.handleSelectionChange(cb, true);
-                });
+                checkboxes.forEach(cb => cb.checked = isChecked);
+
+                // Limpiamos y reconstruimos la lista exacta de IDs únicos
+                this.state.selectedIds = [];
+                if (isChecked) {
+                    const uniqueIds = new Set();
+                    checkboxes.forEach(cb => uniqueIds.add(parseInt(cb.value)));
+                    this.state.selectedIds = Array.from(uniqueIds);
+                }
                 this.syncTopPanel();
             });
         }
@@ -80,14 +93,15 @@ Storevo.ProductsList = {
         }
 
         const selectAllCb = document.getElementById('select-all-checkbox');
-        const totalCheckboxes = document.querySelectorAll('.product-checkbox').length;
+        // Solución matemática: contamos solo los productos únicos usando una sola vista (la tabla)
+        const totalUniqueProducts = document.querySelectorAll('#view-table .product-checkbox').length;
+
         if (selectAllCb) {
-            selectAllCb.checked = (this.state.selectedIds.length === totalCheckboxes && totalCheckboxes > 0);
+            selectAllCb.checked = (this.state.selectedIds.length === totalUniqueProducts && totalUniqueProducts > 0);
         }
 
         if (!skipRender) this.syncTopPanel();
     },
-
     syncTopPanel: function() {
         const count = this.state.selectedIds.length;
         const defaultHeader = document.getElementById('default-header');
