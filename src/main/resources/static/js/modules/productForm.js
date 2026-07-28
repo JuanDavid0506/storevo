@@ -1,41 +1,40 @@
 window.Storevo = window.Storevo || {};
 
 Storevo.ProductForm = {
-    // Atributos sugeridos de Ficha Técnica según la plantilla elegida en el constructor de opciones.
-    // El vendedor solo debe escribir el valor; si lo deja vacío, ProductService ya lo descarta
-    // al guardar, así que nunca se muestra en la ficha pública.
-    // Atributos sugeridos de Ficha Técnica según la plantilla.
-    // Atributos esenciales predeterminados por plantilla (Killer Attributes)
+    // --- FICHA TÉCNICA ---
     SPEC_TEMPLATES: {
-        ropa: [
-            'Marca', 'Material', 'Talla', 'Color', 'Género'
-        ],
-        calzado: [
-            'Marca', 'Material', 'Talla', 'Color', 'Tipo de suela'
-        ],
-        perfume: [
-            'Marca', 'Contenido (ml)', 'Familia olfativa', 'Género'
-        ],
-        accesorios: [
-            'Marca', 'Material', 'Color', 'Dimensiones'
-        ],
-        tecnologia: [
-            'Marca', 'Modelo', 'Estado', 'Garantía'
-        ],
+        ropa: ['Marca', 'Material', 'Talla', 'Color', 'Género'],
+        calzado: ['Marca', 'Material', 'Talla', 'Color', 'Tipo de suela'],
+        perfume: ['Marca', 'Contenido (ml)', 'Familia olfativa', 'Género'],
+        accesorios: ['Marca', 'Material', 'Color', 'Dimensiones'],
+        tecnologia: ['Marca', 'Modelo', 'Estado', 'Garantía'],
         personalizado: []
     },
 
+    // --- ESTADO DE CATEGORÍAS ---
+    categories: [],
+    selectedPath: [],
+
     init: function() {
-        this.initCategories();
+        // Carga las categorías y dibuja el nivel principal
+        this.loadCategories();
+        this.renderLevel(1, null);
+
+        // Autoselección en modo Edición
+        const existingId = document.getElementById('finalCategoryId')?.value;
+        if (existingId) {
+            this.preselectCategory(existingId);
+        }
     },
 
-    // NUEVA FUNCIÓN: Hace que la caja crezca sola según el texto
+    // ==========================================
+    // LÓGICA DE FICHA TÉCNICA
+    // ==========================================
     autoResize: function(el) {
-        el.style.height = 'auto'; // Resetea la altura
-        el.style.height = el.scrollHeight + 'px'; // Ajusta al contenido exacto
+        el.style.height = 'auto';
+        el.style.height = el.scrollHeight + 'px';
     },
 
-    // Precarga los atributos sugeridos de la plantilla
     prefillSpecs: function(templateKey) {
         this.clearTemplateSpecs();
 
@@ -57,7 +56,6 @@ Storevo.ProductForm = {
             row.className = 'flex gap-3 mb-3 items-start';
             row.dataset.templateRow = 'true';
 
-            // Usamos textarea con rows="1", resize-none, y el evento oninput para el auto-crecimiento
             row.innerHTML = `
                 <textarea name="attrKeys" rows="1" placeholder="Atributo" oninput="Storevo.ProductForm.autoResize(this)" class="w-1/3 px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:ring-storevo-500 text-sm resize-none overflow-hidden min-h-[42px] leading-relaxed">${key}</textarea>
                 <textarea name="attrValues" rows="1" placeholder="Escribe el valor..." oninput="Storevo.ProductForm.autoResize(this)" class="flex-1 px-4 py-2 bg-slate-950 border border-storevo-500/40 rounded-lg text-white focus:ring-storevo-500 text-sm resize-none overflow-hidden min-h-[42px] leading-relaxed"></textarea>
@@ -67,7 +65,6 @@ Storevo.ProductForm = {
             `;
             container.appendChild(row);
 
-            // Auto-ajustar inmediatamente por si la "key" sugerida es muy larga
             const keyInput = row.querySelector('textarea[name="attrKeys"]');
             this.autoResize(keyInput);
 
@@ -77,7 +74,6 @@ Storevo.ProductForm = {
         if (firstNewValueInput) firstNewValueInput.focus();
     },
 
-    // Agrega una fila vacía manualmente
     addSpecRow: function() {
         const container = document.getElementById('specsContainer');
         if (!container) return;
@@ -95,155 +91,139 @@ Storevo.ProductForm = {
         container.appendChild(row);
     },
 
-    // Elimina únicamente las filas que dejó una plantilla (nunca las que el vendedor agregó a mano)
     clearTemplateSpecs: function() {
         const container = document.getElementById('specsContainer');
         if (!container) return;
         container.querySelectorAll('[data-template-row="true"]').forEach(row => row.remove());
     },
 
-
-
-    initCategories: function() {
-        const bridge = document.getElementById('categoryDataBridge');
-        const mainSelect = document.getElementById('mainCatSelect');
-        const subCatBox = document.getElementById('subCatBox');
-        const catSummaryBox = document.getElementById('catSummaryBox');
-        const summaryText = document.getElementById('summaryText');
-        const finalCatInput = document.getElementById('finalCategoryId');
-
-        if (!bridge || !mainSelect || !subCatBox || !finalCatInput) return;
-
-        // Limpieza por si se llama recursivamente (Creación al vuelo)
-        mainSelect.innerHTML = '<option value="">Selecciona la categoría del catálogo...</option>';
-        subCatBox.innerHTML = '';
-
-        let categories = [];
-
-        // 1. Extraer toda la jerarquía del DOM
-        bridge.querySelectorAll('.cat-data-node').forEach(node => {
-            const parentId = node.getAttribute('data-parent-id');
-            categories.push({
+    // ==========================================
+    // LÓGICA DE CATEGORÍAS (SISTEMA DE CHIPS)
+    // ==========================================
+    loadCategories: function() {
+        this.categories = [];
+        document.querySelectorAll('#categoryDataBridge .cat-data-node').forEach(node => {
+            const pId = node.getAttribute('data-parent-id');
+            this.categories.push({
                 id: node.getAttribute('data-id'),
                 name: node.getAttribute('data-name'),
-                parentId: (parentId && parentId !== 'null' && parentId !== '') ? parentId : null
+                parentId: (pId && pId !== 'null' && pId !== '') ? pId : null
             });
         });
+    },
 
-        // 2. Llenar Select Principal (Categorías Raíz)
-        const rootCats = categories.filter(c => !c.parentId);
-        rootCats.forEach(cat => {
-            const option = document.createElement('option');
-            option.value = cat.id;
-            option.textContent = cat.name;
-            mainSelect.appendChild(option);
-        });
+    renderLevel: function(level, parentId) {
+        const container = document.getElementById(`level-${level}-container`);
+        const wrapper = document.getElementById(`level-${level}-wrapper`);
+        const label = document.getElementById(`level-${level}-label`);
 
-        let selectedPath = [];
+        if (!container) return;
 
-        // 3. Reconstruir la ruta visual
-        const initialCatId = finalCatInput.value;
-        if (initialCatId) {
-            let currentId = initialCatId;
-            while (currentId) {
-                const cat = categories.find(c => c.id === currentId);
-                if (cat) {
-                    selectedPath.unshift({ id: cat.id, name: cat.name });
-                    currentId = cat.parentId;
-                } else {
-                    break;
-                }
-            }
-            if (selectedPath.length > 0) {
-                mainSelect.value = selectedPath[0].id;
-                updateUI();
-            }
+        // Limpiar subniveles
+        if (level === 1) {
+            this.clearLevel(2);
+            this.clearLevel(3);
+            this.selectedPath = [];
+        } else if (level === 2) {
+            this.clearLevel(3);
+            this.selectedPath = [this.selectedPath[0]];
         }
 
-        // 4. EVENTO: Cambio en el Select de Categoría Principal
-        mainSelect.addEventListener('change', function() {
-            const selectedId = this.value;
-            if (!selectedId) {
-                selectedPath = [];
-                updateUI();
-                return;
-            }
-            const selectedName = this.options[this.selectedIndex].text;
-            selectedPath = [{ id: selectedId, name: selectedName }];
-            updateUI();
-        });
+        const children = this.categories.filter(c => c.parentId === parentId);
 
-        function updateUI() {
-            if (selectedPath.length === 0) {
-                subCatBox.classList.add('hidden');
-                catSummaryBox.classList.add('hidden');
-                finalCatInput.value = '';
-                subCatBox.innerHTML = '';
-                return;
-            }
-
-            const deepestCat = selectedPath[selectedPath.length - 1];
-            finalCatInput.value = deepestCat.id;
-
-            summaryText.innerHTML = selectedPath.map((cat, index) => {
-                if (index === selectedPath.length - 1) return `<span class="text-storevo-400">${cat.name}</span>`;
-                return `<span>${cat.name}</span> <svg class="w-4 h-4 mx-1 text-slate-500 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>`;
-            }).join('');
-            catSummaryBox.classList.remove('hidden');
-
-            renderLevels();
+        if (children.length === 0) {
+            if (wrapper) wrapper.classList.add('hidden');
+            this.updateFinalSelection();
+            return;
         }
 
-        function renderLevels() {
-            subCatBox.innerHTML = '';
-            let hasAnyChildren = false;
+        if (wrapper) wrapper.classList.remove('hidden');
+        if (label && parentId) {
+            const parentCat = this.categories.find(c => c.id === parentId);
+            label.innerHTML = `Subcategoría dentro de <span class="text-white font-bold">${parentCat ? parentCat.name : ''}</span>`;
+        }
 
-            for (let i = 0; i < selectedPath.length; i++) {
-                const currentCat = selectedPath[i];
-                const children = categories.filter(c => c.parentId === currentCat.id);
+        container.innerHTML = '';
+        children.forEach(cat => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            // Estilo por defecto (Inactivo)
+            btn.className = 'px-4 py-2 text-sm font-semibold rounded-xl border transition-all duration-200 bg-slate-900 border-slate-700 text-slate-300 hover:text-white hover:bg-storevo-500/10 hover:border-storevo-500/50';
+            btn.textContent = cat.name;
+            btn.onclick = () => this.selectCategory(level, cat);
+            container.appendChild(btn);
+        });
 
-                if (children.length > 0) {
-                    hasAnyChildren = true;
-                    const levelDiv = document.createElement('div');
-                    levelDiv.className = i > 0 ? 'mt-4 pt-4 border-t border-slate-800' : '';
+        this.updateFinalSelection();
+    },
 
-                    const label = document.createElement('label');
-                    label.className = 'block text-xs font-bold uppercase tracking-wide text-slate-500 mb-3 flex items-center gap-2';
-                    label.textContent = `Subcategorías de ${currentCat.name}`;
-                    levelDiv.appendChild(label);
+    clearLevel: function(level) {
+        const container = document.getElementById(`level-${level}-container`);
+        const wrapper = document.getElementById(`level-${level}-wrapper`);
+        if (container) container.innerHTML = '';
+        if (wrapper) wrapper.classList.add('hidden');
+    },
 
-                    const chipsDiv = document.createElement('div');
-                    chipsDiv.className = 'flex flex-wrap gap-2';
+    selectCategory: function(level, cat) {
+        this.selectedPath[level - 1] = cat;
 
-                    children.forEach(child => {
-                        const isSelected = selectedPath.length > i + 1 && selectedPath[i + 1].id === child.id;
-                        const btn = document.createElement('button');
-                        btn.type = 'button';
-
-                        if (isSelected) {
-                            btn.className = 'px-4 py-2 text-sm font-bold rounded-lg border border-storevo-500 bg-storevo-500 text-white shadow-md shadow-storevo-500/20 transition-all';
-                        } else {
-                            btn.className = 'px-4 py-2 text-sm font-bold rounded-lg border border-slate-700 bg-slate-900 text-slate-300 hover:bg-storevo-500/10 hover:text-storevo-400 hover:border-storevo-500/50 transition-all';
-                        }
-                        btn.textContent = child.name;
-
-                        btn.addEventListener('click', function() {
-                            if (isSelected) selectedPath = selectedPath.slice(0, i + 1);
-                            else {
-                                selectedPath = selectedPath.slice(0, i + 1);
-                                selectedPath.push({ id: child.id, name: child.name });
-                            }
-                            updateUI();
-                        });
-                        chipsDiv.appendChild(btn);
-                    });
-                    levelDiv.appendChild(chipsDiv);
-                    subCatBox.appendChild(levelDiv);
-                }
+        // Pitar el botón activo y apagar los demás
+        const container = document.getElementById(`level-${level}-container`);
+        Array.from(container.children).forEach(btn => {
+            if (btn.textContent === cat.name) {
+                // ACTIVO (Morado)
+                btn.className = 'px-4 py-2 text-sm font-bold rounded-xl border transition-all duration-200 bg-storevo-500/10 border-storevo-500/60 text-white ring-1 ring-storevo-500/20';
+            } else {
+                // INACTIVO
+                btn.className = 'px-4 py-2 text-sm font-semibold rounded-xl border transition-all duration-200 bg-slate-900 border-slate-700 text-slate-300 hover:text-white hover:bg-storevo-500/10 hover:border-storevo-500/50';
             }
+        });
 
-            if (hasAnyChildren) subCatBox.classList.remove('hidden');
-            else if (subCatBox.innerHTML === '') subCatBox.classList.add('hidden');
+        // Intentar abrir el siguiente nivel
+        if (level < 3) {
+            this.renderLevel(level + 1, cat.id);
+        } else {
+            this.updateFinalSelection();
+        }
+    },
+
+    updateFinalSelection: function() {
+        const summaryBox = document.getElementById('catSummaryBox');
+        const summaryText = document.getElementById('summaryText');
+        const finalIdInput = document.getElementById('finalCategoryId');
+
+        if (this.selectedPath.length > 0) {
+            const lastSelected = this.selectedPath[this.selectedPath.length - 1];
+            finalIdInput.value = lastSelected.id;
+
+            // Construir la ruta visual
+            summaryText.innerHTML = this.selectedPath.map((c, index) => {
+                const isLast = index === this.selectedPath.length - 1;
+                return `<span class="${isLast ? 'text-white font-bold' : 'text-slate-400'}">${c.name}</span>`;
+            }).join('<span class="text-slate-600 font-bold mx-1">›</span>');
+
+            summaryBox.classList.remove('hidden');
+        } else {
+            finalIdInput.value = '';
+            summaryText.textContent = '';
+            summaryBox.classList.add('hidden');
+        }
+
+        // Disparar evento para productUX
+        finalIdInput.dispatchEvent(new Event('change'));
+    },
+
+    preselectCategory: function(targetId) {
+        let path = [];
+        let current = this.categories.find(c => c.id === targetId);
+        while (current) {
+            path.unshift(current);
+            current = this.categories.find(c => c.id === current.parentId);
+        }
+        if (path.length > 0) {
+            this.selectCategory(1, path[0]);
+            if (path.length > 1) this.selectCategory(2, path[1]);
+            if (path.length > 2) this.selectCategory(3, path[2]);
         }
     }
 };
@@ -266,7 +246,6 @@ Storevo.CategoryModal = {
             });
         });
 
-        // Calculamos la ruta y la PROFUNDIDAD de cada categoría
         const getCategoryInfo = (cat) => {
             let path = [cat.name];
             let current = cat;
@@ -281,14 +260,10 @@ Storevo.CategoryModal = {
             return { pathString: path.join(' > '), depth: path.length };
         };
 
-        // Enriquecemos el array y aplicamos la REGLA DE 3 NIVELES:
-        // Solo pueden ser padres las categorías de Nivel 1 o Nivel 2.
-        // Si eliges Nivel 2, la nueva será Nivel 3 (tu límite).
         let validParents = categories.map(cat => {
             return { ...cat, info: getCategoryInfo(cat) };
         }).filter(cat => cat.info.depth < 3);
 
-        // Ordenamos alfabéticamente por la ruta para mayor claridad visual
         validParents.sort((a, b) => a.info.pathString.localeCompare(b.info.pathString));
 
         validParents.forEach(cat => {
@@ -298,15 +273,12 @@ Storevo.CategoryModal = {
             parentSelect.appendChild(opt);
         });
 
-        // Autodetección Inteligente y segura
         const currentFinalCat = document.getElementById('finalCategoryId')?.value;
         if (currentFinalCat) {
-            // Verificamos si la categoría donde está parado es un padre permitido (Nivel 1 o 2)
             const isValidParent = validParents.find(c => c.id === currentFinalCat);
             if (isValidParent) {
                 parentSelect.value = currentFinalCat;
             } else {
-                // Si estaba parado en una de Nivel 3, preseleccionamos a su padre (Nivel 2) para proteger la regla
                 const deepCat = categories.find(c => c.id === currentFinalCat);
                 if (deepCat && deepCat.parentId) {
                     parentSelect.value = deepCat.parentId;
@@ -351,7 +323,6 @@ Storevo.CategoryModal = {
         btn.disabled = true;
 
         try {
-            // Extraer slug de la URL para el endpoint
             const slug = window.location.pathname.split('/')[2];
 
             const response = await fetch(`/dashboard/${slug}/categories/api/quick-add`, {
@@ -364,7 +335,7 @@ Storevo.CategoryModal = {
 
             const newCat = await response.json();
 
-            // 1. Inyectar la nueva categoría en el DOM oculto (Bridge)
+            // 1. Inyectar en el Bridge
             const bridge = document.getElementById('categoryDataBridge');
             const newNode = document.createElement('div');
             newNode.className = 'cat-data-node';
@@ -373,11 +344,11 @@ Storevo.CategoryModal = {
             newNode.setAttribute('data-parent-id', newCat.parentId || '');
             bridge.appendChild(newNode);
 
-            // 2. Definirla como la seleccionada
-            document.getElementById('finalCategoryId').value = newCat.id;
+            // 2. Refrescar categorías en la UI
+            Storevo.ProductForm.loadCategories();
 
-            // 3. Reiniciar la lógica visual mágicamente
-            Storevo.ProductForm.initCategories();
+            // 3. Autoseleccionar la nueva categoría con los chips
+            Storevo.ProductForm.preselectCategory(newCat.id.toString());
 
             if (Storevo.UI && Storevo.UI.Toast) Storevo.UI.Toast.show(`Categoría "${newCat.name}" creada`, 'success');
             this.close();
@@ -391,7 +362,6 @@ Storevo.CategoryModal = {
     }
 };
 
-// Permitir guardar al presionar Enter
 document.addEventListener('DOMContentLoaded', () => {
     Storevo.ProductForm.init();
 

@@ -114,7 +114,7 @@
                             <!-- Input visual para el Usuario -->
                             <input type="text" inputmode="numeric" id="input-price" placeholder="0" class="w-full pl-8 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white text-xl font-bold placeholder-slate-700 focus:outline-none focus:ring-2 focus:ring-storevo-500/40 focus:border-storevo-500/60 transition font-mono">
                         </div>
-                        <button type="button" onclick="toggleDiscountField()" id="btn-show-discount" class="mt-2 text-xs font-semibold flex items-center gap-1 transition-colors text-storevo-400 hover:text-storevo-300">
+                        <button type="button" onclick="Storevo.ProductUX.toggleDiscountField()" id="btn-show-discount" class="mt-2 text-xs font-semibold flex items-center gap-1 transition-colors text-storevo-400 hover:text-storevo-300">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg> Agregar precio de oferta
                         </button>
                         <div id="discount-container" class="hidden mt-2 space-y-1 opacity-0 -translate-y-2 transition-all duration-200">
@@ -164,14 +164,26 @@
                     </button>
                 </div>
 
-                <select id="mainCatSelect" class="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-storevo-500 cursor-pointer font-medium mb-4">
-                    <option value="">Selecciona la categoría del catálogo...</option>
-                </select>
-                <div id="subCatBox" class="hidden pt-3 border-t border-slate-800 mt-4"></div>
-                <div id="catSummaryBox" class="hidden mt-4 flex items-center gap-2 text-sm bg-slate-950 p-3 rounded-xl border border-slate-800">
-                    <svg class="w-4 h-4 text-storevo-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /></svg>
-                    <span id="summaryText" class="text-slate-400 font-medium"></span>
+                <!-- CONTENEDORES DE CHIPS (Niveles 1, 2 y 3) -->
+                <div id="level-1-container" class="flex flex-wrap gap-2 mb-2"></div>
+
+                <div id="level-2-wrapper" class="hidden border-t border-slate-800/60 pt-4 mt-4 mb-2 transition-all">
+                    <p class="text-xs text-slate-500 mb-3 font-medium" id="level-2-label">Subcategoría</p>
+                    <div id="level-2-container" class="flex flex-wrap gap-2"></div>
                 </div>
+
+                <div id="level-3-wrapper" class="hidden border-t border-slate-800/60 pt-4 mt-4 mb-2 transition-all">
+                    <p class="text-xs text-slate-500 mb-3 font-medium" id="level-3-label">Subcategoría</p>
+                    <div id="level-3-container" class="flex flex-wrap gap-2"></div>
+                </div>
+
+                <!-- RESUMEN DE RUTA SELECCIONADA -->
+                <div id="catSummaryBox" class="hidden mt-6 flex items-center gap-2 text-sm bg-slate-950 p-3 rounded-xl border border-slate-800">
+                    <svg class="w-4 h-4 text-storevo-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /></svg>
+                    <span id="summaryText" class="text-slate-300 font-medium flex items-center flex-wrap gap-1"></span>
+                </div>
+
+                <!-- Input real que recibe el ID para el Backend -->
                 <input type="hidden" id="finalCategoryId" th:field="*{categoryId}">
             </section>
 
@@ -457,214 +469,7 @@
 </div>
 
 <th:block layout:fragment="scripts">
-    <!-- Lógica UX Visual (Scroll Activo, Checklist, Progreso y Preview) -->
-    <!-- Lógica UX Visual (Scroll Activo, Checklist, Progreso y Preview) -->
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // Referencias DOM generales
-            const iName = document.getElementById('input-name');
-            const pName = document.getElementById('preview-name');
-            const pPriceContainer = document.getElementById('preview-price-container');
-            const pCat = document.getElementById('preview-cat');
-            const pctContainer = document.getElementById('discount-percentage-text');
-            const pctValue = document.getElementById('discount-pct-val');
-
-            // Referencias Inputs Reales (Backend) vs Visuales (Frontend)
-            const realPrice = document.getElementById('real-price');
-            const visualPrice = document.getElementById('input-price');
-
-            const realDiscount = document.getElementById('real-discount-price');
-            const visualDiscount = document.getElementById('input-discount-price');
-
-            const realStock = document.getElementById('real-stock');
-            const visualStock = document.getElementById('input-stock');
-
-            // ==========================================
-            // MÁSCARA DE MILES (Formateador)
-            // ==========================================
-            function applyMask(visualInput, realInput) {
-                // Quitamos letras, puntos y comas
-                let value = visualInput.value.replace(/\D/g, "");
-                if (value === "") {
-                    visualInput.value = "";
-                    realInput.value = ""; // Vacio para validaciones
-                } else {
-                    const num = parseInt(value, 10);
-                    // 'es-CO' para separador de miles con punto
-                    visualInput.value = new Intl.NumberFormat('es-CO').format(num);
-                    realInput.value = num; // El backend recibe el número limpio
-                }
-            }
-
-            // Inicializar inputs y agregar listeners
-            [
-                {v: visualPrice, r: realPrice},
-                {v: visualDiscount, r: realDiscount},
-                {v: visualStock, r: realStock}
-            ].forEach(item => {
-                // Si viene un valor del backend (Editar), lo limpiamos de decimales (.0) y aplicamos la máscara
-                if (item.r && item.r.value && item.r.value !== "0.0" && item.r.value !== "0") {
-                    item.v.value = item.r.value.split('.')[0];
-                    applyMask(item.v, item.r);
-                }
-                // Escuchar cada que el usuario teclea
-                if (item.v) {
-                    item.v.addEventListener('input', function() {
-                        applyMask(item.v, item.r);
-                        updateUIState();
-                    });
-                }
-            });
-
-            // 1. Mostrar/Ocultar Precio Oferta
-            window.toggleDiscountField = function() {
-                const container = document.getElementById('discount-container');
-                const btn = document.getElementById('btn-show-discount');
-
-                if(container.classList.contains('hidden')) {
-                    container.classList.remove('hidden');
-                    setTimeout(() => {
-                        container.classList.remove('opacity-0', '-translate-y-2');
-                        visualDiscount.focus();
-                    }, 10);
-                    btn.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" /></svg> Quitar precio de oferta`;
-                    btn.classList.replace('text-storevo-400', 'text-slate-500');
-                } else {
-                    container.classList.add('opacity-0', '-translate-y-2');
-                    btn.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg> Agregar precio de oferta`;
-                    btn.classList.replace('text-slate-500', 'text-storevo-400');
-                    visualDiscount.value = '';
-                    realDiscount.value = '';
-                    updateUIState();
-                    setTimeout(() => container.classList.add('hidden'), 200);
-                }
-            };
-            if(realDiscount && parseFloat(realDiscount.value) > 0) toggleDiscountField();
-
-            // 2. Observer para pintar el menú lateral según el scroll
-            const sections = document.querySelectorAll('main section');
-            const navLinks = document.querySelectorAll('.nav-link');
-
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if(entry.isIntersecting) {
-                        navLinks.forEach(link => {
-                            link.classList.remove('bg-storevo-500/10', 'text-storevo-300', 'font-semibold');
-                            link.classList.add('text-slate-500', 'hover:text-slate-200', 'hover:bg-slate-800');
-                            link.querySelector('span').classList.replace('bg-storevo-400', 'bg-slate-600');
-                            link.querySelector('span').classList.replace('bg-storevo-400', 'bg-slate-700');
-                            if(link.getAttribute('href') === '#' + entry.target.id) {
-                                link.classList.remove('text-slate-500', 'hover:text-slate-200', 'hover:bg-slate-800');
-                                link.classList.add('bg-storevo-500/10', 'text-storevo-300', 'font-semibold');
-                                link.querySelector('span').classList.add('bg-storevo-400');
-                            }
-                        });
-                    }
-                });
-            }, { rootMargin: '-40% 0px -55% 0px' });
-            sections.forEach(sec => observer.observe(sec));
-
-            // 3. Lógica Reactiva principal
-            function updateUIState() {
-                // Usamos los inputs reales (los que no tienen puntos) para la validación matemática
-                const priceVal = parseFloat(realPrice.value) || 0;
-                const discountVal = parseFloat(realDiscount.value) || 0;
-                const stockVal = parseFloat(realStock.value) || 0;
-
-                const hasName = iName.value.trim().length > 0;
-                const hasPrice = priceVal > 0;
-                const hasDiscount = discountVal > 0 && discountVal < priceVal;
-                const hasStock = realStock.value.trim().length > 0;
-                const hasCat = document.getElementById('finalCategoryId').value.trim() !== '';
-                const hasImg = document.getElementById('image-preview-grid').children.length > 0 || Storevo.ProductImages?.state.existing.length > 0;
-
-                let completed = 0;
-
-                const setCheck = (id, isDone) => {
-                    const check = document.getElementById(`check-${id}`);
-                    const text = document.getElementById(`text-${id}`);
-                    if(isDone) {
-                        completed++;
-                        check.className = 'w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 bg-emerald-500';
-                        check.innerHTML = '<svg class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>';
-                        text.className = 'text-xs transition-colors text-slate-400 line-through';
-                    } else {
-                        check.className = 'w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 bg-slate-800 border border-slate-700';
-                        check.innerHTML = '';
-                        text.className = 'text-xs transition-colors text-slate-500';
-                    }
-                };
-
-                setCheck('name', hasName);
-                setCheck('price', hasPrice);
-                setCheck('stock', hasStock);
-                setCheck('category', hasCat);
-                setCheck('images', hasImg);
-
-                document.getElementById('progress-bar-fill').style.width = `${(completed/5)*100}%`;
-                document.getElementById('progress-text').textContent = `${completed}/5`;
-
-                const vText = document.getElementById('bottom-validation-text');
-                if(!hasName) vText.innerHTML = '<span class="text-xs text-slate-500">Escribe el nombre para continuar</span>';
-                else if(!hasPrice) vText.innerHTML = '<span class="text-xs text-slate-500">Falta asignar un precio base</span>';
-                else if(!hasStock) vText.innerHTML = '<span class="text-xs text-slate-500">Añade la cantidad en stock</span>';
-                else vText.innerHTML = '<span class="text-xs text-emerald-400 font-medium flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" /></svg>Listo para guardar</span>';
-
-                // ==========================================
-                // CÁLCULO DE DESCUENTO
-                // ==========================================
-                if (hasPrice && hasDiscount) {
-                    const pct = Math.round(((priceVal - discountVal) / priceVal) * 100);
-                    pctValue.textContent = pct + '%';
-                    pctContainer.classList.remove('hidden');
-                } else {
-                    pctContainer.classList.add('hidden');
-                }
-
-                // ==========================================
-                // ACTUALIZAR PREVIEW (Con separadores y tachado)
-                // ==========================================
-                pName.textContent = hasName ? iName.value : '—';
-                pCat.textContent = hasCat ? document.getElementById('summaryText').textContent : 'Sin categoría';
-
-                // Usamos una mini-función de formato rápido para pintar el preview
-                const fmt = (num) => new Intl.NumberFormat('es-CO').format(num);
-
-                if (hasPrice && hasDiscount) {
-                    // Muestra el precio de oferta brillante y el original tachado y gris
-                    pPriceContainer.innerHTML = `
-                        <span class="text-sm font-bold text-storevo-400">$${fmt(discountVal)}</span>
-                        <span class="text-[11px] font-medium text-slate-600 line-through ml-1">$${fmt(priceVal)}</span>
-                    `;
-                } else if (hasPrice) {
-                    // Muestra solo el precio base
-                    pPriceContainer.innerHTML = `<span class="text-sm font-bold text-storevo-400">$${fmt(priceVal)}</span>`;
-                } else {
-                    pPriceContainer.innerHTML = `<span class="text-sm font-bold text-slate-600">Sin precio</span>`;
-                }
-
-                // Actualizar foto del preview si existe
-                const previewImgContainer = document.getElementById('preview-img-container');
-                const firstImg = document.querySelector('#image-preview-grid img');
-                if (firstImg) {
-                    previewImgContainer.innerHTML = `<img src="${firstImg.src}" class="w-full h-full object-cover">`;
-                } else {
-                    previewImgContainer.innerHTML = `<svg class="w-10 h-10 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>`;
-                }
-            }
-
-            // Escuchar cambios reactivos en el Nombre
-            iName.addEventListener('input', updateUIState);
-
-            // Observers para la categoría e imágenes
-            new MutationObserver(updateUIState).observe(document.getElementById('summaryText'), { childList: true, subtree: true });
-            new MutationObserver(updateUIState).observe(document.getElementById('image-preview-grid'), { childList: true });
-
-            // Llamada inicial
-            updateUIState();
-        });
-    </script>
-
+    <script th:src="@{/js/modules/productUx.js}"></script>
     <script th:src="@{/js/modules/productDraft.js}"></script>
     <script th:src="@{/js/modules/productWizard.js}"></script>
     <script th:src="@{/js/modules/productImages.js}"></script>
