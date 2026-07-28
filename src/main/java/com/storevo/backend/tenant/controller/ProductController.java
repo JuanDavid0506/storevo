@@ -11,7 +11,10 @@ import com.storevo.backend.tenant.service.CategoryService;
 import com.storevo.backend.tenant.service.ProductService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -53,7 +56,7 @@ public class ProductController {
     public String showCreateForm(Model model) {
         ProductDto dto = new ProductDto();
         dto.setIsActive(true);
-        dto.setHasVariants(false); // Por defecto es un producto simple
+        dto.setHasVariants(false);
 
         model.addAttribute("product", dto);
         model.addAttribute("categories", categoryService.getAllCategories());
@@ -65,7 +68,6 @@ public class ProductController {
     public String showEditForm(@PathVariable Long id, Model model) {
         Product product = productService.getProductById(id);
 
-        // Desempaquetamos el mapa JSON en dos listas para el formulario
         List<String> keys = new ArrayList<>();
         List<String> values = new ArrayList<>();
         if (product.getAttributes() != null) {
@@ -75,7 +77,6 @@ public class ProductController {
             });
         }
 
-        // Mapeo de la entidad ProductImage al DTO para edición
         List<String> existingImages = new ArrayList<>();
         List<String> imageOrder = new ArrayList<>();
         String mainImageRef = "";
@@ -90,13 +91,11 @@ public class ProductController {
             }
         }
 
-        // --- MAPEO FASE 2: VARIANTES Y OPCIONES ---
         Boolean hasVariants = product.getHasVariants() != null ? product.getHasVariants() : false;
         List<ProductDto.OptionDto> optionDtos = new ArrayList<>();
         List<ProductDto.VariantDto> variantDtos = new ArrayList<>();
 
         if (hasVariants) {
-            // Mapear Opciones (Ej: Color -> Rojo, Azul)
             if (product.getOptions() != null) {
                 optionDtos = product.getOptions().stream().map(opt -> {
                     ProductDto.OptionDto optDto = new ProductDto.OptionDto();
@@ -112,7 +111,6 @@ public class ProductController {
                 }).collect(Collectors.toList());
             }
 
-            // Mapear Combinaciones y Valores Anteriores
             if (product.getVariantsList() != null) {
                 variantDtos = product.getVariantsList().stream().map(var -> {
                     ProductDto.VariantDto varDto = new ProductDto.VariantDto();
@@ -122,7 +120,6 @@ public class ProductController {
                     varDto.setBarcode(var.getBarcode());
                     varDto.setWeight(var.getWeight());
 
-                    // Construir el diccionario de la combinación
                     Map<String, String> combo = new HashMap<>();
                     if (var.getOptionValues() != null) {
                         var.getOptionValues().forEach(val ->
@@ -131,7 +128,6 @@ public class ProductController {
                     }
                     varDto.setCombination(combo);
 
-                    // Mapear imagen si la tiene vinculada
                     if (var.getImages() != null && !var.getImages().isEmpty()) {
                         varDto.setImageRef(var.getImages().get(0).getFilePath());
                     }
@@ -139,7 +135,6 @@ public class ProductController {
                 }).collect(Collectors.toList());
             }
         }
-        // ------------------------------------------
 
         ProductDto dto = ProductDto.builder()
                 .id(product.getId())
@@ -153,13 +148,11 @@ public class ProductController {
                 .sku(product.getSku())
                 .weight(product.getWeight())
                 .isActive(product.getIsActive())
-                // Datos de la Fase 1
                 .existingImages(existingImages)
                 .imageOrder(imageOrder)
                 .mainImageRef(mainImageRef)
                 .attrKeys(keys)
                 .attrValues(values)
-                // Datos de la Fase 2
                 .hasVariants(hasVariants)
                 .options(optionDtos)
                 .variants(variantDtos)
@@ -176,15 +169,12 @@ public class ProductController {
                               @ModelAttribute ProductDto productDto,
                               @RequestParam(required = false) String action) {
 
-        // --- RED DE SEGURIDAD BACKEND ---
         if (productDto.getStock() == null) productDto.setStock(0);
         if (productDto.getPrice() == null) productDto.setPrice(0.0);
         if (productDto.getWeight() == null) productDto.setWeight(0.0);
-        // --------------------------------
 
         productService.saveProduct(productDto);
 
-        // FASE 3: Flujo de Productividad
         if ("save_and_new".equals(action)) {
             return "redirect:/dashboard/" + slug + "/products/new?success=true&continue=true";
         }
@@ -226,6 +216,7 @@ public class ProductController {
             @RequestParam(required = false) String q,
             @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) String status,
+            @RequestParam(required = false) String quick,
             @RequestParam(defaultValue = "newest") String sort,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -243,7 +234,12 @@ public class ProductController {
             isDeletedFilter = true;
         }
 
-        Page<Product> productsPage = productService.searchProducts(q, categoryId, isActiveFilter, isDeletedFilter, sort, pageable);
+        if ("active".equals(quick)) {
+            isActiveFilter = true;
+            isDeletedFilter = false;
+        }
+
+        Page<Product> productsPage = productService.searchProducts(q, categoryId, isActiveFilter, isDeletedFilter, quick, sort, pageable);
 
         model.addAttribute("products", productsPage);
         model.addAttribute("categories", categoryService.getAllCategories());
@@ -260,5 +256,63 @@ public class ProductController {
         } catch (Exception e) {
             return "[]";
         }
+    }
+
+    @PostMapping("/{id}/quick-stock")
+    @ResponseBody
+    public ResponseEntity<?> updateQuickStock(
+            @PathVariable String slug,
+            @PathVariable("id") Long productId,
+            @RequestBody java.util.Map<String, Integer> payload) {
+
+        try {
+            Integer newStock = payload.get("stock");
+            if (newStock == null || newStock < 0) {
+                return ResponseEntity.badRequest().body(java.util.Map.of("error", "Stock inválido"));
+            }
+
+            productService.updateQuickStock(productId, newStock);
+
+            return ResponseEntity.ok(java.util.Map.of("success", true, "newStock", newStock));
+
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(java.util.Map.of("error", "Error al actualizar el stock"));
+        }
+    }
+
+    // ==========================================
+    // FRENTE 4: API ACCIONES MASIVAS
+    // ==========================================
+    @PostMapping("/api/mass-action")
+    @ResponseBody
+    public ResponseEntity<?> executeMassAction(@PathVariable String slug, @RequestBody MassActionRequest payload) {
+        try {
+            productService.executeMassAction(payload.getIds(), payload.getAction());
+            return ResponseEntity.ok(Map.of("success", true));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // ==========================================
+    // FRENTE 5: API ESTADÍSTICAS ASÍNCRONAS
+    // ==========================================
+    @PostMapping("/api/stats")
+    @ResponseBody
+    public ResponseEntity<?> getProductsStats(@PathVariable String slug, @RequestBody List<Long> productIds) {
+        try {
+            Map<Long, Map<String, Object>> stats = productService.getBulkStatistics(productIds);
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // DTO Interno para peticiones
+    @Getter
+    @Setter
+    public static class MassActionRequest {
+        private String action;
+        private List<Long> ids;
     }
 }

@@ -38,14 +38,11 @@ public class ProductService {
         return productRepository.findActiveProductsByCategoryIds(categoryIds);
     }
 
-    // --- SOLUCIÓN A LAZY INITIALIZATION EXCEPTION ---
     @Transactional(readOnly = true)
     public Product getProductById(Long id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
 
-        // MAGIA ANTI-LAZY: Forzamos a Hibernate a inicializar las listas relacionales
-        // mientras la sesión de la base de datos sigue abierta.
         if (product.getHasVariants() != null && product.getHasVariants()) {
             product.getOptions().size();
             for (ProductOption opt : product.getOptions()) {
@@ -60,15 +57,9 @@ public class ProductService {
 
         return product;
     }
-    // ------------------------------------------------
 
     @Transactional
     public void saveProduct(ProductDto dto) {
-
-        // ==========================================
-        // INICIO - MOTOR AUTOGENERADOR DE SKU
-        // ==========================================
-        // 1. Autogenerar SKU para el producto principal si viene vacío
         if (dto.getSku() == null || dto.getSku().trim().isEmpty()) {
             long nextNumber = productRepository.findTopByOrderByIdDesc()
                     .map(p -> p.getId() + 1)
@@ -76,7 +67,6 @@ public class ProductService {
             dto.setSku(String.format("PROD-%04d", nextNumber));
         }
 
-        // 2. Autogenerar SKU para las variantes si vienen vacías
         if (Boolean.TRUE.equals(dto.getHasVariants()) && dto.getVariants() != null) {
             int variantCounter = 1;
             for (ProductDto.VariantDto variant : dto.getVariants()) {
@@ -86,9 +76,6 @@ public class ProductService {
                 variantCounter++;
             }
         }
-        // ==========================================
-        // FIN - MOTOR AUTOGENERADOR DE SKU
-        // ==========================================
 
         Product product;
         boolean isNew = dto.getId() == null;
@@ -379,7 +366,7 @@ public class ProductService {
         return product.getIsActive();
     }
 
-    public Page<Product> searchProducts(String q, Long categoryId, Boolean isActive, Boolean isDeleted, String sortStr, Pageable pageable) {
+    public Page<Product> searchProducts(String q, Long categoryId, Boolean isActive, Boolean isDeleted, String quick, String sortStr, Pageable pageable) {
         Sort sort;
         switch (sortStr) {
             case "price_asc": sort = Sort.by("price").ascending(); break;
@@ -391,6 +378,66 @@ public class ProductService {
 
         Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
         List<Long> categoryIds = (categoryId != null) ? categoryService.getCategoryAndDescendantIds(categoryId) : null;
-        return productRepository.searchProducts(q, categoryIds, isActive, isDeleted, sortedPageable);
+        return productRepository.searchProducts(q, categoryIds, isActive, isDeleted, quick, sortedPageable);
+    }
+
+    @Transactional
+    public void updateQuickStock(Long productId, Integer newStock) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado"));
+
+        product.setStock(newStock);
+        productRepository.save(product);
+    }
+
+    // ==========================================
+    // FRENTE 4: ACCIONES MASIVAS
+    // ==========================================
+    @Transactional
+    public void executeMassAction(List<Long> ids, String action) {
+        if (ids == null || ids.isEmpty()) return;
+
+        List<Product> products = productRepository.findAllById(ids);
+        for (Product p : products) {
+            switch (action) {
+                case "activate":
+                    p.setIsActive(true);
+                    p.setIsDeleted(false); // Por si estaba en papelera
+                    break;
+                case "hide":
+                    p.setIsActive(false);
+                    break;
+                case "delete":
+                    p.setIsDeleted(true);
+                    p.setIsActive(false);
+                    break;
+            }
+        }
+        productRepository.saveAll(products);
+    }
+
+    // ==========================================
+    // FRENTE 5: ESTADÍSTICAS ASÍNCRONAS (N+1 SAFE)
+    // ==========================================
+    @Transactional(readOnly = true)
+    public Map<Long, Map<String, Object>> getBulkStatistics(List<Long> productIds) {
+        Map<Long, Map<String, Object>> statsMap = new HashMap<>();
+
+        if (productIds == null || productIds.isEmpty()) return statsMap;
+
+        // TODO Arquitectura: Aquí inyectarías el OrderRepository para hacer un
+        // SELECT productId, COUNT(id), MAX(createdAt) FROM OrderItem WHERE productId IN (:ids) GROUP BY productId
+        //
+        // Por ahora, devolvemos un DTO seguro estructurado a 0 para que la interfaz
+        // no colapse ni mienta mientras implementas el módulo de Órdenes a futuro.
+
+        for (Long id : productIds) {
+            Map<String, Object> productStats = new HashMap<>();
+            productStats.put("sold", 0);
+            productStats.put("lastSale", "Sin ventas");
+            statsMap.put(id, productStats);
+        }
+
+        return statsMap;
     }
 }

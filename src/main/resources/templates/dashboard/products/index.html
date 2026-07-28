@@ -4,138 +4,368 @@
       layout:decorate="~{layouts/dashboard-layout}">
 <head>
   <title>Productos</title>
+  <style>
+    /* Ocultar scrollbar en los filtros rápidos para un look más limpio en móvil */
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
 </head>
 <body>
 <div layout:fragment="content" class="space-y-6">
 
-  <div class="flex justify-between items-center">
-    <div>
-      <h2 class="text-2xl font-bold text-white">Tu Inventario</h2>
-      <p class="text-sm text-slate-400 mt-1">Gestiona los productos, precios y stock de tu tienda.</p>
+  <!-- 1. PANEL SUPERIOR DINÁMICO (Default vs Mass Actions) -->
+  <div class="relative min-h-[60px]">
+
+    <!-- Panel por defecto -->
+    <div id="default-header" class="flex flex-col sm:flex-row justify-between sm:items-center gap-4 transition-all duration-300">
+      <div>
+        <h2 class="text-2xl font-bold text-white flex items-center gap-3">
+          Tu Inventario
+          <span class="bg-slate-800 text-storevo-400 text-xs font-black px-2.5 py-1 rounded-full border border-slate-700" th:text="${products.totalElements}">0</span>
+        </h2>
+        <p class="text-sm text-slate-400 mt-1">Gestiona los productos, precios y stock de tu tienda.</p>
+      </div>
+      <a th:href="@{|/dashboard/${slug}/products/new|}" class="bg-storevo-500 hover:bg-storevo-600 text-white font-bold py-2.5 px-5 rounded-xl flex items-center justify-center gap-2 transition shadow-lg shadow-storevo-500/20 whitespace-nowrap">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+        Agregar Producto
+      </a>
     </div>
-    <a th:href="@{|/dashboard/${slug}/products/new|}" class="bg-storevo-500 hover:bg-storevo-600 text-white font-medium py-2 px-4 rounded-lg flex items-center gap-2 transition shadow-lg shadow-storevo-500/20">
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-      Agregar Producto
-    </a>
+
+    <!-- Panel de Acciones Masivas (Oculto por defecto) -->
+    <div id="mass-action-header" class="hidden opacity-0 absolute inset-0 z-10 w-full flex flex-col md:flex-row md:items-center justify-between gap-4 bg-storevo-500/10 border border-storevo-500/30 p-3 sm:px-5 sm:py-3 rounded-2xl transition-all duration-300 backdrop-blur-md">
+      <div class="flex items-center gap-3">
+        <span class="w-8 h-8 rounded-full bg-storevo-500 flex items-center justify-center text-white font-black text-sm shadow-md" id="selected-count">0</span>
+        <span class="font-bold text-storevo-400">Seleccionados</span>
+      </div>
+      <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
+        <button type="button" onclick="Storevo.ProductsList.executeMassAction('activate')" class="flex-1 md:flex-none bg-slate-900 border border-slate-700 hover:border-green-500 hover:text-green-400 text-slate-300 text-xs sm:text-sm font-bold py-2 px-3 sm:px-4 rounded-xl transition-all shadow-sm">Activar</button>
+        <button type="button" onclick="Storevo.ProductsList.executeMassAction('hide')" class="flex-1 md:flex-none bg-slate-900 border border-slate-700 hover:border-slate-500 hover:text-slate-300 text-slate-300 text-xs sm:text-sm font-bold py-2 px-3 sm:px-4 rounded-xl transition-all shadow-sm">Ocultar</button>
+        <button type="button" onclick="Storevo.ProductsList.executeMassAction('delete')" class="flex-1 md:flex-none bg-slate-900 border border-slate-700 hover:border-orange-500 hover:text-orange-400 text-slate-300 text-xs sm:text-sm font-bold py-2 px-3 sm:px-4 rounded-xl transition-all shadow-sm">A Papelera</button>
+        <button type="button" onclick="Storevo.ProductsList.clearSelection()" class="w-full md:w-auto mt-1 md:mt-0 md:ml-2 text-slate-500 hover:text-slate-300 text-sm font-bold py-1.5 px-2 transition-colors text-center">Cancelar</button>
+      </div>
+    </div>
   </div>
 
-  <form id="listing-form" method="GET" class="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-3 shadow-sm"
+  <!-- PANEL DE BÚSQUEDA Y FILTROS NATIVOS DISFRAZADOS -->
+  <form id="listing-form" method="GET" class="bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-800 shadow-sm flex flex-col gap-4"
         th:with="clearFiltersUrl=@{|/dashboard/${slug}/products|},
                  hasActiveFilters=${(param.q != null and not #strings.isEmpty(param.q[0]))
                    or (param.categoryId != null and not #strings.isEmpty(param.categoryId[0]))
-                   or (param.isActive != null and not #strings.isEmpty(param.isActive[0]))}">
-    <div class="flex flex-col md:flex-row justify-between gap-4">
-      <div class="flex flex-col sm:flex-row sm:flex-wrap gap-3 flex-1">
-        <div th:replace="~{components/ui/listing :: search('Buscar por nombre o SKU...')}"></div>
-        <div th:replace="~{components/ui/listing :: category-combobox('categoryId', 'Todas las categorías', ${categoryTreeJson})}"></div>
-        <div th:replace="~{components/ui/listing :: filter-select('status', 'Todos (Sin papelera)', ${ {'active':'Activos', 'inactive':'Inactivos', 'deleted':'Papelera (Eliminados)'} }, 'key', 'value')}"></div>
+                   or (param.status != null and not #strings.isEmpty(param.status[0]))}">
+
+    <!-- Buscador, Combobox y Ordenamiento -->
+    <div class="flex flex-col xl:flex-row justify-between gap-4">
+      <div class="flex flex-col sm:flex-row sm:flex-wrap items-center gap-3 flex-1">
+
+        <!-- Componentes Nativos (Sin tocar) -->
+        <div class="w-full sm:w-auto" th:replace="~{components/ui/listing :: search('Buscar por nombre o SKU...')}"></div>
+        <div class="w-full sm:w-auto" th:replace="~{components/ui/listing :: category-combobox('categoryId', 'Todas las categorías', ${categoryTreeJson})}"></div>
+
+        <!-- SELECT NATIVO OCULTO (Lo dejamos para que listing.js lo pueda leer y limpiar) -->
+        <div class="hidden" id="native-status-filter">
+          <div th:replace="~{components/ui/listing :: filter-select('status', 'Todos (Sin papelera)', ${ {'active':'Activos', 'inactive':'Inactivos', 'deleted':'Papelera (Eliminados)'} }, 'key', 'value')}"></div>
+        </div>
+
+        <!-- PILLS (Control Remoto del Select Oculto) -->
+        <!-- PILLS (Control Remoto del Select Oculto) -->
+        <div class="inline-flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 w-full sm:w-auto overflow-x-auto hide-scrollbar">
+
+          <button type="button" onclick="Storevo.ProductsList.setStatusFilter('')"
+                  class="px-4 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap"
+                  th:classappend="${param.status == null or #strings.isEmpty(param.status)} ? 'bg-slate-800 text-white shadow-sm ring-1 ring-white/5' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-900'">
+            Todos
+          </button>
+
+          <button type="button" onclick="Storevo.ProductsList.setStatusFilter('active')"
+                  class="px-4 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex items-center gap-2"
+                  th:classappend="${param.status != null and param.status[0] == 'active'} ? 'bg-slate-800 text-green-400 shadow-sm ring-1 ring-white/5' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-900'">
+            <span class="w-1.5 h-1.5 rounded-full flex-shrink-0" th:classappend="${param.status != null and param.status[0] == 'active'} ? 'bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.8)]' : 'bg-slate-600'"></span>
+            Activos
+          </button>
+
+          <button type="button" onclick="Storevo.ProductsList.setStatusFilter('inactive')"
+                  class="px-4 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex items-center gap-2"
+                  th:classappend="${param.status != null and param.status[0] == 'inactive'} ? 'bg-slate-800 text-white shadow-sm ring-1 ring-white/5' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-900'">
+            <span class="w-1.5 h-1.5 rounded-full flex-shrink-0" th:classappend="${param.status != null and param.status[0] == 'inactive'} ? 'bg-slate-300' : 'bg-slate-600'"></span>
+            Ocultos
+          </button>
+
+          <button type="button" onclick="Storevo.ProductsList.setStatusFilter('deleted')"
+                  class="px-4 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex items-center gap-1.5"
+                  th:classappend="${param.status != null and param.status[0] == 'deleted'} ? 'bg-slate-800 text-red-400 shadow-sm ring-1 ring-white/5' : 'text-slate-500 hover:text-red-400 hover:bg-slate-900'">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+            Papelera
+          </button>
+
+        </div>
+
         <div th:replace="~{components/ui/listing :: clear-filters(${clearFiltersUrl}, ${hasActiveFilters})}"></div>
       </div>
-      <div class="flex items-center gap-3 self-end md:self-auto">
-        <div th:replace="~{components/ui/listing :: sort(${ {
-                'newest': 'Más recientes',
-                'price_asc': 'Precio: Menor a Mayor',
-                'price_desc': 'Precio: Mayor a Menor',
-                'stock_asc': 'Menor Stock'
-            } })}"></div>
+
+      <div class="flex items-center gap-3 self-end xl:self-auto">
+        <div th:replace="~{components/ui/listing :: sort(${ {'newest': 'Más recientes', 'price_asc': 'Precio: Menor a Mayor', 'price_desc': 'Precio: Mayor a Menor', 'stock_asc': 'Menor Stock'} })}"></div>
         <div th:replace="~{components/ui/listing :: page-size()}"></div>
       </div>
     </div>
-    <div th:replace="~{components/ui/listing :: active-filters-chips}"></div>
+
+    <!-- Chips Activos y View Toggle -->
+    <!-- Chips Activos y View Toggle -->
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-t border-slate-800 pt-4 mt-2 w-full">
+
+      <!-- Contenedor izquierdo para los chips (ocupa el espacio vacío) -->
+      <div class="flex-1 min-w-0">
+        <div th:replace="~{components/ui/listing :: active-filters-chips}"></div>
+      </div>
+
+      <!-- Selector de Vistas (Tabla, Tarjetas, Compacto) ANCLADO A LA DERECHA -->
+      <div class="flex items-center bg-slate-950 border border-slate-800 p-1 rounded-xl w-fit flex-shrink-0 ml-auto lg:ml-0">
+        <button type="button" onclick="Storevo.ProductsList.setView('table')" id="btn-view-table" class="px-3 py-1.5 text-sm font-bold rounded-lg text-slate-500 hover:text-slate-300 transition-all flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+          <span class="hidden sm:inline">Tabla</span>
+        </button>
+        <button type="button" onclick="Storevo.ProductsList.setView('cards')" id="btn-view-cards" class="px-3 py-1.5 text-sm font-bold rounded-lg text-slate-500 hover:text-slate-300 transition-all flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+          <span class="hidden sm:inline">Tarjetas</span>
+        </button>
+        <button type="button" onclick="Storevo.ProductsList.setView('compact')" id="btn-view-compact" class="px-3 py-1.5 text-sm font-bold rounded-lg text-slate-500 hover:text-slate-300 transition-all flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+          <span class="hidden sm:inline">Compacto</span>
+        </button>
+      </div>
+    </div>
   </form>
 
+  <!-- EMPTY STATE -->
   <div th:if="${products.empty}">
-    <div th:replace="~{components/ui/listing :: empty-state(
-        'Aún no hay productos',
-        'No se encontraron productos con los filtros actuales o aún no has agregado ninguno a tu tienda.',
-        'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4',
-        @{|/dashboard/${slug}/products|}
-    )}"></div>
+    <div th:replace="~{components/ui/listing :: empty-state('Aún no hay productos', 'No se encontraron productos con los filtros actuales o aún no has agregado ninguno a tu tienda.', 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4', @{|/dashboard/${slug}/products|})}"></div>
   </div>
 
-  <div th:unless="${products.empty}" class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
-    <div class="overflow-x-auto">
-      <table class="w-full text-left text-sm text-slate-400">
-        <thead class="text-xs uppercase bg-slate-800 text-slate-300">
-        <tr>
-          <th scope="col" class="px-6 py-4 font-medium">Producto</th>
-          <th scope="col" class="px-6 py-4 font-medium">Categoría</th>
-          <th scope="col" class="px-6 py-4 font-medium text-right">Precio</th>
-          <th scope="col" class="px-6 py-4 font-medium text-center">Stock Total</th>
-          <th scope="col" class="px-6 py-4 font-medium text-center">Estado</th>
-          <th scope="col" class="px-6 py-4 font-medium text-right">Acciones</th>
-        </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-800">
-        <tr th:each="prod : ${products}" class="hover:bg-slate-800/50 transition">
-          <td class="px-6 py-4 flex items-center gap-4">
-            <div class="w-12 h-12 bg-slate-800 rounded-lg flex-shrink-0 border border-slate-700 overflow-hidden shadow-sm">
-              <img th:if="${prod.mainImageUrl != null}" th:src="${prod.getMainImageThumbnailUrl() != null ? prod.getMainImageThumbnailUrl() : '/img/placeholder.jpg'}" class="w-full h-full object-cover">
-            </div>
-            <div>
-              <p class="font-bold text-white text-base leading-tight mb-0.5" th:text="${prod.name}">Nombre</p>
-              <div class="flex items-center gap-2">
-                <span th:if="${prod.hasVariants}" class="inline-flex items-center gap-1 bg-storevo-500/10 text-storevo-400 border border-storevo-500/20 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded">
-                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-                  Variantes
-                </span>
-                <span th:unless="${prod.hasVariants}" class="text-xs text-slate-500 font-mono" th:text="${'SKU: ' + (prod.sku != null ? prod.sku : 'N/A')}">SKU</span>
+  <div th:unless="${products.empty}">
+    <!-- VISTA: TABLA (Tu tabla original optimizada) -->
+    <div id="view-table" class="view-container hidden">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-sm overflow-x-auto">
+        <table class="w-full text-left text-sm text-slate-400 min-w-[900px]">
+          <thead class="text-xs uppercase bg-slate-950 text-slate-500 border-b border-slate-800">
+          <tr>
+            <th scope="col" class="px-6 py-4 font-bold w-10">
+              <input type="checkbox" id="select-all-checkbox" class="rounded border-slate-700 bg-slate-900 text-storevo-500 focus:ring-storevo-500 cursor-pointer transition-colors">
+            </th>
+            <th scope="col" class="px-6 py-4 font-bold tracking-wider">Producto</th>
+            <th scope="col" class="px-6 py-4 font-bold tracking-wider">Categoría</th>
+            <th scope="col" class="px-6 py-4 font-bold tracking-wider text-right">Precio</th>
+            <th scope="col" class="px-6 py-4 font-bold tracking-wider text-center">Stock</th>
+            <th scope="col" class="px-6 py-4 font-bold tracking-wider text-center">Estado</th>
+            <th scope="col" class="px-6 py-4 font-bold tracking-wider text-right">Acciones</th>
+          </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-800/60">
+          <tr th:each="prod : ${products}" class="hover:bg-slate-800/40 transition">
+            <td class="px-6 py-4"><input type="checkbox" th:value="${prod.id}" class="product-checkbox rounded border-slate-700 bg-slate-900 text-storevo-500 focus:ring-storevo-500 cursor-pointer transition-colors"></td>
+            <td class="px-6 py-4 flex items-center gap-4">
+              <div class="w-12 h-12 bg-slate-950 rounded-lg flex-shrink-0 border border-slate-800 overflow-hidden shadow-sm">
+                <img th:if="${prod.mainImageUrl != null}" th:src="${prod.getMainImageThumbnailUrl() != null ? prod.getMainImageThumbnailUrl() : '/img/placeholder.jpg'}" class="w-full h-full object-cover">
+                <div th:unless="${prod.mainImageUrl != null}" class="w-full h-full flex items-center justify-center text-slate-700"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg></div>
               </div>
-            </div>
-          </td>
-
-          <td class="px-6 py-4 text-slate-300 font-medium" th:text="${prod.category != null ? prod.category.name : 'General'}">Categoría</td>
-
-          <td class="px-6 py-4 text-right">
-            <p class="font-bold text-storevo-400 text-base">
-              <span th:if="${prod.hasVariants}" class="text-[10px] font-bold uppercase tracking-widest text-slate-500 mr-1 block">Desde</span>
-              <span th:text="${prod.price != null ? '$ ' + #numbers.formatDecimal(prod.price, 1, 'POINT', 0, 'COMMA') : '$ 0'}">$0</span>
-            </p>
-          </td>
-
-          <td class="px-6 py-4 text-center">
-            <span th:text="${prod.stock}" th:class="${prod.stock <= 5 ? 'bg-red-500/10 text-red-400 px-3 py-1 rounded-lg font-black border border-red-500/20' : 'text-slate-300 font-bold bg-slate-950 px-3 py-1 rounded-lg border border-slate-700'}">0</span>
-          </td>
-
-          <td class="px-6 py-4 text-center">
-            <span th:if="${prod.isActive}" class="bg-green-500/10 text-green-400 text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full border border-green-500/20">Activo</span>
-            <span th:unless="${prod.isActive}" class="bg-slate-500/10 text-slate-400 text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full border border-slate-500/20">Oculto</span>
-          </td>
-
-          <td class="px-6 py-4 text-right">
-            <div th:if="${!prod.isDeleted}" class="flex justify-end gap-2">
-              <form th:action="@{|/dashboard/${slug}/products/${prod.id}/toggle|}" method="POST" class="m-0">
-                <button type="submit" class="p-2 bg-slate-800 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition shadow-sm" title="Activar/Desactivar"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg></button>
-              </form>
-              <a th:href="@{|/dashboard/${slug}/products/${prod.id}/edit|}" class="p-2 bg-slate-800 rounded-lg text-blue-400 hover:text-blue-300 hover:bg-slate-700 transition shadow-sm" title="Editar"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></a>
-              <form th:action="@{|/dashboard/${slug}/products/${prod.id}/delete|}" method="POST" class="m-0" data-confirm="¿Mover este producto a la papelera? Podrás restaurarlo más adelante.">
-                <button type="submit" class="p-2 bg-slate-800 rounded-lg text-orange-400 hover:text-orange-300 hover:bg-slate-700 transition shadow-sm" title="Mover a papelera">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                </button>
-              </form>
-            </div>
-
-            <div th:if="${prod.isDeleted}" class="flex justify-end gap-2">
-              <form th:action="@{|/dashboard/${slug}/products/${prod.id}/restore|}" method="POST" class="m-0" data-confirm="¿Restaurar producto?">
-                <button type="submit" class="bg-slate-800 text-blue-400 hover:bg-slate-700 px-3 py-2 rounded-lg flex items-center gap-2 text-xs font-bold transition shadow-sm" title="Restaurar"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg> Restaurar</button>
-              </form>
-              <form th:action="@{|/dashboard/${slug}/products/${prod.id}/hard-delete|}" method="POST" class="m-0" data-confirm="¿Borrar definitivamente? Esta acción no se puede deshacer.">
-                <button type="submit" class="bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white px-3 py-2 rounded-lg flex items-center gap-2 text-xs font-bold transition shadow-sm" title="Destruir para siempre"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
-              </form>
-            </div>
-          </td>
-        </tr>
-        </tbody>
-      </table>
+              <div>
+                <p class="font-bold text-white text-sm leading-tight mb-1 line-clamp-1" th:text="${prod.name}">Nombre</p>
+                <div class="flex items-center gap-2">
+                  <span th:if="${prod.hasVariants}" class="inline-flex items-center gap-1 bg-storevo-500/10 text-storevo-400 border border-storevo-500/20 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded">Variantes</span>
+                  <span th:unless="${prod.hasVariants}" class="text-[10px] text-slate-500 font-mono tracking-wider" th:text="${'SKU: ' + (prod.sku != null ? prod.sku : 'N/A')}">SKU</span>
+                </div>
+              </div>
+            </td>
+            <td class="px-6 py-4 text-slate-300 font-medium text-sm" th:text="${prod.category != null ? prod.category.name : 'General'}">Categoría</td>
+            <td class="px-6 py-4 text-right">
+              <p class="font-bold text-storevo-400 text-sm">
+                <span th:if="${prod.hasVariants}" class="text-[9px] font-bold uppercase tracking-widest text-slate-500 mr-1 block">Desde</span>
+                <span th:text="${prod.price != null ? '$ ' + #numbers.formatDecimal(prod.price, 1, 'POINT', 0, 'COMMA') : '$ 0'}">$0</span>
+              </p>
+            </td>
+            <td class="px-6 py-4 text-center">
+              <span th:text="${prod.stock}" th:class="${prod.stock <= 5 ? 'bg-red-500/10 text-red-400 px-3 py-1 rounded-lg text-xs font-black border border-red-500/20' : 'text-slate-300 text-xs font-bold bg-slate-950 px-3 py-1 rounded-lg border border-slate-800'}">0</span>
+            </td>
+            <td class="px-6 py-4 text-center">
+              <span th:if="${prod.isDeleted}" class="bg-red-500/10 text-red-400 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded border border-red-500/20">Papelera</span>
+              <span th:if="${!prod.isDeleted and prod.isActive}" class="bg-green-500/10 text-green-400 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded border border-green-500/20">Activo</span>
+              <span th:if="${!prod.isDeleted and !prod.isActive}" class="bg-slate-500/10 text-slate-400 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded border border-slate-500/20">Oculto</span>
+            </td>
+            <td class="px-6 py-4 text-right">
+              <div th:if="${!prod.isDeleted}" class="flex justify-end gap-2">
+                <form th:action="@{|/dashboard/${slug}/products/${prod.id}/toggle|}" method="POST" class="m-0">
+                  <button type="submit" class="p-2 bg-slate-950 border border-slate-800 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition shadow-sm" title="Visibilidad"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg></button>
+                </form>
+                <a th:href="@{|/dashboard/${slug}/products/${prod.id}/edit|}" class="p-2 bg-slate-950 border border-slate-800 rounded-lg text-blue-400 hover:text-blue-300 hover:bg-slate-800 transition shadow-sm" title="Editar"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></a>
+                <form th:action="@{|/dashboard/${slug}/products/${prod.id}/delete|}" method="POST" class="m-0" data-confirm="¿Mover este producto a la papelera?">
+                  <button type="submit" class="p-2 bg-slate-950 border border-slate-800 rounded-lg text-orange-400 hover:text-orange-300 hover:bg-slate-800 transition shadow-sm" title="Mover a papelera">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                  </button>
+                </form>
+              </div>
+              <div th:if="${prod.isDeleted}" class="flex justify-end gap-2">
+                <form th:action="@{|/dashboard/${slug}/products/${prod.id}/restore|}" method="POST" class="m-0" data-confirm="¿Restaurar producto?">
+                  <button type="submit" class="bg-slate-950 border border-slate-800 text-blue-400 hover:bg-slate-800 px-3 py-2 rounded-lg flex items-center gap-2 text-xs font-bold transition shadow-sm" title="Restaurar"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg> Restaurar</button>
+                </form>
+                <form th:action="@{|/dashboard/${slug}/products/${prod.id}/hard-delete|}" method="POST" class="m-0" data-confirm="¿Borrar definitivamente? Esta acción no se puede deshacer.">
+                  <button type="submit" class="bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white px-3 py-2 rounded-lg flex items-center gap-2 text-xs font-bold transition shadow-sm" title="Destruir para siempre"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
-    <div class="px-6 pb-6">
+    <!-- VISTA: TARJETAS (Navegación Visual) -->
+    <div id="view-cards" class="view-container hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+      <div th:each="prod : ${products}" class="relative group bg-slate-900 rounded-2xl border border-slate-800 hover:shadow-2xl hover:border-storevo-500/50 transition-all duration-300 flex flex-col overflow-hidden">
+        <div class="relative aspect-[4/3] bg-slate-950 overflow-hidden border-b border-slate-800">
+          <img th:if="${prod.mainImageUrl != null}" th:src="${prod.getMainImageThumbnailUrl() != null ? prod.getMainImageThumbnailUrl() : '/img/placeholder.jpg'}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+          <div th:unless="${prod.mainImageUrl != null}" class="w-full h-full flex items-center justify-center text-slate-800 bg-slate-950">
+            <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+          </div>
+
+          <div class="absolute top-3 left-3 flex flex-col gap-1.5 z-10 pointer-events-none">
+            <span th:if="${prod.isDeleted}" class="bg-red-500 text-white text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded shadow-sm">Papelera</span>
+            <span th:if="${!prod.isDeleted and prod.isActive}" class="bg-green-500/90 backdrop-blur-sm text-white text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded shadow-sm">Activo</span>
+            <span th:if="${!prod.isDeleted and !prod.isActive}" class="bg-slate-700/90 backdrop-blur-sm text-white text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded shadow-sm">Oculto</span>
+            <span th:if="${prod.hasVariants}" class="bg-storevo-500/90 backdrop-blur-sm text-white text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded shadow-sm flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg> Opciones</span>
+          </div>
+
+          <div class="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+            <input type="checkbox" th:value="${prod.id}" class="product-checkbox w-5 h-5 rounded border-slate-600 bg-slate-800 text-storevo-500 focus:ring-storevo-500 shadow-md cursor-pointer transition-colors">
+          </div>
+
+          <div class="absolute inset-0 bg-slate-900/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3 backdrop-blur-sm z-20">
+            <th:block th:if="${!prod.isDeleted}">
+              <a th:href="@{|/dashboard/${slug}/products/${prod.id}/edit|}" class="w-10 h-10 bg-slate-800 text-blue-400 border border-slate-700 rounded-full flex items-center justify-center hover:bg-storevo-500 hover:border-storevo-500 hover:text-white hover:scale-110 transition-all shadow-xl" title="Editar"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></a>
+              <form th:action="@{|/dashboard/${slug}/products/${prod.id}/toggle|}" method="POST" class="m-0">
+                <button type="submit" class="w-10 h-10 bg-slate-800 text-slate-300 border border-slate-700 rounded-full flex items-center justify-center hover:bg-storevo-500 hover:border-storevo-500 hover:text-white hover:scale-110 transition-all shadow-xl" title="Ocultar/Mostrar"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path></svg></button>
+              </form>
+              <form th:action="@{|/dashboard/${slug}/products/${prod.id}/delete|}" method="POST" class="m-0" data-confirm="¿Mover a papelera?">
+                <button type="submit" class="w-10 h-10 bg-slate-800 text-red-400 border border-slate-700 rounded-full flex items-center justify-center hover:bg-red-500 hover:border-red-500 hover:text-white hover:scale-110 transition-all shadow-xl" title="Papelera"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+              </form>
+            </th:block>
+            <th:block th:if="${prod.isDeleted}">
+              <form th:action="@{|/dashboard/${slug}/products/${prod.id}/restore|}" method="POST" class="m-0" data-confirm="¿Restaurar producto?">
+                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-bold shadow-xl hover:bg-blue-500 hover:scale-105 transition-transform"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg> Restaurar</button>
+              </form>
+            </th:block>
+          </div>
+        </div>
+
+        <div class="p-4 flex flex-col flex-grow">
+          <div class="mb-2">
+            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate mb-1" th:text="${prod.category != null ? prod.category.name : 'General'}">Categoría</p>
+            <h3 class="font-bold text-white leading-tight line-clamp-2 text-sm" th:text="${prod.name}">Nombre</h3>
+          </div>
+
+          <p class="text-lg font-black text-storevo-400 mt-auto pt-2" th:text="${prod.price != null ? '$ ' + #numbers.formatDecimal(prod.price, 1, 'POINT', 0, 'COMMA') : '$ 0'}">$0</p>
+
+          <div class="mt-4 border-t border-slate-800 pt-3 flex items-center justify-between">
+            <span class="text-[10px] font-bold text-slate-500 uppercase">Stock</span>
+
+            <div th:if="${!prod.hasVariants and !prod.isDeleted}" class="flex items-center gap-1 bg-slate-950 rounded-lg p-1 border border-slate-700">
+              <button type="button" onclick="Storevo.ProductsList.quickUpdateStock(this, -1)" class="w-6 h-6 text-slate-400 hover:text-white hover:bg-slate-800 rounded flex items-center justify-center transition-colors font-bold text-lg leading-none">-</button>
+              <input type="number" th:value="${prod.stock}" th:data-id="${prod.id}" th:attr="data-last-valid-value=${prod.stock}" onchange="Storevo.ProductsList.directUpdateStock(this)" class="w-10 text-center bg-transparent border-none p-0 text-sm font-bold text-white focus:ring-0">
+              <button type="button" onclick="Storevo.ProductsList.quickUpdateStock(this, 1)" class="w-6 h-6 text-slate-400 hover:text-white hover:bg-slate-800 rounded flex items-center justify-center transition-colors font-bold text-lg leading-none">+</button>
+            </div>
+            <div th:if="${prod.hasVariants or prod.isDeleted}" class="text-xs font-bold px-2 py-1 rounded" th:classappend="${prod.stock <= 5 ? 'text-red-400 bg-red-500/10 border border-red-500/20' : 'text-slate-300 bg-slate-800 border border-slate-700'}" th:text="${prod.stock + ' total'}">0 total</div>
+          </div>
+        </div>
+
+        <div class="product-stats-container bg-slate-950 px-4 py-2 border-t border-slate-800 flex items-center justify-between text-[10px] text-slate-500 font-medium" th:data-stat-id="${prod.id}">
+          <span class="font-mono truncate max-w-[40%]" th:text="${prod.sku != null ? 'SKU: ' + prod.sku : 'Sin SKU'}">SKU</span>
+          <span class="flex items-center gap-2">
+            <span class="stats-sold">Cargando...</span>
+            <span class="stats-date hidden xl:inline"></span>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- VISTA: COMPACTA (Densidad Máxima) -->
+    <div id="view-compact" class="view-container hidden flex flex-col gap-2">
+      <div th:each="prod : ${products}" class="group bg-slate-900 rounded-xl border border-slate-800 hover:border-storevo-500/50 hover:shadow-lg transition-all p-2 flex items-center gap-3 sm:gap-4 relative overflow-hidden">
+
+        <input type="checkbox" th:value="${prod.id}" class="product-checkbox ml-2 rounded border-slate-600 bg-slate-950 text-storevo-500 focus:ring-storevo-500 flex-shrink-0 cursor-pointer transition-colors">
+
+        <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-slate-950 overflow-hidden flex-shrink-0 border border-slate-800">
+          <img th:if="${prod.mainImageUrl != null}" th:src="${prod.getMainImageThumbnailUrl() != null ? prod.getMainImageThumbnailUrl() : '/img/placeholder.jpg'}" class="w-full h-full object-cover">
+          <div th:unless="${prod.mainImageUrl != null}" class="w-full h-full flex items-center justify-center text-slate-700"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg></div>
+        </div>
+
+        <div class="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
+          <div class="flex-1 min-w-0">
+            <h3 class="font-bold text-white truncate text-sm" th:text="${prod.name}">Producto</h3>
+            <div class="flex items-center gap-2 mt-0.5">
+              <span class="text-[10px] sm:text-xs text-slate-500 font-mono truncate" th:text="${prod.sku != null ? prod.sku : 'SIN SKU'}">SKU</span>
+              <span class="hidden sm:inline w-1 h-1 bg-slate-700 rounded-full"></span>
+              <span th:if="${prod.isDeleted}" class="text-[9px] sm:text-[10px] text-red-500 font-bold uppercase tracking-wider">Papelera</span>
+              <span th:if="${!prod.isDeleted and prod.isActive}" class="text-[9px] sm:text-[10px] text-green-400 font-bold uppercase tracking-wider">Activo</span>
+              <span th:if="${!prod.isDeleted and !prod.isActive}" class="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase tracking-wider">Oculto</span>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between sm:justify-end gap-4 sm:gap-6 pr-2 w-full sm:w-auto">
+            <div class="text-left sm:text-right w-24">
+              <p class="text-sm font-black text-storevo-400 whitespace-nowrap" th:text="${prod.price != null ? '$ ' + #numbers.formatDecimal(prod.price, 1, 'POINT', 0, 'COMMA') : '$ 0'}">$0</p>
+            </div>
+
+            <!-- Stock Rápido -->
+            <div th:if="${!prod.hasVariants and !prod.isDeleted}" class="flex items-center gap-1 bg-slate-950 rounded-lg p-1 border border-slate-700 transition-colors w-24 justify-center">
+              <button type="button" onclick="Storevo.ProductsList.quickUpdateStock(this, -1)" class="w-5 h-5 text-slate-500 hover:text-white flex items-center justify-center font-bold text-lg leading-none">-</button>
+              <input type="number" th:value="${prod.stock}" th:data-id="${prod.id}" th:attr="data-last-valid-value=${prod.stock}" onchange="Storevo.ProductsList.directUpdateStock(this)" class="w-8 text-center bg-transparent border-none p-0 text-xs font-bold text-white focus:ring-0">
+              <button type="button" onclick="Storevo.ProductsList.quickUpdateStock(this, 1)" class="w-5 h-5 text-slate-500 hover:text-white flex items-center justify-center font-bold text-lg leading-none">+</button>
+            </div>
+            <div th:if="${prod.hasVariants or prod.isDeleted}" class="w-24 text-center">
+              <span class="text-[10px] font-bold px-2 py-1 rounded" th:classappend="${prod.stock <= 5 ? 'text-red-400 bg-red-500/10 border border-red-500/20' : 'text-slate-400 bg-slate-950 border border-slate-800'}" th:text="${prod.stock + ' uds.'}">0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Acciones Hover Compactas -->
+        <div th:if="${!prod.isDeleted}" class="absolute right-2 top-1/2 -translate-y-1/2 bg-slate-900 shadow-[-10px_0_10px_rgba(15,23,42,1)] pl-2 hidden lg:flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <a th:href="@{|/dashboard/${slug}/products/${prod.id}/edit|}" class="p-2 text-blue-400 hover:bg-slate-800 rounded-lg transition-colors" title="Editar"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></a>
+          <form th:action="@{|/dashboard/${slug}/products/${prod.id}/toggle|}" method="POST" class="m-0">
+            <button type="submit" class="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors" title="Visibilidad"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg></button>
+          </form>
+          <form th:action="@{|/dashboard/${slug}/products/${prod.id}/delete|}" method="POST" class="m-0" data-confirm="¿Mover a la papelera?">
+            <button type="submit" class="p-2 text-orange-400 hover:bg-slate-800 rounded-lg transition-colors" title="Papelera"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+          </form>
+        </div>
+        <div th:if="${prod.isDeleted}" class="absolute right-2 top-1/2 -translate-y-1/2 bg-slate-900 shadow-[-10px_0_10px_rgba(15,23,42,1)] pl-2 hidden lg:flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <form th:action="@{|/dashboard/${slug}/products/${prod.id}/restore|}" method="POST" class="m-0" data-confirm="¿Restaurar producto?">
+            <button type="submit" class="p-2 text-blue-400 hover:bg-slate-800 rounded-lg transition-colors" title="Restaurar"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg></button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Paginación Global -->
+    <div class="mt-6">
       <div th:replace="~{components/ui/listing :: pagination(${products})}"></div>
     </div>
   </div>
 
   <div th:replace="~{components/ui/listing :: scripts}"></div>
+  <script th:src="@{/js/modules/productsList.js}"></script>
 
 </div>
+<!-- Micro-script síncrono para eliminar el FOUC -->
+<script>
+  (function() {
+    const saved = localStorage.getItem('storevo_admin_products_view') || 'cards';
+    const btn = document.getElementById('btn-view-' + saved);
+    if (btn) {
+      btn.classList.remove('text-slate-500', 'hover:text-slate-300');
+      btn.classList.add('bg-slate-800', 'text-white', 'shadow-sm');
+    }
+
+    // Opcional: También pre-mostramos el contenedor correcto al instante
+    const viewContainer = document.getElementById('view-' + saved);
+    if (viewContainer) viewContainer.classList.remove('hidden');
+  })();
+</script>
 </body>
 </html>

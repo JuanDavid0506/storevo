@@ -3,6 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- ETIQUETAS CSRF NECESARIAS PARA QUE FUNCIONEN LAS ACCIONES RÁPIDAS -->
+    <!-- ETIQUETAS CSRF (Solo se renderizan si Spring Security tiene CSRF activado) -->
+    <meta name="_csrf" th:if="${_csrf != null}" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:if="${_csrf != null}" th:content="${_csrf.headerName}"/>
+
     <title layout:title-pattern="$CONTENT_TITLE | Storevo">Dashboard</title>
 
     <link rel="stylesheet" th:href="@{/css/app.css}">
