@@ -6,21 +6,12 @@
     <title th:text="${pageTitle}">Formulario Producto</title>
 </head>
 <body>
-<div layout:fragment="content" class="min-h-screen bg-slate-950 text-slate-300 font-sans antialiased pb-28">
 
-    <!-- Datos ocultos para JS -->
-    <div id="categoryDataBridge" class="hidden">
-        <div th:each="cat : ${categories}" class="cat-data-node" th:data-id="${cat.id}" th:data-name="${cat.name}" th:data-parent-id="${cat.parentCategory?.id}"></div>
-    </div>
-    <script th:inline="javascript">
-        window.INITIAL_HAS_VARIANTS = /*[[${product.hasVariants}]]*/ false;
-        window.INITIAL_OPTIONS = /*[[${product.options}]]*/ [];
-        window.INITIAL_VARIANTS = /*[[${product.variants}]]*/ [];
-        window.IS_NEW_PRODUCT = /*[[${product.id == null}]]*/ true;
-    </script>
-
-    <!-- HEADER SUPERIOR -->
-    <header class="sticky top-0 z-20 h-14 bg-slate-900/95 backdrop-blur-sm border-b border-slate-800 flex items-center px-5 gap-3 -mx-6 mb-6">
+<!-- ========================================== -->
+<!-- 1. SUBHEADER (Queda pegado al Topbar) -->
+<!-- ========================================== -->
+<div layout:fragment="subheader">
+    <header class="h-14 bg-slate-900/95 backdrop-blur-sm flex items-center px-6 gap-3">
         <a th:href="@{|/dashboard/${slug}/products|}" class="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition-colors">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
         </a>
@@ -39,14 +30,31 @@
             </div>
         </div>
     </header>
+</div>
 
-    <form id="product-form" th:action="@{|/dashboard/${slug}/products|}" th:object="${product}" method="POST" enctype="multipart/form-data" class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[200px_1fr_260px] gap-6 lg:gap-8">
+<!-- ========================================== -->
+<!-- 2. CONTENIDO (Hace scroll de forma natural) -->
+<!-- ========================================== -->
+<div layout:fragment="content" class="min-h-screen text-slate-300 font-sans antialiased pb-28">
+
+    <!-- Datos ocultos para JS -->
+    <div id="categoryDataBridge" class="hidden">
+        <div th:each="cat : ${categories}" class="cat-data-node" th:data-id="${cat.id}" th:data-name="${cat.name}" th:data-parent-id="${cat.parentCategory?.id}"></div>
+    </div>
+    <script th:inline="javascript">
+        window.INITIAL_HAS_VARIANTS = /*[[${product.hasVariants}]]*/ false;
+        window.INITIAL_OPTIONS = /*[[${product.options}]]*/ [];
+        window.INITIAL_VARIANTS = /*[[${product.variants}]]*/ [];
+        window.IS_NEW_PRODUCT = /*[[${product.id == null}]]*/ true;
+    </script>
+
+    <form id="product-form" th:action="@{|/dashboard/${slug}/products|}" th:object="${product}" method="POST" enctype="multipart/form-data" class="grid grid-cols-1 lg:grid-cols-[200px_1fr_260px] gap-6 lg:gap-8">
         <input type="hidden" th:field="*{id}">
         <input type="checkbox" id="hasVariantsToggle" th:field="*{hasVariants}" class="hidden">
 
-        <!-- 1. NAVEGACIÓN LATERAL (Left Sticky Nav) -->
+        <!-- NAVEGACIÓN LATERAL (Left Sticky Nav) -->
         <aside class="hidden lg:block">
-            <nav class="sticky top-20 space-y-1">
+            <nav class="sticky top-4 space-y-1">
                 <p class="text-[10px] font-bold uppercase tracking-widest text-slate-600 mb-3 px-3">Secciones</p>
                 <a href="#basics" class="nav-link w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all text-left text-slate-500 hover:text-slate-200 hover:bg-slate-800">
                     <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-slate-600"></span> Información básica <span class="ml-auto text-[9px] font-bold text-slate-600">REQ</span>
@@ -69,7 +77,7 @@
             </nav>
         </aside>
 
-        <!-- 2. CONTENIDO PRINCIPAL (Centro) -->
+        <!-- CONTENIDO PRINCIPAL (Centro) -->
         <main class="space-y-5 min-w-0">
 
             <!-- BASICS -->
@@ -107,11 +115,7 @@
                         <label class="block text-sm font-medium text-slate-300 mb-1.5">Precio <span class="text-storevo-400 ml-0.5">*</span></label>
                         <div class="relative">
                             <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm select-none">$</span>
-
-                            <!-- Input oculto para el Backend -->
                             <input type="hidden" th:field="*{price}" id="real-price">
-
-                            <!-- Input visual para el Usuario -->
                             <input type="text" inputmode="numeric" id="input-price" placeholder="0" class="w-full pl-8 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white text-xl font-bold placeholder-slate-700 focus:outline-none focus:ring-2 focus:ring-storevo-500/40 focus:border-storevo-500/60 transition font-mono">
                         </div>
                         <button type="button" onclick="Storevo.ProductUX.toggleDiscountField()" id="btn-show-discount" class="mt-2 text-xs font-semibold flex items-center gap-1 transition-colors text-storevo-400 hover:text-storevo-300">
@@ -120,11 +124,7 @@
                         <div id="discount-container" class="hidden mt-2 space-y-1 opacity-0 -translate-y-2 transition-all duration-200">
                             <div class="relative">
                                 <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-sm select-none">$</span>
-
-                                <!-- Input oculto para el Backend -->
                                 <input type="hidden" th:field="*{discountPrice}" id="real-discount-price">
-
-                                <!-- Input visual para el Usuario -->
                                 <input type="text" inputmode="numeric" id="input-discount-price" placeholder="Precio con descuento" class="w-full pl-8 pr-4 py-2.5 bg-slate-950 border border-storevo-500/30 rounded-xl text-white placeholder-slate-700 focus:outline-none focus:ring-2 focus:ring-storevo-500/30 transition text-sm font-mono">
                             </div>
                             <p id="discount-percentage-text" class="hidden text-xs font-bold text-emerald-400 flex items-center gap-1 mt-1">
@@ -135,11 +135,7 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-300 mb-1.5">Cantidad en stock <span class="text-storevo-400 ml-0.5">*</span></label>
-
-                        <!-- Input oculto para el Backend -->
                         <input type="hidden" th:field="*{stock}" id="real-stock">
-
-                        <!-- Input visual para el Usuario -->
                         <input type="text" inputmode="numeric" id="input-stock" placeholder="0" class="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white text-xl font-bold placeholder-slate-700 focus:outline-none focus:ring-2 focus:ring-storevo-500/40 focus:border-storevo-500/60 transition font-mono">
                     </div>
                 </div>
@@ -149,7 +145,7 @@
                 </div>
             </section>
 
-            <!-- CATEGORY -->
+            <!-- CATEGORY (Chips Dinámicos) -->
             <section id="category" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 scroll-mt-20 shadow-sm">
                 <div class="flex items-start justify-between mb-5">
                     <div>
@@ -164,7 +160,6 @@
                     </button>
                 </div>
 
-                <!-- CONTENEDORES DE CHIPS (Niveles 1, 2 y 3) -->
                 <div id="level-1-container" class="flex flex-wrap gap-2 mb-2"></div>
 
                 <div id="level-2-wrapper" class="hidden border-t border-slate-800/60 pt-4 mt-4 mb-2 transition-all">
@@ -177,13 +172,11 @@
                     <div id="level-3-container" class="flex flex-wrap gap-2"></div>
                 </div>
 
-                <!-- RESUMEN DE RUTA SELECCIONADA -->
                 <div id="catSummaryBox" class="hidden mt-6 flex items-center gap-2 text-sm bg-slate-950 p-3 rounded-xl border border-slate-800">
                     <svg class="w-4 h-4 text-storevo-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /></svg>
                     <span id="summaryText" class="text-slate-300 font-medium flex items-center flex-wrap gap-1"></span>
                 </div>
 
-                <!-- Input real que recibe el ID para el Backend -->
                 <input type="hidden" id="finalCategoryId" th:field="*{categoryId}">
             </section>
 
@@ -215,7 +208,7 @@
                 <input type="file" name="newImages" id="real-file-input" multiple class="hidden">
             </section>
 
-            <!-- VARIANTS (Tu sistema intacto, embebido) -->
+            <!-- VARIANTS -->
             <section id="variants" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 scroll-mt-20 shadow-sm">
                 <div class="mb-5">
                     <div class="flex items-center justify-between">
@@ -231,7 +224,6 @@
                     <p class="text-xs text-slate-500 ml-8">Tallas, colores u otras opciones del producto</p>
                 </div>
 
-                <!-- ESTADO VACÍO -->
                 <div id="options-empty-state" class="bg-slate-950/50 border border-slate-800 border-dashed rounded-xl p-6 flex flex-col items-center justify-center text-center transition-all duration-300">
                     <h4 class="text-white font-bold mb-1">Este producto no tiene opciones</h4>
                     <p class="text-xs text-slate-500 mb-4 max-w-sm">Si tu producto tiene diferentes colores, tallas o presentaciones, agrégalas aquí.</p>
@@ -241,7 +233,6 @@
                     </button>
                 </div>
 
-                <!-- WIZARD INICIAL -->
                 <div id="options-wizard-state" class="hidden opacity-0 bg-slate-950 border border-slate-800 rounded-xl p-6 text-center transition-all duration-200">
                     <h4 class="text-white font-bold mb-2">¿Cómo deseas comenzar?</h4>
                     <p class="text-xs text-slate-500 mb-5">Elige si quieres configurar todo desde cero o usar una plantilla prediseñada.</p>
@@ -251,7 +242,6 @@
                     </div>
                 </div>
 
-                <!-- PLANTILLAS -->
                 <div id="vb-templates-panel" class="hidden opacity-0 bg-slate-950 border border-slate-800 rounded-xl p-4 transition-all duration-200">
                     <div class="flex justify-between items-center mb-4">
                         <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Selecciona una plantilla</p>
@@ -260,7 +250,6 @@
                     <div class="grid grid-cols-2 sm:grid-cols-3 gap-3" id="vb-templates-grid"></div>
                 </div>
 
-                <!-- CONSTRUCTOR (Opciones y Tabla) -->
                 <div id="variant-builder-container" class="hidden opacity-0 space-y-5 transition-all duration-200">
                     <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
                         <div class="flex justify-between items-start mb-4 border-b border-slate-800 pb-3">
@@ -279,7 +268,6 @@
                         </button>
                     </div>
 
-                    <!-- Panel Bulk -->
                     <div id="vb-bulk-panel" class="hidden bg-slate-950 border border-slate-800 rounded-xl p-4">
                         <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Aplicar a todas las versiones</p>
                         <div class="flex flex-col sm:flex-row gap-3">
@@ -295,7 +283,6 @@
                         </div>
                     </div>
 
-                    <!-- Tabla de Variantes -->
                     <div id="vb-table-container" class="border border-slate-800 rounded-xl overflow-hidden hidden bg-slate-950">
                         <div class="overflow-x-auto">
                             <table class="w-full text-left text-sm text-slate-400">
@@ -345,7 +332,7 @@
 
         <!-- 3. SIDEBAR DERECHA (Checklist & Preview) -->
         <aside class="hidden lg:block">
-            <div class="sticky top-20 space-y-4">
+            <div class="sticky top-4 space-y-4">
 
                 <!-- Checklist -->
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
@@ -407,7 +394,7 @@
             </div>
         </aside>
 
-        <!-- 4. BARRA INFERIOR FIJA (Fixed Bottom Action Bar) -->
+        <!-- 4. BARRA INFERIOR FIJA -->
         <div class="fixed bottom-0 left-0 right-0 z-30 bg-slate-900/95 backdrop-blur-sm border-t border-slate-800">
             <div class="max-w-[85rem] mx-auto px-6 py-3.5 flex items-center gap-3">
                 <div class="hidden sm:flex items-center gap-2 mr-auto" id="bottom-validation-text">
@@ -431,7 +418,7 @@
 
     </form>
 
-    <!-- Modal Imágenes (Mantenido intacto para tu JS) -->
+    <!-- Modal Imágenes -->
     <div id="variant-image-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[100] hidden items-center justify-center opacity-0 transition-all duration-300">
         <div class="bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl p-6 w-full max-w-2xl transform scale-95 transition-transform duration-300" id="vi-modal-content">
             <div class="flex justify-between items-center mb-4 pb-4 border-b border-slate-800">
@@ -446,7 +433,7 @@
         </div>
     </div>
 
-    <!-- Modal Creación Rápida de Categoría (Mantenido intacto para tu JS) -->
+    <!-- Modal Creación Rápida de Categoría -->
     <div id="category-quick-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[100] hidden items-center justify-center opacity-0 transition-all duration-300">
         <div class="bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl p-6 w-full max-w-md transform scale-95 transition-transform duration-300" id="category-quick-content">
             <div class="flex justify-between items-center mb-5">
