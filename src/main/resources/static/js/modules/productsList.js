@@ -104,20 +104,17 @@ Storevo.ProductsList = {
     },
     syncTopPanel: function() {
         const count = this.state.selectedIds.length;
-        const defaultHeader = document.getElementById('default-header');
         const massHeader = document.getElementById('mass-action-header');
         const counterElement = document.getElementById('selected-count');
 
         if (count > 0) {
             counterElement.textContent = count;
-            defaultHeader.classList.add('opacity-0', 'pointer-events-none');
             massHeader.classList.remove('hidden');
-            setTimeout(() => massHeader.classList.remove('opacity-0'), 10);
+            setTimeout(() => massHeader.classList.remove('opacity-0', 'translate-y-10'), 10);
         } else {
-            massHeader.classList.add('opacity-0');
+            massHeader.classList.add('opacity-0', 'translate-y-10');
             setTimeout(() => {
                 massHeader.classList.add('hidden');
-                defaultHeader.classList.remove('opacity-0', 'pointer-events-none');
             }, 300);
         }
     },
