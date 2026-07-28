@@ -6,20 +6,12 @@
     <title th:text="${pageTitle}">Formulario Producto</title>
 </head>
 <body>
-<div layout:fragment="content" class="max-w-5xl mx-auto pb-12">
+<div layout:fragment="content" class="min-h-screen bg-slate-950 text-slate-300 font-sans antialiased pb-28">
 
-    <!-- HEADER -->
-    <div class="mb-6 flex items-center gap-4">
-        <a th:href="@{|/dashboard/${slug}/products|}" class="text-slate-400 hover:text-white transition bg-slate-800 p-2 rounded-lg">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-        </a>
-        <h2 class="text-2xl font-black tracking-tight text-white" th:text="${product.id != null ? 'Editar Producto' : 'Nuevo Producto'}">Título</h2>
-    </div>
-
+    <!-- Datos ocultos para JS -->
     <div id="categoryDataBridge" class="hidden">
         <div th:each="cat : ${categories}" class="cat-data-node" th:data-id="${cat.id}" th:data-name="${cat.name}" th:data-parent-id="${cat.parentCategory?.id}"></div>
     </div>
-
     <script th:inline="javascript">
         window.INITIAL_HAS_VARIANTS = /*[[${product.hasVariants}]]*/ false;
         window.INITIAL_OPTIONS = /*[[${product.options}]]*/ [];
@@ -27,128 +19,249 @@
         window.IS_NEW_PRODUCT = /*[[${product.id == null}]]*/ true;
     </script>
 
-    <!-- EL FORMULARIO -->
-    <form id="product-form" th:action="@{|/dashboard/${slug}/products|}" th:object="${product}" method="POST" enctype="multipart/form-data" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- HEADER SUPERIOR -->
+    <header class="sticky top-0 z-20 h-14 bg-slate-900/95 backdrop-blur-sm border-b border-slate-800 flex items-center px-5 gap-3 -mx-6 mb-6">
+        <a th:href="@{|/dashboard/${slug}/products|}" class="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+        </a>
+        <div class="flex items-center text-sm gap-2 text-slate-400">
+            <span>Productos</span>
+            <svg class="w-3.5 h-3.5 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+            <span class="text-white font-semibold" th:text="${product.id != null ? 'Editar producto' : 'Nuevo producto'}">Nuevo producto</span>
+        </div>
+        <div class="ml-auto flex items-center gap-3">
+            <span class="hidden sm:inline text-xs text-slate-500 bg-slate-800 px-2.5 py-1 rounded-full border border-slate-700" th:text="${product.id != null ? 'Editando' : 'Borrador sin guardar'}">Borrador</span>
+            <div class="flex items-center gap-1.5">
+                <div class="w-20 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                    <div id="progress-bar-fill" class="h-full bg-storevo-500 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+                <span id="progress-text" class="text-xs font-medium text-storevo-400">0/5</span>
+            </div>
+        </div>
+    </header>
+
+    <form id="product-form" th:action="@{|/dashboard/${slug}/products|}" th:object="${product}" method="POST" enctype="multipart/form-data" class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[200px_1fr_260px] gap-6 lg:gap-8">
         <input type="hidden" th:field="*{id}">
         <input type="checkbox" id="hasVariantsToggle" th:field="*{hasVariants}" class="hidden">
 
-        <div class="lg:col-span-2 space-y-6">
+        <!-- 1. NAVEGACIÓN LATERAL (Left Sticky Nav) -->
+        <aside class="hidden lg:block">
+            <nav class="sticky top-20 space-y-1">
+                <p class="text-[10px] font-bold uppercase tracking-widest text-slate-600 mb-3 px-3">Secciones</p>
+                <a href="#basics" class="nav-link w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all text-left text-slate-500 hover:text-slate-200 hover:bg-slate-800">
+                    <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-slate-600"></span> Información básica <span class="ml-auto text-[9px] font-bold text-slate-600">REQ</span>
+                </a>
+                <a href="#pricing" class="nav-link w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all text-left text-slate-500 hover:text-slate-200 hover:bg-slate-800">
+                    <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-slate-600"></span> Precio y stock <span class="ml-auto text-[9px] font-bold text-slate-600">REQ</span>
+                </a>
+                <a href="#category" class="nav-link w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all text-left text-slate-500 hover:text-slate-200 hover:bg-slate-800">
+                    <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-slate-700"></span> Categoría
+                </a>
+                <a href="#images" class="nav-link w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all text-left text-slate-500 hover:text-slate-200 hover:bg-slate-800">
+                    <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-slate-700"></span> Imágenes
+                </a>
+                <a href="#variants" class="nav-link w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all text-left text-slate-500 hover:text-slate-200 hover:bg-slate-800">
+                    <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-slate-700"></span> Variantes
+                </a>
+                <a href="#details" class="nav-link w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all text-left text-slate-500 hover:text-slate-200 hover:bg-slate-800">
+                    <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-slate-700"></span> Ficha Técnica
+                </a>
+            </nav>
+        </aside>
 
-            <!-- 1. INFORMACIÓN BÁSICA -->
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
-                <div class="flex items-center gap-2 border-b border-slate-800 pb-3 mb-4">
-                    <span class="bg-slate-800 text-slate-400 w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold">1</span>
-                    <h3 class="text-lg font-bold text-white">Información Básica</h3>
-                </div>
-                <div th:replace="~{components/ui/fragments :: input('name', 'Nombre del Producto (*)', 'text', 'Ej: Camisa Oversize', *{name})}"></div>
-                <div th:replace="~{components/ui/fragments :: textarea('description', 'Descripción', 'Detalles, material, cuidados...', *{description}, '3')}"></div>
-            </div>
+        <!-- 2. CONTENIDO PRINCIPAL (Centro) -->
+        <main class="space-y-5 min-w-0">
 
-            <!-- 2. ORGANIZACIÓN (Actualizado con Botón de Creación Rápida) -->
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
-                <div class="flex items-center gap-2 border-b border-slate-800 pb-3 mb-4">
-                    <span class="bg-slate-800 text-slate-400 w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold">2</span>
-                    <h3 class="text-lg font-bold text-white">Organización</h3>
-                </div>
-                <div>
-                    <div class="flex justify-between items-center mb-2">
-                        <label class="block text-sm font-bold text-slate-300">Categoría Principal</label>
-                        <button type="button" onclick="Storevo.CategoryModal.open()" class="text-xs font-bold text-storevo-400 hover:text-white flex items-center gap-1 transition-colors px-2 py-1 bg-storevo-500/10 hover:bg-storevo-500/30 rounded-md border border-storevo-500/20">
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"></path></svg>
-                            Nueva categoría
-                        </button>
+            <!-- BASICS -->
+            <section id="basics" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 scroll-mt-20 shadow-sm">
+                <div class="mb-5">
+                    <div class="flex items-center gap-2.5 mb-1">
+                        <span class="w-6 h-6 rounded-full bg-storevo-500/15 text-storevo-400 text-[11px] font-bold flex items-center justify-center border border-storevo-500/25 flex-shrink-0">1</span>
+                        <h2 class="text-base font-bold text-white">Información básica</h2>
                     </div>
-                    <select id="mainCatSelect" class="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-storevo-500 cursor-pointer font-medium">
-                        <option value="">Selecciona la categoría del catálogo...</option>
-                    </select>
+                    <p class="text-xs text-slate-500 ml-8">Cómo se llama y qué es este producto</p>
                 </div>
-                <div id="subCatBox" class="hidden pt-3 border-t border-slate-800 mt-4">
-                    <div id="subCatChips" class="flex flex-wrap gap-2"></div>
-                </div>
-                <div id="catSummaryBox" class="hidden mt-4 p-4 bg-storevo-500/10 border border-storevo-500/20 rounded-xl flex items-center gap-4 transition-all">
-                    <div class="bg-storevo-500/20 p-2 rounded-lg text-storevo-400">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-1.5">Nombre del producto <span class="text-storevo-400 ml-0.5">*</span></label>
+                        <input type="text" th:field="*{name}" id="input-name" placeholder="Ej: Camisa Oversize Premium" class="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white text-lg font-semibold placeholder-slate-700 focus:outline-none focus:ring-2 focus:ring-storevo-500/40 focus:border-storevo-500/60 transition">
                     </div>
                     <div>
-                        <p class="text-[11px] text-storevo-400 font-bold uppercase tracking-wider mb-0.5">Destino en el Catálogo Público</p>
-                        <p id="summaryText" class="text-white font-bold text-base flex items-center gap-2"></p>
+                        <label class="block text-sm font-medium text-slate-300 mb-1.5">Descripción <span class="text-slate-600 text-xs font-normal">(opcional)</span></label>
+                        <textarea th:field="*{description}" rows="4" placeholder="Materiales, cuidados, qué lo hace especial..." class="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-700 focus:outline-none focus:ring-2 focus:ring-storevo-500/40 focus:border-storevo-500/60 transition resize-y text-sm"></textarea>
                     </div>
                 </div>
-                <input type="hidden" id="finalCategoryId" th:field="*{categoryId}">
-            </div>
+            </section>
 
-            <!-- 3. PRECIOS E INVENTARIO -->
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
-                <div class="flex items-center gap-2 border-b border-slate-800 pb-3 mb-6">
-                    <span class="bg-slate-800 text-slate-400 w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold">3</span>
-                    <h3 class="text-lg font-bold text-white">Precios e Inventario</h3>
+            <!-- PRICING & STOCK -->
+            <section id="pricing" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 scroll-mt-20 shadow-sm">
+                <div class="mb-5">
+                    <div class="flex items-center gap-2.5 mb-1">
+                        <span class="w-6 h-6 rounded-full bg-storevo-500/15 text-storevo-400 text-[11px] font-bold flex items-center justify-center border border-storevo-500/25 flex-shrink-0">2</span>
+                        <h2 class="text-base font-bold text-white">Precio y stock</h2>
+                    </div>
+                    <p class="text-xs text-slate-500 ml-8">Cuánto cuesta y cuántos tienes disponibles</p>
                 </div>
-
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div>
-                        <div th:replace="~{components/ui/fragments :: input('price', 'Precio Base ($) (*)', 'number', '0.00', *{price})}"></div>
-                        <button type="button" onclick="toggleDiscountField()" id="btn-show-discount" class="text-sm font-bold text-storevo-400 hover:text-storevo-300 mt-2.5 flex items-center gap-1 transition-colors duration-200">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-                            Agregar precio de oferta
+                        <label class="block text-sm font-medium text-slate-300 mb-1.5">Precio <span class="text-storevo-400 ml-0.5">*</span></label>
+                        <div class="relative">
+                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm select-none">$</span>
+
+                            <!-- Input oculto para el Backend -->
+                            <input type="hidden" th:field="*{price}" id="real-price">
+
+                            <!-- Input visual para el Usuario -->
+                            <input type="text" inputmode="numeric" id="input-price" placeholder="0" class="w-full pl-8 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white text-xl font-bold placeholder-slate-700 focus:outline-none focus:ring-2 focus:ring-storevo-500/40 focus:border-storevo-500/60 transition font-mono">
+                        </div>
+                        <button type="button" onclick="toggleDiscountField()" id="btn-show-discount" class="mt-2 text-xs font-semibold flex items-center gap-1 transition-colors text-storevo-400 hover:text-storevo-300">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg> Agregar precio de oferta
                         </button>
-                        <div id="discount-container" class="hidden opacity-0 -translate-y-2 transition-all duration-200 ease-out mt-3">
-                            <div th:replace="~{components/ui/fragments :: input('discountPrice', 'Precio con Descuento ($)', 'number', '0.00', *{discountPrice})}"></div>
+                        <div id="discount-container" class="hidden mt-2 space-y-1 opacity-0 -translate-y-2 transition-all duration-200">
+                            <div class="relative">
+                                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-sm select-none">$</span>
+
+                                <!-- Input oculto para el Backend -->
+                                <input type="hidden" th:field="*{discountPrice}" id="real-discount-price">
+
+                                <!-- Input visual para el Usuario -->
+                                <input type="text" inputmode="numeric" id="input-discount-price" placeholder="Precio con descuento" class="w-full pl-8 pr-4 py-2.5 bg-slate-950 border border-storevo-500/30 rounded-xl text-white placeholder-slate-700 focus:outline-none focus:ring-2 focus:ring-storevo-500/30 transition text-sm font-mono">
+                            </div>
+                            <p id="discount-percentage-text" class="hidden text-xs font-bold text-emerald-400 flex items-center gap-1 mt-1">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" /></svg>
+                                <span id="discount-pct-val">0%</span> de descuento
+                            </p>
                         </div>
                     </div>
                     <div>
-                        <div th:replace="~{components/ui/fragments :: input('stock', 'Cantidad en Stock (*)', 'number', '0', *{stock})}"></div>
-                        <div class="mt-5">
-                            <div th:replace="~{components/ui/fragments :: input('sku', 'SKU / Código (Opcional)', 'text', 'Ej: PROD-0001', *{sku})}"></div>
-                            <p class="text-[11px] text-slate-500 mt-1.5 leading-tight">Si lo dejas vacío, Storevo generará uno automáticamente.</p>
-                        </div>
+                        <label class="block text-sm font-medium text-slate-300 mb-1.5">Cantidad en stock <span class="text-storevo-400 ml-0.5">*</span></label>
+
+                        <!-- Input oculto para el Backend -->
+                        <input type="hidden" th:field="*{stock}" id="real-stock">
+
+                        <!-- Input visual para el Usuario -->
+                        <input type="text" inputmode="numeric" id="input-stock" placeholder="0" class="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white text-xl font-bold placeholder-slate-700 focus:outline-none focus:ring-2 focus:ring-storevo-500/40 focus:border-storevo-500/60 transition font-mono">
                     </div>
                 </div>
+                <div class="mt-5 pt-5 border-t border-slate-800/70">
+                    <label class="block text-sm font-medium text-slate-300 mb-1.5">SKU <span class="text-slate-600 text-xs font-normal">— código único del producto</span></label>
+                    <input type="text" th:field="*{sku}" placeholder="Si lo dejas vacío se autogenerará" class="w-full lg:w-1/2 px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white font-mono text-sm placeholder-slate-700 focus:outline-none focus:ring-2 focus:ring-storevo-500/40 transition">
+                </div>
+            </section>
 
-                <!-- ESTADO VACÍO: PRODUCTO SIMPLE -->
-                <div id="options-empty-state" class="bg-slate-950/50 border border-slate-800 border-dashed rounded-xl p-6 flex flex-col items-center justify-center text-center mt-8 transition-all duration-300">
-                    <h4 class="text-white font-bold mb-1">Este producto no tiene opciones</h4>
-                    <p class="text-xs text-slate-500 mb-4 max-w-sm">Si tu producto tiene diferentes colores, tallas o presentaciones, agrégalas aquí.</p>
-                    <button type="button" onclick="Storevo.ProductWizard.startWizard()" class="text-sm font-bold bg-slate-800 hover:bg-storevo-500 hover:border-storevo-500 border border-slate-700 text-white px-5 py-2.5 rounded-lg transition-all duration-200 transform hover:-translate-y-0.5 shadow-sm flex items-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-                        Agregar opciones
+            <!-- CATEGORY -->
+            <section id="category" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 scroll-mt-20 shadow-sm">
+                <div class="flex items-start justify-between mb-5">
+                    <div>
+                        <div class="flex items-center gap-2.5 mb-1">
+                            <span class="w-6 h-6 rounded-full bg-storevo-500/15 text-storevo-400 text-[11px] font-bold flex items-center justify-center border border-storevo-500/25 flex-shrink-0">3</span>
+                            <h2 class="text-base font-bold text-white">Categoría</h2>
+                        </div>
+                        <p class="text-xs text-slate-500 ml-8">¿Dónde aparecerá en tu tienda?</p>
+                    </div>
+                    <button type="button" onclick="Storevo.CategoryModal.open()" class="text-xs font-semibold text-storevo-400 hover:text-storevo-300 flex items-center gap-1 bg-storevo-500/10 hover:bg-storevo-500/20 border border-storevo-500/20 px-3 py-1.5 rounded-lg transition">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg> Nueva categoría
                     </button>
                 </div>
 
-                <!-- WIZARD: ¿Cómo deseas comenzar? -->
-                <div id="options-wizard-state" class="hidden opacity-0 -translate-y-2 transition-all duration-200 ease-out mt-8 bg-slate-950 border border-slate-800 rounded-xl p-6 text-center">
+                <select id="mainCatSelect" class="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-storevo-500 cursor-pointer font-medium mb-4">
+                    <option value="">Selecciona la categoría del catálogo...</option>
+                </select>
+                <div id="subCatBox" class="hidden pt-3 border-t border-slate-800 mt-4"></div>
+                <div id="catSummaryBox" class="hidden mt-4 flex items-center gap-2 text-sm bg-slate-950 p-3 rounded-xl border border-slate-800">
+                    <svg class="w-4 h-4 text-storevo-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /></svg>
+                    <span id="summaryText" class="text-slate-400 font-medium"></span>
+                </div>
+                <input type="hidden" id="finalCategoryId" th:field="*{categoryId}">
+            </section>
+
+            <!-- IMAGES -->
+            <section id="images" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 scroll-mt-20 shadow-sm">
+                <div class="flex items-center justify-between mb-5">
+                    <div>
+                        <div class="flex items-center gap-2.5 mb-1">
+                            <span class="w-6 h-6 rounded-full bg-storevo-500/15 text-storevo-400 text-[11px] font-bold flex items-center justify-center border border-storevo-500/25 flex-shrink-0">4</span>
+                            <h2 class="text-base font-bold text-white">Imágenes</h2>
+                        </div>
+                        <p class="text-xs text-slate-500 ml-8">La primera imagen será la foto principal</p>
+                    </div>
+                    <span class="text-xs font-semibold text-slate-500 bg-slate-800 px-2.5 py-1 rounded-full"><span id="img-count">0</span>/10</span>
+                </div>
+
+                <div id="image-dropzone" class="border-2 border-dashed border-slate-700 hover:border-storevo-500/40 bg-slate-950 hover:bg-slate-800/40 rounded-xl px-6 py-10 text-center cursor-pointer transition-all relative group overflow-hidden">
+                    <input type="file" id="file-upload" multiple accept="image/jpeg, image/png, image/webp" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                    <div class="pointer-events-none relative z-0">
+                        <div class="w-12 h-12 mx-auto rounded-2xl flex items-center justify-center mb-3 transition-colors bg-slate-800 text-slate-500 group-hover:bg-storevo-500/20 group-hover:text-storevo-400">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                        </div>
+                        <p class="text-sm font-semibold text-slate-300">Arrastra fotos aquí</p>
+                        <p class="text-xs text-slate-500 mt-1">o haz clic para seleccionar · JPG, PNG, WEBP (Max 10MB)</p>
+                    </div>
+                </div>
+                <div id="image-preview-grid" class="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3 mt-4 empty:hidden"></div>
+                <div id="image-hidden-inputs"></div>
+                <input type="file" name="newImages" id="real-file-input" multiple class="hidden">
+            </section>
+
+            <!-- VARIANTS (Tu sistema intacto, embebido) -->
+            <section id="variants" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 scroll-mt-20 shadow-sm">
+                <div class="mb-5">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2.5 mb-1">
+                            <span class="w-6 h-6 rounded-full bg-storevo-500/15 text-storevo-400 text-[11px] font-bold flex items-center justify-center border border-storevo-500/25 flex-shrink-0">5</span>
+                            <h2 class="text-base font-bold text-white">Variantes</h2>
+                        </div>
+                        <label class="relative inline-flex h-6 w-11 items-center rounded-full cursor-pointer transition-colors bg-slate-700 has-[:checked]:bg-storevo-500">
+                            <input type="checkbox" id="hasVariantsToggleUI" class="peer sr-only" onchange="document.getElementById('hasVariantsToggle').checked = this.checked; if(this.checked){Storevo.ProductWizard.startWizard()}else{Storevo.ProductWizard.cancel()}">
+                            <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform translate-x-1 peer-checked:translate-x-6"></span>
+                        </label>
+                    </div>
+                    <p class="text-xs text-slate-500 ml-8">Tallas, colores u otras opciones del producto</p>
+                </div>
+
+                <!-- ESTADO VACÍO -->
+                <div id="options-empty-state" class="bg-slate-950/50 border border-slate-800 border-dashed rounded-xl p-6 flex flex-col items-center justify-center text-center transition-all duration-300">
+                    <h4 class="text-white font-bold mb-1">Este producto no tiene opciones</h4>
+                    <p class="text-xs text-slate-500 mb-4 max-w-sm">Si tu producto tiene diferentes colores, tallas o presentaciones, agrégalas aquí.</p>
+                    <button type="button" onclick="document.getElementById('hasVariantsToggleUI').click()" class="text-sm font-bold bg-slate-800 hover:bg-storevo-500 border border-slate-700 text-white px-5 py-2.5 rounded-lg transition-all flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                        Activar variantes
+                    </button>
+                </div>
+
+                <!-- WIZARD INICIAL -->
+                <div id="options-wizard-state" class="hidden opacity-0 bg-slate-950 border border-slate-800 rounded-xl p-6 text-center transition-all duration-200">
                     <h4 class="text-white font-bold mb-2">¿Cómo deseas comenzar?</h4>
                     <p class="text-xs text-slate-500 mb-5">Elige si quieres configurar todo desde cero o usar una plantilla prediseñada.</p>
                     <div class="flex flex-col sm:flex-row justify-center gap-3">
                         <button type="button" onclick="Storevo.ProductWizard.chooseManual()" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white text-sm font-bold rounded-lg border border-slate-700 transition-colors">Configuración manual</button>
                         <button type="button" onclick="Storevo.ProductWizard.showTemplates()" class="px-5 py-2.5 bg-storevo-500/10 hover:bg-storevo-500/20 text-storevo-400 text-sm font-bold rounded-lg border border-storevo-500/30 transition-colors">Usar una plantilla</button>
                     </div>
-                    <button type="button" onclick="Storevo.ProductWizard.cancel()" class="mt-5 text-[11px] text-slate-500 hover:text-red-400 font-bold uppercase transition-colors">Cancelar</button>
                 </div>
 
-                <!-- WIZARD: Plantillas -->
-                <div id="vb-templates-panel" class="hidden opacity-0 -translate-y-2 transition-all duration-200 ease-out mt-8 bg-slate-950 border border-slate-800 rounded-xl p-4">
+                <!-- PLANTILLAS -->
+                <div id="vb-templates-panel" class="hidden opacity-0 bg-slate-950 border border-slate-800 rounded-xl p-4 transition-all duration-200">
                     <div class="flex justify-between items-center mb-4">
                         <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Selecciona una plantilla</p>
-                        <button type="button" onclick="Storevo.ProductWizard.startWizard()" class="text-xs font-bold text-slate-500 hover:text-white transition-colors">← Volver atrás</button>
+                        <button type="button" onclick="Storevo.ProductWizard.startWizard()" class="text-xs font-bold text-slate-500 hover:text-white transition-colors">← Volver</button>
                     </div>
                     <div class="grid grid-cols-2 sm:grid-cols-3 gap-3" id="vb-templates-grid"></div>
                 </div>
 
-                <!-- CONSTRUCTOR PRINCIPAL -->
-                <div id="variant-builder-container" class="hidden opacity-0 -translate-y-2 transition-all duration-200 ease-out mt-8 space-y-5">
-                    <div class="bg-storevo-500/5 border border-storevo-500/20 rounded-xl p-4">
-                        <div class="flex justify-between items-start mb-4 border-b border-storevo-500/20 pb-3">
+                <!-- CONSTRUCTOR (Opciones y Tabla) -->
+                <div id="variant-builder-container" class="hidden opacity-0 space-y-5 transition-all duration-200">
+                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
+                        <div class="flex justify-between items-start mb-4 border-b border-slate-800 pb-3">
                             <div>
-                                <h4 class="text-sm font-bold text-storevo-400 flex items-center gap-2">Configurar Opciones</h4>
-                                <p class="text-xs text-slate-400 mt-1">Escribe los valores y presiona <kbd class="bg-slate-800 px-1 rounded text-[10px]">Enter</kbd></p>
+                                <h4 class="text-sm font-bold text-white flex items-center gap-2">Configurar Opciones</h4>
+                                <p class="text-xs text-slate-500 mt-1">Escribe los valores y presiona Enter</p>
                             </div>
-                            <button type="button" onclick="Storevo.ProductWizard.cancel()" class="text-xs text-slate-500 hover:text-red-500 font-bold bg-slate-900 hover:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-800 hover:border-red-500/30 transition-colors flex items-center gap-1">
-                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            <button type="button" onclick="document.getElementById('hasVariantsToggleUI').click()" class="text-xs text-slate-500 hover:text-red-500 font-bold bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-800 transition-colors">
                                 Quitar opciones
                             </button>
                         </div>
                         <div id="vb-options-list" class="space-y-3"></div>
-                        <button type="button" id="vb-btn-add-option" class="mt-3 text-sm text-white font-bold bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded-lg border border-slate-700 transition-colors flex items-center gap-2">
+                        <button type="button" id="vb-btn-add-option" class="mt-3 text-sm text-slate-300 font-bold hover:text-storevo-400 transition-colors flex items-center gap-2">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
                             Añadir otra opción
                         </button>
@@ -156,37 +269,27 @@
 
                     <!-- Panel Bulk -->
                     <div id="vb-bulk-panel" class="hidden bg-slate-950 border border-slate-800 rounded-xl p-4">
-                        <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                            Aplicar a todas las versiones
-                        </p>
+                        <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Aplicar a todas las versiones</p>
                         <div class="flex flex-col sm:flex-row gap-3">
                             <div class="relative flex-1">
                                 <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-sm">$</span>
-                                <input type="number" step="0.01" id="vb-bulk-price" placeholder="Precio para todas" class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg text-sm pl-7 pr-2 py-2.5 focus:ring-storevo-500 transition-colors">
+                                <input type="number" step="0.01" id="vb-bulk-price" placeholder="Precio general" class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg text-sm pl-7 pr-2 py-2.5 focus:ring-storevo-500">
                             </div>
-                            <button type="button" onclick="Storevo.VariantBuilder.applyBulk('price')" class="bg-slate-800 hover:bg-storevo-500 hover:border-storevo-500 text-white text-sm font-bold px-4 py-2.5 rounded-lg border border-slate-700 transition-colors">Aplicar precio</button>
+                            <button type="button" onclick="Storevo.VariantBuilder.applyBulk('price')" class="bg-slate-800 text-white text-sm font-bold px-4 rounded-lg border border-slate-700 hover:bg-slate-700">Aplicar</button>
                             <div class="relative flex-1">
-                                <input type="number" id="vb-bulk-stock" placeholder="Stock para todas" class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg text-sm px-3 py-2.5 focus:ring-storevo-500 transition-colors">
+                                <input type="number" id="vb-bulk-stock" placeholder="Stock general" class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg text-sm px-3 py-2.5 focus:ring-storevo-500">
                             </div>
-                            <button type="button" onclick="Storevo.VariantBuilder.applyBulk('stock')" class="bg-slate-800 hover:bg-storevo-500 hover:border-storevo-500 text-white text-sm font-bold px-4 py-2.5 rounded-lg border border-slate-700 transition-colors">Aplicar stock</button>
-                        </div>
-                        <div class="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-slate-800">
-                            <span class="text-[11px] text-slate-500 font-bold uppercase mr-1">Ajustar precio actual:</span>
-                            <button type="button" onclick="Storevo.VariantBuilder.applyPercentAdjust(10)" class="text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 bg-slate-900 text-emerald-400 hover:border-emerald-500 transition-colors">+10%</button>
-                            <button type="button" onclick="Storevo.VariantBuilder.applyPercentAdjust(-10)" class="text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 bg-slate-900 text-red-400 hover:border-red-500 transition-colors">-10%</button>
-                            <button type="button" onclick="Storevo.VariantBuilder.applyAmountAdjust(5000)" class="text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 bg-slate-900 text-emerald-400 hover:border-emerald-500 transition-colors">+$5.000</button>
-                            <button type="button" onclick="Storevo.VariantBuilder.applyAmountAdjust(-3000)" class="text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 bg-slate-900 text-red-400 hover:border-red-500 transition-colors">-$3.000</button>
+                            <button type="button" onclick="Storevo.VariantBuilder.applyBulk('stock')" class="bg-slate-800 text-white text-sm font-bold px-4 rounded-lg border border-slate-700 hover:bg-slate-700">Aplicar</button>
                         </div>
                     </div>
 
-                    <!-- Tabla -->
+                    <!-- Tabla de Variantes -->
                     <div id="vb-table-container" class="border border-slate-800 rounded-xl overflow-hidden hidden bg-slate-950">
                         <div class="overflow-x-auto">
                             <table class="w-full text-left text-sm text-slate-400">
-                                <thead class="bg-slate-800 text-xs uppercase text-slate-300">
+                                <thead class="bg-slate-900 text-xs uppercase text-slate-500">
                                 <tr>
-                                    <th class="px-4 py-3 font-bold w-14 text-center">Activa</th>
+                                    <th class="px-4 py-3 font-bold w-12 text-center">✓</th>
                                     <th class="px-4 py-3 font-bold w-12 text-center">Img</th>
                                     <th class="px-4 py-3 font-bold">Versión</th>
                                     <th class="px-4 py-3 font-bold w-32">Precio ($)</th>
@@ -194,93 +297,129 @@
                                     <th class="px-4 py-3 font-bold w-32">SKU</th>
                                 </tr>
                                 </thead>
-                                <tbody id="vb-table-body" class="divide-y divide-slate-800"></tbody>
+                                <tbody id="vb-table-body" class="divide-y divide-slate-800/60"></tbody>
                             </table>
                         </div>
-                        <p id="vb-table-summary" class="text-xs text-slate-500 font-medium px-4 py-2.5 border-t border-slate-800 bg-slate-900/50"></p>
+                        <p id="vb-table-summary" class="text-xs text-slate-500 px-4 py-2.5 bg-slate-900"></p>
                     </div>
                 </div>
                 <div id="variants-hidden-inputs"></div>
-            </div>
+            </section>
 
-            <!-- 4. IMÁGENES -->
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm">
-                <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
-                    <div class="flex items-center gap-2">
-                        <span class="bg-slate-800 text-slate-400 w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold">4</span>
-                        <h3 class="text-lg font-bold text-white">Imágenes</h3>
+            <!-- DETAILS / FICHA TÉCNICA -->
+            <section id="details" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 scroll-mt-20 shadow-sm">
+                <div class="mb-5">
+                    <div class="flex items-center gap-2.5 mb-1">
+                        <span class="w-6 h-6 rounded-full bg-storevo-500/15 text-storevo-400 text-[11px] font-bold flex items-center justify-center border border-storevo-500/25 flex-shrink-0">6</span>
+                        <h2 class="text-base font-bold text-white">Más detalles</h2>
                     </div>
-                    <span class="text-xs text-slate-500 font-medium"><span id="img-count">0</span>/10</span>
+                    <p class="text-xs text-slate-500 ml-8">Especificaciones técnicas, medidas, peso...</p>
                 </div>
 
-                <div id="image-dropzone" class="border-2 border-dashed border-slate-700 bg-slate-950/50 rounded-xl p-6 text-center hover:border-storevo-500 hover:bg-slate-900 transition-all duration-200 cursor-pointer relative group overflow-hidden">
-                    <input type="file" id="file-upload" multiple accept="image/jpeg, image/png, image/webp" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
-                    <div class="pointer-events-none relative z-0">
-                        <div class="w-12 h-12 mx-auto bg-slate-800 rounded-full flex items-center justify-center mb-3 group-hover:bg-storevo-500/20 group-hover:text-storevo-400 transition-colors duration-200 text-slate-400">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                <div id="specsContainer" class="space-y-2.5">
+                    <div th:if="${product.attrKeys != null}" th:each="key, stat : ${product.attrKeys}" class="flex items-center gap-2">
+                        <input type="text" name="attrKeys" th:value="${key}" placeholder="Material" class="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white placeholder-slate-700 focus:ring-1 focus:ring-storevo-500/40 focus:border-storevo-500/60 transition">
+                        <span class="text-slate-700 select-none">:</span>
+                        <input type="text" name="attrValues" th:value="${product.attrValues[stat.index]}" placeholder="100% Algodón" class="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white placeholder-slate-700 focus:ring-1 focus:ring-storevo-500/40 focus:border-storevo-500/60 transition">
+                        <button type="button" onclick="this.parentElement.remove()" class="text-slate-600 hover:text-red-400 transition p-1 flex-shrink-0"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
+                    </div>
+                </div>
+                <button type="button" onclick="Storevo.ProductForm.addSpecRow()" class="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-storevo-400 transition mt-3">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg> Añadir especificación
+                </button>
+            </section>
+
+        </main>
+
+        <!-- 3. SIDEBAR DERECHA (Checklist & Preview) -->
+        <aside class="hidden lg:block">
+            <div class="sticky top-20 space-y-4">
+
+                <!-- Checklist -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
+                    <p class="text-xs font-bold uppercase tracking-widest text-slate-600 mb-4">Listo para publicar</p>
+                    <div class="space-y-2.5">
+                        <div class="flex items-center gap-2.5">
+                            <div id="check-name" class="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 bg-slate-800 border border-slate-700"></div>
+                            <span id="text-name" class="text-xs transition-colors text-slate-500">Nombre del producto</span>
                         </div>
-                        <p class="text-sm text-slate-300 font-bold">Arrastra o haz clic aquí</p>
-                        <p class="text-xs text-slate-500 mt-1">JPG, PNG, WEBP (Max. 10MB)</p>
+                        <div class="flex items-center gap-2.5">
+                            <div id="check-price" class="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 bg-slate-800 border border-slate-700"></div>
+                            <span id="text-price" class="text-xs transition-colors text-slate-500">Precio base</span>
+                        </div>
+                        <div class="flex items-center gap-2.5">
+                            <div id="check-stock" class="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 bg-slate-800 border border-slate-700"></div>
+                            <span id="text-stock" class="text-xs transition-colors text-slate-500">Stock inicial</span>
+                        </div>
+                        <div class="flex items-center gap-2.5">
+                            <div id="check-category" class="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 bg-slate-800 border border-slate-700"></div>
+                            <span id="text-category" class="text-xs transition-colors text-slate-500">Categoría elegida</span>
+                        </div>
+                        <div class="flex items-center gap-2.5">
+                            <div id="check-images" class="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 bg-slate-800 border border-slate-700"></div>
+                            <span id="text-images" class="text-xs transition-colors text-slate-500">Al menos 1 imagen</span>
+                        </div>
                     </div>
                 </div>
-                <div id="image-preview-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4 empty:hidden"></div>
-                <div id="image-hidden-inputs"></div>
-                <input type="file" name="newImages" id="real-file-input" multiple class="hidden">
-            </div>
 
-        </div>
-
-        <!-- COLUMNA LATERAL DERECHA -->
-        <div class="space-y-6">
-
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm">
-                <label class="flex items-start gap-3 cursor-pointer group">
-                    <div class="flex items-center h-5 mt-0.5">
-                        <input type="checkbox" id="isActive" th:field="*{isActive}" class="w-5 h-5 rounded border-slate-700 bg-slate-950 text-storevo-500 focus:ring-storevo-500 cursor-pointer transition-colors">
-                    </div>
-                    <div>
-                        <p class="text-sm font-bold text-white group-hover:text-storevo-400 transition-colors">Producto Activo</p>
-                        <p class="text-xs text-slate-400 mt-0.5">Visible en la tienda pública.</p>
-                    </div>
-                </label>
-            </div>
-
-            <!-- 5. FICHA TÉCNICA -->
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
-                <h3 class="text-base font-bold text-white border-b border-slate-800 pb-3 mb-4">Ficha Técnica</h3>
-                <p class="text-xs text-slate-500 mb-3 leading-tight">Medidas, peso o especificaciones específicas del artículo.</p>
-                <div id="specsContainer" class="space-y-3">
-                    <div th:if="${product.attrKeys != null}" th:each="key, stat : ${product.attrKeys}" class="flex gap-3">
-                        <input type="text" name="attrKeys" th:value="${key}" placeholder="Atributo" class="w-1/2 px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:ring-storevo-500 text-sm">
-                        <input type="text" name="attrValues" th:value="${product.attrValues[stat.index]}" placeholder="Valor" class="w-1/2 px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:ring-storevo-500 text-sm">
-                        <button type="button" onclick="this.parentElement.remove()" class="p-2 text-slate-500 hover:text-red-500 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+                <!-- Visibility -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-semibold text-white">Visibilidad</p>
+                            <p id="visibility-text" class="text-xs mt-0.5 font-medium transition-colors text-emerald-400">Visible en tu tienda</p>
+                        </div>
+                        <label class="relative inline-flex h-6 w-11 items-center rounded-full cursor-pointer transition-colors bg-slate-700 has-[:checked]:bg-emerald-500">
+                            <input type="checkbox" id="isActive" th:field="*{isActive}" class="peer sr-only" checked onchange="document.getElementById('visibility-text').textContent = this.checked ? 'Visible en tu tienda' : 'Oculto (Borrador)'; document.getElementById('visibility-text').className = this.checked ? 'text-xs mt-0.5 font-medium transition-colors text-emerald-400' : 'text-xs mt-0.5 font-medium transition-colors text-slate-500'; document.getElementById('btn-submit-main').innerHTML = this.checked ? '<svg class=\'w-4 h-4\' fill=\'none\' stroke=\'currentColor\' viewBox=\'0 0 24 24\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M5 13l4 4L19 7\'/></svg> Publicar producto' : '<svg class=\'w-4 h-4\' fill=\'none\' stroke=\'currentColor\' viewBox=\'0 0 24 24\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M5 13l4 4L19 7\'/></svg> Guardar borrador';">
+                            <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform translate-x-1 peer-checked:translate-x-6"></span>
+                        </label>
                     </div>
                 </div>
-                <button type="button" onclick="Storevo.ProductForm.addSpecRow()" class="text-xs text-slate-400 font-bold hover:text-white flex items-center gap-1 transition-colors mt-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-                    Añadir especificación
+
+                <!-- Mini Preview -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-sm" id="mini-preview-card">
+                    <p class="text-xs font-bold uppercase tracking-widest text-slate-600 mb-3">Vista previa</p>
+                    <div class="rounded-xl overflow-hidden bg-slate-950 border border-slate-800">
+                        <div class="aspect-square bg-slate-800 flex items-center justify-center overflow-hidden" id="preview-img-container">
+                            <svg class="w-10 h-10 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                        </div>
+                        <div class="p-3">
+                            <p class="text-sm font-bold text-white truncate" id="preview-name">—</p>
+                            <div class="flex items-center gap-2 mt-1" id="preview-price-container">
+                                <span class="text-sm font-bold text-storevo-400" id="preview-price">Sin precio</span>
+                            </div>
+                            <p class="text-[11px] text-slate-600 mt-1 truncate" id="preview-cat">Sin categoría</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 4. BARRA INFERIOR FIJA (Fixed Bottom Action Bar) -->
+        <div class="fixed bottom-0 left-0 right-0 z-30 bg-slate-900/95 backdrop-blur-sm border-t border-slate-800">
+            <div class="max-w-[85rem] mx-auto px-6 py-3.5 flex items-center gap-3">
+                <div class="hidden sm:flex items-center gap-2 mr-auto" id="bottom-validation-text">
+                    <span class="text-xs text-slate-500">Completa los campos obligatorios (*) para guardar</span>
+                </div>
+
+                <a th:href="@{|/dashboard/${slug}/products|}" class="px-4 py-2.5 text-sm font-semibold text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition">
+                    Cancelar
+                </a>
+                <button type="submit" name="action" value="save_and_new" class="px-5 py-2.5 text-sm font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl transition flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>
+                    <span class="hidden sm:inline">Guardar y crear otro</span>
+                    <span class="sm:hidden">Guardar+</span>
+                </button>
+                <button type="submit" name="action" value="save" id="btn-submit-main" class="px-6 py-2.5 text-sm font-bold text-white bg-storevo-500 hover:bg-storevo-600 rounded-xl shadow-lg shadow-storevo-500/20 transition-all hover:-translate-y-0.5 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                    Publicar producto
                 </button>
             </div>
-
         </div>
 
-        <!-- FOOTER: BOTONES DE ACCIÓN -->
-        <div class="lg:col-span-3 pt-6 border-t border-slate-800 flex flex-col sm:flex-row gap-3 items-center justify-end">
-            <a th:href="@{|/dashboard/${slug}/products|}" class="w-full sm:w-auto px-6 py-3.5 text-sm font-bold text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 rounded-xl transition-colors order-3 sm:order-1 text-center">
-                Cancelar
-            </a>
-            <button type="submit" name="action" value="save_and_new" class="w-full sm:w-auto px-6 py-3.5 text-sm font-bold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl transition-all shadow-sm order-2 sm:order-2 flex items-center justify-center gap-2">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
-                Guardar y crear otro
-            </button>
-            <button type="submit" name="action" value="save" class="w-full sm:w-auto bg-storevo-500 hover:bg-storevo-600 text-white font-bold py-3.5 px-8 rounded-xl shadow-lg shadow-storevo-500/30 transition-all transform hover:-translate-y-0.5 order-1 sm:order-3 flex items-center justify-center gap-2 text-base">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                Guardar Producto
-            </button>
-        </div>
     </form>
 
-    <!-- Modal Imágenes -->
+    <!-- Modal Imágenes (Mantenido intacto para tu JS) -->
     <div id="variant-image-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[100] hidden items-center justify-center opacity-0 transition-all duration-300">
         <div class="bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl p-6 w-full max-w-2xl transform scale-95 transition-transform duration-300" id="vi-modal-content">
             <div class="flex justify-between items-center mb-4 pb-4 border-b border-slate-800">
@@ -295,7 +434,7 @@
         </div>
     </div>
 
-    <!-- NUEVO MODAL: Creación Rápida de Categoría -->
+    <!-- Modal Creación Rápida de Categoría (Mantenido intacto para tu JS) -->
     <div id="category-quick-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[100] hidden items-center justify-center opacity-0 transition-all duration-300">
         <div class="bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl p-6 w-full max-w-md transform scale-95 transition-transform duration-300" id="category-quick-content">
             <div class="flex justify-between items-center mb-5">
@@ -318,33 +457,214 @@
 </div>
 
 <th:block layout:fragment="scripts">
+    <!-- Lógica UX Visual (Scroll Activo, Checklist, Progreso y Preview) -->
+    <!-- Lógica UX Visual (Scroll Activo, Checklist, Progreso y Preview) -->
     <script>
-        function toggleDiscountField() {
-            const container = document.getElementById('discount-container');
-            const btn = document.getElementById('btn-show-discount');
-            const input = container.querySelector('input');
-
-            if(container.classList.contains('hidden')) {
-                container.classList.remove('hidden');
-                setTimeout(() => {
-                    container.classList.remove('opacity-0', '-translate-y-2');
-                    input.focus();
-                }, 10);
-                btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg> Quitar precio de oferta`;
-                btn.classList.replace('text-storevo-400', 'text-slate-500');
-            } else {
-                container.classList.add('opacity-0', '-translate-y-2');
-                btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg> Agregar precio de oferta`;
-                btn.classList.replace('text-slate-500', 'text-storevo-400');
-                input.value = '';
-                setTimeout(() => container.classList.add('hidden'), 200);
-            }
-        }
         document.addEventListener('DOMContentLoaded', () => {
-            const discountInput = document.querySelector('input[name="discountPrice"]');
-            if(discountInput && parseFloat(discountInput.value) > 0) toggleDiscountField();
+            // Referencias DOM generales
+            const iName = document.getElementById('input-name');
+            const pName = document.getElementById('preview-name');
+            const pPriceContainer = document.getElementById('preview-price-container');
+            const pCat = document.getElementById('preview-cat');
+            const pctContainer = document.getElementById('discount-percentage-text');
+            const pctValue = document.getElementById('discount-pct-val');
+
+            // Referencias Inputs Reales (Backend) vs Visuales (Frontend)
+            const realPrice = document.getElementById('real-price');
+            const visualPrice = document.getElementById('input-price');
+
+            const realDiscount = document.getElementById('real-discount-price');
+            const visualDiscount = document.getElementById('input-discount-price');
+
+            const realStock = document.getElementById('real-stock');
+            const visualStock = document.getElementById('input-stock');
+
+            // ==========================================
+            // MÁSCARA DE MILES (Formateador)
+            // ==========================================
+            function applyMask(visualInput, realInput) {
+                // Quitamos letras, puntos y comas
+                let value = visualInput.value.replace(/\D/g, "");
+                if (value === "") {
+                    visualInput.value = "";
+                    realInput.value = ""; // Vacio para validaciones
+                } else {
+                    const num = parseInt(value, 10);
+                    // 'es-CO' para separador de miles con punto
+                    visualInput.value = new Intl.NumberFormat('es-CO').format(num);
+                    realInput.value = num; // El backend recibe el número limpio
+                }
+            }
+
+            // Inicializar inputs y agregar listeners
+            [
+                {v: visualPrice, r: realPrice},
+                {v: visualDiscount, r: realDiscount},
+                {v: visualStock, r: realStock}
+            ].forEach(item => {
+                // Si viene un valor del backend (Editar), lo limpiamos de decimales (.0) y aplicamos la máscara
+                if (item.r && item.r.value && item.r.value !== "0.0" && item.r.value !== "0") {
+                    item.v.value = item.r.value.split('.')[0];
+                    applyMask(item.v, item.r);
+                }
+                // Escuchar cada que el usuario teclea
+                if (item.v) {
+                    item.v.addEventListener('input', function() {
+                        applyMask(item.v, item.r);
+                        updateUIState();
+                    });
+                }
+            });
+
+            // 1. Mostrar/Ocultar Precio Oferta
+            window.toggleDiscountField = function() {
+                const container = document.getElementById('discount-container');
+                const btn = document.getElementById('btn-show-discount');
+
+                if(container.classList.contains('hidden')) {
+                    container.classList.remove('hidden');
+                    setTimeout(() => {
+                        container.classList.remove('opacity-0', '-translate-y-2');
+                        visualDiscount.focus();
+                    }, 10);
+                    btn.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" /></svg> Quitar precio de oferta`;
+                    btn.classList.replace('text-storevo-400', 'text-slate-500');
+                } else {
+                    container.classList.add('opacity-0', '-translate-y-2');
+                    btn.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg> Agregar precio de oferta`;
+                    btn.classList.replace('text-slate-500', 'text-storevo-400');
+                    visualDiscount.value = '';
+                    realDiscount.value = '';
+                    updateUIState();
+                    setTimeout(() => container.classList.add('hidden'), 200);
+                }
+            };
+            if(realDiscount && parseFloat(realDiscount.value) > 0) toggleDiscountField();
+
+            // 2. Observer para pintar el menú lateral según el scroll
+            const sections = document.querySelectorAll('main section');
+            const navLinks = document.querySelectorAll('.nav-link');
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if(entry.isIntersecting) {
+                        navLinks.forEach(link => {
+                            link.classList.remove('bg-storevo-500/10', 'text-storevo-300', 'font-semibold');
+                            link.classList.add('text-slate-500', 'hover:text-slate-200', 'hover:bg-slate-800');
+                            link.querySelector('span').classList.replace('bg-storevo-400', 'bg-slate-600');
+                            link.querySelector('span').classList.replace('bg-storevo-400', 'bg-slate-700');
+                            if(link.getAttribute('href') === '#' + entry.target.id) {
+                                link.classList.remove('text-slate-500', 'hover:text-slate-200', 'hover:bg-slate-800');
+                                link.classList.add('bg-storevo-500/10', 'text-storevo-300', 'font-semibold');
+                                link.querySelector('span').classList.add('bg-storevo-400');
+                            }
+                        });
+                    }
+                });
+            }, { rootMargin: '-40% 0px -55% 0px' });
+            sections.forEach(sec => observer.observe(sec));
+
+            // 3. Lógica Reactiva principal
+            function updateUIState() {
+                // Usamos los inputs reales (los que no tienen puntos) para la validación matemática
+                const priceVal = parseFloat(realPrice.value) || 0;
+                const discountVal = parseFloat(realDiscount.value) || 0;
+                const stockVal = parseFloat(realStock.value) || 0;
+
+                const hasName = iName.value.trim().length > 0;
+                const hasPrice = priceVal > 0;
+                const hasDiscount = discountVal > 0 && discountVal < priceVal;
+                const hasStock = realStock.value.trim().length > 0;
+                const hasCat = document.getElementById('finalCategoryId').value.trim() !== '';
+                const hasImg = document.getElementById('image-preview-grid').children.length > 0 || Storevo.ProductImages?.state.existing.length > 0;
+
+                let completed = 0;
+
+                const setCheck = (id, isDone) => {
+                    const check = document.getElementById(`check-${id}`);
+                    const text = document.getElementById(`text-${id}`);
+                    if(isDone) {
+                        completed++;
+                        check.className = 'w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 bg-emerald-500';
+                        check.innerHTML = '<svg class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>';
+                        text.className = 'text-xs transition-colors text-slate-400 line-through';
+                    } else {
+                        check.className = 'w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 bg-slate-800 border border-slate-700';
+                        check.innerHTML = '';
+                        text.className = 'text-xs transition-colors text-slate-500';
+                    }
+                };
+
+                setCheck('name', hasName);
+                setCheck('price', hasPrice);
+                setCheck('stock', hasStock);
+                setCheck('category', hasCat);
+                setCheck('images', hasImg);
+
+                document.getElementById('progress-bar-fill').style.width = `${(completed/5)*100}%`;
+                document.getElementById('progress-text').textContent = `${completed}/5`;
+
+                const vText = document.getElementById('bottom-validation-text');
+                if(!hasName) vText.innerHTML = '<span class="text-xs text-slate-500">Escribe el nombre para continuar</span>';
+                else if(!hasPrice) vText.innerHTML = '<span class="text-xs text-slate-500">Falta asignar un precio base</span>';
+                else if(!hasStock) vText.innerHTML = '<span class="text-xs text-slate-500">Añade la cantidad en stock</span>';
+                else vText.innerHTML = '<span class="text-xs text-emerald-400 font-medium flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" /></svg>Listo para guardar</span>';
+
+                // ==========================================
+                // CÁLCULO DE DESCUENTO
+                // ==========================================
+                if (hasPrice && hasDiscount) {
+                    const pct = Math.round(((priceVal - discountVal) / priceVal) * 100);
+                    pctValue.textContent = pct + '%';
+                    pctContainer.classList.remove('hidden');
+                } else {
+                    pctContainer.classList.add('hidden');
+                }
+
+                // ==========================================
+                // ACTUALIZAR PREVIEW (Con separadores y tachado)
+                // ==========================================
+                pName.textContent = hasName ? iName.value : '—';
+                pCat.textContent = hasCat ? document.getElementById('summaryText').textContent : 'Sin categoría';
+
+                // Usamos una mini-función de formato rápido para pintar el preview
+                const fmt = (num) => new Intl.NumberFormat('es-CO').format(num);
+
+                if (hasPrice && hasDiscount) {
+                    // Muestra el precio de oferta brillante y el original tachado y gris
+                    pPriceContainer.innerHTML = `
+                        <span class="text-sm font-bold text-storevo-400">$${fmt(discountVal)}</span>
+                        <span class="text-[11px] font-medium text-slate-600 line-through ml-1">$${fmt(priceVal)}</span>
+                    `;
+                } else if (hasPrice) {
+                    // Muestra solo el precio base
+                    pPriceContainer.innerHTML = `<span class="text-sm font-bold text-storevo-400">$${fmt(priceVal)}</span>`;
+                } else {
+                    pPriceContainer.innerHTML = `<span class="text-sm font-bold text-slate-600">Sin precio</span>`;
+                }
+
+                // Actualizar foto del preview si existe
+                const previewImgContainer = document.getElementById('preview-img-container');
+                const firstImg = document.querySelector('#image-preview-grid img');
+                if (firstImg) {
+                    previewImgContainer.innerHTML = `<img src="${firstImg.src}" class="w-full h-full object-cover">`;
+                } else {
+                    previewImgContainer.innerHTML = `<svg class="w-10 h-10 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>`;
+                }
+            }
+
+            // Escuchar cambios reactivos en el Nombre
+            iName.addEventListener('input', updateUIState);
+
+            // Observers para la categoría e imágenes
+            new MutationObserver(updateUIState).observe(document.getElementById('summaryText'), { childList: true, subtree: true });
+            new MutationObserver(updateUIState).observe(document.getElementById('image-preview-grid'), { childList: true });
+
+            // Llamada inicial
+            updateUIState();
         });
     </script>
+
     <script th:src="@{/js/modules/productDraft.js}"></script>
     <script th:src="@{/js/modules/productWizard.js}"></script>
     <script th:src="@{/js/modules/productImages.js}"></script>
