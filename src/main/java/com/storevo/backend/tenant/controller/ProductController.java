@@ -129,7 +129,12 @@ public class ProductController {
                     varDto.setCombination(combo);
 
                     if (var.getImages() != null && !var.getImages().isEmpty()) {
-                        varDto.setImageRef(var.getImages().get(0).getFilePath());
+                        // Unimos todas las rutas de las imágenes separadas por coma
+                        String joinedImages = var.getImages().stream()
+                                .map(ProductImage::getFilePath)
+                                .collect(Collectors.joining(","));
+
+                        varDto.setImageRef(joinedImages);
                     }
                     return varDto;
                 }).collect(Collectors.toList());

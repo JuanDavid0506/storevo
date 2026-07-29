@@ -321,11 +321,15 @@ public class ProductService {
                                 return vSig.equals(sig);
                             }).findFirst().orElse(null);
 
+
                     if (savedVariant != null) {
+                        // 1. Rompemos el texto de comas en una lista de nombres de fotos
+                        List<String> targetImages = Arrays.asList(vDto.getImageRef().split(","));
+
+                        // 2. Buscamos TODAS las fotos que coincidan y las amarramos a la variante
                         product.getImages().stream()
-                                .filter(img -> img.getFilePath().equals(vDto.getImageRef()))
-                                .findFirst()
-                                .ifPresent(img -> img.setVariantId(savedVariant.getId()));
+                                .filter(img -> targetImages.contains(img.getFilePath()))
+                                .forEach(img -> img.setVariantId(savedVariant.getId()));
                     }
                 }
             }
