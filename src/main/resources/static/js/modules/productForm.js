@@ -16,14 +16,20 @@ Storevo.ProductForm = {
     selectedPath: [],
 
     init: function() {
-        // Carga las categorías y dibuja el nivel principal
+        const inputCategoria = document.getElementById('finalCategoryId');
+        const existingId = inputCategoria ? inputCategoria.value : null;
+
         this.loadCategories();
         this.renderLevel(1, null);
 
-        // Autoselección en modo Edición
-        const existingId = document.getElementById('finalCategoryId')?.value;
-        if (existingId) {
-            this.preselectCategory(existingId);
+        if (existingId && existingId.trim() !== '') {
+            setTimeout(() => {
+                this.preselectCategory(existingId.trim());
+                // Forzamos a que el valor sobreviva
+                if (document.getElementById('finalCategoryId')) {
+                    document.getElementById('finalCategoryId').value = existingId.trim();
+                }
+            }, 150);
         }
     },
 

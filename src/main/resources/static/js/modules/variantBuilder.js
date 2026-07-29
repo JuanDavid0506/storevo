@@ -34,18 +34,50 @@ Storevo.VariantBuilder = {
         options: [],
         variantsData: {},
         excluded: {},
-        collapsedGroups: {}
+        collapsedGroups: {},
+        imageModalTarget: null,
+        tempSelectedImages: []
     },
 
     init: function() {
-        // SOLUCIÓN A LA CONDICIÓN DE CARRERA:
         if (this.state.options && this.state.options.length > 0) {
-            // 1. Ya fue inicializado por ProductWizard, no hacemos nada para no pisarlo
-        } else if (window.INITIAL_OPTIONS && window.INITIAL_OPTIONS.length > 0) {
-            // 2. Viene de Spring Boot (Edición de producto existente)
+            // Ya inicializado
+        } else if (window.INITIAL_HAS_VARIANTS && window.INITIAL_OPTIONS && window.INITIAL_OPTIONS.length > 0) {
+
+            // --- MODO EDICIÓN DE PRODUCTO EXISTENTE ---
             this.state.options = window.INITIAL_OPTIONS;
+
+            if (window.INITIAL_VARIANTS && window.INITIAL_VARIANTS.length > 0) {
+                window.INITIAL_VARIANTS.forEach(v => {
+                    const sig = this.generateSignatureFromMap(v.combination || {});
+                    this.state.variantsData[sig] = {
+                        price: v.price || '',
+                        stock: v.stock || 0,
+                        sku: v.sku || '',
+                        // CORRECCIÓN FOTOS: Spring Boot manda 'imageUrl'
+                        imageRef: v.imageUrl || v.imageRef || ''
+                    };
+                });
+            }
+
+            // CORRECCIÓN UI: Encender el Switch y mostrar el constructor
+            setTimeout(() => {
+                const toggleUI = document.getElementById('hasVariantsToggleUI');
+                if (toggleUI) toggleUI.checked = true;
+                const toggle = document.getElementById('hasVariantsToggle');
+                if (toggle) toggle.checked = true;
+
+                const emptyState = document.getElementById('options-empty-state');
+                if (emptyState) emptyState.classList.add('hidden');
+
+                const builder = document.getElementById('variant-builder-container');
+                if (builder) builder.classList.remove('hidden', 'opacity-0');
+
+                this.renderOptions();
+            }, 50);
+
         } else {
-            // 3. Producto Nuevo: Verificamos si en la memoria quedó guardada una plantilla
+            // --- MODO PRODUCTO NUEVO ---
             const savedTemplate = localStorage.getItem('storevo_product_template');
             const lastMode = localStorage.getItem('storevo_product_mode');
             const isNewProduct = typeof window.IS_NEW_PRODUCT !== 'undefined' ? window.IS_NEW_PRODUCT : true;
@@ -54,73 +86,75 @@ Storevo.VariantBuilder = {
                 const template = this.TEMPLATES[savedTemplate];
                 this.state.options = template.options.map(o => ({ name: o.name, values: [...o.values] }));
             } else {
-                // 4. Estado por defecto si no hay nada de nada
                 this.state.options = [{ name: 'Talla', values: [] }];
             }
         }
 
-        if (window.INITIAL_VARIANTS && window.INITIAL_VARIANTS.length > 0) {
-            window.INITIAL_VARIANTS.forEach(v => {
-                const sig = this.generateSignatureFromMap(v.combination);
-                this.state.variantsData[sig] = {
-                    price: v.price || '',
-                    stock: v.stock || 0,
-                    sku: v.sku || '',
-                    imageRef: v.imageRef || ''
-                };
+        const btnAdd = document.getElementById('vb-btn-add-option');
+        if (btnAdd) {
+            btnAdd.addEventListener('click', () => {
+                if (this.state.options.length >= 3) {
+                    if (Storevo.UI && Storevo.UI.Toast) Storevo.UI.Toast.show('Máximo 3 opciones permitidas', 'warning');
+                    return;
+                }
+                this.state.options.push({ name: '', values: [] });
+                this.renderOptions();
             });
         }
-
-        document.getElementById('vb-btn-add-option').addEventListener('click', () => {
-            if (this.state.options.length >= 3) {
-                if (Storevo.UI && Storevo.UI.Toast) Storevo.UI.Toast.show('Máximo 3 opciones permitidas', 'warning');
-                return;
-            }
-            this.state.options.push({ name: '', values: [] });
-            this.renderOptions();
-        });
 
         const form = document.getElementById('product-form');
-        if (form) {
-            form.addEventListener('submit', () => this.syncHiddenInputs());
-        }
+        // Mantengo el listener del submit por seguridad adicional
+        if (form) form.addEventListener('submit', () => this.syncHiddenInputs());
 
-        this.renderOptions();
-    },
-
-    applyTemplate: function(key, silent = false) {
-        const template = this.TEMPLATES[key];
-        if (!template) return;
-
-        this.state.options = template.options.map(o => ({ name: o.name, values: [...o.values] }));
-        this.state.collapsedGroups = {};
-        this.renderOptions();
-
-        if (Storevo.ProductForm && Storevo.ProductForm.prefillSpecs) {
-            Storevo.ProductForm.prefillSpecs(key);
-        }
-
-        if (!silent && Storevo.UI && Storevo.UI.Toast) {
-            Storevo.UI.Toast.show(`Plantilla "${template.label}" aplicada.`, 'success');
-        }
-    },
-
-    generateSignatureFromMap: function(comboMap) {
-        return Object.keys(comboMap).sort().map(k => `${k}:${comboMap[k]}`).join('|');
-    },
-
-    getCartesianProduct: function() {
-        const validOptions = this.state.options.filter(o => o.name.trim() !== '' && o.values.length > 0);
-        if (validOptions.length === 0) return [];
-        return validOptions.reduce((acc, currOption) => {
-            const currentValues = currOption.values;
-            if (acc.length === 0) return currentValues.map(val => ({ [currOption.name]: val }));
-            const newAcc = [];
-            acc.forEach(existingCombo => {
-                currentValues.forEach(val => newAcc.push({ ...existingCombo, [currOption.name]: val }));
+        // Escuchar el switch de variantes para bloquear/desbloquear campos
+        const toggleUI = document.getElementById('hasVariantsToggleUI');
+        if (toggleUI) {
+            toggleUI.addEventListener('change', (e) => {
+                this.toggleMainFields(e.target.checked);
             });
-            return newAcc;
-        }, []);
+            // Ejecutar al cargar por si entró a editar y ya estaba encendido
+            this.toggleMainFields(toggleUI.checked);
+        }
+        this.renderOptions();
+    },
+    toggleMainFields: function(isVariantsActive) {
+        const inputPrice = document.getElementById('input-price');
+        const inputStock = document.getElementById('input-stock');
+        const helpTextContainer = document.getElementById('pricing'); // La sección 2 (Precio y stock)
+
+        if (isVariantsActive) {
+            // Bloqueamos las cajas visualmente
+            if (inputPrice) {
+                inputPrice.disabled = true;
+                inputPrice.classList.add('opacity-50', 'cursor-not-allowed', 'bg-slate-900');
+            }
+            if (inputStock) {
+                inputStock.disabled = true;
+                inputStock.classList.add('opacity-50', 'cursor-not-allowed', 'bg-slate-900');
+            }
+
+            // Añadimos el aviso explicativo
+            let warning = document.getElementById('variants-lock-warning');
+            if (!warning && helpTextContainer) {
+                const msg = document.createElement('div');
+                msg.id = 'variants-lock-warning';
+                msg.className = 'mt-4 bg-storevo-500/10 border border-storevo-500/20 text-storevo-400 p-3 rounded-xl text-xs font-medium flex items-center gap-2 animate-fade-in-up';
+                msg.innerHTML = '<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg> <span>El precio base y el stock total se <b>auto-calculan</b> desde tus variantes activas.</span>';
+                helpTextContainer.appendChild(msg);
+            }
+        } else {
+            // Desbloqueamos si apaga el switch
+            if (inputPrice) {
+                inputPrice.disabled = false;
+                inputPrice.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-slate-900');
+            }
+            if (inputStock) {
+                inputStock.disabled = false;
+                inputStock.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-slate-900');
+            }
+            const warning = document.getElementById('variants-lock-warning');
+            if (warning) warning.remove();
+        }
     },
 
     getValidOptions: function() {
@@ -143,7 +177,25 @@ Storevo.VariantBuilder = {
     colorDotHtml: function(valueName) {
         const hex = this.getColorHex(valueName);
         const borderClass = hex === '#ffffff' ? 'border-slate-500' : 'border-black/20';
-        return `<span class="inline-block w-3 h-3 rounded-full border ${borderClass} mr-1.5 align-middle" style="background-color:${hex}"></span>`;
+        return `<span class="inline-block w-3 h-3 rounded-full border ${borderClass} mr-1.5 align-middle shrink-0" style="background-color:${hex}"></span>`;
+    },
+
+    generateSignatureFromMap: function(comboMap) {
+        return Object.keys(comboMap).sort().map(k => `${k}:${comboMap[k]}`).join('|');
+    },
+
+    getCartesianProduct: function() {
+        const validOptions = this.getValidOptions();
+        if (validOptions.length === 0) return [];
+        return validOptions.reduce((acc, currOption) => {
+            const currentValues = currOption.values;
+            if (acc.length === 0) return currentValues.map(val => ({ [currOption.name]: val }));
+            const newAcc = [];
+            acc.forEach(existingCombo => {
+                currentValues.forEach(val => newAcc.push({ ...existingCombo, [currOption.name]: val }));
+            });
+            return newAcc;
+        }, []);
     },
 
     getPresetSuggestions: function(optionName) {
@@ -239,33 +291,18 @@ Storevo.VariantBuilder = {
     updateVariantData: function(signature, field, value) {
         if (!this.state.variantsData[signature]) this.state.variantsData[signature] = { price: '', stock: 0, sku: '', imageRef: '' };
         this.state.variantsData[signature][field] = value;
+
+        // CORRECCIÓN STOCK/PRECIO EN 0: Sincronizar en tiempo real con el DOM oculto
+        this.syncHiddenInputs();
     },
 
     applyBulk: function(field) {
         const input = document.getElementById(field === 'price' ? 'vb-bulk-price' : 'vb-bulk-stock');
-        if (!input.value) return;
+        if (!input || !input.value) return;
         this.forEachIncludedCombo(combo => this.updateVariantData(this.generateSignatureFromMap(combo), field, input.value));
+        input.value = '';
         this.renderTable();
-    },
-
-    applyPercentAdjust: function(pct) {
-        const basePrice = parseFloat(document.getElementById('price').value) || 0;
-        this.forEachIncludedCombo(combo => {
-            const signature = this.generateSignatureFromMap(combo);
-            const data = this.state.variantsData[signature] || { price: basePrice, stock: 0, sku: '', imageRef: '' };
-            this.updateVariantData(signature, 'price', Math.max(0, Math.round((parseFloat(data.price) || basePrice) * (1 + pct / 100))));
-        });
-        this.renderTable();
-    },
-
-    applyAmountAdjust: function(amount) {
-        const basePrice = parseFloat(document.getElementById('price').value) || 0;
-        this.forEachIncludedCombo(combo => {
-            const signature = this.generateSignatureFromMap(combo);
-            const data = this.state.variantsData[signature] || { price: basePrice, stock: 0, sku: '', imageRef: '' };
-            this.updateVariantData(signature, 'price', Math.max(0, Math.round((parseFloat(data.price) || basePrice) + amount)));
-        });
-        this.renderTable();
+        if (Storevo.UI && Storevo.UI.Toast) Storevo.UI.Toast.show('Aplicado a la selección', 'success');
     },
 
     forEachIncludedCombo: function(callback) {
@@ -285,15 +322,21 @@ Storevo.VariantBuilder = {
     groupCopy: function(groupValue, sourceSignature) {
         const validOpts = this.getValidOptions();
         if (validOpts.length < 2) return;
+
+        const colorOption = validOpts.find(opt => this.isColorOption(opt.name));
+        const groupOptionName = colorOption ? colorOption.name : validOpts[0].name;
+
         const sourceData = this.state.variantsData[sourceSignature];
         if (!sourceData) return;
+
         this.getCartesianProduct().forEach(combo => {
             const signature = this.generateSignatureFromMap(combo);
-            if (signature !== sourceSignature && combo[validOpts[0].name] === groupValue && !this.state.excluded[signature]) {
+            if (signature !== sourceSignature && combo[groupOptionName] === groupValue && !this.state.excluded[signature]) {
                 this.state.variantsData[signature] = { ...this.state.variantsData[signature], price: sourceData.price, stock: sourceData.stock, sku: sourceData.sku };
             }
         });
         this.renderTable();
+        if (Storevo.UI && Storevo.UI.Toast) Storevo.UI.Toast.show('Copiado al grupo', 'success');
     },
 
     toggleGroup: function(groupValue) {
@@ -319,7 +362,7 @@ Storevo.VariantBuilder = {
         bulkPanel.classList.remove('hidden');
 
         const validOptions = this.getValidOptions();
-        const basePrice = document.getElementById('price').value;
+        const basePrice = document.getElementById('real-price')?.value || 0;
         let activeCount = 0;
 
         combinations.forEach(combo => {
@@ -328,19 +371,48 @@ Storevo.VariantBuilder = {
             if (!this.state.excluded[signature]) activeCount++;
         });
 
-        if (validOptions.length >= 2) this.renderGroupedRows(tbody, combinations, validOptions);
-        else combinations.forEach(combo => tbody.appendChild(this.buildRow(this.generateSignatureFromMap(combo), Object.values(combo).join(' • '), null)));
+        const colorOption = validOptions.find(opt => this.isColorOption(opt.name));
+        const hasColor = !!colorOption;
+
+        const thead = container.querySelector('thead tr');
+        if (thead) {
+            thead.innerHTML = `
+                <th class="px-4 py-3 font-bold w-12 text-center">✓</th>
+                ${hasColor ? '<th class="px-4 py-3 font-bold w-16 text-center">Img</th>' : ''}
+                <th class="px-4 py-3 font-bold">Versión</th>
+                <th class="px-4 py-3 font-bold w-32">Precio ($)</th>
+                <th class="px-4 py-3 font-bold w-24">Stock</th>
+                <th class="px-4 py-3 font-bold w-32">SKU</th>
+            `;
+        }
+
+        const isGrouped = validOptions.length >= 2;
+
+        if (isGrouped) {
+            this.renderGroupedRows(tbody, combinations, validOptions, hasColor, colorOption ? colorOption.name : null);
+        } else {
+            combinations.forEach(combo => {
+                const signature = this.generateSignatureFromMap(combo);
+                const comboLabel = Object.values(combo).join(' • ');
+                tbody.appendChild(this.buildRow(signature, comboLabel, null, hasColor, false));
+            });
+        }
 
         const summary = document.getElementById('vb-table-summary');
         if (summary) summary.textContent = `${activeCount} combinaciones se guardarán.`;
+
+        this.syncHiddenInputs();
     },
 
-    renderGroupedRows: function(tbody, combinations, validOptions) {
-        const firstOptionName = validOptions[0].name;
+    renderGroupedRows: function(tbody, combinations, validOptions, hasColor, colorOptionName) {
+        const groupOptionName = colorOptionName || validOptions[0].name;
+        const groupOption = validOptions.find(o => o.name === groupOptionName);
+
         const groups = {};
-        validOptions[0].values.forEach(val => { groups[val] = []; });
+        groupOption.values.forEach(val => { groups[val] = []; });
+
         combinations.forEach(combo => {
-            const groupValue = combo[firstOptionName];
+            const groupValue = combo[groupOptionName];
             if (!groups[groupValue]) groups[groupValue] = [];
             groups[groupValue].push(combo);
         });
@@ -352,40 +424,63 @@ Storevo.VariantBuilder = {
             const activeInGroup = groupCombos.filter(c => !this.state.excluded[this.generateSignatureFromMap(c)]).length;
 
             const headerTr = document.createElement('tr');
-            headerTr.className = 'bg-slate-900/70';
+            headerTr.className = 'bg-slate-900/70 border-b border-slate-800/50';
+
+            let imgBtnHtml = '';
+            if (hasColor && colorOptionName === groupOptionName) {
+                const firstSig = this.generateSignatureFromMap(groupCombos[0]);
+                const currentImgRef = (this.state.variantsData[firstSig] || {}).imageRef || '';
+                imgBtnHtml = this.renderImageButtonHtml(currentImgRef, `Storevo.VariantBuilder.openImageModal({type:'group', value:'${groupValue}'})`);
+            }
+
+            const colSpan = hasColor ? '6' : '5';
+
             headerTr.innerHTML = `
-                <td colspan="6" class="px-4 py-2.5">
-                    <button type="button" onclick="Storevo.VariantBuilder.toggleGroup('${groupValue}')" class="w-full flex items-center gap-2 text-left">
-                        <svg class="w-4 h-4 text-slate-500 transition-transform ${isCollapsed ? '' : 'rotate-90'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                        ${this.isColorOption(firstOptionName) ? this.colorDotHtml(groupValue) : ''}
-                        <span class="font-bold text-white text-sm">${groupValue}</span>
-                        <span class="text-xs text-slate-500 font-medium">(${activeInGroup} versiones)</span>
-                    </button>
+                <td colspan="${colSpan}" class="px-4 py-3">
+                    <div class="flex items-center gap-3">
+                        <button type="button" onclick="Storevo.VariantBuilder.toggleGroup('${groupValue}')" class="flex items-center gap-2 text-left hover:text-white transition-colors text-slate-300">
+                            <svg class="w-4 h-4 text-slate-500 transition-transform ${isCollapsed ? '' : 'rotate-90'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                            ${this.isColorOption(groupOptionName) ? this.colorDotHtml(groupValue) : ''}
+                            <span class="font-bold text-sm">${groupValue}</span>
+                            <span class="text-xs text-slate-500 font-medium">(${activeInGroup} versiones)</span>
+                        </button>
+                        ${imgBtnHtml ? `<div class="ml-2">${imgBtnHtml}</div>` : ''}
+                    </div>
                 </td>
             `;
             tbody.appendChild(headerTr);
 
             if (isCollapsed) return;
             groupCombos.forEach(combo => {
-                const restLabel = Object.keys(combo).filter(k => k !== firstOptionName).map(k => combo[k]).join(' • ');
-                tbody.appendChild(this.buildRow(this.generateSignatureFromMap(combo), restLabel, groupValue));
+                const restLabel = Object.keys(combo).filter(k => k !== groupOptionName).map(k => combo[k]).join(' • ');
+                const signature = this.generateSignatureFromMap(combo);
+                const isGroupedByColor = hasColor && (colorOptionName === groupOptionName);
+                tbody.appendChild(this.buildRow(signature, restLabel, groupValue, hasColor, isGroupedByColor));
             });
         });
     },
 
-    buildRow: function(signature, comboLabel, groupValue) {
+    buildRow: function(signature, comboLabel, groupValue, hasColor, isGroupedByColor) {
         const data = this.state.variantsData[signature] || { price: '', stock: 0, sku: '', imageRef: '' };
         const isExcluded = !!this.state.excluded[signature];
         const dAttr = isExcluded ? 'disabled' : '';
 
-        const imgHtml = data.imageRef ? `<img src="${data.imageRef}" class="w-full h-full object-cover">` : `<svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>`;
+        let imgColHtml = '';
+        if (hasColor) {
+            if (isGroupedByColor && groupValue) {
+                imgColHtml = `<td class="px-4 py-3 text-center"></td>`;
+            } else {
+                imgColHtml = `<td class="px-4 py-3 text-center">${this.renderImageButtonHtml(data.imageRef, `Storevo.VariantBuilder.openImageModal({type:'signature', value:'${signature}'})`, dAttr)}</td>`;
+            }
+        }
+
         const copyBtn = groupValue ? `<button type="button" ${dAttr} onclick="Storevo.VariantBuilder.groupCopy('${groupValue}', '${signature}')" class="text-slate-500 hover:text-storevo-400 disabled:opacity-30"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button>` : '';
 
         const tr = document.createElement('tr');
         tr.className = `hover:bg-slate-800/80 transition-colors ${isExcluded ? 'opacity-40' : ''} ${groupValue ? 'border-l-2 border-slate-800' : ''}`;
         tr.innerHTML = `
             <td class="px-4 py-3 text-center"><input type="checkbox" ${isExcluded ? '' : 'checked'} onchange="Storevo.VariantBuilder.toggleExclude('${signature}')" class="w-4 h-4 rounded border-slate-700 bg-slate-950 text-storevo-500 focus:ring-storevo-500"></td>
-            <td class="px-4 py-3 text-center"><button type="button" ${dAttr} onclick="Storevo.VariantBuilder.openImageModal('${signature}')" class="w-10 h-10 bg-slate-900 border border-slate-700 rounded-lg flex items-center justify-center overflow-hidden">${imgHtml}</button></td>
+            ${imgColHtml}
             <td class="px-4 py-3 font-bold text-white text-sm"><div class="flex items-center gap-2">${groupValue ? '<span class="text-slate-600 font-normal">↳</span>' : ''}<span>${comboLabel}</span>${copyBtn}</div></td>
             <td class="px-4 py-3"><input type="number" step="0.01" ${dAttr} value="${data.price}" onchange="Storevo.VariantBuilder.updateVariantData('${signature}', 'price', this.value)" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg text-sm px-2 py-2 focus:ring-storevo-500"></td>
             <td class="px-4 py-3"><input type="number" ${dAttr} value="${data.stock}" onchange="Storevo.VariantBuilder.updateVariantData('${signature}', 'stock', this.value)" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg text-sm px-3 py-2 focus:ring-storevo-500 font-mono text-center"></td>
@@ -394,10 +489,73 @@ Storevo.VariantBuilder = {
         return tr;
     },
 
-    openImageModal: function(signature) {
-        document.getElementById('vi-current-signature').value = signature;
+    renderImageButtonHtml: function(imageRefStr, onclickStr, dAttr = '') {
+        if (!imageRefStr) {
+            return `<button type="button" ${dAttr} onclick="${onclickStr}" class="w-9 h-9 bg-slate-900 border border-slate-700 hover:border-storevo-500 rounded-lg flex items-center justify-center text-slate-500 transition-colors disabled:opacity-50 disabled:hover:border-slate-700"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg></button>`;
+        }
+        const refs = imageRefStr.split(',');
+        const firstImg = this.getImageUrlByRef(refs[0]);
+        const badge = refs.length > 1 ? `<span class="absolute -top-1.5 -right-1.5 bg-storevo-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-slate-900 leading-none shadow-sm">+${refs.length - 1}</span>` : '';
+        return `<button type="button" ${dAttr} onclick="${onclickStr}" class="relative w-9 h-9 bg-slate-900 border border-slate-700 hover:border-storevo-500 rounded-lg flex items-center justify-center overflow-visible transition-colors disabled:opacity-50 disabled:hover:border-slate-700"><img src="${firstImg}" class="w-full h-full object-cover rounded-lg">${badge}</button>`;
+    },
+
+    getImageUrlByRef: function(ref) {
+        if (!ref) return '';
+        if (Storevo.ProductImages && Storevo.ProductImages.state) {
+            if (Storevo.ProductImages.state.existing.includes(ref)) return ref;
+            const fileObj = Storevo.ProductImages.state.newFiles.find(f => f.name === ref);
+            if (fileObj) return URL.createObjectURL(fileObj);
+        }
+        return '';
+    },
+
+    openImageModal: function(targetObj) {
+        this.state.imageModalTarget = targetObj;
+
+        let currentRefsStr = '';
+        if (targetObj.type === 'signature') {
+            currentRefsStr = (this.state.variantsData[targetObj.value] || {}).imageRef || '';
+        } else {
+            const colorOptName = this.getValidOptions().find(o => this.isColorOption(o.name)).name;
+            const firstMatchingCombo = this.getCartesianProduct().find(c => c[colorOptName] === targetObj.value);
+            if (firstMatchingCombo) {
+                currentRefsStr = (this.state.variantsData[this.generateSignatureFromMap(firstMatchingCombo)] || {}).imageRef || '';
+            }
+        }
+
+        this.state.tempSelectedImages = currentRefsStr ? currentRefsStr.split(',') : [];
+
+        const modalContent = document.getElementById('vi-modal-content');
+        let footer = document.getElementById('vi-modal-footer');
+        if (!footer && modalContent) {
+            footer = document.createElement('div');
+            footer.id = 'vi-modal-footer';
+            footer.className = 'mt-6 flex justify-end gap-3 pt-4 border-t border-slate-800';
+            footer.innerHTML = `
+                <button type="button" onclick="Storevo.VariantBuilder.clearImageSelection()" class="px-4 py-2 text-sm font-semibold text-slate-400 hover:text-white transition bg-slate-900 rounded-xl border border-slate-700 hover:bg-slate-800">Quitar imágenes</button>
+                <button type="button" onclick="Storevo.VariantBuilder.applyImageSelection()" class="px-6 py-2 text-sm font-bold bg-storevo-500 hover:bg-storevo-600 text-white rounded-xl shadow-lg shadow-storevo-500/20 transition">Guardar galería</button>
+            `;
+            modalContent.appendChild(footer);
+
+            const title = modalContent.querySelector('h3');
+            if (title) title.innerText = 'Galería de la variante';
+            const p = modalContent.querySelector('p');
+            if (p) p.innerText = 'Selecciona una o varias fotos en el orden que quieras.';
+        }
+
+        this.renderImageModalGrid();
+
+        const modal = document.getElementById('variant-image-modal');
+        modal.classList.remove('hidden', 'pointer-events-none');
+        modal.classList.add('flex');
+        setTimeout(() => { modal.classList.remove('opacity-0'); document.getElementById('vi-modal-content').classList.remove('scale-95'); }, 10);
+    },
+
+    renderImageModalGrid: function() {
         const grid = document.getElementById('vi-modal-grid');
+        if (!grid) return;
         grid.innerHTML = '';
+
         let availableImages = [];
         if (Storevo.ProductImages && Storevo.ProductImages.state) {
             availableImages = Storevo.ProductImages.state.order.map(ref => {
@@ -407,27 +565,73 @@ Storevo.VariantBuilder = {
                 return { ref: ref, url: fileObj ? URL.createObjectURL(fileObj) : '' };
             });
         }
+
         if (availableImages.length === 0) {
-            grid.innerHTML = '<div class="col-span-3 text-center py-6 text-slate-500 text-sm">Primero sube imágenes al producto.</div>';
+            grid.innerHTML = '<div class="col-span-full text-center py-8 text-slate-500 text-sm">Aún no has subido imágenes. Sube imágenes en la sección 4 primero.</div>';
         } else {
             availableImages.forEach(img => {
+                const isSelected = this.state.tempSelectedImages.includes(img.ref);
+                const orderIdx = isSelected ? this.state.tempSelectedImages.indexOf(img.ref) + 1 : '';
+
                 const div = document.createElement('div');
-                div.className = 'aspect-square rounded-xl overflow-hidden border-2 border-slate-800 hover:border-storevo-500 cursor-pointer';
-                div.innerHTML = `<img src="${img.url}" class="w-full h-full object-cover pointer-events-none">`;
-                div.onclick = () => { this.updateVariantData(signature, 'imageRef', img.ref); this.closeModal(); this.renderTable(); };
+                div.className = `aspect-square rounded-xl overflow-hidden border-2 cursor-pointer relative transition-all duration-200 ${isSelected ? 'border-storevo-500 scale-95 shadow-[0_0_15px_rgba(var(--color-storevo-500),0.3)]' : 'border-transparent hover:border-slate-600'}`;
+
+                const checkOverlay = isSelected ? `
+                    <div class="absolute inset-0 bg-storevo-500/20 flex items-center justify-center">
+                        <div class="bg-storevo-500 text-white rounded-full w-6 h-6 flex items-center justify-center font-bold text-xs shadow-lg">
+                            ${orderIdx}
+                        </div>
+                    </div>
+                ` : '';
+
+                div.innerHTML = `<img src="${img.url}" class="w-full h-full object-cover pointer-events-none">${checkOverlay}`;
+                div.onclick = () => this.toggleImageSelection(img.ref);
                 grid.appendChild(div);
             });
         }
-        const modal = document.getElementById('variant-image-modal');
-        modal.classList.remove('hidden', 'pointer-events-none');
-        setTimeout(() => { modal.classList.remove('opacity-0'); document.getElementById('vi-modal-content').classList.remove('scale-95'); }, 10);
+    },
+
+    toggleImageSelection: function(ref) {
+        const idx = this.state.tempSelectedImages.indexOf(ref);
+        if (idx > -1) {
+            this.state.tempSelectedImages.splice(idx, 1);
+        } else {
+            this.state.tempSelectedImages.push(ref);
+        }
+        this.renderImageModalGrid();
+    },
+
+    applyImageSelection: function() {
+        const target = this.state.imageModalTarget;
+        const imgStr = this.state.tempSelectedImages.join(',');
+
+        if (target.type === 'signature') {
+            this.updateVariantData(target.value, 'imageRef', imgStr);
+        } else if (target.type === 'group') {
+            const validOpts = this.getValidOptions();
+            const colorOptName = validOpts.find(o => this.isColorOption(o.name)).name;
+
+            this.getCartesianProduct().forEach(combo => {
+                if (combo[colorOptName] === target.value) {
+                    this.updateVariantData(this.generateSignatureFromMap(combo), 'imageRef', imgStr);
+                }
+            });
+        }
+        this.closeModal();
+        this.renderTable();
+    },
+
+    clearImageSelection: function() {
+        this.state.tempSelectedImages = [];
+        this.applyImageSelection();
     },
 
     closeModal: function() {
         const modal = document.getElementById('variant-image-modal');
         modal.classList.add('opacity-0', 'pointer-events-none');
+        modal.classList.add('flex');
         document.getElementById('vi-modal-content').classList.add('scale-95');
-        setTimeout(() => modal.classList.add('hidden'), 300);
+        setTimeout(() => { modal.classList.add('hidden'); this.state.imageModalTarget = null; }, 300);
     },
 
     syncHiddenInputs: function() {
@@ -443,15 +647,45 @@ Storevo.VariantBuilder = {
             opt.values.forEach((val, vIdx) => this.createHidden(container, `options[${oIdx}].values[${vIdx}]`, val));
         });
 
+        let totalStock = 0;
+        let minPrice = Infinity;
+
         const combinations = this.getCartesianProduct().filter(combo => !this.state.excluded[this.generateSignatureFromMap(combo)]);
         combinations.forEach((combo, vIdx) => {
             const data = this.state.variantsData[this.generateSignatureFromMap(combo)];
+
+            // 1. Matemáticas en tiempo real
+            totalStock += parseInt(data.stock) || 0;
+            const p = parseFloat(data.price);
+            if (p && p < minPrice) minPrice = p;
+
             this.createHidden(container, `variants[${vIdx}].sku`, data.sku || '');
             this.createHidden(container, `variants[${vIdx}].price`, data.price || '');
             this.createHidden(container, `variants[${vIdx}].stock`, data.stock || '0');
             this.createHidden(container, `variants[${vIdx}].imageRef`, data.imageRef || '');
+            this.createHidden(container, `variants[${vIdx}].imageUrl`, data.imageRef || '');
             Object.keys(combo).forEach(key => this.createHidden(container, `variants[${vIdx}].combination['${key}']`, combo[key]));
         });
+
+        // 2. Inyectar la suma en las cajas bloqueadas de arriba
+        const inputStock = document.getElementById('input-stock');
+        const realStock = document.getElementById('real-stock');
+        const inputPrice = document.getElementById('input-price');
+        const realPrice = document.getElementById('real-price');
+
+        if (inputStock && realStock) {
+            inputStock.value = totalStock;
+            realStock.value = totalStock;
+        }
+
+        if (minPrice !== Infinity && inputPrice && realPrice) {
+            realPrice.value = minPrice;
+            inputPrice.value = minPrice;
+            // Desparamos el evento para que los separadores de miles ($ 10.000) se formateen visualmente
+            inputPrice.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+
+        container.dispatchEvent(new Event('input', { bubbles: true }));
     },
 
     createHidden: function(container, name, value) {

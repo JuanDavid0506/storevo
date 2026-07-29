@@ -177,8 +177,10 @@
                     <span id="summaryText" class="text-slate-300 font-medium flex items-center flex-wrap gap-1"></span>
                 </div>
 
-                <input type="hidden" id="finalCategoryId" th:field="*{categoryId}">
+                <input type="hidden" id="finalCategoryId" name="categoryId" th:value="${product.categoryId}">
             </section>
+
+
 
             <!-- IMAGES -->
             <section id="images" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 scroll-mt-20 shadow-sm">
@@ -192,7 +194,23 @@
                     </div>
                     <span class="text-xs font-semibold text-slate-500 bg-slate-800 px-2.5 py-1 rounded-full"><span id="img-count">0</span>/10</span>
                 </div>
+                <!-- MEMORIA DE IMÁGENES PARA EL JAVASCRIPT -->
+                <div class="hidden" id="image-memory-bridge">
+                    <!-- 1. Metemos la imagen principal a la galería -->
+                    <th:block th:if="${product.mainImageRef != null}">
+                        <input type="hidden" class="init-existing" th:value="${product.mainImageRef}">
+                        <input type="hidden" class="init-order" th:value="${product.mainImageRef}">
+                        <input type="hidden" id="init-main" th:value="${product.mainImageRef}">
+                    </th:block>
 
+                    <!-- 2. Metemos el resto de las imágenes -->
+                    <th:block th:if="${product.existingImages != null}">
+                        <th:block th:each="imgUrl : ${product.existingImages}">
+                            <input type="hidden" class="init-existing" th:value="${imgUrl}">
+                            <input type="hidden" class="init-order" th:value="${imgUrl}">
+                        </th:block>
+                    </th:block>
+                </div>
                 <div id="image-dropzone" class="border-2 border-dashed border-slate-700 hover:border-storevo-500/40 bg-slate-950 hover:bg-slate-800/40 rounded-xl px-6 py-10 text-center cursor-pointer transition-all relative group overflow-hidden">
                     <input type="file" id="file-upload" multiple accept="image/jpeg, image/png, image/webp" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
                     <div class="pointer-events-none relative z-0">
