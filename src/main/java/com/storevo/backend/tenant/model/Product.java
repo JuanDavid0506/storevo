@@ -56,6 +56,10 @@ public class Product {
     @Builder.Default
     private Boolean isActive = true;
 
+    @Column(name = "is_draft", nullable = false)
+    @Builder.Default
+    private Boolean isDraft = false;
+
     @Column(name = "is_deleted", nullable = false, columnDefinition = "boolean default false")
     @Builder.Default
     private Boolean isDeleted = false;

@@ -65,7 +65,7 @@
                 <div class="w-full sm:w-auto" th:replace="~{components/ui/listing :: category-combobox('categoryId', 'Todas las categorías', ${categoryTreeJson})}"></div>
 
                 <div class="hidden" id="native-status-filter">
-                    <div th:replace="~{components/ui/listing :: filter-select('status', 'Todos (Sin papelera)', ${ {'active':'Activos', 'inactive':'Inactivos', 'deleted':'Papelera (Eliminados)'} }, 'key', 'value')}"></div>
+                    <div th:replace="~{components/ui/listing :: filter-select('status', 'Todos (Sin papelera)', ${ {'active':'Activos', 'inactive':'Inactivos', 'draft':'Borradores', 'deleted':'Papelera (Eliminados)'} }, 'key', 'value')}"></div>
                 </div>
 
                 <!-- PILLS (Control Remoto) -->
@@ -86,6 +86,12 @@
                             th:classappend="${param.status != null and param.status[0] == 'inactive'} ? 'bg-slate-800 text-white shadow-sm ring-1 ring-white/5' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-900'">
                         <span class="w-1.5 h-1.5 rounded-full flex-shrink-0" th:classappend="${param.status != null and param.status[0] == 'inactive'} ? 'bg-slate-300' : 'bg-slate-600'"></span>
                         Ocultos
+                    </button>
+                    <button type="button" onclick="Storevo.ProductsList.setStatusFilter('draft')"
+                            class="px-4 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex items-center gap-2"
+                            th:classappend="${param.status != null and param.status[0] == 'draft'} ? 'bg-slate-800 text-storevo-400 shadow-sm ring-1 ring-white/5' : 'text-slate-500 hover:text-storevo-400 hover:bg-slate-900'">
+                        <span class="w-1.5 h-1.5 rounded-full flex-shrink-0" th:classappend="${param.status != null and param.status[0] == 'draft'} ? 'bg-storevo-400' : 'bg-slate-600'"></span>
+                        Borradores
                     </button>
                     <button type="button" onclick="Storevo.ProductsList.setStatusFilter('deleted')"
                             class="px-4 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex items-center gap-1.5"
@@ -209,7 +215,8 @@
                             <td class="px-6 py-4 text-center">
                                 <span th:if="${prod.isDeleted}" class="bg-red-500/10 text-red-400 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded border border-red-500/20">Papelera</span>
                                 <span th:if="${!prod.isDeleted and prod.isActive}" class="bg-green-500/10 text-green-400 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded border border-green-500/20">Activo</span>
-                                <span th:if="${!prod.isDeleted and !prod.isActive}" class="bg-slate-500/10 text-slate-400 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded border border-slate-500/20">Oculto</span>
+                                <span th:if="${!prod.isDeleted and !prod.isActive and !prod.isDraft}" class="bg-slate-500/10 text-slate-400 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded border border-slate-500/20">Oculto</span>
+                                <span th:if="${!prod.isDeleted and prod.isDraft}" class="bg-storevo-500/10 text-storevo-400 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded border border-storevo-500/20">Borrador</span>
                             </td>
                             <td class="px-6 py-4 text-right">
                                 <div th:if="${!prod.isDeleted}" class="flex justify-end gap-2">
@@ -252,7 +259,8 @@
                         <div class="absolute top-2 left-2 sm:top-3 sm:left-3 flex flex-col gap-1 sm:gap-1.5 z-10 pointer-events-none">
                             <span th:if="${prod.isDeleted}" class="bg-red-500 text-white text-[8px] sm:text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 sm:px-2 sm:py-1 rounded shadow-sm">Papelera</span>
                             <span th:if="${!prod.isDeleted and prod.isActive}" class="bg-green-500/90 backdrop-blur-sm text-white text-[8px] sm:text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 sm:px-2 sm:py-1 rounded shadow-sm">Activo</span>
-                            <span th:if="${!prod.isDeleted and !prod.isActive}" class="bg-slate-700/90 backdrop-blur-sm text-white text-[8px] sm:text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 sm:px-2 sm:py-1 rounded shadow-sm">Oculto</span>
+                            <span th:if="${!prod.isDeleted and !prod.isActive and !prod.isDraft}" class="bg-slate-700/90 backdrop-blur-sm text-white text-[8px] sm:text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 sm:px-2 sm:py-1 rounded shadow-sm">Oculto</span>
+                            <span th:if="${!prod.isDeleted and prod.isDraft}" class="bg-storevo-500/90 backdrop-blur-sm text-white text-[8px] sm:text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 sm:px-2 sm:py-1 rounded shadow-sm">Borrador</span>
                             <span th:if="${prod.hasVariants}" class="bg-storevo-500/90 backdrop-blur-sm text-white text-[8px] sm:text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 sm:px-2 sm:py-1 rounded shadow-sm flex items-center gap-1"><svg class="w-2 h-2 sm:w-3 sm:h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg> <span class="hidden sm:inline">Opciones</span></span>
                         </div>
 
@@ -325,7 +333,8 @@
                                     <span class="hidden sm:inline w-1 h-1 bg-slate-700 rounded-full"></span>
                                     <span th:if="${prod.isDeleted}" class="text-[9px] sm:text-[10px] text-red-500 font-bold uppercase tracking-wider">Papelera</span>
                                     <span th:if="${!prod.isDeleted and prod.isActive}" class="text-[9px] sm:text-[10px] text-green-400 font-bold uppercase tracking-wider">Activo</span>
-                                    <span th:if="${!prod.isDeleted and !prod.isActive}" class="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase tracking-wider">Oculto</span>
+                                    <span th:if="${!prod.isDeleted and !prod.isActive and !prod.isDraft}" class="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase tracking-wider">Oculto</span>
+                                    <span th:if="${!prod.isDeleted and prod.isDraft}" class="text-[9px] sm:text-[10px] text-storevo-400 font-bold uppercase tracking-wider">Borrador</span>
                                 </div>
                             </div>
 

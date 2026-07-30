@@ -35,6 +35,20 @@ public class ProductService {
     private final CategoryService categoryService;
     private final CloudinaryService cloudinaryService;
 
+    @Transactional
+    public Long createEmptyDraft() {
+        Product draft = new Product();
+        draft.setName("");
+        draft.setIsActive(false);
+        draft.setHasVariants(false);
+        draft.setStock(0);
+        draft.setPrice(0.0);
+        draft.setWeight(0.0);
+        draft.setIsDraft(true); // <--- NACE COMO BORRADOR
+        draft = productRepository.save(draft);
+        return draft.getId();
+    }
+
     public List<Product> getAllProducts() {
         return productRepository.findByIsDeletedFalseOrderByIdDesc();
     }
@@ -101,6 +115,7 @@ public class ProductService {
         product.setSku(dto.getSku());
         product.setIsActive(dto.getIsActive() != null ? dto.getIsActive() : false);
         product.setHasVariants(dto.getHasVariants() != null ? dto.getHasVariants() : false);
+        product.setIsDraft(dto.getIsDraft() != null ? dto.getIsDraft() : false); // <--- GUARDA ESTADO DEL BORRADOR
 
         if (dto.getCategoryId() != null) {
             Category category = categoryRepository.findById(dto.getCategoryId())
@@ -147,13 +162,11 @@ public class ProductService {
             product = productRepository.save(product);
         }
 
-        // ---- MANEJO DE IMÁGENES CON CLOUDINARY ----
         String tenantSchema = TenantContext.getCurrentTenant();
         List<String> existingUrlsFromDto = dto.getExistingImages() != null ? dto.getExistingImages() : new ArrayList<>();
         List<ProductImage> oldImagesList = product.getImages() != null ? new ArrayList<>(product.getImages()) : new ArrayList<>();
         if (product.getImages() == null) product.setImages(new ArrayList<>());
 
-        // Eliminar de Cloudinary las que ya no están en el DTO
         for (ProductImage oldImg : oldImagesList) {
             if (!existingUrlsFromDto.contains(oldImg.getSecureUrl())) {
                 cloudinaryService.deleteImage(oldImg.getPublicId());
@@ -161,13 +174,11 @@ public class ProductService {
         }
         product.getImages().clear();
 
-        // Subir las nuevas imágenes
         Map<String, Map<String, String>> newImagesMap = new HashMap<>();
         if (dto.getNewImages() != null && !dto.getNewImages().isEmpty() && dto.getNewImages().get(0).getSize() > 0) {
             for (MultipartFile file : dto.getNewImages()) {
                 try {
                     Map<String, String> uploadResult = cloudinaryService.uploadImage(file, tenantSchema);
-                    // Mapeamos el nombre original del frontend con el resultado seguro de Cloudinary
                     newImagesMap.put(file.getOriginalFilename(), uploadResult);
                 } catch (IOException e) {
                     log.error("Fallo al subir imagen a Cloudinary", e);
@@ -186,12 +197,10 @@ public class ProductService {
                     ProductImage oldMatch = oldImagesList.stream().filter(img -> img.getSecureUrl().equals(ref)).findFirst().orElse(null);
 
                     if (oldMatch != null) {
-                        // 1. REUTILIZAMOS LA ENTIDAD (Para que Hibernate haga UPDATE y no DELETE+INSERT)
                         oldMatch.setIsPrimary(isPrimary);
                         oldMatch.setSortPosition(position++);
                         oldMatch.setVariantId(null);
 
-                        // 2. FIX: Si es una imagen vieja pre-Cloudinary, le ponemos un ID genérico para que no explote
                         if (oldMatch.getPublicId() == null) {
                             oldMatch.setPublicId("legacy_image_" + UUID.randomUUID().toString().substring(0, 8));
                         }
@@ -222,7 +231,6 @@ public class ProductService {
             product.getImages().get(0).setIsPrimary(true);
         }
 
-        // ---- MANEJO DE VARIANTES ----
         if (product.getHasVariants() && dto.getOptions() != null && dto.getVariants() != null) {
 
             Map<String, ProductVariant> existingVariants = new HashMap<>();
@@ -331,12 +339,9 @@ public class ProductService {
                                 return vSig.equals(sig);
                             }).findFirst().orElse(null);
 
-
                     if (savedVariant != null) {
                         List<String> targetImages = Arrays.asList(vDto.getImageRef().split(","));
 
-                        // Traducimos referencias de archivos recién subidos (nombre de archivo) a su URL
-                        // real de Cloudinary, usando el mismo mapa que ya se armó al subir los archivos.
                         List<String> resolvedTargets = targetImages.stream()
                                 .map(ref -> newImagesMap.containsKey(ref)
                                         ? newImagesMap.get(ref).get("secure_url")
@@ -344,7 +349,6 @@ public class ProductService {
                                 .collect(Collectors.toList());
 
                         for (String targetUrl : resolvedTargets) {
-                            // 1. Buscamos una fila con esa URL que todavía no esté "tomada" por otra variante
                             ProductImage freeImg = product.getImages().stream()
                                     .filter(img -> targetUrl.equals(img.getSecureUrl()) && img.getVariantId() == null)
                                     .findFirst()
@@ -353,12 +357,6 @@ public class ProductService {
                             if (freeImg != null) {
                                 freeImg.setVariantId(savedVariant.getId());
                             } else {
-                                // FIX: la misma foto ya fue reclamada por otra variante (ej: una foto de
-                                // "Negro" compartida entre Negro-S, Negro-M y Negro-L). Como variantId es
-                                // una sola columna (no puede pertenecer a varias variantes a la vez), en vez
-                                // de robarle el vínculo a la variante anterior, clonamos la fila (mismo
-                                // archivo de Cloudinary, mismo secureUrl/publicId) para que esta variante
-                                // también tenga su propia fila enlazada.
                                 ProductImage sourceImg = product.getImages().stream()
                                         .filter(img -> targetUrl.equals(img.getSecureUrl()))
                                         .findFirst()
@@ -402,7 +400,6 @@ public class ProductService {
     @Transactional
     public void hardDeleteProduct(Long id) {
         Product product = getProductById(id);
-        // Destruir imágenes en Cloudinary antes de borrar el producto de la DB
         product.getImages().forEach(img -> cloudinaryService.deleteImage(img.getPublicId()));
         productRepository.deleteById(id);
     }
@@ -415,7 +412,7 @@ public class ProductService {
         return product.getIsActive();
     }
 
-    public Page<Product> searchProducts(String q, Long categoryId, Boolean isActive, Boolean isDeleted, String quick, String sortStr, Pageable pageable) {
+    public Page<Product> searchProducts(String q, Long categoryId, Boolean isActive, Boolean isDeleted, Boolean isDraft, String quick, String sortStr, Pageable pageable) {
         Sort sort;
         switch (sortStr) {
             case "price_asc": sort = Sort.by("price").ascending(); break;
@@ -427,7 +424,7 @@ public class ProductService {
 
         Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
         List<Long> categoryIds = (categoryId != null) ? categoryService.getCategoryAndDescendantIds(categoryId) : null;
-        return productRepository.searchProducts(q, categoryIds, isActive, isDeleted, quick, sortedPageable);
+        return productRepository.searchProducts(q, categoryIds, isActive, isDeleted, isDraft, quick, sortedPageable);
     }
 
     @Transactional

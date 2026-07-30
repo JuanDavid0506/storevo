@@ -33,6 +33,7 @@ CREATE TABLE products (
     attributes_json JSON,
     is_active      BOOLEAN         NOT NULL DEFAULT TRUE,
     is_deleted     BOOLEAN         NOT NULL DEFAULT FALSE,
+    is_draft       BOOLEAN         NOT NULL DEFAULT FALSE,
     created_at     TIMESTAMP       DEFAULT CURRENT_TIMESTAMP,
     updated_at     TIMESTAMP       DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (category_id) REFERENCES categories(id)

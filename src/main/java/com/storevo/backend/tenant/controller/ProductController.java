@@ -52,16 +52,30 @@ public class ProductController {
         TenantContext.setCurrentTenant(store.getSchemaName());
     }
 
+    // --- NUEVA LÓGICA: CREA EL BORRADOR Y REDIRIGE A LA EDICIÓN ---
     @GetMapping("/new")
-    public String showCreateForm(Model model) {
-        ProductDto dto = new ProductDto();
-        dto.setIsActive(true);
-        dto.setHasVariants(false);
+    public String showCreateForm(@PathVariable String slug) {
+        Long draftId = productService.createEmptyDraft();
+        return "redirect:/dashboard/" + slug + "/products/" + draftId + "/edit";
+    }
 
-        model.addAttribute("product", dto);
-        model.addAttribute("categories", categoryService.getAllCategories());
-        model.addAttribute("pageTitle", "Nuevo Producto");
-        return "dashboard/products/form";
+    // --- NUEVO ENDPOINT: RECIBE EL GUARDADO SILENCIOSO DEL JS ---
+    @PostMapping("/{id}/auto-save")
+    @ResponseBody
+    public ResponseEntity<?> autoSaveProduct(@PathVariable String slug,
+                                             @PathVariable Long id,
+                                             @ModelAttribute ProductDto productDto) {
+        try {
+            productDto.setId(id);
+            if (productDto.getStock() == null) productDto.setStock(0);
+            if (productDto.getPrice() == null) productDto.setPrice(0.0);
+            if (productDto.getWeight() == null) productDto.setWeight(0.0);
+
+            productService.saveProduct(productDto);
+            return ResponseEntity.ok(Map.of("success", true, "message", "Guardado"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "error", e.getMessage()));
+        }
     }
 
     @GetMapping("/{id}/edit")
@@ -84,9 +98,7 @@ public class ProductController {
         if (product.getImages() != null) {
             for (ProductImage img : product.getImages()) {
                 String url = img.getSecureUrl();
-                // Evita mostrar la misma foto repetida en el dropzone cuando varias variantes
-                // comparten el mismo archivo (cada una tiene su propia fila en la BD, pero
-                // visualmente el vendedor solo necesita verla una vez en la lista general).
+                // Evita mostrar la misma foto repetida en el dropzone cuando varias variantes comparten archivo
                 if (!existingImages.contains(url)) {
                     existingImages.add(url);
                     imageOrder.add(url);
@@ -134,8 +146,6 @@ public class ProductController {
                     }
                     varDto.setCombination(combo);
 
-                    // --- LA CORRECCIÓN ESTÁ AQUÍ ---
-                    // Filtramos las imágenes del producto que tengan el ID de esta variante
                     if (product.getImages() != null) {
                         String joinedImages = product.getImages().stream()
                                 .filter(img -> var.getId().equals(img.getVariantId()))
@@ -146,7 +156,6 @@ public class ProductController {
                             varDto.setImageRef(joinedImages);
                         }
                     }
-                    // -------------------------------
 
                     return varDto;
                 }).collect(Collectors.toList());
@@ -165,6 +174,7 @@ public class ProductController {
                 .sku(product.getSku())
                 .weight(product.getWeight())
                 .isActive(product.getIsActive())
+                .isDraft(product.getIsDraft()) // <--- AQUÍ SE MAPEA LA BANDERA DEL BORRADOR
                 .existingImages(existingImages)
                 .imageOrder(imageOrder)
                 .mainImageRef(mainImageRef)
@@ -243,20 +253,30 @@ public class ProductController {
 
         Boolean isActiveFilter = null;
         Boolean isDeletedFilter = false;
+        Boolean isDraftFilter = false; // Por defecto, NUNCA mostramos los borradores en la lista principal
 
-        if ("active".equals(status)) isActiveFilter = true;
-        else if ("inactive".equals(status)) isActiveFilter = false;
-        else if ("deleted".equals(status)) {
+        if ("active".equals(status)) {
+            isActiveFilter = true;
+        } else if ("inactive".equals(status)) {
+            isActiveFilter = false;
+        } else if ("deleted".equals(status)) {
             isActiveFilter = null;
             isDeletedFilter = true;
+            isDraftFilter = null; // En papelera podemos ver si eliminaron un borrador o uno real
+        } else if ("draft".equals(status)) {
+            isActiveFilter = null; // Ignoramos si está activo o no
+            isDeletedFilter = false;
+            isDraftFilter = true;  // SOLO mostramos borradores
         }
 
         if ("active".equals(quick)) {
             isActiveFilter = true;
             isDeletedFilter = false;
+            isDraftFilter = false;
         }
 
-        Page<Product> productsPage = productService.searchProducts(q, categoryId, isActiveFilter, isDeletedFilter, quick, sort, pageable);
+        // Pasamos la variable isDraftFilter para la consulta
+        Page<Product> productsPage = productService.searchProducts(q, categoryId, isActiveFilter, isDeletedFilter, isDraftFilter, quick, sort, pageable);
 
         model.addAttribute("products", productsPage);
         model.addAttribute("categories", categoryService.getAllCategories());
