@@ -102,7 +102,7 @@ public class StoreFrontController {
                     vMap.put("sku", v.getSku());
 
                     String imageRef = (v.getImages() != null && !v.getImages().isEmpty())
-                            ? v.getImages().get(0).getFilePath() : null;
+                            ? v.getImages().get(0).getSecureUrl() : null;
                     vMap.put("imageRef", imageRef);
 
                     String sig = v.getOptionValues().stream()

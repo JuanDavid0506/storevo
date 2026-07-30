@@ -23,6 +23,12 @@ spring:
     mode: HTML
     encoding: UTF-8
 
+# application.yml
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME}
+  api-key: ${CLOUDINARY_API_KEY}
+  api-secret: ${CLOUDINARY_API_SECRET}
+
   # --- CONFIGURACIÓN PARA SUBIDA DE IMÁGENES FÍSICAS ---
   servlet:
     multipart:

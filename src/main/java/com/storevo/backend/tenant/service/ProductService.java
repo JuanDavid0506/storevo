@@ -1,30 +1,39 @@
 package com.storevo.backend.tenant.service;
 
+import com.cloudinary.Cloudinary;
 import com.storevo.backend.config.tenant.TenantContext;
-import com.storevo.backend.tenant.dto.ImageMetadataDto;
 import com.storevo.backend.tenant.dto.ProductDto;
 import com.storevo.backend.tenant.model.*;
 import com.storevo.backend.tenant.repository.CategoryRepository;
 import com.storevo.backend.tenant.repository.ProductRepository;
+
+import groovy.util.logging.Slf4j;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ProductService {
-
+    private static final Logger log = LoggerFactory.getLogger(CloudinaryService.class);
+    private final Cloudinary cloudinary;
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
     private final CategoryService categoryService;
-    private final ImageStorage imageStorage;
+    private final CloudinaryService cloudinaryService;
 
     public List<Product> getAllProducts() {
         return productRepository.findByIsDeletedFalseOrderByIdDesc();
@@ -130,30 +139,40 @@ public class ProductService {
 
         int existingCount = dto.getExistingImages() != null ? dto.getExistingImages().size() : 0;
         int newCount = (dto.getNewImages() != null && !dto.getNewImages().isEmpty() && dto.getNewImages().get(0).getSize() > 0) ? dto.getNewImages().size() : 0;
-        if ((existingCount + newCount) > ImageStorage.MAX_IMAGES_PER_PRODUCT) {
-            throw new RuntimeException("Límite excedido. Un producto solo puede tener " + ImageStorage.MAX_IMAGES_PER_PRODUCT + " imágenes.");
+        if ((existingCount + newCount) > 10) {
+            throw new RuntimeException("Límite excedido. Un producto solo puede tener 10 imágenes.");
         }
 
         if (isNew) {
             product = productRepository.save(product);
         }
 
+        // ---- MANEJO DE IMÁGENES CON CLOUDINARY ----
         String tenantSchema = TenantContext.getCurrentTenant();
         List<String> existingUrlsFromDto = dto.getExistingImages() != null ? dto.getExistingImages() : new ArrayList<>();
         List<ProductImage> oldImagesList = product.getImages() != null ? new ArrayList<>(product.getImages()) : new ArrayList<>();
         if (product.getImages() == null) product.setImages(new ArrayList<>());
 
+        // Eliminar de Cloudinary las que ya no están en el DTO
         for (ProductImage oldImg : oldImagesList) {
-            if (!existingUrlsFromDto.contains(oldImg.getFilePath())) {
-                imageStorage.deleteImage(oldImg.getFilePath());
+            if (!existingUrlsFromDto.contains(oldImg.getSecureUrl())) {
+                cloudinaryService.deleteImage(oldImg.getPublicId());
             }
         }
         product.getImages().clear();
 
-        List<ImageMetadataDto> newMetadataList = imageStorage.saveImages(tenantSchema, dto.getNewImages());
-        Map<String, ImageMetadataDto> newImagesMap = new HashMap<>();
-        for(ImageMetadataDto meta : newMetadataList) {
-            newImagesMap.put(meta.getOriginalFilename(), meta);
+        // Subir las nuevas imágenes
+        Map<String, Map<String, String>> newImagesMap = new HashMap<>();
+        if (dto.getNewImages() != null && !dto.getNewImages().isEmpty() && dto.getNewImages().get(0).getSize() > 0) {
+            for (MultipartFile file : dto.getNewImages()) {
+                try {
+                    Map<String, String> uploadResult = cloudinaryService.uploadImage(file, tenantSchema);
+                    // Mapeamos el nombre original del frontend con el resultado seguro de Cloudinary
+                    newImagesMap.put(file.getOriginalFilename(), uploadResult);
+                } catch (IOException e) {
+                    log.error("Fallo al subir imagen a Cloudinary", e);
+                }
+            }
         }
 
         if (dto.getImageOrder() != null) {
@@ -164,41 +183,31 @@ public class ProductService {
 
                 if (existingUrlsFromDto.contains(ref)) {
                     if (dto.getMainImageRef() != null && dto.getMainImageRef().equals(ref)) isPrimary = true;
-                    ProductImage oldMatch = oldImagesList.stream().filter(img -> img.getFilePath().equals(ref)).findFirst().orElse(null);
+                    ProductImage oldMatch = oldImagesList.stream().filter(img -> img.getSecureUrl().equals(ref)).findFirst().orElse(null);
 
                     if (oldMatch != null) {
-                        imgEntity = ProductImage.builder()
-                                .product(product)
-                                .fileName(oldMatch.getFileName())
-                                .originalFileName(oldMatch.getOriginalFileName())
-                                .filePath(oldMatch.getFilePath())
-                                .fileHash(oldMatch.getFileHash())
-                                .width(oldMatch.getWidth())
-                                .height(oldMatch.getHeight())
-                                .mimeType(oldMatch.getMimeType())
-                                .fileSize(oldMatch.getFileSize())
-                                .aiTags(oldMatch.getAiTags())
-                                .altText(oldMatch.getAltText())
-                                .variantId(null)
-                                .isPrimary(isPrimary)
-                                .sortPosition(position++)
-                                .build();
+                        // 1. REUTILIZAMOS LA ENTIDAD (Para que Hibernate haga UPDATE y no DELETE+INSERT)
+                        oldMatch.setIsPrimary(isPrimary);
+                        oldMatch.setSortPosition(position++);
+                        oldMatch.setVariantId(null);
+
+                        // 2. FIX: Si es una imagen vieja pre-Cloudinary, le ponemos un ID genérico para que no explote
+                        if (oldMatch.getPublicId() == null) {
+                            oldMatch.setPublicId("legacy_image_" + UUID.randomUUID().toString().substring(0, 8));
+                        }
+
+                        imgEntity = oldMatch;
                     }
                 } else if (newImagesMap.containsKey(ref)) {
-                    ImageMetadataDto meta = newImagesMap.get(ref);
-                    if (dto.getMainImageRef() != null && (dto.getMainImageRef().equals(ref) || dto.getMainImageRef().equals(meta.getPublicUrl()))) {
+                    Map<String, String> meta = newImagesMap.get(ref);
+                    String secureUrl = meta.get("secure_url");
+                    if (dto.getMainImageRef() != null && (dto.getMainImageRef().equals(ref) || dto.getMainImageRef().equals(secureUrl))) {
                         isPrimary = true;
                     }
                     imgEntity = ProductImage.builder()
                             .product(product)
-                            .fileName(meta.getNewFilename())
-                            .originalFileName(meta.getOriginalFilename())
-                            .filePath(meta.getPublicUrl())
-                            .fileHash(meta.getFileHash())
-                            .width(meta.getWidth())
-                            .height(meta.getHeight())
-                            .mimeType(meta.getMimeType())
-                            .fileSize(meta.getSizeBytes())
+                            .secureUrl(secureUrl)
+                            .publicId(meta.get("public_id"))
                             .isPrimary(isPrimary)
                             .sortPosition(position++)
                             .build();
@@ -213,6 +222,7 @@ public class ProductService {
             product.getImages().get(0).setIsPrimary(true);
         }
 
+        // ---- MANEJO DE VARIANTES ----
         if (product.getHasVariants() && dto.getOptions() != null && dto.getVariants() != null) {
 
             Map<String, ProductVariant> existingVariants = new HashMap<>();
@@ -323,12 +333,10 @@ public class ProductService {
 
 
                     if (savedVariant != null) {
-                        // 1. Rompemos el texto de comas en una lista de nombres de fotos
                         List<String> targetImages = Arrays.asList(vDto.getImageRef().split(","));
 
-                        // 2. Buscamos TODAS las fotos que coincidan y las amarramos a la variante
                         product.getImages().stream()
-                                .filter(img -> targetImages.contains(img.getFilePath()))
+                                .filter(img -> targetImages.contains(img.getSecureUrl()))
                                 .forEach(img -> img.setVariantId(savedVariant.getId()));
                     }
                 }
@@ -355,10 +363,8 @@ public class ProductService {
     @Transactional
     public void hardDeleteProduct(Long id) {
         Product product = getProductById(id);
-        List<String> urlsToDelete = product.getImages().stream()
-                .map(ProductImage::getFilePath).collect(Collectors.toList());
-        imageStorage.deleteImages(urlsToDelete);
-
+        // Destruir imágenes en Cloudinary antes de borrar el producto de la DB
+        product.getImages().forEach(img -> cloudinaryService.deleteImage(img.getPublicId()));
         productRepository.deleteById(id);
     }
 
@@ -394,9 +400,6 @@ public class ProductService {
         productRepository.save(product);
     }
 
-    // ==========================================
-    // FRENTE 4: ACCIONES MASIVAS
-    // ==========================================
     @Transactional
     public void executeMassAction(List<Long> ids, String action) {
         if (ids == null || ids.isEmpty()) return;
@@ -406,7 +409,7 @@ public class ProductService {
             switch (action) {
                 case "activate":
                     p.setIsActive(true);
-                    p.setIsDeleted(false); // Por si estaba en papelera
+                    p.setIsDeleted(false);
                     break;
                 case "hide":
                     p.setIsActive(false);
@@ -420,20 +423,11 @@ public class ProductService {
         productRepository.saveAll(products);
     }
 
-    // ==========================================
-    // FRENTE 5: ESTADÍSTICAS ASÍNCRONAS (N+1 SAFE)
-    // ==========================================
     @Transactional(readOnly = true)
     public Map<Long, Map<String, Object>> getBulkStatistics(List<Long> productIds) {
         Map<Long, Map<String, Object>> statsMap = new HashMap<>();
 
         if (productIds == null || productIds.isEmpty()) return statsMap;
-
-        // TODO Arquitectura: Aquí inyectarías el OrderRepository para hacer un
-        // SELECT productId, COUNT(id), MAX(createdAt) FROM OrderItem WHERE productId IN (:ids) GROUP BY productId
-        //
-        // Por ahora, devolvemos un DTO seguro estructurado a 0 para que la interfaz
-        // no colapse ni mienta mientras implementas el módulo de Órdenes a futuro.
 
         for (Long id : productIds) {
             Map<String, Object> productStats = new HashMap<>();

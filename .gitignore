@@ -31,6 +31,8 @@ build/
 
 ### VS Code ###
 .vscode/
-
+# Variables de entorno y credenciales locales
+.env
+*.env
 
 node_modules/

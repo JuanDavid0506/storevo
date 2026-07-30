@@ -119,7 +119,7 @@ public class CartController {
             // Gracias al @Transactional superior, esta llamada getImages() funcionará perfectamente
             if (variant.getImages() != null && !variant.getImages().isEmpty()) {
                 imageUrl = variant.getImages().get(0).getThumbnailUrl();
-                if (imageUrl == null) imageUrl = variant.getImages().get(0).getFilePath();
+                if (imageUrl == null) imageUrl = variant.getImages().get(0).getSecureUrl();
             }
         } else if (product.getHasVariants()) {
             return ResponseEntity.ok(Map.of("success", false, "message", "Debe seleccionar las opciones del producto."));

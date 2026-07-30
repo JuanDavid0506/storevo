@@ -83,10 +83,10 @@ public class ProductController {
 
         if (product.getImages() != null) {
             for (ProductImage img : product.getImages()) {
-                existingImages.add(img.getFilePath());
-                imageOrder.add(img.getFilePath());
+                existingImages.add(img.getSecureUrl());
+                imageOrder.add(img.getSecureUrl());
                 if (img.getIsPrimary()) {
-                    mainImageRef = img.getFilePath();
+                    mainImageRef = img.getSecureUrl();
                 }
             }
         }
@@ -128,14 +128,20 @@ public class ProductController {
                     }
                     varDto.setCombination(combo);
 
-                    if (var.getImages() != null && !var.getImages().isEmpty()) {
-                        // Unimos todas las rutas de las imágenes separadas por coma
-                        String joinedImages = var.getImages().stream()
-                                .map(ProductImage::getFilePath)
+                    // --- LA CORRECCIÓN ESTÁ AQUÍ ---
+                    // Filtramos las imágenes del producto que tengan el ID de esta variante
+                    if (product.getImages() != null) {
+                        String joinedImages = product.getImages().stream()
+                                .filter(img -> var.getId().equals(img.getVariantId()))
+                                .map(ProductImage::getSecureUrl)
                                 .collect(Collectors.joining(","));
 
-                        varDto.setImageRef(joinedImages);
+                        if (!joinedImages.isEmpty()) {
+                            varDto.setImageRef(joinedImages);
+                        }
                     }
+                    // -------------------------------
+
                     return varDto;
                 }).collect(Collectors.toList());
             }
@@ -285,9 +291,6 @@ public class ProductController {
         }
     }
 
-    // ==========================================
-    // FRENTE 4: API ACCIONES MASIVAS
-    // ==========================================
     @PostMapping("/api/mass-action")
     @ResponseBody
     public ResponseEntity<?> executeMassAction(@PathVariable String slug, @RequestBody MassActionRequest payload) {
@@ -299,9 +302,6 @@ public class ProductController {
         }
     }
 
-    // ==========================================
-    // FRENTE 5: API ESTADÍSTICAS ASÍNCRONAS
-    // ==========================================
     @PostMapping("/api/stats")
     @ResponseBody
     public ResponseEntity<?> getProductsStats(@PathVariable String slug, @RequestBody List<Long> productIds) {
@@ -313,7 +313,6 @@ public class ProductController {
         }
     }
 
-    // DTO Interno para peticiones
     @Getter
     @Setter
     public static class MassActionRequest {

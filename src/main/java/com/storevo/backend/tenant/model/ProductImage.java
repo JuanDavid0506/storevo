@@ -9,9 +9,7 @@ import java.time.LocalDateTime;
 import java.util.Map;
 
 @Entity
-@Table(name = "product_images", indexes = {
-        @Index(name = "idx_file_hash", columnList = "file_hash")
-})
+@Table(name = "product_images")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -31,32 +29,16 @@ public class ProductImage {
     @Column(name = "variant_id")
     private Long variantId;
 
-    @Column(nullable = false, length = 255)
-    private String fileName;
+    // ALMACENAMIENTO CLOUDINARY
+    @Column(name = "secure_url", nullable = false, length = 500)
+    private String secureUrl;
 
-    // NUEVO: Auditoría del nombre del archivo subido por el cliente
-    @Column(name = "original_file_name", nullable = false, length = 255)
-    private String originalFileName;
-
-    @Column(nullable = false, length = 500)
-    private String filePath;
-
-    @Column(name = "file_hash", length = 64)
-    private String fileHash;
+    @Column(name = "public_id", nullable = false)
+    private String publicId;
 
     @Column(name = "alt_text", length = 255)
     private String altText;
 
-    private Integer width;
-    private Integer height;
-
-    @Column(name = "mime_type", length = 50)
-    private String mimeType;
-
-    @Column(name = "file_size")
-    private Long fileSize;
-
-    // NUEVO: Campo JSON dinámico para el futuro motor de Inteligencia Artificial
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "ai_tags", columnDefinition = "json")
     private Map<String, Object> aiTags;
@@ -72,7 +54,6 @@ public class ProductImage {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
-    // NUEVO: Fecha de modificación
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
@@ -87,8 +68,9 @@ public class ProductImage {
         this.updatedAt = LocalDateTime.now();
     }
 
+    // Miniatura dinámica de Cloudinary al vuelo (300x300 optimizada)
     public String getThumbnailUrl() {
-        if (this.filePath == null) return null;
-        return this.filePath.replace(".webp", "_thumb.webp");
+        if (this.secureUrl == null) return null;
+        return this.secureUrl.replaceFirst("/upload/", "/upload/c_fill,h_300,w_300,q_auto,f_auto/");
     }
 }

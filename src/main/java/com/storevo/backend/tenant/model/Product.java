@@ -103,7 +103,7 @@ public class Product {
 
     public String getMainImageUrl() {
         if (this.images == null || this.images.isEmpty()) return null;
-        return this.images.stream().filter(ProductImage::getIsPrimary).findFirst().orElse(this.images.get(0)).getFilePath();
+        return this.images.stream().filter(ProductImage::getIsPrimary).findFirst().orElse(this.images.get(0)).getSecureUrl();
     }
 
     public String getMainImageThumbnailUrl() {

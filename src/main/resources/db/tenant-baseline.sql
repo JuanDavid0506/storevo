@@ -85,26 +85,17 @@ CREATE TABLE product_variant_values (
 
 -- Imágenes preparadas con variant_id
 CREATE TABLE product_images (
-    id                 BIGINT AUTO_INCREMENT PRIMARY KEY,
-    product_id         BIGINT          NOT NULL,
-    variant_id         BIGINT          NULL,
-    file_name          VARCHAR(255)    NOT NULL,
-    original_file_name VARCHAR(255)    NOT NULL,
-    file_path          VARCHAR(500)    NOT NULL,
-    file_hash          VARCHAR(64)     NULL,
-    alt_text           VARCHAR(255)    NULL,
-    width              INT             NULL,
-    height             INT             NULL,
-    mime_type          VARCHAR(50)     NULL,
-    file_size          BIGINT          NULL,
-    ai_tags            JSON            NULL,
-    is_primary         BOOLEAN         NOT NULL DEFAULT FALSE,
-    sort_position      INT             NOT NULL DEFAULT 0,
-    created_at         TIMESTAMP       DEFAULT CURRENT_TIMESTAMP,
-    updated_at         TIMESTAMP       DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
-    FOREIGN KEY (variant_id) REFERENCES product_variants(id) ON DELETE SET NULL,
-    INDEX idx_file_hash (file_hash)
+                                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                                product_id BIGINT NOT NULL,
+                                variant_id BIGINT,
+                                secure_url VARCHAR(500) NOT NULL,
+                                public_id VARCHAR(255) NOT NULL,
+                                alt_text VARCHAR(255),
+                                ai_tags JSON,
+                                is_primary BOOLEAN NOT NULL DEFAULT FALSE,
+                                sort_position INT NOT NULL DEFAULT 0,
+                                created_at TIMESTAMP,
+                                updated_at TIMESTAMP
 );
 
 -- ============================================================
