@@ -1,15 +1,21 @@
 window.Storevo = window.Storevo || {};
 
 Storevo.ProductDraft = {
-    // Generamos una llave única. Si está editando, usa el ID. Si es nuevo, usa "new".
+    // Generamos una llave única (ahora solo nos importa el "new")
     getDraftKey: function() {
-        const id = document.querySelector('input[name="id"]')?.value;
-        return `storevo_draft_product_${id ? id : 'new'}`;
+        return `storevo_draft_product_new`;
     },
 
     init: function() {
         this.form = document.getElementById('product-form');
         if (!this.form) return;
+
+        // --- LA REGLA DE ORO: Solo funcionar al crear un producto nuevo ---
+        if (typeof window.IS_NEW_PRODUCT !== 'undefined' && !window.IS_NEW_PRODUCT) {
+            console.log("Modo edición. Sistema de borradores locales desactivado.");
+            return; // Salimos inmediatamente. No guardamos ni leemos borradores.
+        }
+        // ------------------------------------------------------------------
 
         this.draftKey = this.getDraftKey();
         this.saveTimeout = null;
