@@ -1,5 +1,96 @@
 window.Storevo = window.Storevo || {};
 
+// ==========================================
+// 1. COMPONENTE: CARRUSEL DE VISTA PREVIA
+// ==========================================
+window.StorevoPreview = {
+    currentIndex: 0,
+    totalImages: 0,
+
+    updateGallery: function(imageUrls) {
+        const container = document.getElementById('preview-img-container');
+        const dotsContainer = document.getElementById('preview-dots');
+        const btnPrev = document.getElementById('btn-prev-img');
+        const btnNext = document.getElementById('btn-next-img');
+
+        if (!container) return;
+
+        this.totalImages = imageUrls.length;
+
+        if (this.totalImages === 0) {
+            container.innerHTML = '<div class="w-full h-full flex-shrink-0 flex items-center justify-center"><svg class="w-10 h-10 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg></div>';
+            if (btnPrev) btnPrev.classList.add('hidden');
+            if (btnNext) btnNext.classList.add('hidden');
+            if (dotsContainer) dotsContainer.innerHTML = '';
+            this.slideTo(0);
+            return;
+        }
+
+        // Inyectar TODAS las imágenes como un tren horizontal
+        container.innerHTML = imageUrls.map(url =>
+            `<img src="${url}" class="w-full h-full object-cover flex-shrink-0 bg-slate-900" />`
+        ).join('');
+
+        // Mostrar controles si hay más de 1 foto
+        if (this.totalImages > 1) {
+            if (btnPrev) btnPrev.classList.remove('hidden');
+            if (btnNext) btnNext.classList.remove('hidden');
+            if (dotsContainer) {
+                dotsContainer.innerHTML = imageUrls.map((_, i) =>
+                    `<div class="w-1.5 h-1.5 rounded-full transition-all ${i === 0 ? 'bg-white scale-125' : 'bg-white/40'}"></div>`
+                ).join('');
+            }
+        } else {
+            if (btnPrev) btnPrev.classList.add('hidden');
+            if (btnNext) btnNext.classList.add('hidden');
+            if (dotsContainer) dotsContainer.innerHTML = '';
+        }
+
+        this.slideTo(0);
+    },
+
+    nextImage: function() {
+        if (this.currentIndex < this.totalImages - 1) {
+            this.slideTo(this.currentIndex + 1);
+        } else {
+            this.slideTo(0); // Volver al inicio
+        }
+    },
+
+    prevImage: function() {
+        if (this.currentIndex > 0) {
+            this.slideTo(this.currentIndex - 1);
+        } else {
+            this.slideTo(this.totalImages - 1); // Ir al final
+        }
+    },
+
+    slideTo: function(index) {
+        this.currentIndex = index;
+        const container = document.getElementById('preview-img-container');
+
+        if (container) {
+            container.style.transform = `translateX(-${index * 100}%)`;
+        }
+
+        const dotsContainer = document.getElementById('preview-dots');
+        if (dotsContainer && dotsContainer.children.length > 0) {
+            Array.from(dotsContainer.children).forEach((dot, i) => {
+                if (i === index) {
+                    dot.classList.replace('bg-white/40', 'bg-white');
+                    dot.classList.add('scale-125');
+                } else {
+                    dot.classList.replace('bg-white', 'bg-white/40');
+                    dot.classList.remove('scale-125');
+                }
+            });
+        }
+    }
+};
+
+// ==========================================
+// 2. MÓDULO: PRODUCT UX
+// ==========================================
 Storevo.ProductUX = {
     init: function() {
         const iName = document.getElementById('input-name');
@@ -127,7 +218,7 @@ Storevo.ProductUX = {
                 pctContainer.classList.add('hidden');
             }
 
-            // Pintar el Preview
+            // Pintar el Preview (Textos)
             if(pName) pName.textContent = hasName ? iName.value : '—';
             if(pCat) pCat.textContent = hasCat ? document.getElementById('summaryText').textContent : 'Sin categoría';
 
@@ -145,25 +236,12 @@ Storevo.ProductUX = {
                     pPriceContainer.innerHTML = `<span class="text-sm font-bold text-slate-600">Sin precio</span>`;
                 }
             }
-
-            const previewImgContainer = document.getElementById('preview-img-container');
-            const firstImg = document.querySelector('#image-preview-grid img');
-            if(previewImgContainer) {
-                if (firstImg) {
-                    previewImgContainer.innerHTML = `<img src="${firstImg.src}" class="w-full h-full object-cover">`;
-                } else {
-                    previewImgContainer.innerHTML = `<svg class="w-10 h-10 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>`;
-                }
-            }
         };
 
         if(iName) iName.addEventListener('input', this.updateUIState);
 
         const summaryText = document.getElementById('summaryText');
         if(summaryText) new MutationObserver(this.updateUIState).observe(summaryText, { childList: true, subtree: true });
-
-        const imgGrid = document.getElementById('image-preview-grid');
-        if(imgGrid) new MutationObserver(this.updateUIState).observe(imgGrid, { childList: true });
 
         // Llamada inicial
         this.updateUIState();
@@ -199,6 +277,36 @@ Storevo.ProductUX = {
             if(this.updateUIState) this.updateUIState();
 
             setTimeout(() => container.classList.add('hidden'), 200);
+        }
+    },
+
+    // LA NUEVA MAGIA: UX de Variantes
+    toggleVariantsUX: function(isActive) {
+        const overlay = document.getElementById('pricing-overlay');
+        const basePrice = document.getElementById('input-price')?.value;
+        const baseStock = document.getElementById('input-stock')?.value;
+
+        if (isActive) {
+            // Mostrar bloqueo visual en la sección superior
+            if (overlay) {
+                overlay.classList.remove('hidden');
+                overlay.classList.add('flex');
+            }
+
+            // Copiar los valores que el usuario ya escribió a los inputs de "Aplicar a todas" (Bulk)
+            const bulkPrice = document.getElementById('vb-bulk-price');
+            const bulkStock = document.getElementById('vb-bulk-stock');
+            if (bulkPrice && basePrice) bulkPrice.value = basePrice;
+            if (bulkStock && baseStock) bulkStock.value = baseStock;
+
+            if (Storevo.ProductWizard) Storevo.ProductWizard.startWizard();
+        } else {
+            // Ocultar bloqueo visual
+            if (overlay) {
+                overlay.classList.add('hidden');
+                overlay.classList.remove('flex');
+            }
+            if (Storevo.ProductWizard) Storevo.ProductWizard.cancel();
         }
     }
 };

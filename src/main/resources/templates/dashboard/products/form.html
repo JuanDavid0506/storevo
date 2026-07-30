@@ -398,9 +398,30 @@
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-sm" id="mini-preview-card">
                     <p class="text-xs font-bold uppercase tracking-widest text-slate-600 mb-3">Vista previa</p>
                     <div class="rounded-xl overflow-hidden bg-slate-950 border border-slate-800">
-                        <div class="aspect-square bg-slate-800 flex items-center justify-center overflow-hidden" id="preview-img-container">
-                            <svg class="w-10 h-10 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+
+                        <!-- CONTENEDOR CARRUSEL -->
+                        <div class="aspect-square bg-slate-800 relative group overflow-hidden" id="preview-carousel-wrapper">
+
+                            <!-- Imágenes se inyectan aquí como un tren horizontal -->
+                            <div id="preview-img-container" class="w-full h-full flex transition-transform duration-300 ease-out">
+                                <!-- Placeholder por defecto (cuando no hay fotos) -->
+                                <div class="w-full h-full flex-shrink-0 flex items-center justify-center">
+                                    <svg class="w-10 h-10 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                </div>
+                            </div>
+
+                            <!-- Botones Nav (Ocultos si hay 0 o 1 foto) -->
+                            <button type="button" onclick="StorevoPreview.prevImage()" id="btn-prev-img" class="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hidden hover:bg-black/90">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+                            </button>
+                            <button type="button" onclick="StorevoPreview.nextImage()" id="btn-next-img" class="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hidden hover:bg-black/90">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+                            </button>
+
+                            <!-- Puntos indicadores (Dots) -->
+                            <div id="preview-dots" class="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5 z-10"></div>
                         </div>
+
                         <div class="p-3">
                             <p class="text-sm font-bold text-white truncate" id="preview-name">—</p>
                             <div class="flex items-center gap-2 mt-1" id="preview-price-container">

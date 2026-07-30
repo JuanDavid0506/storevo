@@ -183,6 +183,8 @@ Storevo.ProductImages = {
         const total = this.state.order.length;
         if(countBadge) countBadge.textContent = total;
 
+        const galleryUrls = []; // Array que almacena las rutas para enviarlas al carrusel
+
         this.state.order.forEach((ref) => {
             let isExisting = this.state.existing.includes(ref);
             let imgSrc = isExisting ? ref : '';
@@ -191,6 +193,8 @@ Storevo.ProductImages = {
                 const fileObj = this.state.newFiles.find(f => f.name === ref);
                 if (fileObj) imgSrc = URL.createObjectURL(fileObj);
             }
+
+            galleryUrls.push(imgSrc); // Recolectamos la url visual
 
             const isMain = this.state.mainRef === ref;
 
@@ -216,7 +220,7 @@ Storevo.ProductImages = {
             });
 
             col.innerHTML = `
-                <img src="${imgSrc}" class="w-full h-full object-cover select-none">
+                <img src="${imgSrc}" class="w-full h-full object-cover select-none bg-slate-900">
                 <div class="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
                     ${!isMain ? `<button type="button" class="text-xs font-bold bg-slate-800 text-white px-2 py-1 rounded-md hover:bg-storevo-500 transition-colors" onclick="Storevo.ProductImages.setMainImage('${ref}')">⭐ Principal</button>` : `<span class="text-xs font-bold bg-storevo-500 text-white px-2 py-1 rounded-md">⭐ Principal</span>`}
                     <button type="button" class="text-xs font-bold bg-red-500 text-white px-2 py-1 rounded-md hover:bg-red-600 transition-colors" onclick="Storevo.ProductImages.removeImage('${ref}')">Eliminar</button>
@@ -224,6 +228,11 @@ Storevo.ProductImages = {
             `;
             grid.appendChild(col);
         });
+
+        // Actualizamos el Carrusel del Preview automáticamente
+        if (window.StorevoPreview) {
+            window.StorevoPreview.updateGallery(galleryUrls);
+        }
     },
 
     swapOrder: function(refA, refB) {
