@@ -83,10 +83,16 @@ public class ProductController {
 
         if (product.getImages() != null) {
             for (ProductImage img : product.getImages()) {
-                existingImages.add(img.getSecureUrl());
-                imageOrder.add(img.getSecureUrl());
+                String url = img.getSecureUrl();
+                // Evita mostrar la misma foto repetida en el dropzone cuando varias variantes
+                // comparten el mismo archivo (cada una tiene su propia fila en la BD, pero
+                // visualmente el vendedor solo necesita verla una vez en la lista general).
+                if (!existingImages.contains(url)) {
+                    existingImages.add(url);
+                    imageOrder.add(url);
+                }
                 if (img.getIsPrimary()) {
-                    mainImageRef = img.getSecureUrl();
+                    mainImageRef = url;
                 }
             }
         }

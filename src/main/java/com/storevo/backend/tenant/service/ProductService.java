@@ -335,9 +335,48 @@ public class ProductService {
                     if (savedVariant != null) {
                         List<String> targetImages = Arrays.asList(vDto.getImageRef().split(","));
 
-                        product.getImages().stream()
-                                .filter(img -> targetImages.contains(img.getSecureUrl()))
-                                .forEach(img -> img.setVariantId(savedVariant.getId()));
+                        // Traducimos referencias de archivos recién subidos (nombre de archivo) a su URL
+                        // real de Cloudinary, usando el mismo mapa que ya se armó al subir los archivos.
+                        List<String> resolvedTargets = targetImages.stream()
+                                .map(ref -> newImagesMap.containsKey(ref)
+                                        ? newImagesMap.get(ref).get("secure_url")
+                                        : ref)
+                                .collect(Collectors.toList());
+
+                        for (String targetUrl : resolvedTargets) {
+                            // 1. Buscamos una fila con esa URL que todavía no esté "tomada" por otra variante
+                            ProductImage freeImg = product.getImages().stream()
+                                    .filter(img -> targetUrl.equals(img.getSecureUrl()) && img.getVariantId() == null)
+                                    .findFirst()
+                                    .orElse(null);
+
+                            if (freeImg != null) {
+                                freeImg.setVariantId(savedVariant.getId());
+                            } else {
+                                // FIX: la misma foto ya fue reclamada por otra variante (ej: una foto de
+                                // "Negro" compartida entre Negro-S, Negro-M y Negro-L). Como variantId es
+                                // una sola columna (no puede pertenecer a varias variantes a la vez), en vez
+                                // de robarle el vínculo a la variante anterior, clonamos la fila (mismo
+                                // archivo de Cloudinary, mismo secureUrl/publicId) para que esta variante
+                                // también tenga su propia fila enlazada.
+                                ProductImage sourceImg = product.getImages().stream()
+                                        .filter(img -> targetUrl.equals(img.getSecureUrl()))
+                                        .findFirst()
+                                        .orElse(null);
+
+                                if (sourceImg != null) {
+                                    ProductImage clone = ProductImage.builder()
+                                            .product(product)
+                                            .secureUrl(sourceImg.getSecureUrl())
+                                            .publicId(sourceImg.getPublicId())
+                                            .isPrimary(false)
+                                            .sortPosition(sourceImg.getSortPosition())
+                                            .variantId(savedVariant.getId())
+                                            .build();
+                                    product.getImages().add(clone);
+                                }
+                            }
+                        }
                     }
                 }
             }

@@ -196,14 +196,14 @@
                 </div>
                 <!-- MEMORIA DE IMÁGENES PARA EL JAVASCRIPT -->
                 <div class="hidden" id="image-memory-bridge">
-                    <!-- 1. Metemos la imagen principal a la galería -->
+                    <!-- 1. Solo marcamos cuál es la principal (para identificarla); NO la agregamos aquí
+                         a la galería, porque ya viene incluida en el bucle de abajo (paso 2). Antes se
+                         agregaba en los dos lados, y por eso la foto principal salía duplicada. -->
                     <th:block th:if="${product.mainImageRef != null}">
-                        <input type="hidden" class="init-existing" th:value="${product.mainImageRef}">
-                        <input type="hidden" class="init-order" th:value="${product.mainImageRef}">
                         <input type="hidden" id="init-main" th:value="${product.mainImageRef}">
                     </th:block>
 
-                    <!-- 2. Metemos el resto de las imágenes -->
+                    <!-- 2. Metemos TODAS las imágenes del producto (la principal ya está incluida aquí) -->
                     <th:block th:if="${product.existingImages != null}">
                         <th:block th:each="imgUrl : ${product.existingImages}">
                             <input type="hidden" class="init-existing" th:value="${imgUrl}">
