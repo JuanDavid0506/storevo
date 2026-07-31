@@ -74,41 +74,20 @@ public class ProductController {
     }
 
     // --- NUEVA LÓGICA: UNIFICADO PARA CREACIÓN O ACTUALIZACIÓN CON DEVOLUCIÓN DE ID ---
+    // --- NUEVA LÓGICA: UNIFICADO PARA CREACIÓN O ACTUALIZACIÓN CON DEVOLUCIÓN DE ID ---
     @PostMapping(value = {"/auto-save", "/{id}/auto-save"})
     @ResponseBody
     public ResponseEntity<?> autoSaveProduct(@PathVariable String slug,
                                              @PathVariable(required = false) Long id,
                                              @ModelAttribute ProductDto productDto) {
         try {
+            // Buscamos el ID ya sea en la URL o en el cuerpo del formulario oculto
             Long targetId = (id != null) ? id : productDto.getId();
 
+            // Si realmente no existe, es un borrador totalmente nuevo
             if (targetId == null || targetId == 0) {
                 targetId = productService.createEmptyDraft();
             }
-
-            // ==========================================
-            // ESCUDO PROTECTOR DE IMÁGENES
-            // ==========================================
-            if (targetId > 0) {
-                Product existing = productService.getProductById(targetId);
-                if (existing != null && existing.getImages() != null) {
-                    List<String> dbImages = existing.getImages().stream()
-                            .map(ProductImage::getSecureUrl)
-                            .collect(Collectors.toList());
-
-                    if (productDto.getExistingImages() == null) productDto.setExistingImages(new ArrayList<>());
-                    if (productDto.getImageOrder() == null) productDto.setImageOrder(new ArrayList<>());
-
-                    // Inyectamos las imágenes de la BD al DTO para que Spring NO las borre
-                    for (String dbImg : dbImages) {
-                        if (!productDto.getExistingImages().contains(dbImg)) {
-                            productDto.getExistingImages().add(dbImg);
-                            productDto.getImageOrder().add(dbImg);
-                        }
-                    }
-                }
-            }
-            // ==========================================
 
             productDto.setId(targetId);
             if (productDto.getStock() == null) productDto.setStock(0);

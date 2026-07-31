@@ -18,6 +18,19 @@ Storevo.ProductDraft = {
             if (!e.isTrusted) return;
             this.scheduleSave();
         });
+
+        // --- NUEVO: Micrófono para las variantes ---
+        const variantsSection = document.getElementById('variants');
+        if (variantsSection) {
+            // Cualquier clic (ej. añadir opción, seleccionar color, abrir modal) disparará el guardado
+            variantsSection.addEventListener('click', () => {
+                this.scheduleSave();
+            });
+            // Cuando escriban una variante y presionen Enter
+            variantsSection.addEventListener('keyup', (e) => {
+                if (e.key === 'Enter') this.scheduleSave();
+            });
+        }
     },
 
     scheduleSave: function() {
@@ -50,17 +63,19 @@ Storevo.ProductDraft = {
 
             const formData = new FormData(this.form);
 
-            // --- EL SALVAVIDAS DE SPRING BOOT ---
-            // Forzamos un '0' a los números vacíos para evitar el Error 400 (Bad Request)
             ['price', 'stock', 'discountPrice', 'weight'].forEach(field => {
                 if (formData.has(field) && formData.get(field).trim() === '') {
                     formData.set(field, '0');
                 }
             });
-            // Si la categoría está vacía, la eliminamos para que pase como null
             if (formData.has('categoryId') && formData.get('categoryId').trim() === '') {
                 formData.delete('categoryId');
             }
+
+            // --- SOLUCIÓN DE DUPLICACIÓN DE IMÁGENES ---
+            // Eliminamos los archivos del autoguardado para no saturar ni duplicar en la BD.
+            // Las fotos viajarán completas cuando el usuario haga clic en "Publicar".
+            formData.delete('newImages');
 
             const currentUrl = window.location.pathname;
 
@@ -81,7 +96,6 @@ Storevo.ProductDraft = {
 
             const data = await response.json();
 
-            // --- LA MAGIA DE LA URL ---
             if (data && data.id) {
                 const idInput = document.getElementById('id');
                 if (idInput) idInput.value = data.id;
