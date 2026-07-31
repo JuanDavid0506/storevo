@@ -364,6 +364,8 @@ Storevo.ProductWizard = {
 
         if (!Storevo.VariantBuilder) return;
 
+        sessionStorage.setItem('storevo_product_template', templateId);
+
         Storevo.VariantBuilder.state.options = [];
         Storevo.VariantBuilder.state.variantsData = {};
         Storevo.VariantBuilder.state.excluded = {};
@@ -373,51 +375,33 @@ Storevo.ProductWizard = {
 
         const t = this.templates.find(x => x.id === templateId);
 
-        // ESQUELETOS: Talla primero y valores vacíos para forzar el uso de sugerencias
         if (templateId === 'ropa' || templateId === 'calzado') {
-            Storevo.VariantBuilder.state.options = [
-                { name: 'Talla', values: [] },
-                { name: 'Color', values: [] }
-            ];
-        }
-        else if (templateId === 'perfume') {
-            Storevo.VariantBuilder.state.options = [
-                { name: 'Presentación', values: [] }
-            ];
-        }
-        else if (templateId === 'tecnologia') {
-            Storevo.VariantBuilder.state.options = [
-                { name: 'Capacidad', values: [] },
-                { name: 'Color', values: [] }
-            ];
-        }
-        else if (templateId === 'accesorios') {
-            Storevo.VariantBuilder.state.options = [
-                { name: 'Material', values: [] },
-                { name: 'Color', values: [] }
-            ];
-        }
-        else if (templateId === 'personalizado') {
-            Storevo.VariantBuilder.state.options = [
-                { name: '', values: [] }
-            ];
+            Storevo.VariantBuilder.state.options = [{ name: 'Talla', values: [] }, { name: 'Color', values: [] }];
+        } else if (templateId === 'perfume') {
+            Storevo.VariantBuilder.state.options = [{ name: 'Presentación', values: [] }];
+        } else if (templateId === 'tecnologia') {
+            Storevo.VariantBuilder.state.options = [{ name: 'Capacidad', values: [] }, { name: 'Color', values: [] }];
+        } else if (templateId === 'accesorios') {
+            Storevo.VariantBuilder.state.options = [{ name: 'Material', values: [] }, { name: 'Color', values: [] }];
+        } else {
+            Storevo.VariantBuilder.state.options = [{ name: '', values: [] }];
         }
 
-        // Auto-Aprender opciones vacías para disparar botones sugeridos
         Storevo.VariantBuilder.state.options.forEach(opt => {
             if (opt.name) {
                 Storevo.VariantBuilder.fetchSuggestions(opt.name);
             }
         });
 
-        // 1. FORZAR EL INTERRUPTOR DE VARIANTES A "ENCENDIDO"
+        // 1. FORZAR INTERRUPTOR Y BLOQUEOS DE FORMA SILENCIOSA
         const toggleUI = document.getElementById('hasVariantsToggleUI');
-        if(toggleUI && !toggleUI.checked) {
-            toggleUI.checked = true;
-            document.getElementById('hasVariantsToggle').checked = true;
-            if(Storevo.ProductUX && typeof Storevo.ProductUX.toggleVariantsUX === 'function') {
-                Storevo.ProductUX.toggleVariantsUX(true);
-            }
+        const toggleHidden = document.getElementById('hasVariantsToggle');
+
+        if (toggleUI) toggleUI.checked = true;
+        if (toggleHidden) toggleHidden.checked = true;
+
+        if (Storevo.VariantBuilder) {
+            Storevo.VariantBuilder.toggleMainFields(true);
         }
 
         // 2. DIBUJAR LA PLANTILLA
@@ -428,8 +412,7 @@ Storevo.ProductWizard = {
             this.injectBanner(t);
         }
 
-        // 3. LA LLAVE MAESTRA: AUTOGUARDADO INMEDIATO
-        // Avisamos a Spring Boot en este preciso instante para que no lo olvide al recargar (F5)
+        // 3. AUTOGUARDADO INMEDIATO
         if (window.Storevo.ProductDraft && typeof window.Storevo.ProductDraft.saveToDatabase === 'function') {
             Storevo.VariantBuilder.syncHiddenInputs();
             Storevo.ProductDraft.saveToDatabase();

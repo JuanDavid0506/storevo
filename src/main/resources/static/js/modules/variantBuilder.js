@@ -33,12 +33,9 @@ Storevo.VariantBuilder = {
     },
 
     init: function() {
-        if (this.state.options && this.state.options.length > 0) {
-            // Ya inicializado
-        } else if (window.INITIAL_HAS_VARIANTS && window.INITIAL_OPTIONS && window.INITIAL_OPTIONS.length > 0) {
-
+        let hasRealData = false;
+        if (window.INITIAL_HAS_VARIANTS && window.INITIAL_OPTIONS && window.INITIAL_OPTIONS.length > 0) {
             this.state.options = window.INITIAL_OPTIONS;
-
             if (window.INITIAL_VARIANTS && window.INITIAL_VARIANTS.length > 0) {
                 window.INITIAL_VARIANTS.forEach(v => {
                     const sig = this.generateSignatureFromMap(v.combination || {});
@@ -50,37 +47,65 @@ Storevo.VariantBuilder = {
                     };
                 });
             }
+            hasRealData = true;
+        }
 
-            setTimeout(() => {
+        const savedTemplate = sessionStorage.getItem('storevo_product_template');
+
+        if (!hasRealData && savedTemplate) {
+            if (savedTemplate === 'ropa' || savedTemplate === 'calzado') {
+                this.state.options = [{ name: 'Talla', values: [] }, { name: 'Color', values: [] }];
+            } else if (savedTemplate === 'perfume') {
+                this.state.options = [{ name: 'Presentación', values: [] }];
+            } else if (savedTemplate === 'tecnologia') {
+                this.state.options = [{ name: 'Capacidad', values: [] }, { name: 'Color', values: [] }];
+            } else if (savedTemplate === 'accesorios') {
+                this.state.options = [{ name: 'Material', values: [] }, { name: 'Color', values: [] }];
+            } else {
+                this.state.options = [{ name: '', values: [] }];
+            }
+        } else if (!hasRealData) {
+            this.state.options = [{ name: 'Talla', values: [] }];
+        }
+
+        const shouldBeActive = window.INITIAL_HAS_VARIANTS || savedTemplate != null;
+
+        // EJECUCIÓN BLINDADA: Encendemos UI silenciosamente sin pelear con ProductUX
+        setTimeout(() => {
+            if (shouldBeActive) {
                 const toggleUI = document.getElementById('hasVariantsToggleUI');
-                if (toggleUI) toggleUI.checked = true;
-                const toggle = document.getElementById('hasVariantsToggle');
-                if (toggle) toggle.checked = true;
+                const toggleHidden = document.getElementById('hasVariantsToggle');
 
+                if (toggleUI) toggleUI.checked = true;
+                if (toggleHidden) toggleHidden.checked = true;
+
+                // 1. Ocultamos las pantallas de bienvenida
                 const emptyState = document.getElementById('options-empty-state');
                 if (emptyState) emptyState.classList.add('hidden');
 
+                const wizardState = document.getElementById('options-wizard-state');
+                if (wizardState) wizardState.classList.add('hidden', 'opacity-0');
+
+                const templatesPanel = document.getElementById('vb-templates-panel');
+                if (templatesPanel) templatesPanel.classList.add('hidden', 'opacity-0');
+
+                // 2. Mostramos el constructor
                 const builder = document.getElementById('variant-builder-container');
-                if (builder) builder.classList.remove('hidden', 'opacity-0');
+                if (builder) {
+                    builder.classList.remove('hidden');
+                    setTimeout(() => builder.classList.remove('opacity-0'), 20);
+                }
 
-                this.state.options.forEach(opt => {
-                    if (opt.name.trim()) this.fetchSuggestions(opt.name);
-                });
-
-                this.renderOptions();
-            }, 50);
-
-        } else {
-            const savedTemplate = localStorage.getItem('storevo_product_template');
-            const lastMode = localStorage.getItem('storevo_product_mode');
-            const isNewProduct = typeof window.IS_NEW_PRODUCT !== 'undefined' ? window.IS_NEW_PRODUCT : true;
-
-            if (isNewProduct && savedTemplate && lastMode === 'options' && Storevo.ProductWizard.templates.find(t => t.id === savedTemplate)) {
-                // Dejamos vacío, el Wizard se encargará si es necesario
-            } else {
-                this.state.options = [{ name: 'Talla', values: [] }];
+                // 3. Forzamos bloqueo de precio y stock principal
+                this.toggleMainFields(true);
             }
-        }
+
+            this.state.options.forEach(opt => {
+                if (opt.name && opt.name.trim() !== '') this.fetchSuggestions(opt.name);
+            });
+
+            this.renderOptions();
+        }, 100);
 
         const btnAdd = document.getElementById('vb-btn-add-option');
         if (btnAdd) {
@@ -103,12 +128,6 @@ Storevo.VariantBuilder = {
                 this.toggleMainFields(e.target.checked);
             });
             this.toggleMainFields(toggleUI.checked);
-        }
-
-        if(this.state.options.length > 0 && this.state.options[0].name.trim()) {
-            this.fetchSuggestions(this.state.options[0].name);
-        } else {
-            this.renderOptions();
         }
     },
 

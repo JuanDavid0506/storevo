@@ -237,19 +237,18 @@ Storevo.ProductForm = {
     // LÓGICA DE PUBLICACIÓN (SUBMIT)
     // ==========================================
     publish: function() {
-        // 1. Quitar el estado de borrador
         const isDraftInput = document.getElementById('isDraft');
         if (isDraftInput) isDraftInput.value = 'false';
 
-        // 2. Forzar a que el producto esté activo (visible en tienda)
         const isActiveToggle = document.getElementById('isActive');
         if (isActiveToggle && !isActiveToggle.checked) {
             isActiveToggle.checked = true;
             isActiveToggle.dispatchEvent(new Event('change'));
         }
 
-        // NUEVO: Limpiamos la memoria del paso para que el próximo producto inicie en 1
+        // LIMPIAMOS AMBAS MEMORIAS PARA EL PRÓXIMO PRODUCTO
         sessionStorage.removeItem('storevo_current_step');
+        sessionStorage.removeItem('storevo_product_template');
 
         if (window.Storevo && window.Storevo.VariantBuilder) {
             window.Storevo.VariantBuilder.syncHiddenInputs();
