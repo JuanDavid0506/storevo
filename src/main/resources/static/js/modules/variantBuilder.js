@@ -673,8 +673,10 @@ Storevo.VariantBuilder = {
 
         if (!document.getElementById('hasVariantsToggle').checked) return;
 
-        const validOptions = this.getValidOptions();
-        validOptions.forEach((opt, oIdx) => {
+        // EL ARREGLO: Extraemos TODAS las opciones que tengan un nombre (incluso las plantillas vacías)
+        const allNamedOptions = this.state.options.filter(o => o.name.trim() !== '');
+
+        allNamedOptions.forEach((opt, oIdx) => {
             this.createHidden(container, `options[${oIdx}].name`, opt.name.trim());
             opt.values.forEach((val, vIdx) => this.createHidden(container, `options[${oIdx}].values[${vIdx}]`, val));
         });
@@ -682,6 +684,7 @@ Storevo.VariantBuilder = {
         let totalStock = 0;
         let minPrice = Infinity;
 
+        // Las combinaciones finales sí siguen requiriendo valores válidos
         const combinations = this.getCartesianProduct().filter(combo => !this.state.excluded[this.generateSignatureFromMap(combo)]);
         combinations.forEach((combo, vIdx) => {
             const data = this.state.variantsData[this.generateSignatureFromMap(combo)];

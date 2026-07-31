@@ -55,27 +55,74 @@ public class ProductController {
         TenantContext.setCurrentTenant(store.getSchemaName());
     }
 
-    // --- NUEVA LÓGICA: CREA EL BORRADOR Y REDIRIGE A LA EDICIÓN ---
+    // --- NUEVA LÓGICA: MUESTRA LA VISTA SIN ENSUCIAR LA BASE DE DATOS ---
     @GetMapping("/new")
-    public String showCreateForm(@PathVariable String slug) {
-        Long draftId = productService.createEmptyDraft();
-        return "redirect:/dashboard/" + slug + "/products/" + draftId + "/edit";
+    public String showCreateForm(@PathVariable String slug, Model model) {
+        // Preparamos un DTO en blanco para evitar NullPointers en la vista
+        ProductDto dto = ProductDto.builder()
+                .isDraft(true)
+                .isActive(true)
+                .hasVariants(false)
+                .price(0.0)
+                .stock(0)
+                .build();
+
+        model.addAttribute("product", dto);
+        model.addAttribute("categories", categoryService.getAllCategories());
+        model.addAttribute("pageTitle", "Nuevo Producto");
+        return "dashboard/products/form";
     }
 
-    // --- NUEVO ENDPOINT: RECIBE EL GUARDADO SILENCIOSO DEL JS ---
-    @PostMapping("/{id}/auto-save")
+    // --- NUEVA LÓGICA: UNIFICADO PARA CREACIÓN O ACTUALIZACIÓN CON DEVOLUCIÓN DE ID ---
+    @PostMapping(value = {"/auto-save", "/{id}/auto-save"})
     @ResponseBody
     public ResponseEntity<?> autoSaveProduct(@PathVariable String slug,
-                                             @PathVariable Long id,
+                                             @PathVariable(required = false) Long id,
                                              @ModelAttribute ProductDto productDto) {
         try {
-            productDto.setId(id);
+            Long targetId = (id != null) ? id : productDto.getId();
+
+            if (targetId == null || targetId == 0) {
+                targetId = productService.createEmptyDraft();
+            }
+
+            // ==========================================
+            // ESCUDO PROTECTOR DE IMÁGENES
+            // ==========================================
+            if (targetId > 0) {
+                Product existing = productService.getProductById(targetId);
+                if (existing != null && existing.getImages() != null) {
+                    List<String> dbImages = existing.getImages().stream()
+                            .map(ProductImage::getSecureUrl)
+                            .collect(Collectors.toList());
+
+                    if (productDto.getExistingImages() == null) productDto.setExistingImages(new ArrayList<>());
+                    if (productDto.getImageOrder() == null) productDto.setImageOrder(new ArrayList<>());
+
+                    // Inyectamos las imágenes de la BD al DTO para que Spring NO las borre
+                    for (String dbImg : dbImages) {
+                        if (!productDto.getExistingImages().contains(dbImg)) {
+                            productDto.getExistingImages().add(dbImg);
+                            productDto.getImageOrder().add(dbImg);
+                        }
+                    }
+                }
+            }
+            // ==========================================
+
+            productDto.setId(targetId);
             if (productDto.getStock() == null) productDto.setStock(0);
             if (productDto.getPrice() == null) productDto.setPrice(0.0);
             if (productDto.getWeight() == null) productDto.setWeight(0.0);
 
             productService.saveProduct(productDto);
-            return ResponseEntity.ok(Map.of("success", true, "message", "Guardado"));
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Guardado");
+            response.put("id", targetId);
+
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("success", false, "error", e.getMessage()));
         }
@@ -101,7 +148,6 @@ public class ProductController {
         if (product.getImages() != null) {
             for (ProductImage img : product.getImages()) {
                 String url = img.getSecureUrl();
-                // Evita mostrar la misma foto repetida en el dropzone cuando varias variantes comparten archivo
                 if (!existingImages.contains(url)) {
                     existingImages.add(url);
                     imageOrder.add(url);
@@ -177,7 +223,7 @@ public class ProductController {
                 .sku(product.getSku())
                 .weight(product.getWeight())
                 .isActive(product.getIsActive())
-                .isDraft(product.getIsDraft()) // <--- AQUÍ SE MAPEA LA BANDERA DEL BORRADOR
+                .isDraft(product.getIsDraft())
                 .existingImages(existingImages)
                 .imageOrder(imageOrder)
                 .mainImageRef(mainImageRef)
@@ -198,6 +244,11 @@ public class ProductController {
     public String saveProduct(@PathVariable String slug,
                               @ModelAttribute ProductDto productDto,
                               @RequestParam(required = false) String action) {
+
+        // Seguro de vida: Si el usuario clica publicar extremadamente rápido desde /new
+        if (productDto.getId() == null) {
+            productDto.setId(productService.createEmptyDraft());
+        }
 
         if (productDto.getStock() == null) productDto.setStock(0);
         if (productDto.getPrice() == null) productDto.setPrice(0.0);
@@ -256,7 +307,7 @@ public class ProductController {
 
         Boolean isActiveFilter = null;
         Boolean isDeletedFilter = false;
-        Boolean isDraftFilter = false; // Por defecto, NUNCA mostramos los borradores en la lista principal
+        Boolean isDraftFilter = false;
 
         if ("active".equals(status)) {
             isActiveFilter = true;
@@ -265,11 +316,11 @@ public class ProductController {
         } else if ("deleted".equals(status)) {
             isActiveFilter = null;
             isDeletedFilter = true;
-            isDraftFilter = null; // En papelera podemos ver si eliminaron un borrador o uno real
+            isDraftFilter = null;
         } else if ("draft".equals(status)) {
-            isActiveFilter = null; // Ignoramos si está activo o no
+            isActiveFilter = null;
             isDeletedFilter = false;
-            isDraftFilter = true;  // SOLO mostramos borradores
+            isDraftFilter = true;
         }
 
         if ("active".equals(quick)) {
@@ -278,7 +329,6 @@ public class ProductController {
             isDraftFilter = false;
         }
 
-        // Pasamos la variable isDraftFilter para la consulta
         Page<Product> productsPage = productService.searchProducts(q, categoryId, isActiveFilter, isDeletedFilter, isDraftFilter, quick, sort, pageable);
 
         model.addAttribute("products", productsPage);
@@ -348,11 +398,13 @@ public class ProductController {
         private String action;
         private List<Long> ids;
     }
+
     @GetMapping("/api/categories/{categoryId}/smart-template")
     @ResponseBody
     public ResponseEntity<TemplateRecommendationResponse> getSmartTemplate(@PathVariable String slug, @PathVariable Long categoryId) {
         return ResponseEntity.ok(templateRecommendationService.getSmartRecommendation(categoryId));
     }
+
     @GetMapping("/api/categories/{categoryId}/options/{optionName}/suggestions")
     @ResponseBody
     public ResponseEntity<List<String>> getDynamicSuggestions(@PathVariable String slug, @PathVariable Long categoryId, @PathVariable String optionName) {

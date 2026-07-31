@@ -6,17 +6,16 @@ Storevo.ProductDraft = {
         if (!this.form) return;
 
         this.saveTimeout = null;
-        this.statusTimeout = null; // Nuevo: Para controlar que los textos no se pisen
+        this.statusTimeout = null;
         this.isSaving = false;
 
-        // Añadimos el evento 'e' y la regla anti-bucles (isTrusted)
         this.form.addEventListener('input', (e) => {
-            if (!e.isTrusted) return; // Si fue el Javascript, ignorar
+            if (!e.isTrusted) return;
             this.scheduleSave();
         });
 
         this.form.addEventListener('change', (e) => {
-            if (!e.isTrusted) return; // Si fue el Javascript, ignorar
+            if (!e.isTrusted) return;
             this.scheduleSave();
         });
     },
@@ -24,28 +23,18 @@ Storevo.ProductDraft = {
     scheduleSave: function() {
         if (this.saveTimeout) clearTimeout(this.saveTimeout);
 
-        // Si el usuario vuelve a escribir, regresamos a "Editando" silenciosamente
         this.updateIndicator('<span class="text-slate-500">Editando</span>');
-
         this.saveTimeout = setTimeout(() => this.saveToDatabase(), 2000);
     },
 
     saveToDatabase: async function() {
-        // ==========================================
-        // 1. ESCUDO ANTI-FANTASMAS (Borradores vacíos)
-        // ==========================================
         const nombreInput = document.getElementById('input-name');
 
-        // Si el input no existe, o si el usuario ha escrito menos de 2 letras, abortar.
         if (!nombreInput || nombreInput.value.trim().length < 2) {
-            // Regresamos el indicador visual a "Borrador sin guardar"
             this.updateIndicator('<span class="text-slate-500" title="Escribe un nombre para guardar">Borrador sin guardar</span>');
             return;
         }
 
-        // ==========================================
-        // 2. LÓGICA DE GUARDADO
-        // ==========================================
         if (this.isSaving) return;
         this.isSaving = true;
 
@@ -60,22 +49,56 @@ Storevo.ProductDraft = {
             }
 
             const formData = new FormData(this.form);
+
+            // --- EL SALVAVIDAS DE SPRING BOOT ---
+            // Forzamos un '0' a los números vacíos para evitar el Error 400 (Bad Request)
+            ['price', 'stock', 'discountPrice', 'weight'].forEach(field => {
+                if (formData.has(field) && formData.get(field).trim() === '') {
+                    formData.set(field, '0');
+                }
+            });
+            // Si la categoría está vacía, la eliminamos para que pase como null
+            if (formData.has('categoryId') && formData.get('categoryId').trim() === '') {
+                formData.delete('categoryId');
+            }
+
             const currentUrl = window.location.pathname;
-            const autoSaveUrl = currentUrl.replace('/edit', '/auto-save');
+
+            let autoSaveUrl = currentUrl;
+            if (currentUrl.endsWith('/new')) {
+                autoSaveUrl = currentUrl.replace('/new', '/auto-save');
+            } else {
+                const basePath = currentUrl.split('/products/')[0] + '/products';
+                autoSaveUrl = basePath + '/auto-save';
+            }
 
             const response = await fetch(autoSaveUrl, {
                 method: 'POST',
                 body: formData
             });
 
-            if (!response.ok) throw new Error('Error en el servidor');
+            if (!response.ok) throw new Error('Error en el servidor al guardar el borrador');
+
+            const data = await response.json();
+
+            // --- LA MAGIA DE LA URL ---
+            if (data && data.id) {
+                const idInput = document.getElementById('id');
+                if (idInput) idInput.value = data.id;
+
+                if (window.location.pathname.endsWith('/new')) {
+                    const basePath = window.location.pathname.replace('/new', '');
+                    const newUrl = `${basePath}/${data.id}/edit`;
+
+                    window.history.replaceState(null, '', newUrl);
+                    window.IS_NEW_PRODUCT = false;
+                }
+            }
 
             this.updateIndicator('<span class="text-emerald-400 font-medium">✓ Guardado</span>');
 
-            // Limpiamos cualquier temporizador anterior para que no borre el "✓ Guardado" antes de tiempo
             if (this.statusTimeout) clearTimeout(this.statusTimeout);
 
-            // Volver al estado de reposo después de 2.5 segundos
             this.statusTimeout = setTimeout(() => {
                 this.updateIndicator('<span class="text-slate-500">Editando</span>');
             }, 2500);

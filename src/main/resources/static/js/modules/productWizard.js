@@ -255,16 +255,18 @@ Storevo.ProductWizard = {
 
             this.currentRecommendation.options.forEach(opt => {
                 const optKey = opt.name.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-
-                // Guardar en el caché vivo para sugerencias
                 window.Storevo.VariantBuilder.state.suggestionsCache[optKey] = [...opt.values];
-
-                // Insertar como esqueleto vacío para obligar a usar los botones sugeridos
-                window.Storevo.VariantBuilder.state.options.push({
-                    name: opt.name,
-                    values: []
-                });
+                window.Storevo.VariantBuilder.state.options.push({ name: opt.name, values: [] });
             });
+
+            // NUEVO: Forzar la activación del interruptor de Variantes
+            const toggleUI = document.getElementById('hasVariantsToggleUI');
+            if(toggleUI && !toggleUI.checked) {
+                toggleUI.checked = true;
+                document.getElementById('hasVariantsToggle').checked = true;
+                if(Storevo.ProductUX) Storevo.ProductUX.toggleVariantsUX(true);
+            }
+
             window.Storevo.VariantBuilder.renderOptions();
         }
     },
@@ -408,11 +410,29 @@ Storevo.ProductWizard = {
             }
         });
 
+        // 1. FORZAR EL INTERRUPTOR DE VARIANTES A "ENCENDIDO"
+        const toggleUI = document.getElementById('hasVariantsToggleUI');
+        if(toggleUI && !toggleUI.checked) {
+            toggleUI.checked = true;
+            document.getElementById('hasVariantsToggle').checked = true;
+            if(Storevo.ProductUX && typeof Storevo.ProductUX.toggleVariantsUX === 'function') {
+                Storevo.ProductUX.toggleVariantsUX(true);
+            }
+        }
+
+        // 2. DIBUJAR LA PLANTILLA
         Storevo.VariantBuilder.renderOptions();
 
         this.removeBanner();
         if (showBanner && templateId !== 'personalizado') {
             this.injectBanner(t);
+        }
+
+        // 3. LA LLAVE MAESTRA: AUTOGUARDADO INMEDIATO
+        // Avisamos a Spring Boot en este preciso instante para que no lo olvide al recargar (F5)
+        if (window.Storevo.ProductDraft && typeof window.Storevo.ProductDraft.saveToDatabase === 'function') {
+            Storevo.VariantBuilder.syncHiddenInputs();
+            Storevo.ProductDraft.saveToDatabase();
         }
     },
 
