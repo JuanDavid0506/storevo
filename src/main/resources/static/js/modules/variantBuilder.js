@@ -1,25 +1,17 @@
 window.Storevo = window.Storevo || {};
 
 Storevo.VariantBuilder = {
-    // --- PLANTILLAS RÁPIDAS ---
-    TEMPLATES: {
-        ropa:          { label: 'Ropa', icon: '👕', options: [{ name: 'Color', values: [] }, { name: 'Talla', values: ['S', 'M', 'L', 'XL'] }] },
-        calzado:       { label: 'Calzado', icon: '👟', options: [{ name: 'Color', values: [] }, { name: 'Número', values: ['36', '37', '38', '39', '40', '41', '42'] }] },
-        perfume:       { label: 'Perfumes', icon: '🌸', options: [{ name: 'Presentación', values: ['30 ml', '50 ml', '100 ml'] }] },
-        accesorios:    { label: 'Accesorios', icon: '💍', options: [{ name: 'Color', values: [] }] },
-        tecnologia:    { label: 'Tecnología', icon: '📱', options: [{ name: 'Color', values: [] }, { name: 'Capacidad', values: ['64GB', '128GB', '256GB'] }] },
-        personalizado: { label: 'Personalizado', icon: '✏️', options: [{ name: '', values: [] }] }
-    },
 
+    // --- CEREBRO BASE (DICCIONARIO ESTÁTICO) ---
     PRESET_VALUES: {
-        'talla': ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
+        'talla': ['XS', 'S', 'M', 'L', 'XL', 'XXL', '35', '36', '37', '38', '39', '40', '41', '42', '43', '44'],
         'tallas': ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
         'size': ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
-        'color': ['Negro', 'Blanco', 'Rojo', 'Azul', 'Verde', 'Amarillo', 'Gris', 'Beige', 'Rosado', 'Café'],
+        'color': ['Negro', 'Blanco', 'Rojo', 'Azul', 'Verde', 'Amarillo', 'Gris', 'Beige', 'Rosado', 'Café', 'Dorado', 'Plateado'],
         'colores': ['Negro', 'Blanco', 'Rojo', 'Azul', 'Verde', 'Amarillo', 'Gris', 'Beige', 'Rosado', 'Café'],
-        'numero': ['34', '35', '36', '37', '38', '39', '40', '41', '42', '43', '44'],
-        'número': ['34', '35', '36', '37', '38', '39', '40', '41', '42', '43', '44'],
-        'talla calzado': ['34', '35', '36', '37', '38', '39', '40', '41', '42', '43', '44']
+        'presentacion': ['30 ml', '50 ml', '100 ml'],
+        'capacidad': ['64 GB', '128 GB', '256 GB', '512 GB'],
+        'material': ['Acero', 'Plata', 'Oro', 'Cuero']
     },
 
     COLOR_HEX: {
@@ -36,7 +28,8 @@ Storevo.VariantBuilder = {
         excluded: {},
         collapsedGroups: {},
         imageModalTarget: null,
-        tempSelectedImages: []
+        tempSelectedImages: [],
+        suggestionsCache: {} // Cerebro Vivo (Caché asíncrono)
     },
 
     init: function() {
@@ -44,7 +37,6 @@ Storevo.VariantBuilder = {
             // Ya inicializado
         } else if (window.INITIAL_HAS_VARIANTS && window.INITIAL_OPTIONS && window.INITIAL_OPTIONS.length > 0) {
 
-            // --- MODO EDICIÓN DE PRODUCTO EXISTENTE ---
             this.state.options = window.INITIAL_OPTIONS;
 
             if (window.INITIAL_VARIANTS && window.INITIAL_VARIANTS.length > 0) {
@@ -54,13 +46,11 @@ Storevo.VariantBuilder = {
                         price: v.price || '',
                         stock: v.stock || 0,
                         sku: v.sku || '',
-                        // CORRECCIÓN FOTOS: Spring Boot manda 'imageUrl'
                         imageRef: v.imageUrl || v.imageRef || ''
                     };
                 });
             }
 
-            // CORRECCIÓN UI: Encender el Switch y mostrar el constructor
             setTimeout(() => {
                 const toggleUI = document.getElementById('hasVariantsToggleUI');
                 if (toggleUI) toggleUI.checked = true;
@@ -73,18 +63,20 @@ Storevo.VariantBuilder = {
                 const builder = document.getElementById('variant-builder-container');
                 if (builder) builder.classList.remove('hidden', 'opacity-0');
 
+                this.state.options.forEach(opt => {
+                    if (opt.name.trim()) this.fetchSuggestions(opt.name);
+                });
+
                 this.renderOptions();
             }, 50);
 
         } else {
-            // --- MODO PRODUCTO NUEVO ---
             const savedTemplate = localStorage.getItem('storevo_product_template');
             const lastMode = localStorage.getItem('storevo_product_mode');
             const isNewProduct = typeof window.IS_NEW_PRODUCT !== 'undefined' ? window.IS_NEW_PRODUCT : true;
 
-            if (isNewProduct && savedTemplate && lastMode === 'options' && this.TEMPLATES[savedTemplate]) {
-                const template = this.TEMPLATES[savedTemplate];
-                this.state.options = template.options.map(o => ({ name: o.name, values: [...o.values] }));
+            if (isNewProduct && savedTemplate && lastMode === 'options' && Storevo.ProductWizard.templates.find(t => t.id === savedTemplate)) {
+                // Dejamos vacío, el Wizard se encargará si es necesario
             } else {
                 this.state.options = [{ name: 'Talla', values: [] }];
             }
@@ -103,27 +95,29 @@ Storevo.VariantBuilder = {
         }
 
         const form = document.getElementById('product-form');
-        // Mantengo el listener del submit por seguridad adicional
         if (form) form.addEventListener('submit', () => this.syncHiddenInputs());
 
-        // Escuchar el switch de variantes para bloquear/desbloquear campos
         const toggleUI = document.getElementById('hasVariantsToggleUI');
         if (toggleUI) {
             toggleUI.addEventListener('change', (e) => {
                 this.toggleMainFields(e.target.checked);
             });
-            // Ejecutar al cargar por si entró a editar y ya estaba encendido
             this.toggleMainFields(toggleUI.checked);
         }
-        this.renderOptions();
+
+        if(this.state.options.length > 0 && this.state.options[0].name.trim()) {
+            this.fetchSuggestions(this.state.options[0].name);
+        } else {
+            this.renderOptions();
+        }
     },
+
     toggleMainFields: function(isVariantsActive) {
         const inputPrice = document.getElementById('input-price');
         const inputStock = document.getElementById('input-stock');
-        const helpTextContainer = document.getElementById('pricing'); // La sección 2 (Precio y stock)
+        const helpTextContainer = document.getElementById('pricing');
 
         if (isVariantsActive) {
-            // Bloqueamos las cajas visualmente
             if (inputPrice) {
                 inputPrice.disabled = true;
                 inputPrice.classList.add('opacity-50', 'cursor-not-allowed', 'bg-slate-900');
@@ -133,7 +127,6 @@ Storevo.VariantBuilder = {
                 inputStock.classList.add('opacity-50', 'cursor-not-allowed', 'bg-slate-900');
             }
 
-            // Añadimos el aviso explicativo
             let warning = document.getElementById('variants-lock-warning');
             if (!warning && helpTextContainer) {
                 const msg = document.createElement('div');
@@ -143,7 +136,6 @@ Storevo.VariantBuilder = {
                 helpTextContainer.appendChild(msg);
             }
         } else {
-            // Desbloqueamos si apaga el switch
             if (inputPrice) {
                 inputPrice.disabled = false;
                 inputPrice.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-slate-900');
@@ -198,10 +190,49 @@ Storevo.VariantBuilder = {
         }, []);
     },
 
+    fetchSuggestions: async function(optionName) {
+        const catIdInput = document.getElementById('finalCategoryId');
+        const catId = catIdInput ? catIdInput.value : null;
+        const key = (optionName || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+        if (!catId || !key) return;
+        if (this.state.suggestionsCache[key]) return;
+
+        try {
+            const slug = window.location.pathname.split('/')[2];
+            const response = await fetch(`/dashboard/${slug}/products/api/categories/${catId}/options/${encodeURIComponent(optionName.trim())}/suggestions`);
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data && data.length > 0) {
+                    this.state.suggestionsCache[key] = data;
+                    this.renderOptions();
+                }
+            }
+        } catch (error) {
+            console.error("Fallo silencioso al buscar sugerencias dinámicas:", error);
+        }
+    },
+
     getPresetSuggestions: function(optionName) {
         const key = (optionName || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
         const matchKey = Object.keys(this.PRESET_VALUES).find(k => k.normalize('NFD').replace(/[\u0300-\u036f]/g, '') === key);
-        return matchKey ? this.PRESET_VALUES[matchKey] : [];
+        const baseSuggestions = matchKey ? this.PRESET_VALUES[matchKey] : [];
+        const liveSuggestions = this.state.suggestionsCache[key] || [];
+
+        const merged = [];
+        const seen = new Set();
+
+        [...liveSuggestions, ...baseSuggestions].forEach(val => {
+            const valKey = val.toLowerCase().trim();
+            if (!seen.has(valKey)) {
+                seen.add(valKey);
+                merged.push(val);
+            }
+        });
+
+        return merged;
     },
 
     addSuggestedValue: function(idx, val) {
@@ -243,7 +274,7 @@ Storevo.VariantBuilder = {
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
                     <div class="md:col-span-1">
                         <label class="text-xs font-bold text-slate-500 uppercase mb-1 block">Opción</label>
-                        <input type="text" value="${opt.name}" placeholder="Ej: Color" onchange="Storevo.VariantBuilder.updateOptionName(${idx}, this.value)" class="w-full bg-slate-900 border border-slate-800 text-white rounded-lg px-3 py-2.5 text-sm focus:ring-storevo-500 font-bold transition-colors">
+                        <input type="text" value="${opt.name}" placeholder="Ej: Color" onblur="Storevo.VariantBuilder.updateOptionName(${idx}, this.value)" class="w-full bg-slate-900 border border-slate-800 text-white rounded-lg px-3 py-2.5 text-sm focus:ring-storevo-500 font-bold transition-colors">
                     </div>
                     <div class="md:col-span-3">
                         <label class="text-xs font-bold text-slate-500 uppercase mb-1 block">Valores</label>
@@ -262,8 +293,11 @@ Storevo.VariantBuilder = {
     },
 
     updateOptionName: function(idx, val) {
-        this.state.options[idx].name = val;
-        this.renderOptions();
+        if (this.state.options[idx].name !== val) {
+            this.state.options[idx].name = val;
+            this.fetchSuggestions(val);
+            this.renderOptions();
+        }
     },
 
     handleTagKey: function(e, idx) {
@@ -291,8 +325,6 @@ Storevo.VariantBuilder = {
     updateVariantData: function(signature, field, value) {
         if (!this.state.variantsData[signature]) this.state.variantsData[signature] = { price: '', stock: 0, sku: '', imageRef: '' };
         this.state.variantsData[signature][field] = value;
-
-        // CORRECCIÓN STOCK/PRECIO EN 0: Sincronizar en tiempo real con el DOM oculto
         this.syncHiddenInputs();
     },
 
@@ -654,7 +686,6 @@ Storevo.VariantBuilder = {
         combinations.forEach((combo, vIdx) => {
             const data = this.state.variantsData[this.generateSignatureFromMap(combo)];
 
-            // 1. Matemáticas en tiempo real
             totalStock += parseInt(data.stock) || 0;
             const p = parseFloat(data.price);
             if (p && p < minPrice) minPrice = p;
@@ -667,7 +698,6 @@ Storevo.VariantBuilder = {
             Object.keys(combo).forEach(key => this.createHidden(container, `variants[${vIdx}].combination['${key}']`, combo[key]));
         });
 
-        // 2. Inyectar la suma en las cajas bloqueadas de arriba
         const inputStock = document.getElementById('input-stock');
         const realStock = document.getElementById('real-stock');
         const inputPrice = document.getElementById('input-price');
@@ -681,7 +711,6 @@ Storevo.VariantBuilder = {
         if (minPrice !== Infinity && inputPrice && realPrice) {
             realPrice.value = minPrice;
             inputPrice.value = minPrice;
-            // Desparamos el evento para que los separadores de miles ($ 10.000) se formateen visualmente
             inputPrice.dispatchEvent(new Event('input', { bubbles: true }));
         }
 

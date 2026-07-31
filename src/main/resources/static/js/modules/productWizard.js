@@ -7,17 +7,15 @@ Storevo.ProductWizard = {
     currentStep: 1,
     totalSteps: 4,
     mode: 'wizard',
-    currentRecommendation: null, // Almacena la sugerencia inteligente
+    currentRecommendation: null,
 
     init: function() {
         const savedMode = localStorage.getItem('storevo_product_mode');
-        // Si hay un modo guardado y NO estamos editando un producto viejo, aplicarlo.
         if (savedMode && window.IS_NEW_PRODUCT) {
             this.mode = savedMode;
         } else if (!window.IS_NEW_PRODUCT) {
             this.mode = 'advanced';
         }
-
         this.setMode(this.mode);
     },
 
@@ -28,31 +26,20 @@ Storevo.ProductWizard = {
         const btnWiz = document.getElementById('btn-mode-wizard');
         const btnAdv = document.getElementById('btn-mode-advanced');
         const allSteps = document.querySelectorAll('.wizard-step');
-
-        // Obtenemos el formulario
         const formLayout = document.getElementById('product-form');
 
-        // LA MAGIA: Al cambiar este atributo, nuestro <style> CSS hace el trabajo pesado
         if(formLayout) formLayout.setAttribute('data-mode', this.mode);
 
         if (this.mode === 'wizard') {
-            // UI Switch: Activar botón Asistente
             if(btnWiz) btnWiz.className = "px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-md transition-all bg-storevo-500 text-white shadow-md";
             if(btnAdv) btnAdv.className = "px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-md transition-all text-slate-500 hover:text-slate-300 bg-transparent";
-
             this.goToStep(this.currentStep);
-
         } else {
-            // UI Switch: Activar botón Avanzado
             if(btnAdv) btnAdv.className = "px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-md transition-all bg-slate-700 text-white shadow-md";
             if(btnWiz) btnWiz.className = "px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-md transition-all text-slate-500 hover:text-slate-300 bg-transparent";
 
-            // Mostrar TODO
-            allSteps.forEach(step => {
-                step.classList.remove('hidden', 'animate-fade-in-up');
-            });
+            allSteps.forEach(step => step.classList.remove('hidden', 'animate-fade-in-up'));
 
-            // Ocultar botones de pasos, mostrar grupo submit
             const wizardControls = document.getElementById('wizard-controls');
             if(wizardControls) {
                 wizardControls.classList.add('hidden');
@@ -71,7 +58,6 @@ Storevo.ProductWizard = {
         if(Storevo.ProductDraft && typeof Storevo.ProductDraft.saveDraft === 'function' && window.IS_NEW_PRODUCT) {
             Storevo.ProductDraft.saveDraft();
         }
-
         if (this.currentStep < this.totalSteps) {
             this.goToStep(this.currentStep + 1);
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -133,9 +119,6 @@ Storevo.ProductWizard = {
         }
     },
 
-    // ---------------------------------------------------
-    // LÓGICA DE PLANTILLAS Y VARIANTES
-    // ---------------------------------------------------
     templates: [
         { id: 'ropa', name: 'Ropa', icon: 'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z', desc: 'Camisetas, pantalones, vestidos...' },
         { id: 'calzado', name: 'Calzado', icon: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z', desc: 'Zapatos, tenis, botas...' },
@@ -149,7 +132,6 @@ Storevo.ProductWizard = {
         const emptyState = document.getElementById('options-empty-state');
         if(emptyState) emptyState.classList.add('hidden');
 
-        // Esconder vistas por si apaga y prende
         const panelSmart = document.getElementById('smart-recommendation-panel');
         const panelTemplates = document.getElementById('vb-templates-panel');
         if (panelSmart) panelSmart.classList.add('hidden');
@@ -163,21 +145,16 @@ Storevo.ProductWizard = {
 
         const wizardState = document.getElementById('options-wizard-state');
         if(wizardState) {
-            wizardState.classList.remove('hidden');
-            wizardState.classList.remove('opacity-0');
-
-            // Mostrar estado de carga transitorio
+            wizardState.classList.remove('hidden', 'opacity-0');
             wizardState.innerHTML = `<div class="py-4"><div class="w-6 h-6 border-2 border-storevo-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div><p class="text-xs text-slate-500">Buscando configuración ideal...</p></div>`;
         }
 
-        // Consultar silenciosamente al Backend
         const catIdInput = document.getElementById('finalCategoryId');
         const catId = catIdInput ? catIdInput.value : null;
 
         if (catId && catId !== "") {
             try {
-                const currentUrl = window.location.pathname;
-                const slug = currentUrl.split('/')[2];
+                const slug = window.location.pathname.split('/')[2];
                 const response = await fetch(`/dashboard/${slug}/products/api/categories/${catId}/smart-template`);
 
                 if (response.ok) {
@@ -185,15 +162,13 @@ Storevo.ProductWizard = {
                     if (data && data.recommendation) {
                         this.currentRecommendation = data.recommendation;
                         this.renderSmartTemplate(data.recommendation);
-                        return; // Detenemos aquí, la inteligencia funcionó.
+                        return;
                     }
                 }
             } catch (error) {
                 console.error("Fallo silencioso al buscar recomendación:", error);
             }
         }
-
-        // Fallback: Si no hay categoría o devuelve NULL, restaurar los botones manuales
         this.showInitialOptions();
     },
 
@@ -262,16 +237,23 @@ Storevo.ProductWizard = {
         if (!this.currentRecommendation) return;
 
         if(window.Storevo.VariantBuilder) {
-            window.Storevo.VariantBuilder.options = [];
+            window.Storevo.VariantBuilder.state.options = [];
+            window.Storevo.VariantBuilder.state.variantsData = {};
+            window.Storevo.VariantBuilder.state.excluded = {};
+
             this.currentRecommendation.options.forEach(opt => {
-                window.Storevo.VariantBuilder.options.push({
-                    id: 'opt_' + Date.now() + Math.random(),
+                const optKey = opt.name.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+                // Guardar en el caché vivo para sugerencias
+                window.Storevo.VariantBuilder.state.suggestionsCache[optKey] = [...opt.values];
+
+                // Insertar como esqueleto vacío para obligar a usar los botones sugeridos
+                window.Storevo.VariantBuilder.state.options.push({
                     name: opt.name,
-                    values: opt.values
+                    values: []
                 });
             });
             window.Storevo.VariantBuilder.renderOptions();
-            window.Storevo.VariantBuilder.generateTable();
         }
     },
 
@@ -295,8 +277,9 @@ Storevo.ProductWizard = {
         }
 
         if(Storevo.VariantBuilder) {
-            Storevo.VariantBuilder.options = [];
-            Storevo.VariantBuilder.variants = [];
+            Storevo.VariantBuilder.state.options = [];
+            Storevo.VariantBuilder.state.variantsData = {};
+            Storevo.VariantBuilder.state.excluded = {};
             Storevo.VariantBuilder.renderOptions();
             const tableContainer = document.getElementById('vb-table-container');
             if(tableContainer) tableContainer.classList.add('hidden');
@@ -367,36 +350,53 @@ Storevo.ProductWizard = {
 
         if (!Storevo.VariantBuilder) return;
 
-        Storevo.VariantBuilder.options = [];
-        Storevo.VariantBuilder.variants = [];
+        Storevo.VariantBuilder.state.options = [];
+        Storevo.VariantBuilder.state.variantsData = {};
+        Storevo.VariantBuilder.state.excluded = {};
 
         const tableContainer = document.getElementById('vb-table-container');
         if(tableContainer) tableContainer.classList.add('hidden');
 
         const t = this.templates.find(x => x.id === templateId);
 
-        if (templateId === 'ropa') {
-            Storevo.VariantBuilder.addOption('Color', ['Negro', 'Blanco', 'Gris', 'Azul']);
-            Storevo.VariantBuilder.addOption('Talla', ['XS', 'S', 'M', 'L', 'XL']);
-        }
-        else if (templateId === 'calzado') {
-            Storevo.VariantBuilder.addOption('Color', ['Negro', 'Blanco']);
-            Storevo.VariantBuilder.addOption('Talla', ['35', '36', '37', '38', '39', '40']);
+        // ESQUELETOS: Talla primero y valores vacíos para forzar el uso de sugerencias
+        if (templateId === 'ropa' || templateId === 'calzado') {
+            Storevo.VariantBuilder.state.options = [
+                { name: 'Talla', values: [] },
+                { name: 'Color', values: [] }
+            ];
         }
         else if (templateId === 'perfume') {
-            Storevo.VariantBuilder.addOption('Presentación', ['30 ml', '50 ml', '100 ml']);
+            Storevo.VariantBuilder.state.options = [
+                { name: 'Presentación', values: [] }
+            ];
         }
         else if (templateId === 'tecnologia') {
-            Storevo.VariantBuilder.addOption('Color', ['Negro', 'Blanco']);
-            Storevo.VariantBuilder.addOption('Capacidad', ['64 GB', '128 GB', '256 GB']);
+            Storevo.VariantBuilder.state.options = [
+                { name: 'Capacidad', values: [] },
+                { name: 'Color', values: [] }
+            ];
         }
         else if (templateId === 'accesorios') {
-            Storevo.VariantBuilder.addOption('Color', []);
-            Storevo.VariantBuilder.addOption('Material', []);
+            Storevo.VariantBuilder.state.options = [
+                { name: 'Material', values: [] },
+                { name: 'Color', values: [] }
+            ];
         }
         else if (templateId === 'personalizado') {
-            Storevo.VariantBuilder.addOption('', []);
+            Storevo.VariantBuilder.state.options = [
+                { name: '', values: [] }
+            ];
         }
+
+        // Auto-Aprender opciones vacías para disparar botones sugeridos
+        Storevo.VariantBuilder.state.options.forEach(opt => {
+            if (opt.name) {
+                Storevo.VariantBuilder.fetchSuggestions(opt.name);
+            }
+        });
+
+        Storevo.VariantBuilder.renderOptions();
 
         this.removeBanner();
         if (showBanner && templateId !== 'personalizado') {

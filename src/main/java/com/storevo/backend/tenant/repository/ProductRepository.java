@@ -53,6 +53,6 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     List<String> findMostUsedOptionsByCategory(@Param("categoryId") Long categoryId, Pageable pageable);
 
     // 3. Extrae los valores más populares para esa opción (S, M, L o Negro, Blanco)
-    @Query("SELECT v.valueName FROM Product p JOIN p.options o JOIN o.values v WHERE p.category.id = :categoryId AND o.name = :optionName AND p.isDeleted = false GROUP BY v.valueName ORDER BY COUNT(v.id) DESC")
+    @Query("SELECT v.valueName FROM Product p JOIN p.options o JOIN o.values v WHERE p.category.id = :categoryId AND LOWER(o.name) = LOWER(:optionName) AND p.isDeleted = false GROUP BY v.valueName ORDER BY COUNT(v.id) DESC, MAX(p.id) DESC")
     List<String> findMostUsedOptionValuesByCategory(@Param("categoryId") Long categoryId, @Param("optionName") String optionName, Pageable pageable);
 }

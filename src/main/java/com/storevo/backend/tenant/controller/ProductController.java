@@ -353,4 +353,9 @@ public class ProductController {
     public ResponseEntity<TemplateRecommendationResponse> getSmartTemplate(@PathVariable String slug, @PathVariable Long categoryId) {
         return ResponseEntity.ok(templateRecommendationService.getSmartRecommendation(categoryId));
     }
+    @GetMapping("/api/categories/{categoryId}/options/{optionName}/suggestions")
+    @ResponseBody
+    public ResponseEntity<List<String>> getDynamicSuggestions(@PathVariable String slug, @PathVariable Long categoryId, @PathVariable String optionName) {
+        return ResponseEntity.ok(templateRecommendationService.getDynamicSuggestions(categoryId, optionName));
+    }
 }
