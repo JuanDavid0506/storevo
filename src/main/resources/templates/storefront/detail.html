@@ -32,13 +32,19 @@
           <div th:if="${product.discountPrice != null and product.discountPrice > 0}" class="absolute top-4 left-4 bg-red-500 text-white text-xs font-black uppercase px-3 py-1.5 rounded-full shadow-lg z-10">Oferta</div>
           <img id="main-product-image" th:src="${product.mainImageUrl != null ? product.mainImageUrl : '/img/placeholder.jpg'}" th:alt="${product.name}" class="w-full h-full object-cover transition-opacity duration-300">
         </div>
+
+        <!-- GALERÍA BLINDADA CONTRA DUPLICADOS -->
         <div th:if="${product.images != null and product.images.size() > 1}" class="grid grid-cols-5 sm:grid-cols-6 gap-3">
-          <button th:each="img : ${product.images}" type="button"
-                  th:data-src="${img.filePath}" onclick="Storevo.ProductDetail.changeImage(this)"
-                  class="product-thumbnail aspect-square rounded-xl overflow-hidden border-2 transition-all duration-200"
-                  th:classappend="${img.isPrimary ? 'border-brand shadow-md ring-2 ring-brand/20' : 'border-transparent hover:border-slate-300 opacity-70 hover:opacity-100'}">
-            <img th:src="${img.getThumbnailUrl() != null ? img.getThumbnailUrl() : img.filePath}" class="w-full h-full object-cover">
-          </button>
+          <th:block th:with="seenUrls=${new java.util.HashSet()}">
+            <button th:each="img : ${product.images}"
+                    th:if="${seenUrls.add(img.secureUrl)}"
+                    type="button"
+                    th:data-src="${img.secureUrl}" onclick="Storevo.ProductDetail.changeImage(this)"
+                    class="product-thumbnail aspect-square rounded-xl overflow-hidden border-2 transition-all duration-200"
+                    th:classappend="${img.isPrimary ? 'border-brand shadow-md ring-2 ring-brand/20' : 'border-transparent hover:border-slate-300 opacity-70 hover:opacity-100'}">
+              <img th:src="${img.getThumbnailUrl() != null ? img.getThumbnailUrl() : img.secureUrl}" class="w-full h-full object-cover">
+            </button>
+          </th:block>
         </div>
       </div>
 
