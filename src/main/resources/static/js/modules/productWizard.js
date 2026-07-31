@@ -16,6 +16,15 @@ Storevo.ProductWizard = {
         } else if (!window.IS_NEW_PRODUCT) {
             this.mode = 'advanced';
         }
+
+        // NUEVO: Recuperar el paso en el que estaba antes de recargar
+        const savedStep = sessionStorage.getItem('storevo_current_step');
+        if (savedStep) {
+            this.currentStep = parseInt(savedStep);
+        } else {
+            this.currentStep = 1;
+        }
+
         this.setMode(this.mode);
     },
 
@@ -75,6 +84,9 @@ Storevo.ProductWizard = {
         if (this.mode !== 'wizard') return;
 
         this.currentStep = stepNumber;
+
+        // NUEVO: Guardar el paso actual en la memoria de la pestaña
+        sessionStorage.setItem('storevo_current_step', stepNumber);
 
         document.querySelectorAll('.wizard-step').forEach(el => {
             el.classList.add('hidden');

@@ -248,12 +248,13 @@ Storevo.ProductForm = {
             isActiveToggle.dispatchEvent(new Event('change'));
         }
 
-        // 3. Sincronizar las variantes en tiempo real antes del submit
+        // NUEVO: Limpiamos la memoria del paso para que el próximo producto inicie en 1
+        sessionStorage.removeItem('storevo_current_step');
+
         if (window.Storevo && window.Storevo.VariantBuilder) {
             window.Storevo.VariantBuilder.syncHiddenInputs();
         }
 
-        // Retornamos true para permitir que el form se envíe nativamente
         return true;
     }
 };
