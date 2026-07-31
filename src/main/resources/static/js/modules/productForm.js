@@ -231,8 +231,33 @@ Storevo.ProductForm = {
             if (path.length > 1) this.selectCategory(2, path[1]);
             if (path.length > 2) this.selectCategory(3, path[2]);
         }
+    },
+
+    // ==========================================
+    // LÓGICA DE PUBLICACIÓN (SUBMIT)
+    // ==========================================
+    publish: function() {
+        // 1. Quitar el estado de borrador
+        const isDraftInput = document.getElementById('isDraft');
+        if (isDraftInput) isDraftInput.value = 'false';
+
+        // 2. Forzar a que el producto esté activo (visible en tienda)
+        const isActiveToggle = document.getElementById('isActive');
+        if (isActiveToggle && !isActiveToggle.checked) {
+            isActiveToggle.checked = true;
+            isActiveToggle.dispatchEvent(new Event('change'));
+        }
+
+        // 3. Sincronizar las variantes en tiempo real antes del submit
+        if (window.Storevo && window.Storevo.VariantBuilder) {
+            window.Storevo.VariantBuilder.syncHiddenInputs();
+        }
+
+        // Retornamos true para permitir que el form se envíe nativamente
+        return true;
     }
 };
+
 
 // ==========================================
 // MÓDULO: Creación de Categorías al Vuelo

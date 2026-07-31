@@ -31,6 +31,21 @@ Storevo.ProductDraft = {
     },
 
     saveToDatabase: async function() {
+        // ==========================================
+        // 1. ESCUDO ANTI-FANTASMAS (Borradores vacíos)
+        // ==========================================
+        const nombreInput = document.getElementById('input-name');
+
+        // Si el input no existe, o si el usuario ha escrito menos de 2 letras, abortar.
+        if (!nombreInput || nombreInput.value.trim().length < 2) {
+            // Regresamos el indicador visual a "Borrador sin guardar"
+            this.updateIndicator('<span class="text-slate-500" title="Escribe un nombre para guardar">Borrador sin guardar</span>');
+            return;
+        }
+
+        // ==========================================
+        // 2. LÓGICA DE GUARDADO
+        // ==========================================
         if (this.isSaving) return;
         this.isSaving = true;
 
