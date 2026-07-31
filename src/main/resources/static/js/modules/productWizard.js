@@ -1,6 +1,140 @@
 window.Storevo = window.Storevo || {};
 
 Storevo.ProductWizard = {
+    // ---------------------------------------------------
+    // LÓGICA DEL DIRECTOR DE ESCENA (MODO DUAL Y PASOS)
+    // ---------------------------------------------------
+    currentStep: 1,
+    totalSteps: 4,
+    mode: 'wizard',
+
+    init: function() {
+        const savedMode = localStorage.getItem('storevo_product_mode');
+        // Si hay un modo guardado y NO estamos editando un producto viejo, aplicarlo.
+        if (savedMode && window.IS_NEW_PRODUCT) {
+            this.mode = savedMode;
+        } else if (!window.IS_NEW_PRODUCT) {
+            this.mode = 'advanced';
+        }
+
+        this.setMode(this.mode);
+    },
+
+    setMode: function(newMode) {
+        this.mode = newMode;
+        localStorage.setItem('storevo_product_mode', newMode);
+
+        const btnWiz = document.getElementById('btn-mode-wizard');
+        const btnAdv = document.getElementById('btn-mode-advanced');
+        const allSteps = document.querySelectorAll('.wizard-step');
+
+        // Obtenemos el formulario
+        const formLayout = document.getElementById('product-form');
+
+        // LA MAGIA: Al cambiar este atributo, nuestro <style> CSS hace el trabajo pesado
+        if(formLayout) formLayout.setAttribute('data-mode', this.mode);
+
+        if (this.mode === 'wizard') {
+            // UI Switch: Activar botón Asistente
+            if(btnWiz) btnWiz.className = "px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-md transition-all bg-storevo-500 text-white shadow-md";
+            if(btnAdv) btnAdv.className = "px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-md transition-all text-slate-500 hover:text-slate-300 bg-transparent";
+
+            this.goToStep(this.currentStep);
+
+        } else {
+            // UI Switch: Activar botón Avanzado
+            if(btnAdv) btnAdv.className = "px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-md transition-all bg-slate-700 text-white shadow-md";
+            if(btnWiz) btnWiz.className = "px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-md transition-all text-slate-500 hover:text-slate-300 bg-transparent";
+
+            // Mostrar TODO
+            allSteps.forEach(step => {
+                step.classList.remove('hidden', 'animate-fade-in-up');
+            });
+
+            // Ocultar botones de pasos, mostrar grupo submit
+            const wizardControls = document.getElementById('wizard-controls');
+            if(wizardControls) {
+                wizardControls.classList.add('hidden');
+                wizardControls.classList.remove('flex');
+            }
+
+            const submitGroup = document.getElementById('submit-group');
+            if(submitGroup) {
+                submitGroup.classList.remove('hidden');
+                submitGroup.classList.add('flex');
+            }
+        }
+    },
+
+    nextStep: function() {
+        if(Storevo.ProductDraft && typeof Storevo.ProductDraft.saveDraft === 'function' && window.IS_NEW_PRODUCT) {
+            Storevo.ProductDraft.saveDraft();
+        }
+
+        if (this.currentStep < this.totalSteps) {
+            this.goToStep(this.currentStep + 1);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    },
+
+    prevStep: function() {
+        if (this.currentStep > 1) {
+            this.goToStep(this.currentStep - 1);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    },
+
+    goToStep: function(stepNumber) {
+        if (this.mode !== 'wizard') return;
+
+        this.currentStep = stepNumber;
+
+        document.querySelectorAll('.wizard-step').forEach(el => {
+            el.classList.add('hidden');
+            el.classList.remove('animate-fade-in-up');
+        });
+
+        document.querySelectorAll(`.wizard-step-${stepNumber}`).forEach(el => {
+            el.classList.remove('hidden');
+            el.classList.add('animate-fade-in-up');
+        });
+
+        const prevBtn = document.getElementById('wizard-prev');
+        const nextBtn = document.getElementById('wizard-next');
+        const submitGroup = document.getElementById('submit-group');
+        const wizardControls = document.getElementById('wizard-controls');
+        const progress = document.getElementById('wizard-progress');
+
+        if(wizardControls) {
+            wizardControls.classList.remove('hidden');
+            wizardControls.classList.add('flex');
+        }
+
+        if (progress) progress.innerHTML = `<span class="font-bold text-white">Paso ${stepNumber}</span> de ${this.totalSteps}`;
+
+        if (prevBtn) {
+            if (stepNumber === 1) prevBtn.classList.add('invisible');
+            else prevBtn.classList.remove('invisible');
+        }
+
+        if (stepNumber === this.totalSteps) {
+            if(nextBtn) nextBtn.classList.add('hidden');
+            if(submitGroup) {
+                submitGroup.classList.remove('hidden');
+                submitGroup.classList.add('flex');
+            }
+        } else {
+            if(nextBtn) nextBtn.classList.remove('hidden');
+            if(submitGroup) {
+                submitGroup.classList.add('hidden');
+                submitGroup.classList.remove('flex');
+            }
+        }
+    },
+
+    // ---------------------------------------------------
+    // LÓGICA DE PLANTILLAS Y VARIANTES
+    // ---------------------------------------------------
     templates: [
         { id: 'ropa', name: 'Ropa', icon: 'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z', desc: 'Camisetas, pantalones, vestidos...' },
         { id: 'calzado', name: 'Calzado', icon: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z', desc: 'Zapatos, tenis, botas...' },
@@ -10,14 +144,19 @@ Storevo.ProductWizard = {
         { id: 'personalizado', name: 'Personalizado', icon: 'M12 6v6m0 0v6m0-6h6m-6 0H6', desc: 'Empieza desde cero' }
     ],
 
-    // Paso 1: Activar variantes -> Oculta el estado vacío y muestra (Manual o Plantilla)
     startWizard: function() {
-        document.getElementById('options-empty-state').classList.add('hidden');
-        const wizardState = document.getElementById('options-wizard-state');
-        wizardState.classList.remove('hidden');
-        setTimeout(() => wizardState.classList.remove('opacity-0'), 10);
+        const emptyState = document.getElementById('options-empty-state');
+        if(emptyState) emptyState.classList.add('hidden');
 
-        document.getElementById('vb-templates-panel').classList.add('hidden', 'opacity-0');
+        const wizardState = document.getElementById('options-wizard-state');
+        if(wizardState) {
+            wizardState.classList.remove('hidden');
+            setTimeout(() => wizardState.classList.remove('opacity-0'), 10);
+        }
+
+        const templatesPanel = document.getElementById('vb-templates-panel');
+        if(templatesPanel) templatesPanel.classList.add('hidden', 'opacity-0');
+
         const builder = document.getElementById('variant-builder-container');
         if(builder) {
             builder.classList.add('opacity-0');
@@ -25,11 +164,15 @@ Storevo.ProductWizard = {
         }
     },
 
-    // Quitar variantes: Vuelve al estado vacío
     cancel: function() {
-        document.getElementById('options-empty-state').classList.remove('hidden');
-        document.getElementById('options-wizard-state').classList.add('hidden', 'opacity-0');
-        document.getElementById('vb-templates-panel').classList.add('hidden', 'opacity-0');
+        const emptyState = document.getElementById('options-empty-state');
+        if(emptyState) emptyState.classList.remove('hidden');
+
+        const wizardState = document.getElementById('options-wizard-state');
+        if(wizardState) wizardState.classList.add('hidden', 'opacity-0');
+
+        const templatesPanel = document.getElementById('vb-templates-panel');
+        if(templatesPanel) templatesPanel.classList.add('hidden', 'opacity-0');
 
         const builder = document.getElementById('variant-builder-container');
         if(builder) {
@@ -39,26 +182,26 @@ Storevo.ProductWizard = {
 
         if(Storevo.VariantBuilder) {
             Storevo.VariantBuilder.options = [];
-            Storevo.VariantBuilder.variants = []; // Limpiamos la tabla
+            Storevo.VariantBuilder.variants = [];
             Storevo.VariantBuilder.renderOptions();
             const tableContainer = document.getElementById('vb-table-container');
             if(tableContainer) tableContainer.classList.add('hidden');
         }
     },
 
-    // Paso 2: Mostrar grid de plantillas
     showTemplates: function() {
-        document.getElementById('options-wizard-state').classList.add('hidden', 'opacity-0');
+        const wizardState = document.getElementById('options-wizard-state');
+        if(wizardState) wizardState.classList.add('hidden', 'opacity-0');
 
-        // Si hay un banner de éxito previo, lo eliminamos
         this.removeBanner();
 
         const panel = document.getElementById('vb-templates-panel');
-        panel.classList.remove('hidden');
-        setTimeout(() => panel.classList.remove('opacity-0'), 10);
-        this.renderTemplates();
+        if(panel) {
+            panel.classList.remove('hidden');
+            setTimeout(() => panel.classList.remove('opacity-0'), 10);
+            this.renderTemplates();
+        }
 
-        // Ocultar el constructor si estaba visible (Por si dio clic en "Cambiar plantilla")
         const builder = document.getElementById('variant-builder-container');
         if(builder) {
             builder.classList.add('opacity-0');
@@ -66,9 +209,8 @@ Storevo.ProductWizard = {
         }
     },
 
-    // Paso 2 (Alternativo): Configuración manual
     chooseManual: function() {
-        this.applyTemplate('personalizado', false); // false = No mostrar banner
+        this.applyTemplate('personalizado', false);
     },
 
     renderTemplates: function() {
@@ -93,28 +235,29 @@ Storevo.ProductWizard = {
         });
     },
 
-    // Paso 3: Aplicar valores al constructor SIN generar variantes automáticamente
     applyTemplate: function(templateId, showBanner = true) {
-        document.getElementById('options-wizard-state').classList.add('hidden', 'opacity-0');
-        document.getElementById('vb-templates-panel').classList.add('hidden', 'opacity-0');
+        const wizardState = document.getElementById('options-wizard-state');
+        if(wizardState) wizardState.classList.add('hidden', 'opacity-0');
+
+        const templatesPanel = document.getElementById('vb-templates-panel');
+        if(templatesPanel) templatesPanel.classList.add('hidden', 'opacity-0');
 
         const builder = document.getElementById('variant-builder-container');
-        builder.classList.remove('hidden');
-        setTimeout(() => builder.classList.remove('opacity-0'), 10);
+        if(builder) {
+            builder.classList.remove('hidden');
+            setTimeout(() => builder.classList.remove('opacity-0'), 10);
+        }
 
         if (!Storevo.VariantBuilder) return;
 
-        // 1. Limpiamos cualquier opción y variante anterior
         Storevo.VariantBuilder.options = [];
         Storevo.VariantBuilder.variants = [];
 
-        // 2. Ocultamos la tabla de variantes para no forzar la generación automática
         const tableContainer = document.getElementById('vb-table-container');
         if(tableContainer) tableContainer.classList.add('hidden');
 
         const t = this.templates.find(x => x.id === templateId);
 
-        // 3. Rellenamos las opciones según el diseño exacto que pediste
         if (templateId === 'ropa') {
             Storevo.VariantBuilder.addOption('Color', ['Negro', 'Blanco', 'Gris', 'Azul']);
             Storevo.VariantBuilder.addOption('Talla', ['XS', 'S', 'M', 'L', 'XL']);
@@ -138,7 +281,6 @@ Storevo.ProductWizard = {
             Storevo.VariantBuilder.addOption('', []);
         }
 
-        // 4. Inyectamos el Banner de Éxito
         this.removeBanner();
         if (showBanner && templateId !== 'personalizado') {
             this.injectBanner(t);
@@ -175,3 +317,7 @@ Storevo.ProductWizard = {
         if(existing) existing.remove();
     }
 };
+
+document.addEventListener('DOMContentLoaded', () => {
+    Storevo.ProductWizard.init();
+});
