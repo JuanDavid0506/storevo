@@ -285,11 +285,32 @@
                 </div>
 
                 <div id="options-wizard-state" class="hidden opacity-0 bg-slate-950 border border-slate-800 rounded-xl p-6 text-center transition-all duration-200">
-                    <h4 class="text-white font-bold mb-2">¿Cómo deseas comenzar?</h4>
-                    <p class="text-xs text-slate-500 mb-5">Elige si quieres configurar todo desde cero o usar una plantilla prediseñada.</p>
-                    <div class="flex flex-col sm:flex-row justify-center gap-3">
-                        <button type="button" onclick="Storevo.ProductWizard.chooseManual()" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white text-sm font-bold rounded-lg border border-slate-700 transition-colors">Configuración manual</button>
-                        <button type="button" onclick="Storevo.ProductWizard.showTemplates()" class="px-5 py-2.5 bg-storevo-500/10 hover:bg-storevo-500/20 text-storevo-400 text-sm font-bold rounded-lg border border-storevo-500/30 transition-colors">Usar una plantilla</button>
+                    <!-- Dinamizado por JS -->
+                </div>
+
+                <!-- NUEVO: TARJETA INTELIGENTE (SMART RECOMMENDATION) -->
+                <div id="smart-recommendation-panel" class="hidden opacity-0 bg-slate-900 border border-storevo-500/30 rounded-2xl p-6 shadow-[0_0_20px_rgba(99,102,241,0.05)] transition-all duration-300 relative overflow-hidden mt-4">
+                    <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-storevo-500/10 rounded-full blur-2xl"></div>
+                    <div class="flex flex-col sm:flex-row items-start gap-4 relative z-10">
+                        <div class="w-10 h-10 rounded-full bg-storevo-500/10 flex items-center justify-center flex-shrink-0 text-storevo-400">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                        </div>
+                        <div class="flex-1 w-full">
+                            <div class="flex items-center gap-2 mb-1 flex-wrap">
+                                <h4 id="smart-title" class="text-white font-bold text-base sm:text-lg">Configuración recomendada</h4>
+                                <span id="smart-confidence" class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wide">Alta confianza</span>
+                            </div>
+                            <p id="smart-subtitle" class="text-xs text-slate-400 mb-4">Analizando el historial...</p>
+
+                            <div id="smart-options-list" class="flex flex-wrap gap-2 mb-5">
+                                <!-- Los checks verdes dinámicos -->
+                            </div>
+
+                            <div class="flex flex-col sm:flex-row items-center gap-3">
+                                <button type="button" onclick="Storevo.ProductWizard.applySmartTemplate()" class="w-full sm:w-auto bg-storevo-500 hover:bg-storevo-600 text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-storevo-500/20">Aplicar configuración</button>
+                                <button type="button" onclick="Storevo.ProductWizard.showTemplates()" class="w-full sm:w-auto text-slate-400 hover:text-white text-sm font-bold px-4 py-2.5 rounded-xl transition-all hover:bg-slate-800 border border-transparent hover:border-slate-700">Elegir otras plantillas</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

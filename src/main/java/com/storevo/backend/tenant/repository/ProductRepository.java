@@ -42,4 +42,17 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             Pageable pageable);
 
     Optional<Product> findTopByOrderByIdDesc();
+
+
+    // 1. Cuenta la cantidad de productos con variantes en una categoría para saber si hay historial
+    @Query("SELECT COUNT(p) FROM Product p WHERE p.category.id = :categoryId AND p.hasVariants = true AND p.isDeleted = false")
+    Long countProductsWithVariantsByCategory(@Param("categoryId") Long categoryId);
+
+    // 2. Extrae los nombres de opciones (Color, Talla, etc) más repetidos en esa categoría
+    @Query("SELECT o.name FROM Product p JOIN p.options o WHERE p.category.id = :categoryId AND p.isDeleted = false GROUP BY o.name ORDER BY COUNT(o.id) DESC")
+    List<String> findMostUsedOptionsByCategory(@Param("categoryId") Long categoryId, Pageable pageable);
+
+    // 3. Extrae los valores más populares para esa opción (S, M, L o Negro, Blanco)
+    @Query("SELECT v.valueName FROM Product p JOIN p.options o JOIN o.values v WHERE p.category.id = :categoryId AND o.name = :optionName AND p.isDeleted = false GROUP BY v.valueName ORDER BY COUNT(v.id) DESC")
+    List<String> findMostUsedOptionValuesByCategory(@Param("categoryId") Long categoryId, @Param("optionName") String optionName, Pageable pageable);
 }

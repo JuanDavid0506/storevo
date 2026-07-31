@@ -5,11 +5,13 @@ import com.storevo.backend.admin.service.StoreSettingsService;
 import com.storevo.backend.config.tenant.TenantContext;
 import com.storevo.backend.tenant.dto.CategoryTreeDto;
 import com.storevo.backend.tenant.dto.ProductDto;
+import com.storevo.backend.tenant.dto.TemplateRecommendationResponse;
 import com.storevo.backend.tenant.model.Product;
 import com.storevo.backend.tenant.model.ProductImage;
 import com.storevo.backend.tenant.service.CategoryService;
 import com.storevo.backend.tenant.service.ProductService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.storevo.backend.tenant.service.TemplateRecommendationService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.Getter;
 import lombok.Setter;
@@ -37,6 +39,7 @@ public class ProductController {
     private final CategoryService categoryService;
     private final StoreSettingsService storeSettingsService;
     private final ObjectMapper objectMapper;
+    private final TemplateRecommendationService templateRecommendationService;
 
     @ModelAttribute
     public void setupTenant(@PathVariable String slug, Model model, HttpServletRequest request) {
@@ -344,5 +347,10 @@ public class ProductController {
     public static class MassActionRequest {
         private String action;
         private List<Long> ids;
+    }
+    @GetMapping("/api/categories/{categoryId}/smart-template")
+    @ResponseBody
+    public ResponseEntity<TemplateRecommendationResponse> getSmartTemplate(@PathVariable String slug, @PathVariable Long categoryId) {
+        return ResponseEntity.ok(templateRecommendationService.getSmartRecommendation(categoryId));
     }
 }

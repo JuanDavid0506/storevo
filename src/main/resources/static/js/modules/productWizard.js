@@ -7,6 +7,7 @@ Storevo.ProductWizard = {
     currentStep: 1,
     totalSteps: 4,
     mode: 'wizard',
+    currentRecommendation: null, // Almacena la sugerencia inteligente
 
     init: function() {
         const savedMode = localStorage.getItem('storevo_product_mode');
@@ -144,23 +145,133 @@ Storevo.ProductWizard = {
         { id: 'personalizado', name: 'Personalizado', icon: 'M12 6v6m0 0v6m0-6h6m-6 0H6', desc: 'Empieza desde cero' }
     ],
 
-    startWizard: function() {
+    startWizard: async function() {
         const emptyState = document.getElementById('options-empty-state');
         if(emptyState) emptyState.classList.add('hidden');
 
-        const wizardState = document.getElementById('options-wizard-state');
-        if(wizardState) {
-            wizardState.classList.remove('hidden');
-            setTimeout(() => wizardState.classList.remove('opacity-0'), 10);
-        }
-
-        const templatesPanel = document.getElementById('vb-templates-panel');
-        if(templatesPanel) templatesPanel.classList.add('hidden', 'opacity-0');
+        // Esconder vistas por si apaga y prende
+        const panelSmart = document.getElementById('smart-recommendation-panel');
+        const panelTemplates = document.getElementById('vb-templates-panel');
+        if (panelSmart) panelSmart.classList.add('hidden');
+        if (panelTemplates) panelTemplates.classList.add('hidden');
 
         const builder = document.getElementById('variant-builder-container');
         if(builder) {
             builder.classList.add('opacity-0');
             setTimeout(() => builder.classList.add('hidden'), 200);
+        }
+
+        const wizardState = document.getElementById('options-wizard-state');
+        if(wizardState) {
+            wizardState.classList.remove('hidden');
+            wizardState.classList.remove('opacity-0');
+
+            // Mostrar estado de carga transitorio
+            wizardState.innerHTML = `<div class="py-4"><div class="w-6 h-6 border-2 border-storevo-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div><p class="text-xs text-slate-500">Buscando configuración ideal...</p></div>`;
+        }
+
+        // Consultar silenciosamente al Backend
+        const catIdInput = document.getElementById('finalCategoryId');
+        const catId = catIdInput ? catIdInput.value : null;
+
+        if (catId && catId !== "") {
+            try {
+                const currentUrl = window.location.pathname;
+                const slug = currentUrl.split('/')[2];
+                const response = await fetch(`/dashboard/${slug}/products/api/categories/${catId}/smart-template`);
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data && data.recommendation) {
+                        this.currentRecommendation = data.recommendation;
+                        this.renderSmartTemplate(data.recommendation);
+                        return; // Detenemos aquí, la inteligencia funcionó.
+                    }
+                }
+            } catch (error) {
+                console.error("Fallo silencioso al buscar recomendación:", error);
+            }
+        }
+
+        // Fallback: Si no hay categoría o devuelve NULL, restaurar los botones manuales
+        this.showInitialOptions();
+    },
+
+    showInitialOptions: function() {
+        const wizState = document.getElementById('options-wizard-state');
+        if(!wizState) return;
+        wizState.innerHTML = `
+            <h4 class="text-white font-bold mb-2">¿Cómo deseas comenzar?</h4>
+            <p class="text-xs text-slate-500 mb-5">Elige si quieres configurar todo desde cero o usar una plantilla prediseñada.</p>
+            <div class="flex flex-col sm:flex-row justify-center gap-3">
+                <button type="button" onclick="Storevo.ProductWizard.chooseManual()" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white text-sm font-bold rounded-lg border border-slate-700 transition-colors">Configuración manual</button>
+                <button type="button" onclick="Storevo.ProductWizard.showTemplates()" class="px-5 py-2.5 bg-storevo-500/10 hover:bg-storevo-500/20 text-storevo-400 text-sm font-bold rounded-lg border border-storevo-500/30 transition-colors">Usar plantilla general</button>
+            </div>
+        `;
+    },
+
+    renderSmartTemplate: function(rec) {
+        const wizState = document.getElementById('options-wizard-state');
+        if(wizState) wizState.classList.add('hidden');
+
+        const panel = document.getElementById('smart-recommendation-panel');
+        if(!panel) return;
+
+        document.getElementById('smart-title').textContent = rec.title;
+        document.getElementById('smart-subtitle').textContent = rec.subtitle;
+
+        const confBadge = document.getElementById('smart-confidence');
+        if(confBadge) {
+            confBadge.textContent = rec.confidenceLabel + ' (' + rec.confidence + '%)';
+            if (rec.confidence >= 90) {
+                confBadge.className = "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wide";
+            } else {
+                confBadge.className = "bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wide";
+            }
+        }
+
+        const optionsList = document.getElementById('smart-options-list');
+        if(optionsList) {
+            optionsList.innerHTML = '';
+            rec.options.forEach(opt => {
+                const vals = opt.values.slice(0,3).join(', ') + (opt.values.length > 3 ? '...' : '');
+                optionsList.innerHTML += `
+                    <div class="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 flex items-center gap-2 shadow-sm">
+                        <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                        <span class="text-sm font-bold text-white">${opt.name}</span>
+                        <span class="text-xs text-slate-500 ml-1">(${vals})</span>
+                    </div>
+                `;
+            });
+        }
+
+        panel.classList.remove('hidden');
+        setTimeout(() => panel.classList.remove('opacity-0'), 20);
+    },
+
+    applySmartTemplate: function() {
+        const panel = document.getElementById('smart-recommendation-panel');
+        if(panel) panel.classList.add('hidden');
+
+        const builder = document.getElementById('variant-builder-container');
+        if(builder) {
+            builder.classList.remove('hidden');
+            setTimeout(() => builder.classList.remove('opacity-0'), 20);
+        }
+
+        if (!this.currentRecommendation) return;
+
+        if(window.Storevo.VariantBuilder) {
+            window.Storevo.VariantBuilder.options = [];
+            this.currentRecommendation.options.forEach(opt => {
+                window.Storevo.VariantBuilder.options.push({
+                    id: 'opt_' + Date.now() + Math.random(),
+                    name: opt.name,
+                    values: opt.values
+                });
+            });
+            window.Storevo.VariantBuilder.renderOptions();
+            window.Storevo.VariantBuilder.generateTable();
         }
     },
 
@@ -170,6 +281,9 @@ Storevo.ProductWizard = {
 
         const wizardState = document.getElementById('options-wizard-state');
         if(wizardState) wizardState.classList.add('hidden', 'opacity-0');
+
+        const panelSmart = document.getElementById('smart-recommendation-panel');
+        if (panelSmart) panelSmart.classList.add('hidden');
 
         const templatesPanel = document.getElementById('vb-templates-panel');
         if(templatesPanel) templatesPanel.classList.add('hidden', 'opacity-0');
@@ -192,6 +306,9 @@ Storevo.ProductWizard = {
     showTemplates: function() {
         const wizardState = document.getElementById('options-wizard-state');
         if(wizardState) wizardState.classList.add('hidden', 'opacity-0');
+
+        const panelSmart = document.getElementById('smart-recommendation-panel');
+        if (panelSmart) panelSmart.classList.add('hidden');
 
         this.removeBanner();
 
