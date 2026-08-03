@@ -20,6 +20,11 @@ Storevo.ProductsList = {
         this.setView(savedView);
         this.initSelection();
         this.loadStatistics();
+        // NUEVO: Escuchar el cambio en el selector de paginación
+        const sizeSelect = document.querySelector('select[name="size"]');
+        if (sizeSelect) {
+            sizeSelect.addEventListener('change', () => document.getElementById('listing-form').submit());
+        }
     },
 
     // --- GESTIÓN DE VISTAS (Layout Toggle) ---

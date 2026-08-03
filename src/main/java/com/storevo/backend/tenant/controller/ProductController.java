@@ -286,7 +286,7 @@ public class ProductController {
 
         Boolean isActiveFilter = null;
         Boolean isDeletedFilter = false;
-        Boolean isDraftFilter = false;
+        Boolean isDraftFilter = null;
 
         if ("active".equals(status)) {
             isActiveFilter = true;
@@ -314,6 +314,7 @@ public class ProductController {
         model.addAttribute("categories", categoryService.getAllCategories());
         model.addAttribute("categoryTreeJson", getCategoryTreeJson());
         model.addAttribute("pageTitle", "Productos");
+        model.addAttribute("counts", productService.getGlobalCounts());
 
         return "dashboard/products/index";
     }

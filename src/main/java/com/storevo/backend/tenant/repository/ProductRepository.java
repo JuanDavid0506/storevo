@@ -57,4 +57,16 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     // 3. Extrae los valores más populares para esa opción (S, M, L o Negro, Blanco)
     @Query("SELECT v.valueName FROM Product p JOIN p.options o JOIN o.values v WHERE p.category.id = :categoryId AND LOWER(o.name) = LOWER(:optionName) AND p.isDeleted = false GROUP BY v.valueName ORDER BY COUNT(v.id) DESC, MAX(p.id) DESC")
     List<String> findMostUsedOptionValuesByCategory(@Param("categoryId") Long categoryId, @Param("optionName") String optionName, Pageable pageable);
+
+    // ==========================================
+    // CONTADORES GLOBALES DE INVENTARIO
+    // ==========================================
+    @Query("SELECT " +
+            "COUNT(CASE WHEN p.isDeleted = false THEN 1 END) as todos, " +
+            "COUNT(CASE WHEN p.isActive = true AND p.isDeleted = false AND p.isDraft = false THEN 1 END) as activos, " +
+            "COUNT(CASE WHEN p.isActive = false AND p.isDeleted = false AND p.isDraft = false THEN 1 END) as ocultos, " +
+            "COUNT(CASE WHEN p.isDraft = true AND p.isDeleted = false THEN 1 END) as borradores, " +
+            "COUNT(CASE WHEN p.isDeleted = true THEN 1 END) as papelera " +
+            "FROM Product p")
+    ProductCountsProjection countProductsByStatus();
 }

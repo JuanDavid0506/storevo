@@ -2,6 +2,7 @@ package com.storevo.backend.tenant.service;
 
 import com.cloudinary.Cloudinary;
 import com.storevo.backend.config.tenant.TenantContext;
+import com.storevo.backend.tenant.repository.ProductCountsProjection;
 import com.storevo.backend.tenant.dto.ProductDto;
 import com.storevo.backend.tenant.model.*;
 import com.storevo.backend.tenant.repository.CategoryRepository;
@@ -488,5 +489,9 @@ public class ProductService {
         }
 
         return statsMap;
+    }
+    @Transactional(readOnly = true)
+    public ProductCountsProjection getGlobalCounts() {
+        return productRepository.countProductsByStatus();
     }
 }
