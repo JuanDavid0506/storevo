@@ -1,5 +1,15 @@
 window.Storevo = window.Storevo || {};
 
+if (!Storevo.getTenantKey) {
+    // Namespacing por tenant: evita que un dato de sessionStorage/localStorage de una tienda
+    // se filtre a otra si el mismo usuario administra varias tiendas desde el mismo navegador.
+    // Autodefensivo: se define una sola vez, sin importar qué archivo cargue primero.
+    Storevo.getTenantKey = function(baseKey) {
+        const match = window.location.pathname.match(/^\/dashboard\/([^/]+)/);
+        return baseKey + '_' + (match ? match[1] : 'default');
+    };
+}
+
 Storevo.Listing = {
     // === MOTOR AJAX TIPO REACT ===
     submitForm: function() {
@@ -80,7 +90,7 @@ Storevo.Listing = {
                 if (window.Storevo.ProductsList) {
                     Storevo.ProductsList.initSelection();
                     Storevo.ProductsList.loadStatistics();
-                    const savedView = localStorage.getItem('storevo_admin_products_view') || 'cards';
+                    const savedView = localStorage.getItem(Storevo.getTenantKey('storevo_admin_products_view')) || 'cards';
                     Storevo.ProductsList.setView(savedView);
                 }
             })

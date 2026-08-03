@@ -1,12 +1,22 @@
 window.Storevo = window.Storevo || {};
 
+if (!Storevo.getTenantKey) {
+    // Namespacing por tenant: evita que un dato de sessionStorage/localStorage de una tienda
+    // se filtre a otra si el mismo usuario administra varias tiendas desde el mismo navegador.
+    // Autodefensivo: se define una sola vez, sin importar qué archivo cargue primero.
+    Storevo.getTenantKey = function(baseKey) {
+        const match = window.location.pathname.match(/^\/dashboard\/([^/]+)/);
+        return baseKey + '_' + (match ? match[1] : 'default');
+    };
+}
+
 Storevo.ProductsList = {
     state: {
         selectedIds: []
     },
 
     init: function() {
-        const savedView = localStorage.getItem('storevo_admin_products_view') || 'cards';
+        const savedView = localStorage.getItem(Storevo.getTenantKey('storevo_admin_products_view')) || 'cards';
         this.setView(savedView);
         this.initSelection();
         this.loadStatistics();
@@ -38,7 +48,7 @@ Storevo.ProductsList = {
             buttons[viewName].classList.add('bg-slate-800', 'text-white', 'shadow-sm');
         }
 
-        localStorage.setItem('storevo_admin_products_view', viewName);
+        localStorage.setItem(Storevo.getTenantKey('storevo_admin_products_view'), viewName);
     },
 
     // --- CONTROL REMOTO DE FILTROS NATIVOS (Pills) ---

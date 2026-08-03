@@ -1,5 +1,15 @@
 window.Storevo = window.Storevo || {};
 
+if (!Storevo.getTenantKey) {
+    // Namespacing por tenant: evita que un dato de sessionStorage/localStorage de una tienda
+    // se filtre a otra si el mismo usuario administra varias tiendas desde el mismo navegador.
+    // Autodefensivo: se define una sola vez, sin importar qué archivo cargue primero.
+    Storevo.getTenantKey = function(baseKey) {
+        const match = window.location.pathname.match(/^\/dashboard\/([^/]+)/);
+        return baseKey + '_' + (match ? match[1] : 'default');
+    };
+}
+
 Storevo.VariantBuilder = {
 
     // --- CEREBRO BASE (DICCIONARIO ESTÁTICO) ---
@@ -50,7 +60,12 @@ Storevo.VariantBuilder = {
             hasRealData = true;
         }
 
-        const savedTemplate = sessionStorage.getItem('storevo_product_template');
+        // Solo confiamos en sessionStorage cuando NO existe todavía un ID real de producto
+        // (URL terminada en /new). En cuanto hay un ID, la base de datos manda.
+        const isNewProductUrl = window.location.pathname.endsWith('/new');
+        const templateKey = Storevo.getTenantKey('storevo_product_template');
+        const savedTemplate = isNewProductUrl ? sessionStorage.getItem(templateKey) : null;
+        if (isNewProductUrl && savedTemplate) sessionStorage.removeItem(templateKey); // Se consume una sola vez
 
         if (!hasRealData && savedTemplate) {
             if (savedTemplate === 'ropa' || savedTemplate === 'calzado') {

@@ -142,12 +142,26 @@
             </div>
             <script>
                 (function() {
-                    let saved = localStorage.getItem('storevo_admin_products_view') || 'cards';
+                    window.Storevo = window.Storevo || {};
+                    if (!Storevo.getTenantKey) {
+                        // Namespacing por tenant: evita que un dato de sessionStorage/localStorage
+                        // de una tienda se filtre a otra si el mismo usuario administra varias
+                        // tiendas desde el mismo navegador. Autodefensivo: se define una sola vez,
+                        // sin importar qué script cargue primero (este es inline y puede ir antes
+                        // que storevo.js).
+                        Storevo.getTenantKey = function(baseKey) {
+                            const match = window.location.pathname.match(/^\/dashboard\/([^/]+)/);
+                            return baseKey + '_' + (match ? match[1] : 'default');
+                        };
+                    }
+
+                    const viewKey = Storevo.getTenantKey('storevo_admin_products_view');
+                    let saved = localStorage.getItem(viewKey) || 'cards';
 
                     // Lógica responsiva para proteger al usuario si cambia de PC a Celular
                     const isMobile = window.innerWidth < 640;
-                    if (isMobile && saved === 'table') { saved = 'cards'; localStorage.setItem('storevo_admin_products_view', saved); }
-                    if (!isMobile && saved === 'compact') { saved = 'table'; localStorage.setItem('storevo_admin_products_view', saved); }
+                    if (isMobile && saved === 'table') { saved = 'cards'; localStorage.setItem(viewKey, saved); }
+                    if (!isMobile && saved === 'compact') { saved = 'table'; localStorage.setItem(viewKey, saved); }
 
                     const btn = document.getElementById('btn-view-' + saved);
                     if (btn) {

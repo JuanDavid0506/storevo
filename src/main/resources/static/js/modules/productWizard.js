@@ -1,5 +1,15 @@
 window.Storevo = window.Storevo || {};
 
+if (!Storevo.getTenantKey) {
+    // Namespacing por tenant: evita que un dato de sessionStorage/localStorage de una tienda
+    // se filtre a otra si el mismo usuario administra varias tiendas desde el mismo navegador.
+    // Autodefensivo: se define una sola vez, sin importar qué archivo cargue primero.
+    Storevo.getTenantKey = function(baseKey) {
+        const match = window.location.pathname.match(/^\/dashboard\/([^/]+)/);
+        return baseKey + '_' + (match ? match[1] : 'default');
+    };
+}
+
 Storevo.ProductWizard = {
     // ---------------------------------------------------
     // LÓGICA DEL DIRECTOR DE ESCENA (MODO DUAL Y PASOS)
@@ -75,15 +85,21 @@ Storevo.ProductWizard = {
     },
 
     init: function() {
-        const savedMode = localStorage.getItem('storevo_product_mode');
+        const savedMode = localStorage.getItem(Storevo.getTenantKey('storevo_product_mode'));
         if (savedMode && window.IS_NEW_PRODUCT) {
             this.mode = savedMode;
         } else if (!window.IS_NEW_PRODUCT) {
             this.mode = 'advanced';
         }
 
-        // Recuperar el paso en el que estaba antes de recargar
-        const savedStep = sessionStorage.getItem('storevo_current_step');
+        // Recuperar el paso en el que estaba antes de recargar.
+        // Solo aplica mientras el producto no tenga un ID real todavía (URL /new);
+        // una vez existe el ID, la base de datos es la fuente de verdad.
+        const isNewProductUrl = window.location.pathname.endsWith('/new');
+        const stepKey = Storevo.getTenantKey('storevo_current_step');
+        const savedStep = isNewProductUrl ? sessionStorage.getItem(stepKey) : null;
+        if (isNewProductUrl && savedStep) sessionStorage.removeItem(stepKey); // Se consume una sola vez
+
         if (savedStep) {
             this.currentStep = parseInt(savedStep);
         } else {
@@ -96,7 +112,7 @@ Storevo.ProductWizard = {
 
     setMode: function(newMode) {
         this.mode = newMode;
-        localStorage.setItem('storevo_product_mode', newMode);
+        localStorage.setItem(Storevo.getTenantKey('storevo_product_mode'), newMode);
 
         const btnWiz = document.getElementById('btn-mode-wizard');
         const btnAdv = document.getElementById('btn-mode-advanced');
@@ -152,7 +168,7 @@ Storevo.ProductWizard = {
         this.currentStep = stepNumber;
 
         // Guardar el paso actual en la memoria de la pestaña
-        sessionStorage.setItem('storevo_current_step', stepNumber);
+        sessionStorage.setItem(Storevo.getTenantKey('storevo_current_step'), stepNumber);
 
         document.querySelectorAll('.wizard-step').forEach(el => {
             el.classList.add('hidden');
@@ -422,7 +438,7 @@ Storevo.ProductWizard = {
 
         if (!Storevo.VariantBuilder) return;
 
-        sessionStorage.setItem('storevo_product_template', templateId);
+        sessionStorage.setItem(Storevo.getTenantKey('storevo_product_template'), templateId);
 
         Storevo.VariantBuilder.state.options = [];
         Storevo.VariantBuilder.state.variantsData = {};

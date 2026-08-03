@@ -125,13 +125,28 @@ public class ProductService {
             product.setCategory(null);
         }
 
+        // ==========================================
+        // GUARDADO HÍBRIDO DE FICHA TÉCNICA
+        // ==========================================
         Map<String, String> attributes = new HashMap<>();
         if (dto.getAttrKeys() != null && dto.getAttrValues() != null) {
             for (int i = 0; i < dto.getAttrKeys().size(); i++) {
                 String k = dto.getAttrKeys().get(i);
                 String v = dto.getAttrValues().get(i);
-                if (k != null && !k.trim().isEmpty() && v != null && !v.trim().isEmpty()) {
-                    attributes.put(k.trim(), v.trim());
+
+                String key = (k != null) ? k.trim() : "";
+                String value = (v != null) ? v.trim() : "";
+
+                if (Boolean.TRUE.equals(product.getIsDraft())) {
+                    // MODO BORRADOR: Guardamos todo tal como está.
+                    // Permite llaves con valores vacíos para que las plantillas sobrevivan al recargar.
+                    attributes.put(key, value);
+                } else {
+                    // MODO PUBLICACIÓN (ESTRICTO): Pasamos la escoba.
+                    // Solo guardamos la especificación si el comerciante llenó ambos campos.
+                    if (!key.isEmpty() && !value.isEmpty()) {
+                        attributes.put(key, value);
+                    }
                 }
             }
         }
