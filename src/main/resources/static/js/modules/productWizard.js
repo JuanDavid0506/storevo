@@ -9,6 +9,71 @@ Storevo.ProductWizard = {
     mode: 'wizard',
     currentRecommendation: null,
 
+    // 1. INICIALIZADOR: Escucha silenciosa del ID de categoría
+    initSmartObserver: function() {
+        const catInput = document.getElementById('finalCategoryId');
+        if (!catInput) return;
+
+        // Observa si el input oculto de categoría cambia de valor
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === "attributes" && mutation.attributeName === "value") {
+                    const newCategoryId = catInput.value;
+                    if (newCategoryId && newCategoryId.trim() !== '') {
+                        this.fetchSmartRecommendation(newCategoryId);
+                    }
+                }
+            });
+        });
+        observer.observe(catInput, { attributes: true });
+    },
+
+    // 2. CONSUMO DEL BACKEND (El nuevo Endpoint)
+    fetchSmartRecommendation: async function(categoryId) {
+        try {
+            const response = await fetch(`/api/recommendations/category/${categoryId}`);
+
+            // REGLA PURISTA: Si el backend dice 204 (No Content) o hay error, abortamos.
+            if (!response.ok || response.status === 204) {
+                const panel = document.getElementById('smart-recommendation-panel');
+                if (panel) panel.classList.add('hidden', 'opacity-0');
+                this.currentRecommendation = null;
+                return;
+            }
+
+            const data = await response.json();
+            this.currentRecommendation = data;
+            const rec = data.recommendation;
+
+            const panel = document.getElementById('smart-recommendation-panel');
+            const title = document.getElementById('smart-title');
+            const subtitle = document.getElementById('smart-subtitle');
+            const optionsList = document.getElementById('smart-options-list');
+
+            if (!panel) return;
+
+            // Construir los chips visuales del banner
+            let html = '';
+            if (rec.options && rec.options.length > 0) {
+                html += `<span class="px-2.5 py-1 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-300 shadow-inner"><span class="text-storevo-400 font-bold">Variantes:</span> ${rec.options.join(', ')}</span>`;
+            }
+            if (rec.specifications && rec.specifications.length > 0) {
+                html += `<span class="px-2.5 py-1 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-300 shadow-inner"><span class="text-storevo-400 font-bold">Ficha:</span> ${rec.specifications.join(', ')}</span>`;
+            }
+            optionsList.innerHTML = html;
+
+            title.textContent = 'Configuración recomendada';
+            subtitle.textContent = `Basado en ${data.basedOnProductCount} productos creados en esta categoría.`;
+
+            // Mostrar el banner verde solo porque estamos seguros de que hay datos
+            panel.classList.remove('hidden');
+            setTimeout(() => panel.classList.remove('opacity-0'), 20);
+
+        } catch (error) {
+            console.error("Error obteniendo recomendación:", error);
+        }
+    },
+
     init: function() {
         const savedMode = localStorage.getItem('storevo_product_mode');
         if (savedMode && window.IS_NEW_PRODUCT) {
@@ -17,7 +82,7 @@ Storevo.ProductWizard = {
             this.mode = 'advanced';
         }
 
-        // NUEVO: Recuperar el paso en el que estaba antes de recargar
+        // Recuperar el paso en el que estaba antes de recargar
         const savedStep = sessionStorage.getItem('storevo_current_step');
         if (savedStep) {
             this.currentStep = parseInt(savedStep);
@@ -26,6 +91,7 @@ Storevo.ProductWizard = {
         }
 
         this.setMode(this.mode);
+        this.initSmartObserver(); // <-- Encendemos el vigía de categoría
     },
 
     setMode: function(newMode) {
@@ -85,7 +151,7 @@ Storevo.ProductWizard = {
 
         this.currentStep = stepNumber;
 
-        // NUEVO: Guardar el paso actual en la memoria de la pestaña
+        // Guardar el paso actual en la memoria de la pestaña
         sessionStorage.setItem('storevo_current_step', stepNumber);
 
         document.querySelectorAll('.wizard-step').forEach(el => {
@@ -158,29 +224,25 @@ Storevo.ProductWizard = {
         const wizardState = document.getElementById('options-wizard-state');
         if(wizardState) {
             wizardState.classList.remove('hidden', 'opacity-0');
-            wizardState.innerHTML = `<div class="py-4"><div class="w-6 h-6 border-2 border-storevo-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div><p class="text-xs text-slate-500">Buscando configuración ideal...</p></div>`;
+            wizardState.innerHTML = `<div class="py-4"><div class="w-6 h-6 border-2 border-storevo-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div><p class="text-xs text-slate-500">Analizando el tipo de producto...</p></div>`;
         }
 
         const catIdInput = document.getElementById('finalCategoryId');
         const catId = catIdInput ? catIdInput.value : null;
 
         if (catId && catId !== "") {
-            try {
-                const slug = window.location.pathname.split('/')[2];
-                const response = await fetch(`/dashboard/${slug}/products/api/categories/${catId}/smart-template`);
-
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data && data.recommendation) {
-                        this.currentRecommendation = data.recommendation;
-                        this.renderSmartTemplate(data.recommendation);
-                        return;
-                    }
+            // Si el observador ya consumió el endpoint y encontró datos, mostramos el panel
+            if (this.currentRecommendation) {
+                if(wizardState) wizardState.classList.add('hidden');
+                if (panelSmart) {
+                    panelSmart.classList.remove('hidden');
+                    setTimeout(() => panelSmart.classList.remove('opacity-0'), 20);
                 }
-            } catch (error) {
-                console.error("Fallo silencioso al buscar recomendación:", error);
+                return;
             }
         }
+
+        // Si no hay categoría o si la IA devolvió 204 (No Content), caemos al flujo normal
         this.showInitialOptions();
     },
 
@@ -197,77 +259,73 @@ Storevo.ProductWizard = {
         `;
     },
 
-    renderSmartTemplate: function(rec) {
+    renderSmartTemplate: function(data) {
         const wizState = document.getElementById('options-wizard-state');
         if(wizState) wizState.classList.add('hidden');
 
         const panel = document.getElementById('smart-recommendation-panel');
         if(!panel) return;
 
-        document.getElementById('smart-title').textContent = rec.title;
-        document.getElementById('smart-subtitle').textContent = rec.subtitle;
-
-        const confBadge = document.getElementById('smart-confidence');
-        if(confBadge) {
-            confBadge.textContent = rec.confidenceLabel + ' (' + rec.confidence + '%)';
-            if (rec.confidence >= 90) {
-                confBadge.className = "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wide";
-            } else {
-                confBadge.className = "bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wide";
-            }
-        }
-
-        const optionsList = document.getElementById('smart-options-list');
-        if(optionsList) {
-            optionsList.innerHTML = '';
-            rec.options.forEach(opt => {
-                const vals = opt.values.slice(0,3).join(', ') + (opt.values.length > 3 ? '...' : '');
-                optionsList.innerHTML += `
-                    <div class="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 flex items-center gap-2 shadow-sm">
-                        <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
-                        <span class="text-sm font-bold text-white">${opt.name}</span>
-                        <span class="text-xs text-slate-500 ml-1">(${vals})</span>
-                    </div>
-                `;
-            });
-        }
-
+        // Ya fue renderizado por el fetchSmartRecommendation() al cambiar la categoría.
+        // Solo nos aseguramos de mostrar el panel.
         panel.classList.remove('hidden');
         setTimeout(() => panel.classList.remove('opacity-0'), 20);
     },
 
+    // 3. INYECCIÓN ÚNICA (Variantes + Specs)
     applySmartTemplate: function() {
-        const panel = document.getElementById('smart-recommendation-panel');
-        if(panel) panel.classList.add('hidden');
+        if (!this.currentRecommendation) return;
+        const rec = this.currentRecommendation.recommendation;
 
-        const builder = document.getElementById('variant-builder-container');
-        if(builder) {
-            builder.classList.remove('hidden');
-            setTimeout(() => builder.classList.remove('opacity-0'), 20);
+        // --- A. Inyectar Variantes (Tu lógica nativa) ---
+        if (rec.options && rec.options.length > 0 && window.Storevo.VariantBuilder) {
+            Storevo.VariantBuilder.state.options = rec.options.map(optName => ({
+                name: optName,
+                values: []
+            }));
+
+            const toggleUI = document.getElementById('hasVariantsToggleUI');
+            const toggleHidden = document.getElementById('hasVariantsToggle');
+            if (toggleUI) toggleUI.checked = true;
+            if (toggleHidden) toggleHidden.checked = true;
+
+            if (Storevo.VariantBuilder) Storevo.VariantBuilder.toggleMainFields(true);
+            Storevo.VariantBuilder.state.options.forEach(opt => {
+                if (opt.name) Storevo.VariantBuilder.fetchSuggestions(opt.name);
+            });
+            Storevo.VariantBuilder.renderOptions();
+
+            document.getElementById('options-empty-state')?.classList.add('hidden');
+            document.getElementById('smart-recommendation-panel')?.classList.add('hidden', 'opacity-0');
+            document.getElementById('variant-builder-container')?.classList.remove('hidden', 'opacity-0');
         }
 
-        if (!this.currentRecommendation) return;
-
-        if(window.Storevo.VariantBuilder) {
-            window.Storevo.VariantBuilder.state.options = [];
-            window.Storevo.VariantBuilder.state.variantsData = {};
-            window.Storevo.VariantBuilder.state.excluded = {};
-
-            this.currentRecommendation.options.forEach(opt => {
-                const optKey = opt.name.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-                window.Storevo.VariantBuilder.state.suggestionsCache[optKey] = [...opt.values];
-                window.Storevo.VariantBuilder.state.options.push({ name: opt.name, values: [] });
+        // --- B. Inyectar Ficha Técnica (Ahora usando el Creador Universal) ---
+        if (rec.specifications && rec.specifications.length > 0) {
+            this.clearSpecs();
+            rec.specifications.forEach(spec => {
+                if (window.Storevo.ProductForm) Storevo.ProductForm.addSpecRow(spec, '');
             });
+            // Dejamos siempre una fila vacía al final para activar el vigilante
+            if (window.Storevo.ProductForm) Storevo.ProductForm.addSpecRow('', '');
+        }
 
-            // NUEVO: Forzar la activación del interruptor de Variantes
-            const toggleUI = document.getElementById('hasVariantsToggleUI');
-            if(toggleUI && !toggleUI.checked) {
-                toggleUI.checked = true;
-                document.getElementById('hasVariantsToggle').checked = true;
-                if(Storevo.ProductUX) Storevo.ProductUX.toggleVariantsUX(true);
-            }
+        // Autoguardado silencioso de todo el combo
+        if (window.Storevo.ProductDraft && typeof window.Storevo.ProductDraft.scheduleSave === 'function') {
+            Storevo.ProductDraft.scheduleSave();
+        }
+    },
 
-            window.Storevo.VariantBuilder.renderOptions();
+    // 4. FUNCIÓN DE LIMPIEZA MANUAL (Ficha Técnica)
+    clearSpecs: function() {
+        const container = document.getElementById('specsContainer');
+        if (container) {
+            container.innerHTML = '';
+            // Si el usuario limpia todo, el sistema le regala la primera fila vacía para empezar
+            if (window.Storevo.ProductForm) Storevo.ProductForm.addSpecRow();
+        }
+        if (window.Storevo.ProductDraft && typeof window.Storevo.ProductDraft.scheduleSave === 'function') {
+            Storevo.ProductDraft.scheduleSave();
         }
     },
 
@@ -375,14 +433,23 @@ Storevo.ProductWizard = {
 
         const t = this.templates.find(x => x.id === templateId);
 
-        if (templateId === 'ropa' || templateId === 'calzado') {
+        let defaultSpecs = []; // Ficha Técnica asociada a la plantilla predeterminada
+
+        if (templateId === 'ropa') {
             Storevo.VariantBuilder.state.options = [{ name: 'Talla', values: [] }, { name: 'Color', values: [] }];
+            defaultSpecs = ['Material', 'Género', 'Tipo de prenda', 'Estilo'];
+        } else if (templateId === 'calzado') {
+            Storevo.VariantBuilder.state.options = [{ name: 'Talla', values: [] }, { name: 'Color', values: [] }];
+            defaultSpecs = ['Material', 'Género', 'Estilo'];
         } else if (templateId === 'perfume') {
             Storevo.VariantBuilder.state.options = [{ name: 'Presentación', values: [] }];
+            defaultSpecs = ['Marca', 'Familia olfativa', 'Volumen'];
         } else if (templateId === 'tecnologia') {
             Storevo.VariantBuilder.state.options = [{ name: 'Capacidad', values: [] }, { name: 'Color', values: [] }];
+            defaultSpecs = ['Marca', 'Modelo', 'Garantía', 'Sistema Operativo'];
         } else if (templateId === 'accesorios') {
             Storevo.VariantBuilder.state.options = [{ name: 'Material', values: [] }, { name: 'Color', values: [] }];
+            defaultSpecs = ['Material', 'Género', 'Estilo'];
         } else {
             Storevo.VariantBuilder.state.options = [{ name: '', values: [] }];
         }
@@ -404,15 +471,26 @@ Storevo.ProductWizard = {
             Storevo.VariantBuilder.toggleMainFields(true);
         }
 
-        // 2. DIBUJAR LA PLANTILLA
+        // 2. DIBUJAR LA PLANTILLA (Variantes)
         Storevo.VariantBuilder.renderOptions();
+
+        // 3. INYECTAR FICHA TÉCNICA (Ahora usando el Creador Universal)
+        this.clearSpecs();
+        if (defaultSpecs.length > 0) {
+            defaultSpecs.forEach(spec => {
+                if (window.Storevo.ProductForm) Storevo.ProductForm.addSpecRow(spec, '');
+            });
+            if (window.Storevo.ProductForm) Storevo.ProductForm.addSpecRow('', '');
+        } else {
+            if (window.Storevo.ProductForm) Storevo.ProductForm.addSpecRow('', '');
+        }
 
         this.removeBanner();
         if (showBanner && templateId !== 'personalizado') {
             this.injectBanner(t);
         }
 
-        // 3. AUTOGUARDADO INMEDIATO
+        // 4. AUTOGUARDADO INMEDIATO
         if (window.Storevo.ProductDraft && typeof window.Storevo.ProductDraft.saveToDatabase === 'function') {
             Storevo.VariantBuilder.syncHiddenInputs();
             Storevo.ProductDraft.saveToDatabase();
@@ -433,7 +511,7 @@ Storevo.ProductWizard = {
                 </div>
                 <div>
                     <p class="text-sm font-bold text-emerald-400">Plantilla "${template.name}" aplicada</p>
-                    <p class="text-xs text-slate-400 mt-0.5">Puedes modificar colores, tallas y opciones libremente.</p>
+                    <p class="text-xs text-slate-400 mt-0.5">Puedes modificar colores, tallas y especificaciones libremente.</p>
                 </div>
             </div>
             <button type="button" onclick="Storevo.ProductWizard.showTemplates()" class="text-xs font-bold text-slate-400 hover:text-white bg-slate-950 hover:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700 transition shrink-0">

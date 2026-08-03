@@ -378,25 +378,29 @@
 
             <!-- DETAILS / FICHA TÉCNICA -->
             <section id="details" class="wizard-step wizard-step-4 bg-slate-900 border border-slate-800 rounded-2xl p-6 scroll-mt-20 shadow-sm">
-                <div class="mb-5">
-                    <div class="flex items-center gap-2.5 mb-1">
-                        <span class="w-6 h-6 rounded-full bg-storevo-500/15 text-storevo-400 text-[11px] font-bold flex items-center justify-center border border-storevo-500/25 flex-shrink-0">6</span>
-                        <h2 class="text-base font-bold text-white">Más detalles</h2>
+                <div class="flex items-start justify-between mb-5">
+                    <div>
+                        <div class="flex items-center gap-2.5 mb-1">
+                            <span class="w-6 h-6 rounded-full bg-storevo-500/15 text-storevo-400 text-[11px] font-bold flex items-center justify-center border border-storevo-500/25 flex-shrink-0">6</span>
+                            <h2 class="text-base font-bold text-white">Más detalles</h2>
+                        </div>
+                        <p class="text-xs text-slate-500 ml-8">Especificaciones técnicas, medidas, peso...</p>
                     </div>
-                    <p class="text-xs text-slate-500 ml-8">Especificaciones técnicas, medidas, peso...</p>
+                    <button type="button" onclick="Storevo.ProductWizard.clearSpecs()" class="text-xs font-semibold text-slate-500 hover:text-red-400 bg-slate-950 hover:bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        Limpiar
+                    </button>
                 </div>
 
                 <div id="specsContainer" class="space-y-2.5">
-                    <div th:if="${product.attrKeys != null}" th:each="key, stat : ${product.attrKeys}" class="flex items-center gap-2">
-                        <input type="text" name="attrKeys" th:value="${key}" placeholder="Material" class="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white placeholder-slate-700 focus:ring-1 focus:ring-storevo-500/40 focus:border-storevo-500/60 transition">
+                    <!-- Filas nativas ahora incluyen la clase 'spec-row' -->
+                    <div th:if="${product.attrKeys != null}" th:each="key, stat : ${product.attrKeys}" class="flex items-center gap-2 spec-row">
+                        <input type="text" name="attrKeys" th:value="${key}" placeholder="Ej: Material" class="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white placeholder-slate-700 focus:ring-1 focus:ring-storevo-500/40 focus:border-storevo-500/60 transition">
                         <span class="text-slate-700 select-none">:</span>
-                        <input type="text" name="attrValues" th:value="${product.attrValues[stat.index]}" placeholder="100% Algodón" class="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white placeholder-slate-700 focus:ring-1 focus:ring-storevo-500/40 focus:border-storevo-500/60 transition">
-                        <button type="button" onclick="this.parentElement.remove()" class="text-slate-600 hover:text-red-400 transition p-1 flex-shrink-0"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
+                        <input type="text" name="attrValues" th:value="${product.attrValues[stat.index]}" placeholder="Ej: 100% Algodón" class="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white placeholder-slate-700 focus:ring-1 focus:ring-storevo-500/40 focus:border-storevo-500/60 transition">
+                        <button type="button" onclick="Storevo.ProductForm.removeSpecRow(this)" class="text-slate-600 hover:text-red-400 transition p-1 flex-shrink-0"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
                     </div>
                 </div>
-                <button type="button" onclick="Storevo.ProductForm.addSpecRow()" class="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-storevo-400 transition mt-3">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg> Añadir especificación
-                </button>
             </section>
 
         </main>

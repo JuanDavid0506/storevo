@@ -43,6 +43,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     Optional<Product> findTopByOrderByIdDesc();
 
+    List<Product> findByCategoryId(Long categoryId);
+
 
     // 1. Cuenta la cantidad de productos con variantes en una categoría para saber si hay historial
     @Query("SELECT COUNT(p) FROM Product p WHERE p.category.id = :categoryId AND p.hasVariants = true AND p.isDeleted = false")

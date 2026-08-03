@@ -50,51 +50,84 @@ Storevo.ProductForm = {
         const container = document.getElementById('specsContainer');
         if (!container) return;
 
-        const existingKeys = Array.from(container.querySelectorAll('textarea[name="attrKeys"], input[name="attrKeys"]'))
+        const existingKeys = Array.from(container.querySelectorAll('input[name="attrKeys"]'))
             .map(input => input.value.trim().toLowerCase());
-
-        let firstNewValueInput = null;
 
         suggestedKeys.forEach(key => {
             if (existingKeys.includes(key.toLowerCase())) return;
-
-            const row = document.createElement('div');
-            row.className = 'flex gap-3 mb-3 items-start';
-            row.dataset.templateRow = 'true';
-
-            row.innerHTML = `
-                <textarea name="attrKeys" rows="1" placeholder="Atributo" oninput="Storevo.ProductForm.autoResize(this)" class="w-1/3 px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:ring-storevo-500 text-sm resize-none overflow-hidden min-h-[42px] leading-relaxed">${key}</textarea>
-                <textarea name="attrValues" rows="1" placeholder="Escribe el valor..." oninput="Storevo.ProductForm.autoResize(this)" class="flex-1 px-4 py-2 bg-slate-950 border border-storevo-500/40 rounded-lg text-white focus:ring-storevo-500 text-sm resize-none overflow-hidden min-h-[42px] leading-relaxed"></textarea>
-                <button type="button" onclick="this.parentElement.remove()" class="p-2 text-slate-500 hover:text-red-500 transition mt-1">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                </button>
-            `;
-            container.appendChild(row);
-
-            const keyInput = row.querySelector('textarea[name="attrKeys"]');
-            this.autoResize(keyInput);
-
-            if (!firstNewValueInput) firstNewValueInput = row.querySelector('textarea[name="attrValues"]');
+            this.addSpecRow(key, '');
         });
-
-        if (firstNewValueInput) firstNewValueInput.focus();
     },
 
-    addSpecRow: function() {
+    // 1. Creador Universal de Filas
+    addSpecRow: function(key = '', value = '') {
         const container = document.getElementById('specsContainer');
         if (!container) return;
 
         const row = document.createElement('div');
-        row.className = 'flex gap-3 mb-3 items-start';
-
+        row.className = 'flex items-center gap-2 spec-row animate-fade-in-up';
         row.innerHTML = `
-            <textarea name="attrKeys" rows="1" placeholder="Atributo" oninput="Storevo.ProductForm.autoResize(this)" class="w-1/3 px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:ring-storevo-500 text-sm resize-none overflow-hidden min-h-[42px] leading-relaxed"></textarea>
-            <textarea name="attrValues" rows="1" placeholder="Valor" oninput="Storevo.ProductForm.autoResize(this)" class="flex-1 px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:ring-storevo-500 text-sm resize-none overflow-hidden min-h-[42px] leading-relaxed"></textarea>
-            <button type="button" onclick="this.parentElement.remove()" class="p-2 text-slate-500 hover:text-red-500 transition mt-1">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+            <input type="text" name="attrKeys" value="${key}" placeholder="Ej: Material" class="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white placeholder-slate-700 focus:ring-1 focus:ring-storevo-500/40 focus:border-storevo-500/60 transition">
+            <span class="text-slate-700 select-none">:</span>
+            <input type="text" name="attrValues" value="${value}" placeholder="Ej: 100% Algodón" class="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white placeholder-slate-700 focus:ring-1 focus:ring-storevo-500/40 focus:border-storevo-500/60 transition">
+            <button type="button" onclick="Storevo.ProductForm.removeSpecRow(this)" class="text-slate-600 hover:text-red-400 transition p-1 flex-shrink-0">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         `;
         container.appendChild(row);
+    },
+
+    // 2. Eliminador seguro de filas
+    removeSpecRow: function(button) {
+        const row = button.parentElement;
+        row.remove();
+
+        const container = document.getElementById('specsContainer');
+        if (container && container.children.length === 0) {
+            Storevo.ProductForm.addSpecRow(); // Si borra todo, crea una fila limpia
+        }
+        if (window.Storevo.ProductDraft && typeof window.Storevo.ProductDraft.scheduleSave === 'function') {
+            Storevo.ProductDraft.scheduleSave();
+        }
+    },
+
+    // 3. El Vigilante Silencioso (Efecto Formulario Infinito)
+    initSpecObserver: function() {
+        const container = document.getElementById('specsContainer');
+        if (!container) return;
+
+        // SOLUCIÓN 1: Asegurarnos de que siempre haya una fila vacía al final (incluso al editar)
+        const allRows = container.querySelectorAll('.spec-row');
+        if (allRows.length === 0) {
+            this.addSpecRow();
+        } else {
+            const lastRow = allRows[allRows.length - 1];
+            const inputs = lastRow.querySelectorAll('input');
+            const hasText = Array.from(inputs).some(input => input.value.trim() !== '');
+            // Si la última fila cargada desde la BD tiene texto, agregamos una extra en blanco
+            if (hasText) {
+                this.addSpecRow();
+            }
+        }
+
+        container.addEventListener('input', (e) => {
+            if (e.target.tagName === 'INPUT') {
+                const currentRows = container.querySelectorAll('.spec-row');
+                if (currentRows.length === 0) return;
+
+                const lastRow = currentRows[currentRows.length - 1];
+                const currentRow = e.target.closest('.spec-row');
+
+                if (lastRow === currentRow) {
+                    const inputs = lastRow.querySelectorAll('input');
+                    const hasText = Array.from(inputs).some(input => input.value.trim() !== '');
+
+                    if (hasText) {
+                        Storevo.ProductForm.addSpecRow();
+                    }
+                }
+            }
+        });
     },
 
     clearTemplateSpecs: function() {
@@ -125,7 +158,6 @@ Storevo.ProductForm = {
 
         if (!container) return;
 
-        // Limpiar subniveles
         if (level === 1) {
             this.clearLevel(2);
             this.clearLevel(3);
@@ -153,7 +185,6 @@ Storevo.ProductForm = {
         children.forEach(cat => {
             const btn = document.createElement('button');
             btn.type = 'button';
-            // Estilo por defecto (Inactivo)
             btn.className = 'px-4 py-2 text-sm font-semibold rounded-xl border transition-all duration-200 bg-slate-900 border-slate-700 text-slate-300 hover:text-white hover:bg-storevo-500/10 hover:border-storevo-500/50';
             btn.textContent = cat.name;
             btn.onclick = () => this.selectCategory(level, cat);
@@ -173,19 +204,15 @@ Storevo.ProductForm = {
     selectCategory: function(level, cat) {
         this.selectedPath[level - 1] = cat;
 
-        // Pitar el botón activo y apagar los demás
         const container = document.getElementById(`level-${level}-container`);
         Array.from(container.children).forEach(btn => {
             if (btn.textContent === cat.name) {
-                // ACTIVO (Morado)
                 btn.className = 'px-4 py-2 text-sm font-bold rounded-xl border transition-all duration-200 bg-storevo-500/10 border-storevo-500/60 text-white ring-1 ring-storevo-500/20';
             } else {
-                // INACTIVO
                 btn.className = 'px-4 py-2 text-sm font-semibold rounded-xl border transition-all duration-200 bg-slate-900 border-slate-700 text-slate-300 hover:text-white hover:bg-storevo-500/10 hover:border-storevo-500/50';
             }
         });
 
-        // Intentar abrir el siguiente nivel
         if (level < 3) {
             this.renderLevel(level + 1, cat.id);
         } else {
@@ -202,7 +229,6 @@ Storevo.ProductForm = {
             const lastSelected = this.selectedPath[this.selectedPath.length - 1];
             finalIdInput.value = lastSelected.id;
 
-            // Construir la ruta visual
             summaryText.innerHTML = this.selectedPath.map((c, index) => {
                 const isLast = index === this.selectedPath.length - 1;
                 return `<span class="${isLast ? 'text-white font-bold' : 'text-slate-400'}">${c.name}</span>`;
@@ -215,7 +241,6 @@ Storevo.ProductForm = {
             summaryBox.classList.add('hidden');
         }
 
-        // Disparar evento para productUX
         finalIdInput.dispatchEvent(new Event('change'));
     },
 
@@ -246,7 +271,6 @@ Storevo.ProductForm = {
             isActiveToggle.dispatchEvent(new Event('change'));
         }
 
-        // LIMPIAMOS AMBAS MEMORIAS PARA EL PRÓXIMO PRODUCTO
         sessionStorage.removeItem('storevo_current_step');
         sessionStorage.removeItem('storevo_product_template');
 
@@ -378,7 +402,7 @@ Storevo.CategoryModal = {
             // 2. Refrescar categorías en la UI
             Storevo.ProductForm.loadCategories();
 
-            // 3. Autoseleccionar la nueva categoría con los chips
+            // 3. Autoseleccionar la nueva categoría
             Storevo.ProductForm.preselectCategory(newCat.id.toString());
 
             if (Storevo.UI && Storevo.UI.Toast) Storevo.UI.Toast.show(`Categoría "${newCat.name}" creada`, 'success');
@@ -396,12 +420,29 @@ Storevo.CategoryModal = {
 document.addEventListener('DOMContentLoaded', () => {
     Storevo.ProductForm.init();
 
+    // Iniciar el vigilante silencioso
+    if (Storevo.ProductForm.initSpecObserver) {
+        Storevo.ProductForm.initSpecObserver();
+    }
+
     const catInput = document.getElementById('new-cat-name');
     if(catInput) {
         catInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 Storevo.CategoryModal.save();
+            }
+        });
+    }
+
+    // SOLUCIÓN 2: Prevenir que 'Enter' envíe el formulario principal accidentalmente
+    const mainForm = document.getElementById('product-form');
+    if (mainForm) {
+        mainForm.addEventListener('keydown', function(e) {
+            // Evitamos el submit automático solo si presionan Enter
+            // Y si NO están en un textarea (para dejarles hacer saltos de línea donde se requiera)
+            if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+                e.preventDefault();
             }
         });
     }
