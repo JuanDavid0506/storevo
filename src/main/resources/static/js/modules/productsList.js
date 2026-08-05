@@ -1,9 +1,6 @@
 window.Storevo = window.Storevo || {};
 
 if (!Storevo.getTenantKey) {
-    // Namespacing por tenant: evita que un dato de sessionStorage/localStorage de una tienda
-    // se filtre a otra si el mismo usuario administra varias tiendas desde el mismo navegador.
-    // Autodefensivo: se define una sola vez, sin importar qué archivo cargue primero.
     Storevo.getTenantKey = function(baseKey) {
         const match = window.location.pathname.match(/^\/dashboard\/([^/]+)/);
         return baseKey + '_' + (match ? match[1] : 'default');
@@ -15,19 +12,27 @@ Storevo.ProductsList = {
         selectedIds: []
     },
 
+    initPaginationFix: function() {
+        document.addEventListener('change', function(e) {
+            if (e.target && (e.target.name === 'size' || e.target.name === 'sort')) {
+                if (window.Storevo && Storevo.Listing && typeof Storevo.Listing.submitForm === 'function') {
+                    Storevo.Listing.submitForm();
+                } else {
+                    const form = document.getElementById('listing-form');
+                    if (form) form.submit();
+                }
+            }
+        });
+    },
+
     init: function() {
         const savedView = localStorage.getItem(Storevo.getTenantKey('storevo_admin_products_view')) || 'cards';
         this.setView(savedView);
         this.initSelection();
         this.loadStatistics();
-        // NUEVO: Escuchar el cambio en el selector de paginación
-        const sizeSelect = document.querySelector('select[name="size"]');
-        if (sizeSelect) {
-            sizeSelect.addEventListener('change', () => document.getElementById('listing-form').submit());
-        }
+        this.initPaginationFix();
     },
 
-    // --- GESTIÓN DE VISTAS (Layout Toggle) ---
     setView: function(viewName) {
         document.querySelectorAll('.view-container').forEach(el => {
             el.classList.add('hidden');
@@ -56,23 +61,25 @@ Storevo.ProductsList = {
         localStorage.setItem(Storevo.getTenantKey('storevo_admin_products_view'), viewName);
     },
 
-    // --- CONTROL REMOTO DE FILTROS NATIVOS (Pills) ---
     setStatusFilter: function(statusValue) {
         const select = document.querySelector('select[name="status"]');
         if (select) {
             select.value = statusValue;
-            Storevo.Listing.submitForm(); // Magia AJAX 🔥
+            if (window.Storevo && Storevo.Listing && typeof Storevo.Listing.submitForm === 'function') {
+                Storevo.Listing.submitForm();
+            } else {
+                const form = document.getElementById('listing-form');
+                if (form) form.submit();
+            }
         }
     },
 
-    // --- GESTIÓN DE ACCIONES MASIVAS Y CHECKBOXES ---
     initSelection: function() {
         const checkboxes = document.querySelectorAll('.product-checkbox');
         const selectAllCb = document.getElementById('select-all-checkbox');
 
         checkboxes.forEach(cb => {
             cb.addEventListener('change', (e) => {
-                // Sincronizar el mismo producto en las vistas ocultas (magia UX)
                 const id = e.target.value;
                 const isChecked = e.target.checked;
                 document.querySelectorAll(`.product-checkbox[value="${id}"]`).forEach(sibling => {
@@ -87,7 +94,6 @@ Storevo.ProductsList = {
                 const isChecked = e.target.checked;
                 checkboxes.forEach(cb => cb.checked = isChecked);
 
-                // Limpiamos y reconstruimos la lista exacta de IDs únicos
                 this.state.selectedIds = [];
                 if (isChecked) {
                     const uniqueIds = new Set();
@@ -108,7 +114,6 @@ Storevo.ProductsList = {
         }
 
         const selectAllCb = document.getElementById('select-all-checkbox');
-        // Solución matemática: contamos solo los productos únicos usando una sola vista (la tabla)
         const totalUniqueProducts = document.querySelectorAll('#view-table .product-checkbox').length;
 
         if (selectAllCb) {
@@ -117,6 +122,7 @@ Storevo.ProductsList = {
 
         if (!skipRender) this.syncTopPanel();
     },
+
     syncTopPanel: function() {
         const count = this.state.selectedIds.length;
         const massHeader = document.getElementById('mass-action-header');
@@ -172,7 +178,6 @@ Storevo.ProductsList = {
             });
     },
 
-    // --- EDICIÓN RÁPIDA (Inline Stock) ---
     quickUpdateStock: function(btnElement, changeAmount) {
         if (event) {
             event.stopPropagation();
@@ -239,7 +244,6 @@ Storevo.ProductsList = {
             });
     },
 
-    // --- CARGA DE ESTADÍSTICAS ASÍNCRONAS ---
     loadStatistics: function() {
         const statContainers = document.querySelectorAll('.product-stats-container');
         if (statContainers.length === 0) return;

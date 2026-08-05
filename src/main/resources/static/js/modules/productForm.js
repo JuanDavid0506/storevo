@@ -1,15 +1,5 @@
 window.Storevo = window.Storevo || {};
 
-if (!Storevo.getTenantKey) {
-    // Namespacing por tenant: evita que un dato de sessionStorage/localStorage de una tienda
-    // se filtre a otra si el mismo usuario administra varias tiendas desde el mismo navegador.
-    // Autodefensivo: se define una sola vez, sin importar qué archivo cargue primero.
-    Storevo.getTenantKey = function(baseKey) {
-        const match = window.location.pathname.match(/^\/dashboard\/([^/]+)/);
-        return baseKey + '_' + (match ? match[1] : 'default');
-    };
-}
-
 Storevo.ProductForm = {
     // --- FICHA TÉCNICA ---
     SPEC_TEMPLATES: {
@@ -278,11 +268,11 @@ Storevo.ProductForm = {
         const isActiveToggle = document.getElementById('isActive');
         if (isActiveToggle && !isActiveToggle.checked) {
             isActiveToggle.checked = true;
-            isActiveToggle.dispatchEvent(new Event('change'));
+            // Se eliminó dispatchEvent('change') aquí para prevenir la Race Condition con el AJAX de autoguardado.
         }
 
-        sessionStorage.removeItem(Storevo.getTenantKey('storevo_current_step'));
-        sessionStorage.removeItem(Storevo.getTenantKey('storevo_product_template'));
+        sessionStorage.removeItem('storevo_current_step');
+        sessionStorage.removeItem('storevo_product_template');
 
         if (window.Storevo && window.Storevo.VariantBuilder) {
             window.Storevo.VariantBuilder.syncHiddenInputs();

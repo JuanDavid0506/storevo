@@ -2,7 +2,6 @@ package com.storevo.backend.tenant.service;
 
 import com.cloudinary.Cloudinary;
 import com.storevo.backend.config.tenant.TenantContext;
-import com.storevo.backend.tenant.repository.ProductCountsProjection;
 import com.storevo.backend.tenant.dto.ProductDto;
 import com.storevo.backend.tenant.model.*;
 import com.storevo.backend.tenant.repository.CategoryRepository;
@@ -36,6 +35,11 @@ public class ProductService {
     private final CategoryService categoryService;
     private final CloudinaryService cloudinaryService;
 
+    @Transactional(readOnly = true)
+    public ProductRepository.ProductCountsProjection getGlobalCounts() {
+        return productRepository.countProductsByStatus();
+    }
+
     @Transactional
     public Long createEmptyDraft() {
         Product draft = new Product();
@@ -45,7 +49,7 @@ public class ProductService {
         draft.setStock(0);
         draft.setPrice(0.0);
         draft.setWeight(0.0);
-        draft.setIsDraft(true); // <--- NACE COMO BORRADOR
+        draft.setIsDraft(true);
         draft = productRepository.save(draft);
         return draft.getId();
     }
@@ -116,7 +120,7 @@ public class ProductService {
         product.setSku(dto.getSku());
         product.setIsActive(dto.getIsActive() != null ? dto.getIsActive() : false);
         product.setHasVariants(dto.getHasVariants() != null ? dto.getHasVariants() : false);
-        product.setIsDraft(dto.getIsDraft() != null ? dto.getIsDraft() : false); // <--- GUARDA ESTADO DEL BORRADOR
+        product.setIsDraft(dto.getIsDraft() != null ? dto.getIsDraft() : false);
 
         if (dto.getCategoryId() != null) {
             Category category = categoryRepository.findById(dto.getCategoryId())
@@ -126,9 +130,6 @@ public class ProductService {
             product.setCategory(null);
         }
 
-        // ==========================================
-        // GUARDADO HÍBRIDO DE FICHA TÉCNICA
-        // ==========================================
         Map<String, String> attributes = new HashMap<>();
         if (dto.getAttrKeys() != null && dto.getAttrValues() != null) {
             for (int i = 0; i < dto.getAttrKeys().size(); i++) {
@@ -139,12 +140,8 @@ public class ProductService {
                 String value = (v != null) ? v.trim() : "";
 
                 if (Boolean.TRUE.equals(product.getIsDraft())) {
-                    // MODO BORRADOR: Guardamos todo tal como está.
-                    // Permite llaves con valores vacíos para que las plantillas sobrevivan al recargar.
                     attributes.put(key, value);
                 } else {
-                    // MODO PUBLICACIÓN (ESTRICTO): Pasamos la escoba.
-                    // Solo guardamos la especificación si el comerciante llenó ambos campos.
                     if (!key.isEmpty() && !value.isEmpty()) {
                         attributes.put(key, value);
                     }
@@ -260,33 +257,66 @@ public class ProductService {
                 }
             }
 
-            List<ProductOption> newOptions = new ArrayList<>();
+            // =========================================================================
+            // SOLUCIÓN HIBERNATE: En lugar de destruir y recrear, actualizamos y fusionamos
+            // las Opciones para no perder las referencias con las Variantes existentes.
+            // =========================================================================
+            Map<String, ProductOption> existingOptionsMap = new HashMap<>();
+            if (product.getOptions() != null) {
+                for (ProductOption opt : product.getOptions()) {
+                    existingOptionsMap.put(opt.getName(), opt);
+                }
+            }
+
+            List<ProductOption> newOptionsList = new ArrayList<>();
             Map<String, ProductOptionValue> optionValueLookup = new HashMap<>();
 
             int optPos = 0;
             for (ProductDto.OptionDto optDto : dto.getOptions()) {
-                ProductOption option = ProductOption.builder()
-                        .product(product)
-                        .name(optDto.getName())
-                        .sortPosition(optPos++)
-                        .build();
+                ProductOption option = existingOptionsMap.get(optDto.getName());
+                if (option == null) {
+                    option = ProductOption.builder()
+                            .product(product)
+                            .name(optDto.getName())
+                            .build();
+                    option.setValues(new ArrayList<>());
+                }
+                option.setSortPosition(optPos++);
 
-                List<ProductOptionValue> values = new ArrayList<>();
+                Map<String, ProductOptionValue> existingValuesMap = new HashMap<>();
+                if (option.getValues() != null) {
+                    for (ProductOptionValue val : option.getValues()) {
+                        existingValuesMap.put(val.getValueName(), val);
+                    }
+                }
+
+                List<ProductOptionValue> newValuesList = new ArrayList<>();
                 int valPos = 0;
                 for (String valName : optDto.getValues()) {
-                    ProductOptionValue val = ProductOptionValue.builder()
-                            .option(option)
-                            .valueName(valName)
-                            .sortPosition(valPos++)
-                            .build();
-                    values.add(val);
+                    ProductOptionValue val = existingValuesMap.get(valName);
+                    if (val == null) {
+                        val = ProductOptionValue.builder()
+                                .option(option)
+                                .valueName(valName)
+                                .build();
+                    }
+                    val.setSortPosition(valPos++);
+                    newValuesList.add(val);
                     optionValueLookup.put(optDto.getName() + ":" + valName, val);
                 }
-                option.setValues(values);
-                newOptions.add(option);
+
+                if(option.getValues() == null) {
+                    option.setValues(newValuesList);
+                } else {
+                    option.getValues().clear();
+                    option.getValues().addAll(newValuesList);
+                }
+
+                newOptionsList.add(option);
             }
             product.getOptions().clear();
-            product.getOptions().addAll(newOptions);
+            product.getOptions().addAll(newOptionsList);
+            // =========================================================================
 
             List<ProductVariant> newVariantsList = new ArrayList<>();
             double minPrice = Double.MAX_VALUE;
@@ -489,9 +519,5 @@ public class ProductService {
         }
 
         return statsMap;
-    }
-    @Transactional(readOnly = true)
-    public ProductCountsProjection getGlobalCounts() {
-        return productRepository.countProductsByStatus();
     }
 }

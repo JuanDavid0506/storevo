@@ -74,7 +74,7 @@
                             class="relative px-3 py-1 rounded-lg text-sm font-medium transition-all whitespace-nowrap"
                             th:classappend="${param.status == null or #strings.isEmpty(param.status)} ? 'bg-slate-800 text-white shadow-sm ring-1 ring-white/5' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-900'">
                         Todos
-                        <span class="absolute -top-2 -right-2 min-w-[20px] text-center bg-slate-900 text-slate-400 text-[9px] font-black px-1.5 py-0.5 rounded-full border border-slate-700 shadow-md" th:text="${counts.todos != null ? counts.todos : 0}">0</span>
+                        <span class="absolute -top-2 -right-2 min-w-[20px] text-center bg-slate-900 text-slate-400 text-[9px] font-black px-1.5 py-0.5 rounded-full border border-slate-700 shadow-md" th:text="${counts != null and counts.todos != null ? counts.todos : 0}">0</span>
                     </button>
 
                     <button type="button" onclick="Storevo.ProductsList.setStatusFilter('active')"
@@ -82,7 +82,7 @@
                             th:classappend="${param.status != null and param.status[0] == 'active'} ? 'bg-slate-800 text-green-400 shadow-sm ring-1 ring-white/5' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-900'">
                         <span class="w-1.5 h-1.5 rounded-full flex-shrink-0" th:classappend="${param.status != null and param.status[0] == 'active'} ? 'bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.8)]' : 'bg-slate-600'"></span>
                         Activos
-                        <span class="absolute -top-2 -right-2 min-w-[20px] text-center bg-slate-900 text-green-500/80 text-[9px] font-black px-1.5 py-0.5 rounded-full border border-slate-700 shadow-md" th:text="${counts.activos != null ? counts.activos : 0}">0</span>
+                        <span class="absolute -top-2 -right-2 min-w-[20px] text-center bg-slate-900 text-green-500/80 text-[9px] font-black px-1.5 py-0.5 rounded-full border border-slate-700 shadow-md" th:text="${counts != null and counts.activos != null ? counts.activos : 0}">0</span>
                     </button>
 
                     <button type="button" onclick="Storevo.ProductsList.setStatusFilter('inactive')"
@@ -90,7 +90,7 @@
                             th:classappend="${param.status != null and param.status[0] == 'inactive'} ? 'bg-slate-800 text-white shadow-sm ring-1 ring-white/5' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-900'">
                         <span class="w-1.5 h-1.5 rounded-full flex-shrink-0" th:classappend="${param.status != null and param.status[0] == 'inactive'} ? 'bg-slate-300' : 'bg-slate-600'"></span>
                         Ocultos
-                        <span class="absolute -top-2 -right-2 min-w-[20px] text-center bg-slate-900 text-slate-400 text-[9px] font-black px-1.5 py-0.5 rounded-full border border-slate-700 shadow-md" th:text="${counts.ocultos != null ? counts.ocultos : 0}">0</span>
+                        <span class="absolute -top-2 -right-2 min-w-[20px] text-center bg-slate-900 text-slate-400 text-[9px] font-black px-1.5 py-0.5 rounded-full border border-slate-700 shadow-md" th:text="${counts != null and counts.ocultos != null ? counts.ocultos : 0}">0</span>
                     </button>
 
                     <button type="button" onclick="Storevo.ProductsList.setStatusFilter('draft')"
@@ -98,7 +98,7 @@
                             th:classappend="${param.status != null and param.status[0] == 'draft'} ? 'bg-slate-800 text-storevo-400 shadow-sm ring-1 ring-white/5' : 'text-slate-500 hover:text-storevo-400 hover:bg-slate-900'">
                         <span class="w-1.5 h-1.5 rounded-full flex-shrink-0" th:classappend="${param.status != null and param.status[0] == 'draft'} ? 'bg-storevo-400' : 'bg-slate-600'"></span>
                         Borradores
-                        <span class="absolute -top-2 -right-2 min-w-[20px] text-center bg-slate-900 text-storevo-500/80 text-[9px] font-black px-1.5 py-0.5 rounded-full border border-slate-700 shadow-md" th:text="${counts.borradores != null ? counts.borradores : 0}">0</span>
+                        <span class="absolute -top-2 -right-2 min-w-[20px] text-center bg-slate-900 text-storevo-500/80 text-[9px] font-black px-1.5 py-0.5 rounded-full border border-slate-700 shadow-md" th:text="${counts != null and counts.borradores != null ? counts.borradores : 0}">0</span>
                     </button>
 
                     <button type="button" onclick="Storevo.ProductsList.setStatusFilter('deleted')"
@@ -106,7 +106,7 @@
                             th:classappend="${param.status != null and param.status[0] == 'deleted'} ? 'bg-slate-800 text-red-400 shadow-sm ring-1 ring-white/5' : 'text-slate-500 hover:text-red-400 hover:bg-slate-900'">
                         <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                         Papelera
-                        <span class="absolute -top-2 -right-2 min-w-[20px] text-center bg-slate-900 text-red-500/80 text-[9px] font-black px-1.5 py-0.5 rounded-full border border-slate-700 shadow-md" th:text="${counts.papelera != null ? counts.papelera : 0}">0</span>
+                        <span class="absolute -top-2 -right-2 min-w-[20px] text-center bg-slate-900 text-red-500/80 text-[9px] font-black px-1.5 py-0.5 rounded-full border border-slate-700 shadow-md" th:text="${counts != null and counts.papelera != null ? counts.papelera : 0}">0</span>
                     </button>
                 </div>
 
@@ -153,11 +153,6 @@
                 (function() {
                     window.Storevo = window.Storevo || {};
                     if (!Storevo.getTenantKey) {
-                        // Namespacing por tenant: evita que un dato de sessionStorage/localStorage
-                        // de una tienda se filtre a otra si el mismo usuario administra varias
-                        // tiendas desde el mismo navegador. Autodefensivo: se define una sola vez,
-                        // sin importar qué script cargue primero (este es inline y puede ir antes
-                        // que storevo.js).
                         Storevo.getTenantKey = function(baseKey) {
                             const match = window.location.pathname.match(/^\/dashboard\/([^/]+)/);
                             return baseKey + '_' + (match ? match[1] : 'default');
@@ -167,7 +162,6 @@
                     const viewKey = Storevo.getTenantKey('storevo_admin_products_view');
                     let saved = localStorage.getItem(viewKey) || 'cards';
 
-                    // Lógica responsiva para proteger al usuario si cambia de PC a Celular
                     const isMobile = window.innerWidth < 640;
                     if (isMobile && saved === 'table') { saved = 'cards'; localStorage.setItem(viewKey, saved); }
                     if (!isMobile && saved === 'compact') { saved = 'table'; localStorage.setItem(viewKey, saved); }
@@ -237,9 +231,9 @@
                             </td>
                             <td class="px-6 py-4 text-center">
                                 <span th:if="${prod.isDeleted}" class="bg-red-500/10 text-red-400 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded border border-red-500/20">Papelera</span>
-                                <span th:if="${!prod.isDeleted and prod.isActive}" class="bg-green-500/10 text-green-400 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded border border-green-500/20">Activo</span>
-                                <span th:if="${!prod.isDeleted and !prod.isActive and !prod.isDraft}" class="bg-slate-500/10 text-slate-400 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded border border-slate-500/20">Oculto</span>
                                 <span th:if="${!prod.isDeleted and prod.isDraft}" class="bg-storevo-500/10 text-storevo-400 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded border border-storevo-500/20">Borrador</span>
+                                <span th:if="${!prod.isDeleted and !prod.isDraft and prod.isActive}" class="bg-green-500/10 text-green-400 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded border border-green-500/20">Activo</span>
+                                <span th:if="${!prod.isDeleted and !prod.isDraft and !prod.isActive}" class="bg-slate-500/10 text-slate-400 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded border border-slate-500/20">Oculto</span>
                             </td>
                             <td class="px-6 py-4 text-right">
                                 <div th:if="${!prod.isDeleted}" class="flex justify-end gap-2">
@@ -271,7 +265,6 @@
             <!-- VISTA: TARJETAS -->
             <div id="view-cards" class="view-container hidden grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-6">
 
-                <!-- SOLUCIÓN: Agregamos tabindex="0" y focus:outline-none para que la tarjeta detecte el toque en celular -->
                 <div th:each="prod : ${products}" tabindex="0" class="relative group bg-slate-900 rounded-2xl border border-slate-800 hover:shadow-2xl hover:border-storevo-500/50 has-[:checked]:border-storevo-500 has-[:checked]:ring-1 has-[:checked]:ring-storevo-500 transition-all duration-300 flex flex-col overflow-hidden focus:outline-none cursor-pointer lg:cursor-default">
                     <div class="relative aspect-[4/3] bg-slate-950 overflow-hidden border-b border-slate-800">
                         <img th:if="${prod.mainImageUrl != null}" th:src="${prod.getMainImageThumbnailUrl() != null ? prod.getMainImageThumbnailUrl() : '/img/placeholder.jpg'}" class="w-full h-full object-cover lg:group-hover:scale-105 transition-transform duration-500">
@@ -281,18 +274,17 @@
 
                         <div class="absolute top-2 left-2 sm:top-3 sm:left-3 flex flex-col gap-1 sm:gap-1.5 z-10 pointer-events-none">
                             <span th:if="${prod.isDeleted}" class="bg-red-500 text-white text-[8px] sm:text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 sm:px-2 sm:py-1 rounded shadow-sm">Papelera</span>
-                            <span th:if="${!prod.isDeleted and prod.isActive}" class="bg-green-500/90 backdrop-blur-sm text-white text-[8px] sm:text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 sm:px-2 sm:py-1 rounded shadow-sm">Activo</span>
-                            <span th:if="${!prod.isDeleted and !prod.isActive and !prod.isDraft}" class="bg-slate-700/90 backdrop-blur-sm text-white text-[8px] sm:text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 sm:px-2 sm:py-1 rounded shadow-sm">Oculto</span>
                             <span th:if="${!prod.isDeleted and prod.isDraft}" class="bg-storevo-500/90 backdrop-blur-sm text-white text-[8px] sm:text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 sm:px-2 sm:py-1 rounded shadow-sm">Borrador</span>
+                            <span th:if="${!prod.isDeleted and !prod.isDraft and prod.isActive}" class="bg-green-500/90 backdrop-blur-sm text-white text-[8px] sm:text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 sm:px-2 sm:py-1 rounded shadow-sm">Activo</span>
+                            <span th:if="${!prod.isDeleted and !prod.isDraft and !prod.isActive}" class="bg-slate-700/90 backdrop-blur-sm text-white text-[8px] sm:text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 sm:px-2 sm:py-1 rounded shadow-sm">Oculto</span>
+
                             <span th:if="${prod.hasVariants}" class="bg-storevo-500/90 backdrop-blur-sm text-white text-[8px] sm:text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 sm:px-2 sm:py-1 rounded shadow-sm flex items-center gap-1"><svg class="w-2 h-2 sm:w-3 sm:h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg> <span class="hidden sm:inline">Opciones</span></span>
                         </div>
 
-                        <!-- SOLUCIÓN: Solo se muestra en hover de PC (lg:group-hover) o al tocar en móvil (group-focus) -->
                         <div class="absolute top-2 right-2 sm:top-3 sm:right-3 z-30 opacity-0 lg:group-hover:opacity-100 group-focus:opacity-100 focus-within:opacity-100 has-[:checked]:opacity-100 transition-opacity">
                             <input type="checkbox" th:value="${prod.id}" class="product-checkbox w-4 h-4 sm:w-5 sm:h-5 rounded border-slate-600 bg-slate-800 text-storevo-500 focus:ring-storevo-500 shadow-md cursor-pointer transition-colors">
                         </div>
 
-                        <!-- SOLUCIÓN: Bloqueamos clics accidentales con pointer-events-none hasta que la tarjeta reciba el "toque" (focus) -->
                         <div class="absolute inset-0 bg-slate-900/80 opacity-0 lg:group-hover:opacity-100 group-focus:opacity-100 focus-within:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-4 sm:pb-6 gap-2 sm:gap-3 backdrop-blur-sm z-20 pointer-events-none lg:group-hover:pointer-events-auto group-focus:pointer-events-auto focus-within:pointer-events-auto">
                             <th:block th:if="${!prod.isDeleted}">
                                 <a th:href="@{|/dashboard/${slug}/products/${prod.id}/edit|}" class="w-8 h-8 sm:w-10 sm:h-10 bg-slate-800 text-blue-400 border border-slate-700 rounded-full flex items-center justify-center hover:bg-storevo-500 hover:border-storevo-500 hover:text-white hover:scale-110 transition-all shadow-xl" title="Editar"><svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></a>
@@ -346,7 +338,6 @@
                         <div th:unless="${prod.mainImageUrl != null}" class="w-full h-full flex items-center justify-center text-slate-700"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg></div>
                     </div>
 
-                    <!-- ENVOLTURA FLEX-COL PARA MÓVILES -->
                     <div class="flex-1 min-w-0 flex flex-col">
                         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
                             <div class="flex-1 min-w-0">
@@ -355,9 +346,9 @@
                                     <span class="text-[10px] sm:text-xs text-slate-500 font-mono truncate" th:text="${prod.sku != null ? prod.sku : 'SIN SKU'}">SKU</span>
                                     <span class="hidden sm:inline w-1 h-1 bg-slate-700 rounded-full"></span>
                                     <span th:if="${prod.isDeleted}" class="text-[9px] sm:text-[10px] text-red-500 font-bold uppercase tracking-wider">Papelera</span>
-                                    <span th:if="${!prod.isDeleted and prod.isActive}" class="text-[9px] sm:text-[10px] text-green-400 font-bold uppercase tracking-wider">Activo</span>
-                                    <span th:if="${!prod.isDeleted and !prod.isActive and !prod.isDraft}" class="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase tracking-wider">Oculto</span>
                                     <span th:if="${!prod.isDeleted and prod.isDraft}" class="text-[9px] sm:text-[10px] text-storevo-400 font-bold uppercase tracking-wider">Borrador</span>
+                                    <span th:if="${!prod.isDeleted and !prod.isDraft and prod.isActive}" class="text-[9px] sm:text-[10px] text-green-400 font-bold uppercase tracking-wider">Activo</span>
+                                    <span th:if="${!prod.isDeleted and !prod.isDraft and !prod.isActive}" class="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase tracking-wider">Oculto</span>
                                 </div>
                             </div>
 
@@ -377,7 +368,6 @@
                             </div>
                         </div>
 
-                        <!-- BOTONES EXPLÍCITOS PARA CELULARES (lg:hidden) RESTAURADOS -->
                         <div class="flex lg:hidden items-center justify-end gap-2 pt-3 mt-2 border-t border-slate-800/60 w-full pr-2">
                             <th:block th:if="${!prod.isDeleted}">
                                 <a th:href="@{|/dashboard/${slug}/products/${prod.id}/edit|}" class="p-1.5 bg-slate-950 border border-slate-700 text-blue-400 hover:bg-slate-800 rounded-lg transition-colors shadow-sm" title="Editar"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></a>
@@ -396,7 +386,6 @@
                         </div>
                     </div>
 
-                    <!-- Acciones de Escritorio Originales -->
                     <div th:if="${!prod.isDeleted}" class="absolute right-2 top-1/2 -translate-y-1/2 bg-slate-900 shadow-[-10px_0_10px_rgba(15,23,42,1)] pl-2 hidden lg:flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <a th:href="@{|/dashboard/${slug}/products/${prod.id}/edit|}" class="p-2 text-blue-400 hover:bg-slate-800 rounded-lg transition-colors" title="Editar"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></a>
                         <form th:action="@{|/dashboard/${slug}/products/${prod.id}/toggle|}" method="POST" class="m-0">

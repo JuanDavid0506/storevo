@@ -55,10 +55,8 @@ public class ProductController {
         TenantContext.setCurrentTenant(store.getSchemaName());
     }
 
-    // --- NUEVA LÓGICA: MUESTRA LA VISTA SIN ENSUCIAR LA BASE DE DATOS ---
     @GetMapping("/new")
     public String showCreateForm(@PathVariable String slug, Model model) {
-        // Preparamos un DTO en blanco para evitar NullPointers en la vista
         ProductDto dto = ProductDto.builder()
                 .isDraft(true)
                 .isActive(true)
@@ -73,18 +71,14 @@ public class ProductController {
         return "dashboard/products/form";
     }
 
-    // --- NUEVA LÓGICA: UNIFICADO PARA CREACIÓN O ACTUALIZACIÓN CON DEVOLUCIÓN DE ID ---
-    // --- NUEVA LÓGICA: UNIFICADO PARA CREACIÓN O ACTUALIZACIÓN CON DEVOLUCIÓN DE ID ---
     @PostMapping(value = {"/auto-save", "/{id}/auto-save"})
     @ResponseBody
     public ResponseEntity<?> autoSaveProduct(@PathVariable String slug,
                                              @PathVariable(required = false) Long id,
                                              @ModelAttribute ProductDto productDto) {
         try {
-            // Buscamos el ID ya sea en la URL o en el cuerpo del formulario oculto
             Long targetId = (id != null) ? id : productDto.getId();
 
-            // Si realmente no existe, es un borrador totalmente nuevo
             if (targetId == null || targetId == 0) {
                 targetId = productService.createEmptyDraft();
             }
@@ -224,7 +218,6 @@ public class ProductController {
                               @ModelAttribute ProductDto productDto,
                               @RequestParam(required = false) String action) {
 
-        // Seguro de vida: Si el usuario clica publicar extremadamente rápido desde /new
         if (productDto.getId() == null) {
             productDto.setId(productService.createEmptyDraft());
         }
@@ -290,8 +283,10 @@ public class ProductController {
 
         if ("active".equals(status)) {
             isActiveFilter = true;
+            isDraftFilter = false;
         } else if ("inactive".equals(status)) {
             isActiveFilter = false;
+            isDraftFilter = false;
         } else if ("deleted".equals(status)) {
             isActiveFilter = null;
             isDeletedFilter = true;
