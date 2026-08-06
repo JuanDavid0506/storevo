@@ -19,31 +19,45 @@ Storevo.ProductWizard = {
     mode: 'wizard',
     currentRecommendation: null,
 
-    // 1. INICIALIZADOR: Escucha silenciosa del ID de categoría
+    // 1. INICIALIZADOR: Escucha silenciosa del ID de categoría y del Switch
     initSmartObserver: function() {
         const catInput = document.getElementById('finalCategoryId');
-        if (!catInput) return;
+        const variantsToggle = document.getElementById('hasVariants'); // El ID de tu switch de variantes
 
-        // Observa si el input oculto de categoría cambia de valor
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.type === "attributes" && mutation.attributeName === "value") {
-                    const newCategoryId = catInput.value;
-                    if (newCategoryId && newCategoryId.trim() !== '') {
-                        this.fetchSmartRecommendation(newCategoryId);
-                    }
+        if (catInput) {
+            // Escucha el evento 'change' nativo que productForm.js ya está disparando
+            catInput.addEventListener('change', (e) => {
+                const newCategoryId = e.target.value;
+                if (newCategoryId && newCategoryId.trim() !== '') {
+                    this.fetchSmartRecommendation(newCategoryId);
                 }
             });
-        });
-        observer.observe(catInput, { attributes: true });
+        }
+
+        // NUEVO: El panel solo obedece si el switch de variantes está activo
+        if (variantsToggle) {
+            variantsToggle.addEventListener('change', (e) => {
+                const panel = document.getElementById('smart-recommendation-panel');
+                if (!panel || !this.currentRecommendation) return;
+
+                // Si encienden las variantes y hay data, mostramos. Si apagan, ocultamos.
+                if (e.target.checked) {
+                    panel.classList.remove('hidden');
+                    setTimeout(() => panel.classList.remove('opacity-0'), 20);
+                } else {
+                    panel.classList.add('opacity-0');
+                    setTimeout(() => panel.classList.add('hidden'), 300);
+                }
+            });
+        }
     },
 
-    // 2. CONSUMO DEL BACKEND (El nuevo Endpoint)
+    // 2. CONSUMO DEL BACKEND (El endpoint)
     fetchSmartRecommendation: async function(categoryId) {
         try {
-            const response = await fetch(`/api/recommendations/category/${categoryId}`);
+            const slug = window.location.pathname.split('/')[2];
+            const response = await fetch(`/dashboard/${slug}/products/api/categories/${categoryId}/smart-template`);
 
-            // REGLA PURISTA: Si el backend dice 204 (No Content) o hay error, abortamos.
             if (!response.ok || response.status === 204) {
                 const panel = document.getElementById('smart-recommendation-panel');
                 if (panel) panel.classList.add('hidden', 'opacity-0');
@@ -62,10 +76,12 @@ Storevo.ProductWizard = {
 
             if (!panel) return;
 
-            // Construir los chips visuales del banner
+            // FIX 1: Extraer correctamente los nombres de las opciones (Mata el [object Object])
+            const optionNames = rec.options ? rec.options.map(opt => typeof opt === 'string' ? opt : opt.name) : [];
+
             let html = '';
-            if (rec.options && rec.options.length > 0) {
-                html += `<span class="px-2.5 py-1 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-300 shadow-inner"><span class="text-storevo-400 font-bold">Variantes:</span> ${rec.options.join(', ')}</span>`;
+            if (optionNames.length > 0) {
+                html += `<span class="px-2.5 py-1 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-300 shadow-inner"><span class="text-storevo-400 font-bold">Variantes:</span> ${optionNames.join(', ')}</span>`;
             }
             if (rec.specifications && rec.specifications.length > 0) {
                 html += `<span class="px-2.5 py-1 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-300 shadow-inner"><span class="text-storevo-400 font-bold">Ficha:</span> ${rec.specifications.join(', ')}</span>`;
@@ -73,11 +89,26 @@ Storevo.ProductWizard = {
             optionsList.innerHTML = html;
 
             title.textContent = 'Configuración recomendada';
-            subtitle.textContent = `Basado en ${data.basedOnProductCount} productos creados en esta categoría.`;
 
-            // Mostrar el banner verde solo porque estamos seguros de que hay datos
-            panel.classList.remove('hidden');
-            setTimeout(() => panel.classList.remove('opacity-0'), 20);
+            // FIX 2: Fallback dinámico para matar el "undefined" buscando las llaves comunes de tu DTO
+            const count = data.basedOnProductCount || data.productCount || data.totalProducts || data.sampleSize || 0;
+            subtitle.textContent = `Basado en ${count} productos creados en esta categoría.`;
+
+            // FIX 3: Solo mostrar el panel de inmediato si el interruptor de variantes ESTÁ ENCENDIDO
+            const variantsToggle = document.getElementById('hasVariants');
+            if (variantsToggle && variantsToggle.checked) {
+                panel.classList.remove('hidden');
+                setTimeout(() => panel.classList.remove('opacity-0'), 20);
+            } else {
+                // Lo mantenemos oculto pero con la data cargada, lista para cuando enciendan el switch
+                panel.classList.add('hidden', 'opacity-0');
+            }
+
+            // ENGANCHAR EL BOTÓN DE APLICAR (Buscamos dinámicamente el botón por su texto)
+            const applyBtn = Array.from(panel.querySelectorAll('button')).find(btn => btn.textContent.toLowerCase().includes('aplicar'));
+            if (applyBtn) {
+                applyBtn.onclick = () => this.applySmartTemplate(); // CORRECCIÓN: Llamaba a una función inexistente
+            }
 
         } catch (error) {
             console.error("Error obteniendo recomendación:", error);
@@ -295,7 +326,10 @@ Storevo.ProductWizard = {
 
         // --- A. Inyectar Variantes (Tu lógica nativa) ---
         if (rec.options && rec.options.length > 0 && window.Storevo.VariantBuilder) {
-            Storevo.VariantBuilder.state.options = rec.options.map(optName => ({
+            // CORRECCIÓN: Extraer solo los nombres como texto para evitar [object Object] dentro de VariantBuilder
+            const optionNames = rec.options.map(opt => typeof opt === 'string' ? opt : opt.name);
+
+            Storevo.VariantBuilder.state.options = optionNames.map(optName => ({
                 name: optName,
                 values: []
             }));
