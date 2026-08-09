@@ -202,6 +202,26 @@ Storevo.ProductForm = {
     },
 
     selectCategory: function(level, cat) {
+        const yaEstabaSeleccionada = this.selectedPath[level - 1] && this.selectedPath[level - 1].id === cat.id;
+
+        if (yaEstabaSeleccionada) {
+            // Clic sobre el chip ya activo: se deselecciona este nivel y todo lo que dependía de él
+            // (incluye el nivel 1, que antes se quedaba pegado para siempre).
+            this.selectedPath = this.selectedPath.slice(0, level - 1);
+
+            const container = document.getElementById(`level-${level}-container`);
+            if (container) {
+                Array.from(container.children).forEach(btn => {
+                    btn.className = 'px-4 py-2 text-sm font-semibold rounded-xl border transition-all duration-200 bg-slate-900 border-slate-700 text-slate-300 hover:text-white hover:bg-storevo-500/10 hover:border-storevo-500/50';
+                });
+            }
+
+            this.clearLevel(level + 1);
+            this.clearLevel(level + 2);
+            this.updateFinalSelection();
+            return;
+        }
+
         this.selectedPath[level - 1] = cat;
 
         const container = document.getElementById(`level-${level}-container`);
