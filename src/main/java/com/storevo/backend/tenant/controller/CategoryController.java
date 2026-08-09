@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -41,12 +42,21 @@ public class CategoryController {
     public String listCategories(Model model) {
         // Solo mandamos la raíz, Thymeleaf se encarga de dibujar las hijas automáticamente
         model.addAttribute("rootCategories", categoryService.getRootCategories());
+        model.addAttribute("productCounts", categoryService.getProductCountsByCategory());
         model.addAttribute("pageTitle", "Organización del Catálogo");
         return "dashboard/categories/index";
     }
 
     @GetMapping("/new")
-    public String showCreateForm(@RequestParam(required = false) Long parentId, Model model) {
+    public String showCreateForm(@PathVariable String slug, @RequestParam(required = false) Long parentId, Model model, RedirectAttributes redirectAttributes) {
+        // Si el padre ya está en el nivel 3 (Principal > Sub > Sub-sub), no lo dejamos
+        // ni llegar al formulario: evitamos el viaje en falso de llenar todo y que
+        // falle al guardar por el límite de jerarquía.
+        if (parentId != null && !categoryService.canHaveChildren(parentId)) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Esa categoría ya está en el nivel más profundo permitido (3 niveles) y no puede tener subcategorías.");
+            return "redirect:/dashboard/" + slug + "/categories";
+        }
+
         CategoryDto dto = new CategoryDto();
         dto.setIsActive(true);
         dto.setDisplayOrder(0);
@@ -85,9 +95,14 @@ public class CategoryController {
     }
 
     @PostMapping
-    public String saveCategory(@PathVariable String slug, @ModelAttribute CategoryDto categoryDto) {
-        categoryService.saveCategory(categoryDto);
-        return "redirect:/dashboard/" + slug + "/categories?success=true";
+    public String saveCategory(@PathVariable String slug, @ModelAttribute CategoryDto categoryDto, RedirectAttributes redirectAttributes) {
+        try {
+            categoryService.saveCategory(categoryDto);
+            return "redirect:/dashboard/" + slug + "/categories?success=true";
+        } catch (RuntimeException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+            return "redirect:/dashboard/" + slug + "/categories";
+        }
     }
 
     // ==========================================
@@ -139,8 +154,20 @@ public class CategoryController {
     }
 
     @PostMapping("/{id}/delete")
-    public String deleteCategory(@PathVariable String slug, @PathVariable Long id) {
-        categoryService.deleteCategory(id);
-        return "redirect:/dashboard/" + slug + "/categories?deleted=true";
+    public String deleteCategory(@PathVariable String slug, @PathVariable Long id, RedirectAttributes redirectAttributes) {
+        try {
+            categoryService.deleteCategory(id);
+            redirectAttributes.addFlashAttribute("successMessage", "Categoría eliminada correctamente.");
+            return "redirect:/dashboard/" + slug + "/categories?deleted=true";
+        } catch (RuntimeException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+            return "redirect:/dashboard/" + slug + "/categories";
+        }
+    }
+
+    @PostMapping("/{id}/reorder")
+    public String reorderCategory(@PathVariable String slug, @PathVariable Long id, @RequestParam String direction) {
+        categoryService.reorderCategory(id, direction);
+        return "redirect:/dashboard/" + slug + "/categories";
     }
 }

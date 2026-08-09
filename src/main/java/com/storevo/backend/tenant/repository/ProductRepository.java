@@ -48,6 +48,12 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Query("SELECT COUNT(p) FROM Product p WHERE p.category.id = :categoryId AND p.hasVariants = true AND p.isDeleted = false")
     Long countProductsWithVariantsByCategory(@Param("categoryId") Long categoryId);
 
+    @Query("SELECT COUNT(p) FROM Product p WHERE p.category.id = :categoryId AND p.isDeleted = false")
+    long countByCategoryId(@Param("categoryId") Long categoryId);
+
+    @Query("SELECT p.category.id, COUNT(p) FROM Product p WHERE p.isDeleted = false AND p.category IS NOT NULL GROUP BY p.category.id")
+    List<Object[]> countProductsGroupedByCategory();
+
     @Query("SELECT o.name FROM Product p JOIN p.options o WHERE p.category.id = :categoryId AND p.isDeleted = false GROUP BY o.name ORDER BY COUNT(o.id) DESC")
     List<String> findMostUsedOptionsByCategory(@Param("categoryId") Long categoryId, Pageable pageable);
 

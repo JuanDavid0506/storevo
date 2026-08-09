@@ -4,18 +4,22 @@ import com.storevo.backend.tenant.dto.CategoryDto;
 import com.storevo.backend.tenant.dto.CategoryTreeDto;
 import com.storevo.backend.tenant.model.Category;
 import com.storevo.backend.tenant.repository.CategoryRepository;
+import com.storevo.backend.tenant.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 public class CategoryService {
 
     private final CategoryRepository categoryRepository;
+    private final ProductRepository productRepository;
 
     public List<Category> getAllCategories() {
         return categoryRepository.findAllByOrderByDisplayOrderAsc();
@@ -79,6 +83,23 @@ public class CategoryService {
                 .name(category.getName())
                 .children(children)
                 .build();
+    }
+
+    // Mapa categoryId -> cantidad de productos activos/no-eliminados asignados directamente a ella.
+    // Una sola consulta agrupada, sin importar cuántas categorías tenga la tienda.
+    public Map<Long, Long> getProductCountsByCategory() {
+        Map<Long, Long> counts = new HashMap<>();
+        for (Object[] row : productRepository.countProductsGroupedByCategory()) {
+            counts.put((Long) row[0], (Long) row[1]);
+        }
+        return counts;
+    }
+
+    // true si esta categoría todavía puede recibir subcategorías sin romper
+    // el límite de 3 niveles (Principal > Sub > Sub-sub).
+    public boolean canHaveChildren(Long categoryId) {
+        Category category = getCategoryById(categoryId);
+        return getCategoryLevel(category) < 3;
     }
 
     // Calcula el nivel actual en el árbol (1 = Raíz, 2 = Nivel 2, 3 = Nivel 3)
@@ -154,7 +175,55 @@ public class CategoryService {
 
     @Transactional
     public void deleteCategory(Long id) {
+        Category category = getCategoryById(id);
+
+        if (category.getSubCategories() != null && !category.getSubCategories().isEmpty()) {
+            throw new RuntimeException("No puedes eliminar \"" + category.getName() + "\" porque todavía tiene subcategorías dentro. Elimínalas primero.");
+        }
+
+        long productCount = productRepository.countByCategoryId(id);
+        if (productCount > 0) {
+            throw new RuntimeException("No puedes eliminar \"" + category.getName() + "\" porque tiene " + productCount + " producto(s) asignado(s). Muévelos a otra categoría antes de eliminarla.");
+        }
+
         categoryRepository.deleteById(id);
+    }
+
+    // Intercambia el displayOrder de una categoría con el de su hermana inmediata
+    // (misma categoría padre) hacia arriba o hacia abajo. Normaliza el orden de
+    // todas las hermanas antes de mover, para que funcione aunque hoy todas
+    // tengan displayOrder = 0 (como pasa con las creadas por el alta rápida).
+    @Transactional
+    public void reorderCategory(Long id, String direction) {
+        Category category = getCategoryById(id);
+
+        List<Category> siblings = category.getParentCategory() != null
+                ? new ArrayList<>(category.getParentCategory().getSubCategories())
+                : new ArrayList<>(getRootCategories());
+
+        for (int i = 0; i < siblings.size(); i++) {
+            siblings.get(i).setDisplayOrder(i);
+        }
+
+        int index = -1;
+        for (int i = 0; i < siblings.size(); i++) {
+            if (siblings.get(i).getId().equals(id)) {
+                index = i;
+                break;
+            }
+        }
+        if (index == -1) return;
+
+        int targetIndex = "up".equals(direction) ? index - 1 : index + 1;
+        if (targetIndex >= 0 && targetIndex < siblings.size()) {
+            Category a = siblings.get(index);
+            Category b = siblings.get(targetIndex);
+            int temp = a.getDisplayOrder();
+            a.setDisplayOrder(b.getDisplayOrder());
+            b.setDisplayOrder(temp);
+        }
+
+        categoryRepository.saveAll(siblings);
     }
 
     @Transactional

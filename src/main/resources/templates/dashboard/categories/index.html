@@ -8,6 +8,16 @@
 <body>
 <div layout:fragment="content" class="space-y-6 max-w-5xl mx-auto">
 
+    <!-- Mensajes de éxito / error (borrado bloqueado, límite de 3 niveles, etc.) -->
+    <div th:if="${errorMessage}" class="flex items-start gap-3 bg-red-500/10 border border-red-500/30 text-red-300 text-sm font-semibold p-4 rounded-xl">
+        <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"></path></svg>
+        <span th:text="${errorMessage}"></span>
+    </div>
+    <div th:if="${successMessage}" class="flex items-start gap-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-sm font-semibold p-4 rounded-xl">
+        <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <span th:text="${successMessage}"></span>
+    </div>
+
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-900 p-6 rounded-2xl border border-slate-800 shadow-sm">
         <div>
             <h2 class="text-2xl font-black text-white tracking-tight">Estructura del Catálogo</h2>
@@ -19,14 +29,25 @@
         </a>
     </div>
 
+    <!-- Buscador: filtra por nombre en cualquier nivel del árbol -->
+    <div th:if="${not #lists.isEmpty(rootCategories)}" class="relative">
+        <svg class="w-5 h-5 text-slate-500 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"></path></svg>
+        <input type="text" id="categorySearchInput" placeholder="Buscar categoría, subcategoría o sub-subcategoría..."
+               class="w-full bg-slate-900 border border-slate-800 rounded-xl pl-11 pr-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-storevo-500/50 focus:ring-1 focus:ring-storevo-500/30 transition-colors">
+    </div>
+
     <div th:if="${#lists.isEmpty(rootCategories)}" class="text-center py-16 bg-slate-900 border border-slate-800 rounded-2xl border-dashed">
         <svg class="mx-auto h-12 w-12 text-slate-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6a2 2 0 012-2h2l2 2h8a2 2 0 012 2v2M4 6v12a2 2 0 002 2h12a2 2 0 002-2V10"></path></svg>
         <h3 class="text-lg font-bold text-white">Tu catálogo está vacío</h3>
         <p class="text-slate-400 mt-1">Comienza creando tu primera categoría principal (Ej: Hombres, Mujeres, Hogar).</p>
     </div>
 
+    <div id="noSearchResults" class="hidden text-center py-12 bg-slate-900 border border-slate-800 rounded-2xl border-dashed">
+        <p class="text-slate-400">No encontramos ninguna categoría que coincida con tu búsqueda.</p>
+    </div>
+
     <div class="space-y-4">
-        <details th:each="cat : ${rootCategories}" class="group bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-sm transition-all open:border-storevo-500/50" open>
+        <details th:each="cat, catStat : ${rootCategories}" class="cat-root group bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-sm transition-all open:border-storevo-500/50" th:classappend="${cat.isActive} ? '' : 'opacity-60'" open>
 
             <summary class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 bg-slate-900 hover:bg-slate-800/80 cursor-pointer list-none transition-colors">
                 <div class="flex items-center gap-4">
@@ -36,13 +57,26 @@
                     <div>
                         <div class="flex items-center gap-3">
                             <span class="text-lg font-black text-white tracking-tight" th:text="${cat.name}">Hombres</span>
+                            <span class="px-2 py-0.5 text-[10px] font-bold bg-slate-800 text-slate-400 rounded border border-slate-700" th:text="${(productCounts.get(cat.id) ?: 0)} + ' producto' + ${(productCounts.get(cat.id) ?: 0) == 1 ? '' : 's'}">0 productos</span>
                             <span th:unless="${cat.isActive}" class="px-2 py-0.5 text-[10px] font-bold uppercase bg-slate-800 text-slate-500 rounded border border-slate-700">Oculta</span>
                         </div>
                         <p class="text-sm text-slate-500 mt-0.5" th:text="${cat.description} ?: 'Categoría Principal'"></p>
                     </div>
                 </div>
 
-                <div class="flex items-center gap-2 pl-12 sm:pl-0" onclick="event.stopPropagation();">
+                <div class="flex items-center gap-1.5 pl-12 sm:pl-0 flex-wrap" onclick="event.stopPropagation();">
+                    <!-- Reordenar -->
+                    <form th:action="@{|/dashboard/${slug}/categories/${cat.id}/reorder?direction=up|}" method="post" class="m-0 p-0">
+                        <button type="submit" th:disabled="${catStat.first}" class="p-1.5 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-slate-800" title="Subir">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.5 15.75l7.5-7.5 7.5 7.5"></path></svg>
+                        </button>
+                    </form>
+                    <form th:action="@{|/dashboard/${slug}/categories/${cat.id}/reorder?direction=down|}" method="post" class="m-0 p-0">
+                        <button type="submit" th:disabled="${catStat.last}" class="p-1.5 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-slate-800" title="Bajar">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.5 8.25l-7.5 7.5-7.5-7.5"></path></svg>
+                        </button>
+                    </form>
+
                     <a th:href="@{|/dashboard/${slug}/categories/new?parentId=${cat.id}|}" class="text-xs font-bold px-3 py-1.5 bg-storevo-500/10 text-storevo-400 hover:bg-storevo-500/20 rounded-lg transition-colors border border-storevo-500/20 flex items-center gap-1">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
                         Agregar subcategoría
@@ -55,6 +89,12 @@
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
                         </button>
                     </form>
+                    <form th:action="@{|/dashboard/${slug}/categories/${cat.id}/delete|}" method="post" class="m-0 p-0"
+                          th:attr="onsubmit=|return confirm('¿Eliminar la categoría \'${cat.name}\'? Esta acción no se puede deshacer.');|">
+                        <button type="submit" class="p-1.5 text-slate-400 hover:text-red-400 bg-slate-800 hover:bg-red-500/10 rounded-lg transition-colors" title="Eliminar">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"></path></svg>
+                        </button>
+                    </form>
                 </div>
             </summary>
 
@@ -65,17 +105,28 @@
 
                 <div th:if="${not #lists.isEmpty(cat.subCategories)}" class="space-y-3 pl-4 sm:pl-12 relative border-l border-slate-800 ml-4 sm:ml-8 my-2">
 
-                    <div th:each="sub : ${cat.subCategories}" class="relative group/sub">
-                        <div class="flex items-center justify-between p-3 bg-slate-900 border border-slate-800 rounded-xl hover:border-slate-700 transition-colors relative z-10">
+                    <div th:each="sub, subStat : ${cat.subCategories}" class="relative group/sub" th:classappend="${sub.isActive} ? '' : 'opacity-60'">
+                        <div class="flex items-center justify-between p-3 bg-slate-900 border border-slate-800 rounded-xl hover:border-slate-700 transition-colors relative z-10 flex-wrap gap-2">
                             <div class="absolute -left-4 top-1/2 w-4 border-t border-slate-800"></div>
 
-                            <div class="flex items-center gap-3">
+                            <div class="flex items-center gap-3 flex-wrap">
                                 <span class="font-bold text-slate-300" th:text="${sub.name}">Camisetas</span>
+                                <span class="px-2 py-0.5 text-[10px] font-bold bg-slate-800 text-slate-400 rounded border border-slate-700" th:text="${(productCounts.get(sub.id) ?: 0)} + ' producto' + ${(productCounts.get(sub.id) ?: 0) == 1 ? '' : 's'}">0 productos</span>
                                 <span th:if="${sub.showInNav}" class="px-2 py-0.5 text-[10px] uppercase font-bold bg-blue-500/10 text-blue-400 rounded border border-blue-500/20">Menú Navbar</span>
                                 <span th:unless="${sub.isActive}" class="px-2 py-0.5 text-[10px] uppercase font-bold bg-slate-800 text-slate-500 rounded border border-slate-700">Inactiva</span>
                             </div>
 
-                            <div class="flex items-center gap-2">
+                            <div class="flex items-center gap-1.5">
+                                <form th:action="@{|/dashboard/${slug}/categories/${sub.id}/reorder?direction=up|}" method="post" class="m-0 p-0">
+                                    <button type="submit" th:disabled="${subStat.first}" class="p-1.5 text-slate-400 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title="Subir">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.5 15.75l7.5-7.5 7.5 7.5"></path></svg>
+                                    </button>
+                                </form>
+                                <form th:action="@{|/dashboard/${slug}/categories/${sub.id}/reorder?direction=down|}" method="post" class="m-0 p-0">
+                                    <button type="submit" th:disabled="${subStat.last}" class="p-1.5 text-slate-400 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title="Bajar">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.5 8.25l-7.5 7.5-7.5-7.5"></path></svg>
+                                    </button>
+                                </form>
                                 <a th:href="@{|/dashboard/${slug}/categories/new?parentId=${sub.id}|}" class="text-[10px] font-bold px-2.5 py-1.5 bg-storevo-500/10 text-storevo-400 hover:bg-storevo-500/20 rounded-lg md:mr-2 transition-colors border border-storevo-500/20 flex items-center gap-1" title="Agregar subcategoría">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
                                     <span class="hidden sm:inline">Agregar subcategoría</span>
@@ -89,27 +140,51 @@
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
                                     </button>
                                 </form>
+                                <form th:action="@{|/dashboard/${slug}/categories/${sub.id}/delete|}" method="post" class="m-0 p-0"
+                                      th:attr="onsubmit=|return confirm('¿Eliminar la subcategoría \'${sub.name}\'? Esta acción no se puede deshacer.');|">
+                                    <button type="submit" class="p-1.5 text-slate-400 hover:text-red-400 transition-colors" title="Eliminar">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"></path></svg>
+                                    </button>
+                                </form>
                             </div>
                         </div>
 
                         <div th:if="${not #lists.isEmpty(sub.subCategories)}" class="space-y-2 pl-6 sm:pl-10 relative border-l border-slate-800 ml-4 sm:ml-6 my-2 mt-3">
-                            <div th:each="subsub : ${sub.subCategories}" class="flex items-center justify-between p-3 bg-slate-900 border border-slate-800 rounded-xl hover:border-slate-700 transition-colors relative">
+                            <div th:each="subsub, ssStat : ${sub.subCategories}" class="flex items-center justify-between p-3 bg-slate-900 border border-slate-800 rounded-xl hover:border-slate-700 transition-colors relative flex-wrap gap-2" th:classappend="${subsub.isActive} ? '' : 'opacity-60'">
 
                                 <div class="absolute -left-6 top-1/2 w-6 border-t border-slate-800"></div>
 
-                                <div class="flex items-center gap-3">
+                                <div class="flex items-center gap-3 flex-wrap">
                                     <span class="font-bold text-slate-400" th:text="${subsub.name}">Camiseta Deportiva</span>
+                                    <span class="px-2 py-0.5 text-[10px] font-bold bg-slate-800 text-slate-400 rounded border border-slate-700" th:text="${(productCounts.get(subsub.id) ?: 0)} + ' producto' + ${(productCounts.get(subsub.id) ?: 0) == 1 ? '' : 's'}">0 productos</span>
                                     <span th:if="${subsub.showInNav}" class="px-2 py-0.5 text-[10px] uppercase font-bold bg-blue-500/10 text-blue-400 rounded border border-blue-500/20">Menú Navbar</span>
                                     <span th:unless="${subsub.isActive}" class="px-2 py-0.5 text-[10px] uppercase font-bold bg-slate-800 text-slate-500 rounded border border-slate-700">Inactiva</span>
+                                    <span class="px-2 py-0.5 text-[10px] uppercase font-bold bg-slate-800/50 text-slate-600 rounded border border-slate-800" title="Ya no admite más subcategorías (límite de 3 niveles)">Nivel máximo</span>
                                 </div>
 
-                                <div class="flex items-center gap-2">
+                                <div class="flex items-center gap-1.5">
+                                    <form th:action="@{|/dashboard/${slug}/categories/${subsub.id}/reorder?direction=up|}" method="post" class="m-0 p-0">
+                                        <button type="submit" th:disabled="${ssStat.first}" class="p-1.5 text-slate-400 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title="Subir">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.5 15.75l7.5-7.5 7.5 7.5"></path></svg>
+                                        </button>
+                                    </form>
+                                    <form th:action="@{|/dashboard/${slug}/categories/${subsub.id}/reorder?direction=down|}" method="post" class="m-0 p-0">
+                                        <button type="submit" th:disabled="${ssStat.last}" class="p-1.5 text-slate-400 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title="Bajar">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.5 8.25l-7.5 7.5-7.5-7.5"></path></svg>
+                                        </button>
+                                    </form>
                                     <a th:href="@{|/dashboard/${slug}/categories/${subsub.id}/edit|}" class="p-1.5 text-slate-400 hover:text-storevo-400 transition-colors" title="Editar">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                                     </a>
                                     <form th:action="@{|/dashboard/${slug}/categories/${subsub.id}/toggle|}" method="post" class="m-0 p-0">
                                         <button type="submit" class="p-1.5 text-slate-400 hover:text-white transition-colors" th:title="${subsub.isActive ? 'Desactivar' : 'Activar'}">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+                                        </button>
+                                    </form>
+                                    <form th:action="@{|/dashboard/${slug}/categories/${subsub.id}/delete|}" method="post" class="m-0 p-0"
+                                          th:attr="onsubmit=|return confirm('¿Eliminar \'${subsub.name}\'? Esta acción no se puede deshacer.');|">
+                                        <button type="submit" class="p-1.5 text-slate-400 hover:text-red-400 transition-colors" title="Eliminar">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"></path></svg>
                                         </button>
                                     </form>
                                 </div>
@@ -122,5 +197,37 @@
         </details>
     </div>
 </div>
+
+<script layout:fragment="scripts">
+    (function() {
+        var input = document.getElementById('categorySearchInput');
+        if (!input) return;
+
+        var roots = document.querySelectorAll('details.cat-root');
+        var noResults = document.getElementById('noSearchResults');
+
+        input.addEventListener('input', function() {
+            var query = this.value.trim().toLowerCase();
+            var visibleCount = 0;
+
+            roots.forEach(function(details) {
+                var text = details.textContent.toLowerCase();
+                var matches = !query || text.indexOf(query) !== -1;
+
+                if (matches) {
+                    details.classList.remove('hidden');
+                    visibleCount++;
+                    if (query) details.setAttribute('open', '');
+                } else {
+                    details.classList.add('hidden');
+                }
+            });
+
+            if (noResults) {
+                noResults.classList.toggle('hidden', !(query && visibleCount === 0));
+            }
+        });
+    })();
+</script>
 </body>
 </html>
