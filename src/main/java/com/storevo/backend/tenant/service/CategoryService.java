@@ -40,8 +40,6 @@ public class CategoryService {
 
     // Devuelve el id de la categoría + los ids de TODOS sus descendientes
     // (subcategorías y sub-subcategorías), recorriendo el árbol completo.
-    // Se usa para que al filtrar por una categoría padre (ej. "Hombres")
-    // también se incluyan los productos asignados a sus hijas.
     public List<Long> getCategoryAndDescendantIds(Long categoryId) {
         Category category = getCategoryById(categoryId);
         List<Long> ids = new ArrayList<>();
@@ -59,9 +57,6 @@ public class CategoryService {
     }
 
     // Arma el árbol completo de categorías (raíces + descendientes) como DTOs
-    // livianos, listos para serializar a JSON y alimentar el combobox del
-    // frontend. No depende de cuántas categorías tenga la tienda: funciona
-    // igual con 3 categorías que con 300.
     public List<CategoryTreeDto> getCategoryTree() {
         List<Category> roots = getRootCategories();
         List<CategoryTreeDto> tree = new ArrayList<>();
@@ -85,14 +80,43 @@ public class CategoryService {
                 .build();
     }
 
-    // Mapa categoryId -> cantidad de productos activos/no-eliminados asignados directamente a ella.
-    // Una sola consulta agrupada, sin importar cuántas categorías tenga la tienda.
+    // Mapa categoryId -> cantidad de productos (Directos + Toda su descendencia).
+    // Mantiene la eficiencia de 1 sola consulta a BD, y delega la suma recursiva a la memoria.
     public Map<Long, Long> getProductCountsByCategory() {
-        Map<Long, Long> counts = new HashMap<>();
+        // 1. Obtenemos los conteos directos crudos desde la base de datos
+        Map<Long, Long> directCounts = new HashMap<>();
         for (Object[] row : productRepository.countProductsGroupedByCategory()) {
-            counts.put((Long) row[0], (Long) row[1]);
+            directCounts.put((Long) row[0], (Long) row[1]);
         }
-        return counts;
+
+        // 2. Mapa final para almacenar las sumas acumuladas
+        Map<Long, Long> cumulativeCounts = new HashMap<>();
+
+        // 3. Recorremos el árbol desde las raíces hacia abajo para sumar los conteos
+        List<Category> rootCategories = getRootCategories();
+        for (Category root : rootCategories) {
+            calculateCumulativeCount(root, directCounts, cumulativeCounts);
+        }
+
+        return cumulativeCounts;
+    }
+
+    // Función auxiliar Bottom-Up: Suma los productos de las hojas hacia sus padres
+    private long calculateCumulativeCount(Category category, Map<Long, Long> directCounts, Map<Long, Long> cumulativeCounts) {
+        // Inicia con el conteo directo de esta categoría
+        long total = directCounts.getOrDefault(category.getId(), 0L);
+
+        // Suma recursivamente los conteos de sus subcategorías
+        if (category.getSubCategories() != null) {
+            for (Category sub : category.getSubCategories()) {
+                total += calculateCumulativeCount(sub, directCounts, cumulativeCounts);
+            }
+        }
+
+        // Guarda el total acumulado para uso en la interfaz
+        cumulativeCounts.put(category.getId(), total);
+
+        return total;
     }
 
     // true si esta categoría todavía puede recibir subcategorías sin romper
@@ -190,9 +214,6 @@ public class CategoryService {
     }
 
     // Intercambia el displayOrder de una categoría con el de su hermana inmediata
-    // (misma categoría padre) hacia arriba o hacia abajo. Normaliza el orden de
-    // todas las hermanas antes de mover, para que funcione aunque hoy todas
-    // tengan displayOrder = 0 (como pasa con las creadas por el alta rápida).
     @Transactional
     public void reorderCategory(Long id, String direction) {
         Category category = getCategoryById(id);

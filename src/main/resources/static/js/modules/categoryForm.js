@@ -2,37 +2,42 @@ window.Storevo = window.Storevo || {};
 
 Storevo.CategoryForm = {
     init: function() {
-        const parentSelect = document.querySelector('select[name="parentId"]');
+        // Buscamos cualquier elemento (select o input oculto) que se llame parentId
+        const parentInput = document.querySelector('[name="parentId"]');
         const navCheckbox = document.querySelector('input[name="showInNav"]');
-
-        // Ahora apuntamos exactamente a la caja correcta
         const navContainer = document.getElementById('navbar-setting-container');
 
-        if (parentSelect && navCheckbox && navContainer) {
+        if (navCheckbox && navContainer) {
 
             const toggleNavbarOption = () => {
-                if (parentSelect.value && parentSelect.value.trim() !== "") {
-                    // Tiene padre -> Es subcategoría -> Ocultar y apagar
+                // Verificamos si hay un ID en la URL o si el input tiene valor
+                const urlParams = new URLSearchParams(window.location.search);
+                const hasParentUrl = urlParams.has('parentId');
+                const hasParentInput = parentInput && parentInput.value && parentInput.value.trim() !== "";
+
+                // Si detecta un padre por URL o por valor del input, es una subcategoría
+                if (hasParentUrl || hasParentInput) {
                     navContainer.classList.add('hidden');
                     navCheckbox.checked = false;
                 } else {
-                    // Sin padre -> Es principal -> Mostrar
                     navContainer.classList.remove('hidden');
                 }
             };
 
-            // 1. Ejecutar al cargar la página (vital para cuando entras a "Editar")
+            // 1. Validar inmediatamente al cargar la página (cubre el /new?parentId=1 y la edición)
             toggleNavbarOption();
 
-            // 2. Ejecutar cada vez que el usuario cambie el selector
-            parentSelect.addEventListener('change', () => {
-                toggleNavbarOption();
+            // 2. Escuchar los cambios manuales solo si el campo es un <select> editable
+            if (parentInput && parentInput.tagName === 'SELECT') {
+                parentInput.addEventListener('change', () => {
+                    toggleNavbarOption();
 
-                // Si vuelve a "Categoría Principal", encendemos la opción
-                if (!parentSelect.value || parentSelect.value.trim() === "") {
-                    navCheckbox.checked = true;
-                }
-            });
+                    // Si vuelve a "Categoría Principal", encendemos la opción por defecto
+                    if (!parentInput.value || parentInput.value.trim() === "") {
+                        navCheckbox.checked = true;
+                    }
+                });
+            }
         }
     }
 };
