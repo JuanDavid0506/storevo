@@ -271,8 +271,13 @@ Storevo.ProductForm = {
             // Se eliminó dispatchEvent('change') aquí para prevenir la Race Condition con el AJAX de autoguardado.
         }
 
-        sessionStorage.removeItem('storevo_current_step');
-        sessionStorage.removeItem('storevo_product_template');
+        if (Storevo.getTenantKey) {
+            sessionStorage.removeItem(Storevo.getTenantKey('storevo_current_step'));
+            sessionStorage.removeItem(Storevo.getTenantKey('storevo_product_template'));
+        } else {
+            sessionStorage.removeItem('storevo_current_step');
+            sessionStorage.removeItem('storevo_product_template');
+        }
 
         if (window.Storevo && window.Storevo.VariantBuilder) {
             window.Storevo.VariantBuilder.syncHiddenInputs();

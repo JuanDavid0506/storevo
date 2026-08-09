@@ -1,6 +1,7 @@
 package com.storevo.backend.tenant.service;
 
 import com.storevo.backend.tenant.dto.TemplateRecommendationResponse;
+import com.storevo.backend.tenant.model.Product;
 import com.storevo.backend.tenant.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -10,6 +11,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -41,13 +44,29 @@ public class TemplateRecommendationService {
                 int confidence = productCount >= 10 ? 98 : (productCount >= 5 ? 85 : 70);
                 String confidenceText = productCount >= 10 ? "Alta confianza" : "Confianza media";
 
+                // Ficha técnica sugerida: las llaves de atributos (attrKeys) más repetidas
+                // entre los productos ya existentes de esta categoría (Top 4).
+                List<Product> categoryProducts = productRepository.findByCategoryId(categoryId);
+                Map<String, Long> specFrequencies = categoryProducts.stream()
+                        .filter(p -> p.getAttributes() != null)
+                        .flatMap(p -> p.getAttributes().keySet().stream())
+                        .map(String::trim)
+                        .filter(key -> !key.isEmpty())
+                        .collect(Collectors.groupingBy(key -> key, Collectors.counting()));
+
+                List<String> topSpecs = specFrequencies.entrySet().stream()
+                        .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
+                        .limit(4)
+                        .map(Map.Entry::getKey)
+                        .collect(Collectors.toList());
+
                 TemplateRecommendationResponse.Recommendation rec = TemplateRecommendationResponse.Recommendation.builder()
                         .title("Configuración recomendada")
                         .subtitle("Basada en " + productCount + " productos de esta categoría")
                         .confidence(confidence)
                         .confidenceLabel(confidenceText)
                         .options(suggestedOptions)
-                        .attributes(new ArrayList<>())
+                        .specifications(topSpecs)
                         .build();
 
                 return new TemplateRecommendationResponse(rec);

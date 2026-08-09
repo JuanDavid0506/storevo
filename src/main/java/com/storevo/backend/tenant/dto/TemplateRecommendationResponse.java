@@ -23,7 +23,7 @@ public class TemplateRecommendationResponse {
         private Integer confidence;
         private String confidenceLabel;
         private List<OptionSuggestion> options;
-        private List<String> attributes;
+        private List<String> specifications;
     }
 
     @Data
