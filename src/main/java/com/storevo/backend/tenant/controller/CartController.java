@@ -5,6 +5,7 @@ import com.storevo.backend.admin.service.StoreSettingsService;
 import com.storevo.backend.config.tenant.TenantContext;
 import com.storevo.backend.tenant.dto.CartItemDto;
 import com.storevo.backend.tenant.model.Order;
+import com.storevo.backend.tenant.model.OrderChannel;
 import com.storevo.backend.tenant.model.Product;
 import com.storevo.backend.tenant.model.ProductVariant;
 import com.storevo.backend.tenant.repository.ProductVariantRepository;
@@ -194,8 +195,20 @@ public class CartController {
             @PathVariable String slug, @RequestParam String customerName, @RequestParam String customerPhone,
             @RequestParam String address, @RequestParam String city, @RequestParam(required = false) String notes) {
         try {
-            Order order = orderService.createOrderFromCart(slug, customerName, customerPhone, address, city, notes);
+            Order order = orderService.createOrderFromCart(slug, customerName, customerPhone, address, city, notes, OrderChannel.ONLINE);
             return "redirect:/s/" + slug + "/order/" + order.getId() + "/success";
+        } catch (Exception e) {
+            return "redirect:/s/" + slug + "/cart/checkout?error=true";
+        }
+    }
+
+    @PostMapping("/checkout/whatsapp")
+    public String processCheckoutWhatsapp(
+            @PathVariable String slug, @RequestParam String customerName, @RequestParam String customerPhone,
+            @RequestParam String address, @RequestParam String city, @RequestParam(required = false) String notes) {
+        try {
+            Order order = orderService.createOrderFromCart(slug, customerName, customerPhone, address, city, notes, OrderChannel.WHATSAPP);
+            return "redirect:/s/" + slug + "/order/" + order.getId() + "/whatsapp";
         } catch (Exception e) {
             return "redirect:/s/" + slug + "/cart/checkout?error=true";
         }

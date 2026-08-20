@@ -38,7 +38,11 @@
                 </tr>
 
                 <tr th:each="order : ${orders}" class="hover:bg-slate-800/50 transition cursor-pointer" th:onclick="|window.location.href='@{/dashboard/{slug}/orders/{id}(slug=${slug},id=${order.id})}'|">
-                    <td class="px-6 py-4 font-black text-white text-base" th:text="'#' + ${order.id}">#1</td>
+                    <td class="px-6 py-4 font-black text-white text-base">
+                        <span th:text="'#' + ${order.id}">#1</span>
+                        <span th:text="${order.channel.getDisplayName()}"
+                              th:class="'ml-2 text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full border ' + ${order.channel.getBadgeClasses()}"></span>
+                    </td>
                     <td class="px-6 py-4" th:text="${#temporals.format(order.createdAt, 'dd/MM/yyyy')}">Fecha</td>
                     <td class="px-6 py-4">
                         <p class="font-bold text-white" th:text="${order.customerName}">Nombre</p>

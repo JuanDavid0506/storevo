@@ -36,9 +36,16 @@ public class Order {
     @Column(nullable = false, length = 30)
     private OrderStatus status;
 
-    @Column(name = "payment_method", length = 50)
+    // Canal de venta del pedido. Por defecto ONLINE para no alterar el comportamiento
+    // de pedidos ya existentes ni de cualquier otro punto del código que construya
+    // una Order sin especificarlo explícitamente.
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
     @Builder.Default
-    private String paymentMethod = "Wompi / Tarjeta";
+    private OrderChannel channel = OrderChannel.ONLINE;
+
+    @Column(name = "payment_method", length = 50)
+    private String paymentMethod;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("createdAt DESC")

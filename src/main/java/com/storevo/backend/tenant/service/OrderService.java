@@ -55,12 +55,16 @@ public class OrderService {
     }
 
     @Transactional
-    public Order createOrderFromCart(String slug, String customerName, String customerPhone, String address, String city, String notes) {
+    public Order createOrderFromCart(String slug, String customerName, String customerPhone, String address, String city, String notes, OrderChannel channel) {
         List<CartItemDto> cartItems = cartManager.getCart(slug);
 
         if (cartItems.isEmpty()) {
             throw new IllegalArgumentException("El carrito está vacío");
         }
+
+        // El método de pago inicial depende del canal: por WhatsApp todavía no hay
+        // ningún cobro asociado, así que no tiene sentido dejar "Wompi / Tarjeta" puesto.
+        String initialPaymentMethod = channel == OrderChannel.WHATSAPP ? "Pendiente por WhatsApp" : "Wompi / Tarjeta";
 
         Order order = Order.builder()
                 .customerName(customerName)
@@ -70,6 +74,8 @@ public class OrderService {
                 .notes(notes)
                 .total(cartManager.getTotal(slug))
                 .status(OrderStatus.PENDING)
+                .channel(channel)
+                .paymentMethod(initialPaymentMethod)
                 .build();
 
         List<OrderItem> items = cartItems.stream().map(dto -> {
@@ -91,13 +97,17 @@ public class OrderService {
 
         order.setItems(items);
 
+        String historyDescription = channel == OrderChannel.WHATSAPP
+                ? "Pedido creado por el cliente y enviado por WhatsApp para confirmación."
+                : "Pedido creado por el cliente.";
+
         OrderHistory historyObj = OrderHistory.builder()
                 .order(order)
                 .eventType(OrderHistoryType.SYSTEM_EVENT)
                 .origin(EventOrigin.WEB)
                 .oldStatus(null)
                 .newStatus(OrderStatus.PENDING)
-                .description("Pedido creado por el cliente.")
+                .description(historyDescription)
                 .userId(null)
                 .build();
         order.getHistory().add(historyObj);
@@ -105,6 +115,30 @@ public class OrderService {
         Order savedOrder = orderRepository.save(order);
         cartManager.clearCart(slug);
         return savedOrder;
+    }
+
+    // Arma el mensaje de WhatsApp para un pedido ya creado (usado por el flujo del Plan 1).
+    public String buildWhatsappMessage(Order order) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Hola, quiero realizar este pedido en Storevo:\n\n");
+
+        for (OrderItem item : order.getItems()) {
+            sb.append("• ").append(item.getProductName())
+                    .append(" × ").append(item.getQuantity())
+                    .append("\n");
+        }
+
+        sb.append("\nTotal: $").append(formatCurrency(order.getTotal()));
+        sb.append("\nNombre: ").append(order.getCustomerName());
+        sb.append("\n\n¿Me confirman disponibilidad?");
+
+        return sb.toString();
+    }
+
+    private String formatCurrency(Double amount) {
+        if (amount == null) return "0";
+        long rounded = Math.round(amount);
+        return String.format("%,d", rounded).replace(",", ".");
     }
 
     @Transactional

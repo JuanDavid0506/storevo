@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" layout:decorate="~{layouts/store-layout}"
+      xmlns:layout="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Pedido enviado por WhatsApp</title>
+</head>
+<body>
+<div layout:fragment="content" class="max-w-3xl mx-auto px-4 py-20 text-center">
+
+    <div class="bg-white p-10 rounded-2xl shadow-sm border border-slate-200">
+        <div class="w-20 h-20 bg-emerald-500 text-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+            <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-6l-4 4v-4z"></path></svg>
+        </div>
+
+        <h1 class="text-3xl font-bold text-slate-900 mb-2">¡Tu pedido quedó registrado!</h1>
+        <p class="text-slate-600 mb-8">Tu número de pedido es el <strong class="text-slate-900" th:text="'#' + ${order.id}"></strong></p>
+
+        <div class="bg-slate-50 p-6 rounded-xl border border-slate-200 text-left mb-8">
+            <h3 class="font-bold text-lg mb-4">Resumen</h3>
+            <div class="space-y-2 mb-4">
+                <div th:each="item : ${order.items}" class="flex justify-between text-sm">
+                    <span class="text-slate-600 truncate pr-4"><span th:text="${item.quantity}"></span>x <span th:text="${item.productName}"></span></span>
+                </div>
+            </div>
+            <div class="flex justify-between items-center border-t border-slate-200 pt-4">
+                <span class="text-slate-600">Total</span>
+                <span class="font-bold text-lg" th:text="${'$ ' + #numbers.formatDecimal(order.total, 1, 'POINT', 0, 'COMMA')}">$0</span>
+            </div>
+            <p class="text-sm text-slate-500 mt-3">Estado actual: <span class="font-bold text-orange-500">Solicitud pendiente de confirmación</span></p>
+        </div>
+
+        <div th:if="${whatsappConfigured}">
+            <a th:href="${whatsappLink}" target="_blank" rel="noopener"
+               id="whatsappRedirectLink"
+               class="inline-flex items-center justify-center gap-2 w-full sm:w-auto bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-8 rounded-lg shadow-md transition">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 004.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91C21.96 6.45 17.5 2 12.04 2zm5.83 14.16c-.25.7-1.45 1.33-2 1.42-.53.08-1.03.11-1.78-.11-.41-.12-.93-.29-1.6-.57-2.82-1.22-4.66-4.06-4.8-4.25-.14-.19-1.15-1.53-1.15-2.92s.72-2.07.98-2.35c.25-.28.54-.35.72-.35.18 0 .36 0 .52.01.17.01.39-.06.61.46.25.6.85 2.07.92 2.22.07.15.12.32.02.52-.09.19-.14.32-.28.49-.14.17-.29.37-.42.5-.14.14-.28.29-.12.57.16.28.71 1.17 1.53 1.9 1.05.94 1.94 1.23 2.22 1.37.28.14.45.12.61-.07.17-.19.7-.82.89-1.1.19-.28.37-.23.62-.14.25.09 1.6.75 1.87.89.28.14.46.21.53.32.07.12.07.68-.18 1.38z"></path></svg>
+                Abrir WhatsApp y enviar pedido
+            </a>
+            <p class="text-xs text-slate-400 mt-4">Si no se abrió automáticamente, pulsa el botón. Ya escribimos el mensaje por ti.</p>
+        </div>
+
+        <div th:unless="${whatsappConfigured}" class="bg-orange-50 border border-orange-200 text-orange-700 text-sm font-medium p-4 rounded-xl">
+            Tu pedido ya quedó registrado, pero esta tienda todavía no configuró su número de WhatsApp para recibir pedidos. Contáctala directamente para confirmar la disponibilidad.
+        </div>
+
+    </div>
+
+</div>
+
+<script th:if="${whatsappConfigured}" layout:fragment="scripts">
+    (function() {
+        var link = document.getElementById('whatsappRedirectLink');
+        if (link) {
+            window.location.href = link.href;
+        }
+    })();
+</script>
+</body>
+</html>

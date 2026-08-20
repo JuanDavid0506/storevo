@@ -15,6 +15,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 
@@ -83,6 +84,44 @@ public class OrderController {
         model.addAttribute("pageTitle",      "Pagar Pedido");
 
         return "storefront/order-success";
+    }
+
+    @GetMapping("/{id}/whatsapp")
+    public String orderWhatsapp(@PathVariable String slug, @PathVariable Long id, HttpServletRequest request, Model model) {
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new OrderNotFoundException(id));
+
+        Store store = (Store) request.getAttribute("currentStore");
+        var settings = storeSettingsService.getSettingsByStore(store);
+
+        model.addAttribute("order", order);
+        model.addAttribute("pageTitle", "Pedido enviado por WhatsApp");
+
+        String rawWhatsapp = settings != null ? settings.getWhatsapp() : null;
+        if (rawWhatsapp == null || rawWhatsapp.isBlank()) {
+            // La tienda todavía no configuró su número de WhatsApp: mostramos la
+            // confirmación igual (el pedido ya quedó registrado) pero sin el botón.
+            model.addAttribute("whatsappConfigured", false);
+        } else {
+            String message = orderService.buildWhatsappMessage(order);
+            String encodedMessage = URLEncoder.encode(message, StandardCharsets.UTF_8);
+            String normalizedNumber = normalizeWhatsappNumber(rawWhatsapp);
+            model.addAttribute("whatsappConfigured", true);
+            model.addAttribute("whatsappLink", "https://wa.me/" + normalizedNumber + "?text=" + encodedMessage);
+        }
+
+        return "storefront/order-whatsapp";
+    }
+
+    // Deja el número solo con dígitos y le antepone el indicativo de Colombia (57)
+    // si detecta un celular local de 10 dígitos sin indicativo. Si el comerciante
+    // ya guardó el número con indicativo, se respeta tal cual.
+    private String normalizeWhatsappNumber(String raw) {
+        String digitsOnly = raw.replaceAll("[^0-9]", "");
+        if (digitsOnly.length() == 10) {
+            return "57" + digitsOnly;
+        }
+        return digitsOnly;
     }
 
     private String generateSha256(String input) {
