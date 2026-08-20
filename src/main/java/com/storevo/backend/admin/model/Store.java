@@ -29,8 +29,9 @@ public class Store {
     @Column(name = "schema_name", nullable = false, unique = true, length = 100)
     private String schemaName;
 
-    @Column(name = "plan_id")
-    private Long planId; // Por ahora será un ID simple, luego lo relacionaremos con una entidad Plan
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "plan_id")
+    private SubscriptionPlan plan;
 
     @Column(nullable = false, length = 20)
     private String status = "PENDING"; // PENDING, ACTIVE, SUSPENDED
