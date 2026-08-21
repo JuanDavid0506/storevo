@@ -11,6 +11,9 @@ import java.util.Optional;
 @Repository
 public interface StoreIntegrationRepository extends JpaRepository<StoreIntegration, Long> {
 
-    // Busca la configuración activa de una integración específica para una tienda
+    // 1. Usado por el Dashboard: Busca la configuración sin importar si está apagada o encendida
+    Optional<StoreIntegration> findByStoreAndIntegrationType(Store store, IntegrationType type);
+
+    // 2. Usado por el motor (Checkout/Webhooks): Busca SOLO si la integración está activa
     Optional<StoreIntegration> findByStoreAndIntegrationTypeAndIsActiveTrue(Store store, IntegrationType type);
 }

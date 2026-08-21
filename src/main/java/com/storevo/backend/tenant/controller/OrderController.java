@@ -3,14 +3,15 @@ package com.storevo.backend.tenant.controller;
 import com.storevo.backend.admin.model.Store;
 import com.storevo.backend.admin.service.StoreSettingsService;
 import com.storevo.backend.config.tenant.TenantContext;
+import com.storevo.backend.tenant.dto.WompiCheckoutData;
 import com.storevo.backend.tenant.exception.OrderNotFoundException;
 import com.storevo.backend.tenant.model.Order;
 import com.storevo.backend.tenant.model.OrderStatus;
 import com.storevo.backend.tenant.repository.OrderRepository;
 import com.storevo.backend.tenant.service.OrderService;
+import com.storevo.backend.tenant.service.WompiService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -27,12 +28,7 @@ public class OrderController {
     private final OrderRepository orderRepository;
     private final StoreSettingsService storeSettingsService;
     private final OrderService orderService;
-
-    @Value("${wompi.public-key}")
-    private String wompiPublicKey;
-
-    @Value("${wompi.integrity-secret}")
-    private String wompiIntegritySecret;
+    private final WompiService wompiService;
 
     @ModelAttribute
     public void setupTenant(@PathVariable String slug, Model model, HttpServletRequest request) {
@@ -52,36 +48,38 @@ public class OrderController {
 
     @GetMapping("/{id}/success")
     public String orderSuccess(@PathVariable String slug, @PathVariable Long id, HttpServletRequest request, Model model) {
-        // ACTUALIZADO: Usamos la excepción de Dominio
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new OrderNotFoundException(id));
 
-        // Generamos la referencia de Wompi.
-        // YA NO SE GUARDA EN BD, ya que el Webhook es capaz de extraer el ID de este String.
-        String wompiReference = slug + "__" + order.getId() + "__" + System.currentTimeMillis();
-        long amountInCents = Math.round(order.getTotal() * 100);
+        Store store = (Store) request.getAttribute("currentStore");
 
-        String cleanPublicKey = this.wompiPublicKey.trim();
-        String cleanIntegritySecret = this.wompiIntegritySecret.trim();
+        model.addAttribute("order", order);
+        model.addAttribute("pageTitle", "Pagar Pedido");
 
-        String rawSignature = wompiReference + amountInCents + "COP" + cleanIntegritySecret;
-        String integritySignature = generateSha256(rawSignature);
+        try {
+            // Portero + bóveda: valida el plan y trae las credenciales de ESTA tienda,
+            // ya no las llaves globales de application.yml.
+            WompiCheckoutData checkoutData = wompiService.prepareCheckout(store, order);
 
-        String scheme = request.getHeader("X-Forwarded-Proto") != null ? request.getHeader("X-Forwarded-Proto") : request.getScheme();
-        String serverName = request.getServerName();
-        int serverPort = request.getServerPort();
-        String portSuffix = (serverPort == 80 || serverPort == 443) ? "" : ":" + serverPort;
-        String baseUrl = scheme + "://" + serverName + portSuffix;
+            String scheme = request.getHeader("X-Forwarded-Proto") != null ? request.getHeader("X-Forwarded-Proto") : request.getScheme();
+            String serverName = request.getServerName();
+            int serverPort = request.getServerPort();
+            String portSuffix = (serverPort == 80 || serverPort == 443) ? "" : ":" + serverPort;
+            String baseUrl = scheme + "://" + serverName + portSuffix;
+            String redirectUrl = baseUrl + "/s/" + slug + "/order/" + order.getId() + "/wompi-result";
 
-        String redirectUrl = baseUrl + "/s/" + slug + "/order/" + order.getId() + "/wompi-result";
-
-        model.addAttribute("order",          order);
-        model.addAttribute("wompiReference", wompiReference);
-        model.addAttribute("amountInCents",  amountInCents);
-        model.addAttribute("wompiPublicKey", cleanPublicKey);
-        model.addAttribute("wompiSignature", integritySignature);
-        model.addAttribute("wompiRedirectUrl", redirectUrl);
-        model.addAttribute("pageTitle",      "Pagar Pedido");
+            model.addAttribute("paymentAvailable", true);
+            model.addAttribute("wompiPublicKey", checkoutData.getPublicKey());
+            model.addAttribute("wompiReference", checkoutData.getReference());
+            model.addAttribute("amountInCents", checkoutData.getAmountInCents());
+            model.addAttribute("wompiSignature", checkoutData.getSignature());
+            model.addAttribute("wompiRedirectUrl", redirectUrl);
+        } catch (RuntimeException e) {
+            // La tienda no tiene el plan, o no ha configurado Wompi todavía: mostramos
+            // la página igual (el pedido ya quedó registrado) pero sin el botón de pago roto.
+            model.addAttribute("paymentAvailable", false);
+            model.addAttribute("paymentErrorMessage", e.getMessage());
+        }
 
         return "storefront/order-success";
     }
@@ -145,11 +143,13 @@ public class OrderController {
             @PathVariable String slug,
             @PathVariable Long id,
             @RequestParam(name = "id", required = false) String wompiTransactionId,
+            HttpServletRequest request,
             Model model) {
 
         // 1. Verificamos la transacción en Wompi en tiempo real
         if (wompiTransactionId != null) {
-            orderService.verifyTransactionWithWompi(id, wompiTransactionId);
+            Store store = (Store) request.getAttribute("currentStore");
+            orderService.verifyTransactionWithWompi(store, id, wompiTransactionId);
         }
 
         // 2. Volvemos a consultar la base de datos para obtener el estado ACTUALIZADO

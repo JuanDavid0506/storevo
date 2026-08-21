@@ -5,6 +5,7 @@ import com.storevo.backend.admin.model.Store;
 import com.storevo.backend.admin.model.StoreIntegration;
 import com.storevo.backend.admin.repository.StoreIntegrationRepository;
 import com.storevo.backend.admin.repository.StoreRepository;
+import com.storevo.backend.config.tenant.TenantContext;
 import com.storevo.backend.tenant.dto.WompiEventPayload;
 import com.storevo.backend.tenant.model.EventOrigin;
 import com.storevo.backend.tenant.model.OrderStatus;
@@ -35,6 +36,21 @@ public class WompiWebhookController {
         Store store = storeRepository.findBySlug(storeSlug)
                 .orElseThrow(() -> new RuntimeException("Tienda no encontrada"));
 
+        // IMPORTANTE: esta ruta (/api/webhooks/wompi/**) no pasa por TenantFilter
+        // (que solo cambia de esquema para /s/** y /dashboard/**), así que sin este
+        // cambio explícito el resto del método seguiría consultando el esquema
+        // "storevo_admin" en vez del esquema real de la tienda — y la orden nunca
+        // se encontraría, fallando en silencio. Por eso lo hacemos a mano aquí,
+        // con su try/finally para no dejar el hilo "pegado" a este tenant.
+        TenantContext.setCurrentTenant(store.getSchemaName());
+        try {
+            return processEvent(store, payload);
+        } finally {
+            TenantContext.clear();
+        }
+    }
+
+    private ResponseEntity<Void> processEvent(Store store, WompiEventPayload payload) {
         // 2. Extraer configuración de Wompi
         StoreIntegration wompiConfig = integrationRepository
                 .findByStoreAndIntegrationTypeAndIsActiveTrue(store, IntegrationType.WOMPI)
@@ -60,9 +76,15 @@ public class WompiWebhookController {
                     orderService.updateOrderStatus(orderId, OrderStatus.CANCELLED, EventOrigin.WEBHOOK, null);
                 }
             } catch (Exception e) {
-                // Captura controlada para no fallar el Webhook ante excepciones de validación de negocio
+                // Captura controlada para no fallar el Webhook ante excepciones de negocio
+                // (ej: la orden ya estaba en un estado que no permite esta transición).
+                // OJO: esto es distinto del bug de esquema — este catch es a propósito,
+                // porque Wompi reintenta el webhook si respondemos error, y no queremos
+                // reintentos infinitos por una regla de negocio que nunca va a cambiar.
                 System.out.println("No se pudo actualizar la orden desde el Webhook Wompi: " + e.getMessage());
             }
+        } else {
+            System.out.println("Webhook Wompi: no se pudo extraer el ID del pedido de la referencia '" + reference + "'");
         }
 
         return ResponseEntity.ok().build();

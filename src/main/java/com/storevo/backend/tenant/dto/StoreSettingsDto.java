@@ -7,19 +7,37 @@ import lombok.NoArgsConstructor;
 
 @Data
 @Builder
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 public class StoreSettingsDto {
+
+    // --- Información General ---
     private String storeName;
     private String emailContact;
+    private String primaryColor;
+    private String secondaryColor;
+
+    // --- Redes Sociales ---
     private String whatsapp;
     private String instagram;
     private String facebook;
     private String tiktok;
-    private String primaryColor;
-    private String secondaryColor;
+
+    // --- Políticas de la Tienda ---
     private Boolean showShippingPolicy;
     private String shippingPolicyText;
     private Boolean showReturnPolicy;
     private String returnPolicyText;
+
+    // --- Wompi ---
+    private boolean wompiActive;
+    private String wompiEnvironment;
+    private String wompiPublicKey;
+    private String wompiPrivateKey;
+    private String wompiEventsSecret;
+
+    // --- Mi Paquete ---
+    private boolean miPaqueteActive;
+    private String miPaqueteEnvironment;
+    private String miPaqueteApiKey;
 }

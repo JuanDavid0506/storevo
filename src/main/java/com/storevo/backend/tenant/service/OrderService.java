@@ -1,6 +1,10 @@
 package com.storevo.backend.tenant.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.storevo.backend.admin.model.IntegrationType;
+import com.storevo.backend.admin.model.Store;
+import com.storevo.backend.admin.model.StoreIntegration;
+import com.storevo.backend.admin.repository.StoreIntegrationRepository;
 import com.storevo.backend.tenant.dto.CartItemDto;
 import com.storevo.backend.tenant.exception.InsufficientStockException;
 import com.storevo.backend.tenant.exception.InvalidOrderStatusException;
@@ -24,6 +28,7 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final CartManager cartManager;
     private final InventoryService inventoryService;
+    private final StoreIntegrationRepository integrationRepository;
 
     @Transactional(readOnly = true)
     public List<Order> getAllOrders() {
@@ -210,13 +215,25 @@ public class OrderService {
     }
 
     @Transactional
-    public void verifyTransactionWithWompi(Long orderId, String wompiTransactionId) {
+    public void verifyTransactionWithWompi(Store store, Long orderId, String wompiTransactionId) {
         Order order = orderRepository.findById(orderId).orElse(null);
         if (order == null || order.getStatus() != OrderStatus.PENDING) return;
 
         try {
+            StoreIntegration wompiConfig = integrationRepository
+                    .findByStoreAndIntegrationTypeAndIsActiveTrue(store, IntegrationType.WOMPI)
+                    .orElse(null);
+
+            // Sin esta config no sabemos si la tienda opera en sandbox o producción,
+            // así que no adivinamos: dejamos que sea el webhook el que confirme luego.
+            if (wompiConfig == null) return;
+
+            String baseUrl = "PRODUCTION".equals(wompiConfig.getEnvironment())
+                    ? "https://production.wompi.co/v1/transactions/"
+                    : "https://sandbox.wompi.co/v1/transactions/";
+
             RestTemplate restTemplate = new RestTemplate();
-            ResponseEntity<JsonNode> response = restTemplate.getForEntity("https://sandbox.wompi.co/v1/transactions/" + wompiTransactionId, JsonNode.class);
+            ResponseEntity<JsonNode> response = restTemplate.getForEntity(baseUrl + wompiTransactionId, JsonNode.class);
 
             if (response.getBody() != null && response.getStatusCode().is2xxSuccessful()) {
                 String definitiveStatus = response.getBody().get("data").get("status").asText();
