@@ -40,6 +40,12 @@ public class StoreSettingsService {
                 .shippingPolicyText(settings.getShippingPolicyText())
                 .showReturnPolicy(settings.getShowReturnPolicy() != null ? settings.getShowReturnPolicy() : true)
                 .returnPolicyText(settings.getReturnPolicyText())
+
+                .shippingBusinessNit(settings.getShippingBusinessNit())
+                .shippingContactPhone(settings.getShippingContactPhone())
+                .shippingContactEmail(settings.getShippingContactEmail())
+                .shippingPickupAddress(settings.getShippingPickupAddress())
+                .shippingPickupCity(settings.getShippingPickupCity())
                 .build();
     }
 
@@ -69,6 +75,13 @@ public class StoreSettingsService {
         settings.setShippingPolicyText(dto.getShippingPolicyText());
         settings.setShowReturnPolicy(dto.getShowReturnPolicy() != null ? dto.getShowReturnPolicy() : false);
         settings.setReturnPolicyText(dto.getReturnPolicyText());
+
+        // 5. Datos de remitente para envíos
+        settings.setShippingBusinessNit(dto.getShippingBusinessNit());
+        settings.setShippingContactPhone(dto.getShippingContactPhone());
+        settings.setShippingContactEmail(dto.getShippingContactEmail());
+        settings.setShippingPickupAddress(dto.getShippingPickupAddress());
+        settings.setShippingPickupCity(dto.getShippingPickupCity());
 
         storeSettingsRepository.save(settings);
     }

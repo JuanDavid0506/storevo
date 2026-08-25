@@ -20,6 +20,9 @@ public class Order {
     @Column(nullable = false, length = 20)
     private String customerPhone;
 
+    @Column(name = "customer_document", length = 20)
+    private String customerDocument;
+
     @Column(nullable = false, length = 200)
     private String address;
 

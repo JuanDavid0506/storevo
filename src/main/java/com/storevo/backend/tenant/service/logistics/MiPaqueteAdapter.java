@@ -8,7 +8,9 @@ import com.storevo.backend.admin.model.IntegrationType;
 import com.storevo.backend.admin.model.Store;
 import com.storevo.backend.admin.model.StoreIntegration;
 import com.storevo.backend.admin.repository.StoreIntegrationRepository;
+import com.storevo.backend.admin.service.StoreSettingsService;
 import com.storevo.backend.admin.service.TenantPlanService;
+import com.storevo.backend.tenant.dto.StoreSettingsDto;
 import com.storevo.backend.tenant.model.Order;
 import com.storevo.backend.tenant.model.Shipment;
 import com.storevo.backend.tenant.dto.ShipmentLabelResponse;
@@ -28,6 +30,8 @@ public class MiPaqueteAdapter implements CarrierAdapter {
 
     private final TenantPlanService tenantPlanService;
     private final StoreIntegrationRepository integrationRepository;
+    private final StoreSettingsService storeSettingsService;
+    private final DaneCityResolver daneCityResolver;
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper mapper = new ObjectMapper();
 
@@ -85,21 +89,23 @@ public class MiPaqueteAdapter implements CarrierAdapter {
     public ShipmentLabelResponse createLabel(Store store, Order order, String carrierCode, double weight, String dimensions) {
         tenantPlanService.validateFeatureOrThrow(store, Feature.SHIPPING_INTEGRATION);
         StoreIntegration config = getIntegrationConfig(store);
+        StoreSettingsDto storeSettings = storeSettingsService.getSettingsByStore(store);
+        validateSenderData(storeSettings);
 
         int[] dims = parseDimensions(dimensions);
 
         try {
             ObjectNode payload = mapper.createObjectNode();
 
-            // 1. Sender (Remitente)
+            // 1. Sender (Remitente) — datos reales de la tienda, ya no de ejemplo
             ObjectNode sender = mapper.createObjectNode();
             sender.put("name", store.getName());
             sender.put("surname", "Tienda");
-            sender.put("cellPhone", "3000000000"); // Dato por defecto a actualizar luego
+            sender.put("cellPhone", storeSettings.getShippingContactPhone());
             sender.put("prefix", "+57");
-            sender.put("email", "ventas@storevo.com");
-            sender.put("pickupAddress", "Dirección de bodega por defecto");
-            sender.put("nit", "900000000");
+            sender.put("email", storeSettings.getShippingContactEmail());
+            sender.put("pickupAddress", storeSettings.getShippingPickupAddress());
+            sender.put("nit", storeSettings.getShippingBusinessNit());
             sender.put("nitType", "NIT");
             payload.set("sender", sender);
 
@@ -112,7 +118,8 @@ public class MiPaqueteAdapter implements CarrierAdapter {
             receiver.put("prefix", "+57");
             receiver.put("cellPhone", order.getCustomerPhone());
             receiver.put("destinationAddress", order.getAddress() + ", " + order.getCity());
-            receiver.put("nit", "0");
+            receiver.put("nit", order.getCustomerDocument() != null && !order.getCustomerDocument().isBlank()
+                    ? order.getCustomerDocument() : "0");
             receiver.put("nitType", "CC");
             payload.set("receiver", receiver);
 
@@ -128,10 +135,11 @@ public class MiPaqueteAdapter implements CarrierAdapter {
             productInfo.put("declaredValue", (int) Math.round(order.getTotal()));
             payload.set("productInformation", productInfo);
 
-            // 4. Locate (DANE codes por defecto Bogotá para compilar, a actualizar a futuro)
+            // 4. Locate — código DANE real de origen (bodega de la tienda) y destino
+            // (ciudad del pedido), en vez de Bogotá fijo para ambos.
             ObjectNode locate = mapper.createObjectNode();
-            locate.put("originDaneCode", "11001000");
-            locate.put("destinyDaneCode", "11001000");
+            locate.put("originDaneCode", daneCityResolver.resolve(storeSettings.getShippingPickupCity()));
+            locate.put("destinyDaneCode", daneCityResolver.resolve(order.getCity()));
             payload.set("locate", locate);
 
             // 5. Datos Generales
@@ -199,6 +207,20 @@ public class MiPaqueteAdapter implements CarrierAdapter {
     private StoreIntegration getIntegrationConfig(Store store) {
         return integrationRepository.findByStoreAndIntegrationTypeAndIsActiveTrue(store, IntegrationType.MI_PAQUETE)
                 .orElseThrow(() -> new RuntimeException("Integración de Mi Paquete no configurada."));
+    }
+
+    // Antes de intentar generar una guía real, nos aseguramos de que la tienda
+    // haya cargado sus datos de remitente en Ajustes — si no, Mi Paquete rechazaría
+    // la solicitud de todas formas, pero con un error mucho menos claro que este.
+    private void validateSenderData(StoreSettingsDto settings) {
+        if (isBlank(settings.getShippingContactPhone()) || isBlank(settings.getShippingPickupAddress())
+                || isBlank(settings.getShippingPickupCity()) || isBlank(settings.getShippingBusinessNit())) {
+            throw new RuntimeException("Faltan datos de remitente para envíos (teléfono, dirección de bodega, ciudad o NIT). Complétalos en Ajustes > Mi Paquete antes de generar guías.");
+        }
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     private HttpHeaders buildHeaders(String apiKey) {

@@ -7,11 +7,15 @@ import com.storevo.backend.admin.repository.StoreIntegrationRepository;
 import com.storevo.backend.admin.service.StoreSettingsService;
 import com.storevo.backend.config.tenant.TenantContext;
 import com.storevo.backend.tenant.dto.StoreSettingsDto;
+import com.storevo.backend.tenant.service.WompiService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @Controller
 @RequestMapping("/dashboard/{slug}/settings")
@@ -20,6 +24,7 @@ public class SettingsController {
 
     private final StoreSettingsService storeSettingsService;
     private final StoreIntegrationRepository integrationRepository; // Inyectamos la Bóveda
+    private final WompiService wompiService;
 
     @ModelAttribute
     public void setupTenant(@PathVariable String slug, Model model, HttpServletRequest request) {
@@ -113,5 +118,20 @@ public class SettingsController {
         integrationRepository.save(miPaquete);
 
         return "redirect:/dashboard/" + slug + "/settings?success=true";
+    }
+
+    // Endpoint AJAX para el botón "Probar conexión" de la pestaña Wompi. Prueba la
+    // llave pública que el usuario tiene escrita en el formulario EN ESE MOMENTO
+    // (no la que ya está guardada), para que pueda validar antes de guardar.
+    @PostMapping("/wompi/test-connection")
+    @ResponseBody
+    public ResponseEntity<Map<String, String>> testWompiConnection(
+            @RequestParam String publicKey, @RequestParam String environment) {
+        try {
+            String merchantName = wompiService.testPublicKeyConnection(publicKey, environment);
+            return ResponseEntity.ok(Map.of("status", "ok", "merchantName", merchantName));
+        } catch (RuntimeException e) {
+            return ResponseEntity.ok(Map.of("status", "error", "message", e.getMessage()));
+        }
     }
 }

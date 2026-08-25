@@ -70,6 +70,22 @@ public class StoreSettings {
     @Column(name = "return_policy_text", columnDefinition = "TEXT")
     private String returnPolicyText;
 
+    // --- Datos de remitente para envíos (Mi Paquete y futuras transportadoras) ---
+    @Column(name = "shipping_business_nit", length = 30)
+    private String shippingBusinessNit;
+
+    @Column(name = "shipping_contact_phone", length = 20)
+    private String shippingContactPhone;
+
+    @Column(name = "shipping_contact_email", length = 150)
+    private String shippingContactEmail;
+
+    @Column(name = "shipping_pickup_address", length = 255)
+    private String shippingPickupAddress;
+
+    @Column(name = "shipping_pickup_city", length = 100)
+    private String shippingPickupCity;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 

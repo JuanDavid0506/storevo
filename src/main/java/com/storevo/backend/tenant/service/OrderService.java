@@ -60,7 +60,7 @@ public class OrderService {
     }
 
     @Transactional
-    public Order createOrderFromCart(String slug, String customerName, String customerPhone, String address, String city, String notes, OrderChannel channel) {
+    public Order createOrderFromCart(String slug, String customerName, String customerPhone, String customerDocument, String address, String city, String notes, OrderChannel channel) {
         List<CartItemDto> cartItems = cartManager.getCart(slug);
 
         if (cartItems.isEmpty()) {
@@ -74,6 +74,7 @@ public class OrderService {
         Order order = Order.builder()
                 .customerName(customerName)
                 .customerPhone(customerPhone)
+                .customerDocument(customerDocument)
                 .address(address)
                 .city(city)
                 .notes(notes)

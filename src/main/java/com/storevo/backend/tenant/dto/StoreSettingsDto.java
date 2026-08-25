@@ -29,6 +29,13 @@ public class StoreSettingsDto {
     private Boolean showReturnPolicy;
     private String returnPolicyText;
 
+    // --- Datos de remitente para envíos ---
+    private String shippingBusinessNit;
+    private String shippingContactPhone;
+    private String shippingContactEmail;
+    private String shippingPickupAddress;
+    private String shippingPickupCity;
+
     // --- Wompi ---
     private boolean wompiActive;
     private String wompiEnvironment;

@@ -193,9 +193,10 @@ public class CartController {
     @PostMapping("/checkout/process")
     public String processCheckout(
             @PathVariable String slug, @RequestParam String customerName, @RequestParam String customerPhone,
-            @RequestParam String address, @RequestParam String city, @RequestParam(required = false) String notes) {
+            @RequestParam(required = false) String customerDocument, @RequestParam String address,
+            @RequestParam String city, @RequestParam(required = false) String notes) {
         try {
-            Order order = orderService.createOrderFromCart(slug, customerName, customerPhone, address, city, notes, OrderChannel.ONLINE);
+            Order order = orderService.createOrderFromCart(slug, customerName, customerPhone, customerDocument, address, city, notes, OrderChannel.ONLINE);
             return "redirect:/s/" + slug + "/order/" + order.getId() + "/success";
         } catch (Exception e) {
             return "redirect:/s/" + slug + "/cart/checkout?error=true";
@@ -205,9 +206,10 @@ public class CartController {
     @PostMapping("/checkout/whatsapp")
     public String processCheckoutWhatsapp(
             @PathVariable String slug, @RequestParam String customerName, @RequestParam String customerPhone,
-            @RequestParam String address, @RequestParam String city, @RequestParam(required = false) String notes) {
+            @RequestParam(required = false) String customerDocument, @RequestParam String address,
+            @RequestParam String city, @RequestParam(required = false) String notes) {
         try {
-            Order order = orderService.createOrderFromCart(slug, customerName, customerPhone, address, city, notes, OrderChannel.WHATSAPP);
+            Order order = orderService.createOrderFromCart(slug, customerName, customerPhone, customerDocument, address, city, notes, OrderChannel.WHATSAPP);
             return "redirect:/s/" + slug + "/order/" + order.getId() + "/whatsapp";
         } catch (Exception e) {
             return "redirect:/s/" + slug + "/cart/checkout?error=true";
