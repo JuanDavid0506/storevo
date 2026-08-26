@@ -25,6 +25,7 @@ public class SettingsController {
     private final StoreSettingsService storeSettingsService;
     private final StoreIntegrationRepository integrationRepository; // Inyectamos la Bóveda
     private final WompiService wompiService;
+    private final com.storevo.backend.tenant.service.logistics.MiPaqueteAdapter miPaqueteAdapter;
 
     @ModelAttribute
     public void setupTenant(@PathVariable String slug, Model model, HttpServletRequest request) {
@@ -116,6 +117,19 @@ public class SettingsController {
             miPaquete.setApiKey(settingsDto.getMiPaqueteApiKey()); // JPA lo cifra con AES automáticamente
         }
         integrationRepository.save(miPaquete);
+
+        // Si Mi Paquete quedó activo y con una llave (recién puesta o ya guardada
+        // antes), le avisamos a Mi Paquete a dónde mandar los eventos de guía y
+        // tracking. No bloquea el guardado si esto falla (ver registerWebhook).
+        if (miPaquete.isActive() && miPaquete.getApiKey() != null && !miPaquete.getApiKey().isBlank()) {
+            String scheme = request.getHeader("X-Forwarded-Proto") != null ? request.getHeader("X-Forwarded-Proto") : request.getScheme();
+            String serverName = request.getServerName();
+            int serverPort = request.getServerPort();
+            String portSuffix = (serverPort == 80 || serverPort == 443) ? "" : ":" + serverPort;
+            String webhookUrl = scheme + "://" + serverName + portSuffix + "/api/webhooks/mipaquete/" + slug;
+
+            miPaqueteAdapter.registerWebhook(miPaquete.getApiKey(), miPaquete.getEnvironment(), webhookUrl);
+        }
 
         return "redirect:/dashboard/" + slug + "/settings?success=true";
     }

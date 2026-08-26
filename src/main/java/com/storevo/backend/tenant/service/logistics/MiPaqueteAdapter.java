@@ -32,6 +32,7 @@ public class MiPaqueteAdapter implements CarrierAdapter {
     private final StoreIntegrationRepository integrationRepository;
     private final StoreSettingsService storeSettingsService;
     private final DaneCityResolver daneCityResolver;
+    private final MiPaqueteLocationService miPaqueteLocationService;
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper mapper = new ObjectMapper();
 
@@ -135,11 +136,20 @@ public class MiPaqueteAdapter implements CarrierAdapter {
             productInfo.put("declaredValue", (int) Math.round(order.getTotal()));
             payload.set("productInformation", productInfo);
 
-            // 4. Locate — código DANE real de origen (bodega de la tienda) y destino
-            // (ciudad del pedido), en vez de Bogotá fijo para ambos.
+            // 4. Locate — primero intentamos el catálogo real de Mi Paquete
+            // (getLocations); si esa ciudad no aparece ahí (o el catálogo no cargó
+            // todavía), caemos al catálogo estático de respaldo.
+            miPaqueteLocationService.ensureLoaded(config.getApiKey(), config.getEnvironment());
+
+            String originCode = miPaqueteLocationService.resolve(storeSettings.getShippingPickupCity());
+            if (originCode == null) originCode = daneCityResolver.resolve(storeSettings.getShippingPickupCity());
+
+            String destinyCode = miPaqueteLocationService.resolve(order.getCity());
+            if (destinyCode == null) destinyCode = daneCityResolver.resolve(order.getCity());
+
             ObjectNode locate = mapper.createObjectNode();
-            locate.put("originDaneCode", daneCityResolver.resolve(storeSettings.getShippingPickupCity()));
-            locate.put("destinyDaneCode", daneCityResolver.resolve(order.getCity()));
+            locate.put("originDaneCode", originCode);
+            locate.put("destinyDaneCode", destinyCode);
             payload.set("locate", locate);
 
             // 5. Datos Generales
@@ -184,7 +194,12 @@ public class MiPaqueteAdapter implements CarrierAdapter {
 
     @Override
     public String getTrackingStatus(Shipment shipment) {
-        return "EN RUTA";
+        // Antes devolvía "EN RUTA" fijo. Ahora que el webhook de Mi Paquete mantiene
+        // shipment.status actualizado de verdad, simplemente reflejamos ese dato.
+        if (shipment.getLastTrackingMessage() != null) {
+            return shipment.getLastTrackingMessage();
+        }
+        return shipment.getStatus() != null ? shipment.getStatus().getDisplayName() : "Sin información";
     }
 
     // --- METODOS AUXILIARES ---
@@ -207,6 +222,38 @@ public class MiPaqueteAdapter implements CarrierAdapter {
     private StoreIntegration getIntegrationConfig(Store store) {
         return integrationRepository.findByStoreAndIntegrationTypeAndIsActiveTrue(store, IntegrationType.MI_PAQUETE)
                 .orElseThrow(() -> new RuntimeException("Integración de Mi Paquete no configurada."));
+    }
+
+    // Le dice a Mi Paquete a qué URL debe mandar los eventos de creación de guía y
+    // de cambio de estado, según su endpoint documentado POST /createWebHook.
+    // Se llama cada vez que se guardan los ajustes de Mi Paquete (ver
+    // SettingsController) — es seguro llamarlo repetidas veces, Mi Paquete
+    // simplemente actualiza la URL registrada para esa cuenta.
+    //
+    // No lanza excepción hacia afuera a propósito: que falle el registro del
+    // webhook no debe impedir que el comerciante guarde el resto de sus ajustes.
+    public void registerWebhook(String apiKey, String environment, String webhookUrl) {
+        try {
+            ObjectNode payload = mapper.createObjectNode();
+
+            ObjectNode forGuides = mapper.createObjectNode();
+            forGuides.put("urlClient", webhookUrl);
+            forGuides.put("enabled", true);
+            payload.set("urlForGuides", forGuides);
+
+            ObjectNode forStates = mapper.createObjectNode();
+            forStates.put("urlClient", webhookUrl);
+            forStates.put("enabled", true);
+            payload.set("urlForStates", forStates);
+
+            HttpHeaders headers = buildHeaders(apiKey);
+            HttpEntity<String> entity = new HttpEntity<>(mapper.writeValueAsString(payload), headers);
+            String url = getApiUrl(environment) + "/createWebHook";
+
+            restTemplate.exchange(url, HttpMethod.POST, entity, JsonNode.class);
+        } catch (Exception e) {
+            System.out.println("No se pudo registrar el webhook de Mi Paquete: " + e.getMessage());
+        }
     }
 
     // Antes de intentar generar una guía real, nos aseguramos de que la tienda

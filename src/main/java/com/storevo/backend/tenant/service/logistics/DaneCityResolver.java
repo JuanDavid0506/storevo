@@ -82,6 +82,12 @@ public class DaneCityResolver {
     }
 
     private String normalize(String text) {
+        return normalizeStatic(text);
+    }
+
+    // Público y estático para que MiPaqueteLocationService normalice exactamente
+    // igual y ambas fuentes (catálogo en vivo + tabla de respaldo) sean intercambiables.
+    public static String normalizeStatic(String text) {
         String withoutAccents = Normalizer.normalize(text, Normalizer.Form.NFD)
                 .replaceAll("\\p{M}", ""); // quita tildes
         return withoutAccents

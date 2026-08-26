@@ -24,6 +24,12 @@ public class Shipment {
     @Column(name = "tracking_number", length = 100)
     private String trackingNumber;
 
+    @Column(name = "label_pdf_url", length = 500)
+    private String labelPdfUrl;
+
+    @Column(name = "last_tracking_message", length = 255)
+    private String lastTrackingMessage;
+
     @Column(name = "external_shipment_id", length = 100)
     private String externalShipmentId;
 
