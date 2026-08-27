@@ -57,6 +57,7 @@
         window.INITIAL_OPTIONS = /*[[${product.options}]]*/ [];
         window.INITIAL_VARIANTS = /*[[${product.variants}]]*/ [];
         window.IS_NEW_PRODUCT = /*[[${product.isDraft == true}]]*/ true;
+        window.PRODUCT_IS_MADE_TO_ORDER = /*[[${product.isMadeToOrder}]]*/ false;
     </script>
 
     <!-- ESTILOS NATIVOS PARA MODO DUAL -->
@@ -92,7 +93,7 @@
                     <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-slate-700"></span> Imágenes
                 </a>
                 <a href="#pricing" class="nav-link w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all text-left text-slate-500 hover:text-slate-200 hover:bg-slate-800">
-                    <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-slate-600"></span> Precio y stock <span class="ml-auto text-[9px] font-bold text-slate-600">REQ</span>
+                    <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-slate-600"></span> Precio<span id="nav-stock-suffix" th:unless="${product.isMadeToOrder}"> y stock</span> <span class="ml-auto text-[9px] font-bold text-slate-600">REQ</span>
                 </a>
                 <a href="#variants" class="nav-link w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all text-left text-slate-500 hover:text-slate-200 hover:bg-slate-800">
                     <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-slate-700"></span> Variantes
@@ -224,8 +225,17 @@
                     </div>
                     <p class="text-xs text-slate-500 ml-8">Cuánto cuesta y cuántos tienes disponibles</p>
                 </div>
+
+                <label class="flex items-start gap-3 mb-5 p-3 bg-slate-950/60 border border-slate-800 rounded-xl cursor-pointer">
+                    <input type="checkbox" th:field="*{isMadeToOrder}" id="input-made-to-order" onchange="Storevo.ProductUX.toggleMadeToOrder(this.checked)" class="mt-0.5 w-4 h-4 rounded border-slate-700 bg-slate-950 text-storevo-500 focus:ring-storevo-500">
+                    <span>
+                        <span class="block text-sm font-bold text-white">Producto bajo pedido</span>
+                        <span class="block text-xs text-slate-500 mt-0.5">Este producto no maneja existencias. El cliente deberá coordinar la disponibilidad por WhatsApp.</span>
+                    </span>
+                </label>
+
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <div>
+                    <div id="price-field-wrapper" th:classappend="${product.isMadeToOrder} ? 'sm:col-span-2' : ''">
                         <label class="block text-sm font-medium text-slate-300 mb-1.5">Precio <span class="text-storevo-400 ml-0.5">*</span></label>
                         <div class="relative">
                             <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm select-none">$</span>
@@ -247,7 +257,7 @@
                             </p>
                         </div>
                     </div>
-                    <div>
+                    <div id="stock-field-wrapper" th:classappend="${product.isMadeToOrder} ? 'hidden' : ''">
                         <label class="block text-sm font-medium text-slate-300 mb-1.5">Cantidad en stock <span class="text-storevo-400 ml-0.5">*</span></label>
                         <input type="hidden" th:field="*{stock}" id="real-stock">
                         <input type="text" inputmode="numeric" id="input-stock" placeholder="0" class="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white text-xl font-bold placeholder-slate-700 focus:outline-none focus:ring-2 focus:ring-storevo-500/40 focus:border-storevo-500/60 transition font-mono">
@@ -347,10 +357,10 @@
                                 <input type="number" step="0.01" id="vb-bulk-price" placeholder="Precio general" class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg text-sm pl-7 pr-2 py-2.5 focus:ring-storevo-500">
                             </div>
                             <button type="button" onclick="Storevo.VariantBuilder.applyBulk('price')" class="bg-slate-800 text-white text-sm font-bold px-4 rounded-lg border border-slate-700 hover:bg-slate-700">Aplicar</button>
-                            <div class="relative flex-1">
+                            <div class="relative flex-1 vb-stock-col" th:classappend="${product.isMadeToOrder} ? 'hidden' : ''">
                                 <input type="number" id="vb-bulk-stock" placeholder="Stock general" class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg text-sm px-3 py-2.5 focus:ring-storevo-500">
                             </div>
-                            <button type="button" onclick="Storevo.VariantBuilder.applyBulk('stock')" class="bg-slate-800 text-white text-sm font-bold px-4 rounded-lg border border-slate-700 hover:bg-slate-700">Aplicar</button>
+                            <button type="button" onclick="Storevo.VariantBuilder.applyBulk('stock')" class="bg-slate-800 text-white text-sm font-bold px-4 rounded-lg border border-slate-700 hover:bg-slate-700 vb-stock-col" th:classappend="${product.isMadeToOrder} ? 'hidden' : ''">Aplicar</button>
                         </div>
                     </div>
 
@@ -429,7 +439,7 @@
                             <div id="check-price" class="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 bg-slate-800 border border-slate-700"></div>
                             <span id="text-price" class="text-xs transition-colors text-slate-500">Precio base</span>
                         </div>
-                        <div class="flex items-center gap-2.5">
+                        <div th:classappend="${product.isMadeToOrder} ? 'hidden' : ''" id="checklist-stock-row" class="flex items-center gap-2.5">
                             <div id="check-stock" class="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 bg-slate-800 border border-slate-700"></div>
                             <span id="text-stock" class="text-xs transition-colors text-slate-500">Stock inicial</span>
                         </div>

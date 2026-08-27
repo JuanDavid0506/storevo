@@ -227,7 +227,8 @@
                                 </p>
                             </td>
                             <td class="px-6 py-4 text-center">
-                                <span th:text="${prod.stock}" th:class="${prod.stock <= 5 ? 'bg-red-500/10 text-red-400 px-3 py-1 rounded-lg text-xs font-black border border-red-500/20' : 'text-slate-300 text-xs font-bold bg-slate-950 px-3 py-1 rounded-lg border border-slate-800'}">0</span>
+                                <span th:unless="${prod.isMadeToOrder}" th:text="${prod.stock}" th:class="${prod.stock <= 5 ? 'bg-red-500/10 text-red-400 px-3 py-1 rounded-lg text-xs font-black border border-red-500/20' : 'text-slate-300 text-xs font-bold bg-slate-950 px-3 py-1 rounded-lg border border-slate-800'}">0</span>
+                                <span th:if="${prod.isMadeToOrder}" class="text-slate-600 text-xs" title="Producto bajo pedido">—</span>
                             </td>
                             <td class="px-6 py-4 text-center">
                                 <span th:if="${prod.isDeleted}" class="bg-red-500/10 text-red-400 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded border border-red-500/20">Papelera</span>
@@ -311,12 +312,13 @@
                         <p class="text-base sm:text-lg font-black text-storevo-400 mt-auto pt-1.5 sm:pt-2" th:text="${prod.price != null ? '$ ' + #numbers.formatDecimal(prod.price, 1, 'POINT', 0, 'COMMA') : '$ 0'}">$0</p>
                         <div class="mt-3 sm:mt-4 border-t border-slate-800 pt-2 sm:pt-3 flex items-center justify-between">
                             <span class="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase">Stock</span>
-                            <div th:if="${!prod.hasVariants and !prod.isDeleted}" class="flex items-center gap-0.5 sm:gap-1 bg-slate-950 rounded-lg p-0.5 sm:p-1 border border-slate-700">
+                            <div th:if="${!prod.isMadeToOrder and !prod.hasVariants and !prod.isDeleted}" class="flex items-center gap-0.5 sm:gap-1 bg-slate-950 rounded-lg p-0.5 sm:p-1 border border-slate-700">
                                 <button type="button" onclick="Storevo.ProductsList.quickUpdateStock(this, -1)" class="w-5 h-5 sm:w-6 sm:h-6 text-slate-400 hover:text-white hover:bg-slate-800 rounded flex items-center justify-center transition-colors font-bold text-base sm:text-lg leading-none">-</button>
                                 <input type="number" th:value="${prod.stock}" th:data-id="${prod.id}" th:attr="data-last-valid-value=${prod.stock}" onchange="Storevo.ProductsList.directUpdateStock(this)" class="w-8 sm:w-10 text-center bg-transparent border-none p-0 text-xs sm:text-sm font-bold text-white focus:ring-0">
                                 <button type="button" onclick="Storevo.ProductsList.quickUpdateStock(this, 1)" class="w-5 h-5 sm:w-6 sm:h-6 text-slate-400 hover:text-white hover:bg-slate-800 rounded flex items-center justify-center transition-colors font-bold text-base sm:text-lg leading-none">+</button>
                             </div>
-                            <div th:if="${prod.hasVariants or prod.isDeleted}" class="text-[9px] sm:text-xs font-bold px-1.5 py-0.5 sm:px-2 sm:py-1 rounded" th:classappend="${prod.stock <= 5 ? 'text-red-400 bg-red-500/10 border border-red-500/20' : 'text-slate-300 bg-slate-800 border border-slate-700'}" th:text="${prod.stock + ' total'}">0 total</div>
+                            <div th:if="${!prod.isMadeToOrder and (prod.hasVariants or prod.isDeleted)}" class="text-[9px] sm:text-xs font-bold px-1.5 py-0.5 sm:px-2 sm:py-1 rounded" th:classappend="${prod.stock <= 5 ? 'text-red-400 bg-red-500/10 border border-red-500/20' : 'text-slate-300 bg-slate-800 border border-slate-700'}" th:text="${prod.stock + ' total'}">0 total</div>
+                            <span th:if="${prod.isMadeToOrder}" class="text-slate-600 text-xs" title="Producto bajo pedido">—</span>
                         </div>
                     </div>
 
@@ -357,13 +359,16 @@
                                     <p class="text-sm font-black text-storevo-400 whitespace-nowrap" th:text="${prod.price != null ? '$ ' + #numbers.formatDecimal(prod.price, 1, 'POINT', 0, 'COMMA') : '$ 0'}">$0</p>
                                 </div>
 
-                                <div th:if="${!prod.hasVariants and !prod.isDeleted}" class="flex items-center gap-1 bg-slate-950 rounded-lg p-1 border border-slate-700 transition-colors w-24 justify-center">
+                                <div th:if="${!prod.isMadeToOrder and !prod.hasVariants and !prod.isDeleted}" class="flex items-center gap-1 bg-slate-950 rounded-lg p-1 border border-slate-700 transition-colors w-24 justify-center">
                                     <button type="button" onclick="Storevo.ProductsList.quickUpdateStock(this, -1)" class="w-5 h-5 text-slate-500 hover:text-white flex items-center justify-center font-bold text-lg leading-none">-</button>
                                     <input type="number" th:value="${prod.stock}" th:data-id="${prod.id}" th:attr="data-last-valid-value=${prod.stock}" onchange="Storevo.ProductsList.directUpdateStock(this)" class="w-8 text-center bg-transparent border-none p-0 text-xs font-bold text-white focus:ring-0">
                                     <button type="button" onclick="Storevo.ProductsList.quickUpdateStock(this, 1)" class="w-5 h-5 text-slate-500 hover:text-white flex items-center justify-center font-bold text-lg leading-none">+</button>
                                 </div>
-                                <div th:if="${prod.hasVariants or prod.isDeleted}" class="w-24 text-center">
+                                <div th:if="${!prod.isMadeToOrder and (prod.hasVariants or prod.isDeleted)}" class="w-24 text-center">
                                     <span class="text-[10px] font-bold px-2 py-1 rounded" th:classappend="${prod.stock <= 5 ? 'text-red-400 bg-red-500/10 border border-red-500/20' : 'text-slate-400 bg-slate-950 border border-slate-800'}" th:text="${prod.stock + ' uds.'}">0</span>
+                                </div>
+                                <div th:if="${prod.isMadeToOrder}" class="w-24 text-center">
+                                    <span class="text-slate-600 text-xs" title="Esta tienda no controla inventario">—</span>
                                 </div>
                             </div>
                         </div>

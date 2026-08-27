@@ -28,6 +28,7 @@ public class ProductDto {
 
     // --- NUEVO: SOPORTE HÍBRIDO ---
     private Boolean hasVariants;
+    private Boolean isMadeToOrder;
     private List<OptionDto> options;
     private List<VariantDto> variants;
     // ------------------------------

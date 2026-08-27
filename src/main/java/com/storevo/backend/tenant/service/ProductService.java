@@ -120,6 +120,7 @@ public class ProductService {
         product.setSku(dto.getSku());
         product.setIsActive(dto.getIsActive() != null ? dto.getIsActive() : false);
         product.setHasVariants(dto.getHasVariants() != null ? dto.getHasVariants() : false);
+        product.setIsMadeToOrder(dto.getIsMadeToOrder() != null ? dto.getIsMadeToOrder() : false);
         product.setIsDraft(dto.getIsDraft() != null ? dto.getIsDraft() : false);
 
         if (dto.getCategoryId() != null) {
@@ -153,7 +154,10 @@ public class ProductService {
         if (!product.getHasVariants()) {
             product.setPrice(dto.getPrice() != null ? dto.getPrice() : 0.0);
             product.setDiscountPrice(dto.getDiscountPrice());
-            product.setStock(dto.getStock() != null ? dto.getStock() : 0);
+            // Bajo pedido: el stock no significa nada (nunca se valida ni se
+            // descuenta), así que lo dejamos en 0 sin importar qué haya mandado el
+            // formulario — el campo ni siquiera se muestra en ese caso.
+            product.setStock(Boolean.TRUE.equals(product.getIsMadeToOrder()) ? 0 : (dto.getStock() != null ? dto.getStock() : 0));
             product.setWeight(dto.getWeight());
 
             product.getOptions().clear();
@@ -339,7 +343,7 @@ public class ProductService {
                 variant.setSku(varDto.getSku());
                 variant.setBarcode(varDto.getBarcode());
                 variant.setPrice(varDto.getPrice() != null ? varDto.getPrice() : 0.0);
-                variant.setStock(varDto.getStock() != null ? varDto.getStock() : 0);
+                variant.setStock(Boolean.TRUE.equals(product.getIsMadeToOrder()) ? 0 : (varDto.getStock() != null ? varDto.getStock() : 0));
                 variant.setWeight(varDto.getWeight());
 
                 List<ProductOptionValue> linkedValues = new ArrayList<>();

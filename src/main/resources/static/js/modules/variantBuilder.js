@@ -42,6 +42,16 @@ Storevo.VariantBuilder = {
         suggestionsCache: {} // Cerebro Vivo (Caché asíncrono)
     },
 
+    // Se llama desde productUx.js cuando se marca/desmarca "Producto bajo pedido".
+    // Oculta o muestra toda la columna de stock (encabezado + cada fila ya
+    // renderizada + el panel de "aplicar a todas") sin tener que reconstruir la
+    // tabla completa.
+    onMadeToOrderChange: function(isMadeToOrder) {
+        document.querySelectorAll('.vb-stock-col').forEach(el => {
+            el.classList.toggle('hidden', isMadeToOrder);
+        });
+    },
+
     init: function() {
         let hasRealData = false;
         if (window.INITIAL_HAS_VARIANTS && window.INITIAL_OPTIONS && window.INITIAL_OPTIONS.length > 0) {
@@ -442,12 +452,13 @@ Storevo.VariantBuilder = {
 
         const thead = container.querySelector('thead tr');
         if (thead) {
+            const isMadeToOrder = window.PRODUCT_IS_MADE_TO_ORDER === true;
             thead.innerHTML = `
                 <th class="px-4 py-3 font-bold w-12 text-center">✓</th>
                 ${hasColor ? '<th class="px-4 py-3 font-bold w-16 text-center">Img</th>' : ''}
                 <th class="px-4 py-3 font-bold">Versión</th>
                 <th class="px-4 py-3 font-bold w-32">Precio ($)</th>
-                <th class="px-4 py-3 font-bold w-24">Stock</th>
+                <th class="px-4 py-3 font-bold w-24 vb-stock-col${isMadeToOrder ? ' hidden' : ''}">Stock</th>
                 <th class="px-4 py-3 font-bold w-32">SKU</th>
             `;
         }
@@ -549,7 +560,7 @@ Storevo.VariantBuilder = {
             ${imgColHtml}
             <td class="px-4 py-3 font-bold text-white text-sm"><div class="flex items-center gap-2">${groupValue ? '<span class="text-slate-600 font-normal">↳</span>' : ''}<span>${comboLabel}</span>${copyBtn}</div></td>
             <td class="px-4 py-3"><input type="number" step="0.01" ${dAttr} value="${data.price}" onchange="Storevo.VariantBuilder.updateVariantData('${signature}', 'price', this.value)" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg text-sm px-2 py-2 focus:ring-storevo-500"></td>
-            <td class="px-4 py-3"><input type="number" ${dAttr} value="${data.stock}" onchange="Storevo.VariantBuilder.updateVariantData('${signature}', 'stock', this.value)" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg text-sm px-3 py-2 focus:ring-storevo-500 font-mono text-center"></td>
+            <td class="px-4 py-3 vb-stock-col${window.PRODUCT_IS_MADE_TO_ORDER === true ? ' hidden' : ''}"><input type="number" ${dAttr} value="${data.stock}" onchange="Storevo.VariantBuilder.updateVariantData('${signature}', 'stock', this.value)" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg text-sm px-3 py-2 focus:ring-storevo-500 font-mono text-center"></td>
             <td class="px-4 py-3"><input type="text" ${dAttr} value="${data.sku}" onchange="Storevo.VariantBuilder.updateVariantData('${signature}', 'sku', this.value)" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg text-sm px-3 py-2 focus:ring-storevo-500 font-mono"></td>
         `;
         return tr;

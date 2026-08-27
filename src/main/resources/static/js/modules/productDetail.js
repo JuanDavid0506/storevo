@@ -101,10 +101,13 @@ Storevo.ProductDetail = {
         this.updateTechnicalSheet(this.state.selectedOptions, variant);
 
         if (variant) {
-            // Actualizar Precio de forma fluida
+            // Actualizar Precio de forma fluida. Si la variante nunca tuvo un
+            // precio propio (quedó en 0), usamos el precio base del producto en
+            // vez de mostrar "$ 0" — un precio en 0 nunca es el precio real.
+            const displayPrice = (variant.price && variant.price > 0) ? variant.price : window.PRODUCT_BASE_PRICE;
             priceDisplay.classList.add('opacity-0');
             setTimeout(() => {
-                priceDisplay.textContent = '$ ' + variant.price.toLocaleString('es-CO');
+                priceDisplay.textContent = '$ ' + displayPrice.toLocaleString('es-CO');
                 priceDisplay.classList.remove('opacity-0');
             }, 150);
 
@@ -136,13 +139,18 @@ Storevo.ProductDetail = {
             }
 
             // Gestionar Disponibilidad
-            if (variant.stock > 0) {
+            const isMadeToOrder = window.PRODUCT_IS_MADE_TO_ORDER === true;
+            if (isMadeToOrder || variant.stock > 0) {
                 variantInput.value = variant.id;
-                stockDisplay.textContent = 'Stock disponible: ' + variant.stock;
+                stockDisplay.textContent = isMadeToOrder ? 'Bajo pedido' : ('Stock disponible: ' + variant.stock);
                 stockDisplay.className = 'text-xs text-slate-500 mt-2 font-medium transition-colors';
 
-                qtyInput.max = variant.stock;
-                if(parseInt(qtyInput.value) > variant.stock) qtyInput.value = variant.stock;
+                if (!isMadeToOrder) {
+                    qtyInput.max = variant.stock;
+                    if(parseInt(qtyInput.value) > variant.stock) qtyInput.value = variant.stock;
+                } else {
+                    qtyInput.removeAttribute('max');
+                }
 
                 btnCart.disabled = false;
                 btnCart.classList.remove('bg-slate-300', 'cursor-not-allowed');

@@ -167,7 +167,9 @@ Storevo.ProductUX = {
             const hasName = iName?.value.trim().length > 0;
             const hasPrice = priceVal > 0;
             const hasDiscount = discountVal > 0 && discountVal < priceVal;
-            const hasStock = realStock?.value.trim().length > 0;
+            // Si la tienda no controla inventario, el stock nunca bloquea el guardado.
+            const isMadeToOrder = window.PRODUCT_IS_MADE_TO_ORDER === true;
+            const hasStock = isMadeToOrder || (realStock?.value.trim().length > 0);
             const hasCat = document.getElementById('finalCategoryId')?.value.trim() !== '';
             const hasImg = document.getElementById('image-preview-grid')?.children.length > 0 || (window.Storevo?.ProductImages?.state.existing.length > 0);
 
@@ -192,14 +194,15 @@ Storevo.ProductUX = {
 
             setCheck('name', hasName);
             setCheck('price', hasPrice);
-            setCheck('stock', hasStock);
+            if (!isMadeToOrder) setCheck('stock', hasStock);
             setCheck('category', hasCat);
             setCheck('images', hasImg);
 
+            const totalSteps = isMadeToOrder ? 4 : 5;
             const progFill = document.getElementById('progress-bar-fill');
             const progText = document.getElementById('progress-text');
-            if(progFill) progFill.style.width = `${(completed/5)*100}%`;
-            if(progText) progText.textContent = `${completed}/5`;
+            if(progFill) progFill.style.width = `${(completed/totalSteps)*100}%`;
+            if(progText) progText.textContent = `${completed}/${totalSteps}`;
 
             const vText = document.getElementById('bottom-validation-text');
             if(vText) {
@@ -245,6 +248,45 @@ Storevo.ProductUX = {
 
         // Llamada inicial
         this.updateUIState();
+    },
+
+    // Se llama al marcar/desmarcar "Producto bajo pedido". Oculta o muestra el
+    // campo de stock EN VIVO (sin recargar la página), y avisa a variantBuilder.js
+    // para que tampoco pida stock por variante si el producto tiene variantes.
+    toggleMadeToOrder: function(isMadeToOrder) {
+        window.PRODUCT_IS_MADE_TO_ORDER = isMadeToOrder;
+
+        const stockWrapper = document.getElementById('stock-field-wrapper');
+        const priceWrapper = document.getElementById('price-field-wrapper');
+        const navSuffix = document.getElementById('nav-stock-suffix');
+        const checklistRow = document.getElementById('checklist-stock-row');
+        const realStock = document.getElementById('real-stock');
+
+        if (stockWrapper) stockWrapper.classList.toggle('hidden', isMadeToOrder);
+        if (priceWrapper) priceWrapper.classList.toggle('sm:col-span-2', isMadeToOrder);
+        if (checklistRow) checklistRow.classList.toggle('hidden', isMadeToOrder);
+
+        if (isMadeToOrder) {
+            if (navSuffix) navSuffix.remove();
+            if (realStock) realStock.value = '0';
+            const visualStock = document.getElementById('input-stock');
+            if (visualStock) visualStock.value = '';
+        } else if (!navSuffix) {
+            const navLink = document.querySelector('a[href="#pricing"] span.w-1\\.5');
+            if (navLink && navLink.nextSibling) {
+                const span = document.createElement('span');
+                span.id = 'nav-stock-suffix';
+                span.textContent = ' y stock';
+                navLink.parentNode.insertBefore(span, navLink.nextSibling.nextSibling);
+            }
+        }
+
+        // Notifica a la sección de variantes (si el producto tiene variantes)
+        if (window.Storevo && window.Storevo.VariantBuilder && typeof window.Storevo.VariantBuilder.onMadeToOrderChange === 'function') {
+            window.Storevo.VariantBuilder.onMadeToOrderChange(isMadeToOrder);
+        }
+
+        if (this.updateUIState) this.updateUIState();
     },
 
     toggleDiscountField: function() {

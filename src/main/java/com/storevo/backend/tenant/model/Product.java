@@ -69,6 +69,12 @@ public class Product {
     @Builder.Default
     private Boolean hasVariants = false;
 
+    // Producto bajo pedido: no maneja existencias, nunca aparece agotado, y no se
+    // puede pagar directo con Wompi — el cliente coordina por WhatsApp.
+    @Column(name = "is_made_to_order", nullable = false)
+    @Builder.Default
+    private Boolean isMadeToOrder = false;
+
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("sortPosition ASC")
     @Builder.Default

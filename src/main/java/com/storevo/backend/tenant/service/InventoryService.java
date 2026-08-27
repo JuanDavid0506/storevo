@@ -19,10 +19,16 @@ public class InventoryService {
     public boolean isAvailable(Long productId, Long variantId, int requestedQty) {
         if (variantId != null) {
             ProductVariant variant = variantRepository.findById(variantId).orElse(null);
-            return variant != null && variant.getIsActive() && variant.getStock() >= requestedQty;
+            if (variant == null) return false;
+            // Bajo pedido: el stock no significa nada, siempre se considera
+            // disponible — el comerciante confirma la disponibilidad por WhatsApp.
+            if (Boolean.TRUE.equals(variant.getProduct().getIsMadeToOrder())) return variant.getIsActive();
+            return variant.getIsActive() && variant.getStock() >= requestedQty;
         } else {
             Product product = productRepository.findById(productId).orElse(null);
-            return product != null && product.getIsActive() && product.getStock() >= requestedQty;
+            if (product == null) return false;
+            if (Boolean.TRUE.equals(product.getIsMadeToOrder())) return product.getIsActive();
+            return product.getIsActive() && product.getStock() >= requestedQty;
         }
     }
 
@@ -34,10 +40,13 @@ public class InventoryService {
 
         if (variantId != null) {
             ProductVariant variant = variantRepository.findById(variantId).get();
+            // Bajo pedido: nada que descontar, el número de stock no representa nada.
+            if (Boolean.TRUE.equals(variant.getProduct().getIsMadeToOrder())) return;
             variant.setStock(variant.getStock() - qty);
             variantRepository.save(variant);
         } else {
             Product product = productRepository.findById(productId).get();
+            if (Boolean.TRUE.equals(product.getIsMadeToOrder())) return;
             product.setStock(product.getStock() - qty);
             productRepository.save(product);
         }
@@ -47,11 +56,13 @@ public class InventoryService {
     public void restoreStock(Long productId, Long variantId, int qty) {
         if (variantId != null) {
             variantRepository.findById(variantId).ifPresent(v -> {
+                if (Boolean.TRUE.equals(v.getProduct().getIsMadeToOrder())) return;
                 v.setStock(v.getStock() + qty);
                 variantRepository.save(v);
             });
         } else {
             productRepository.findById(productId).ifPresent(p -> {
+                if (Boolean.TRUE.equals(p.getIsMadeToOrder())) return;
                 p.setStock(p.getStock() + qty);
                 productRepository.save(p);
             });

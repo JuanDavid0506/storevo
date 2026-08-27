@@ -89,13 +89,17 @@ public class CartController {
             @PathVariable String slug,
             @RequestParam Long productId,
             @RequestParam(required = false) Long variantId,
-            @RequestParam(defaultValue = "1") Integer quantity) {
+            @RequestParam(defaultValue = "1") Integer quantity,
+            HttpServletRequest request) {
 
         Map<String, Object> response = new HashMap<>();
         Product product = productService.getProductById(productId);
         if (product.getIsDeleted() || !product.getIsActive()) {
             return ResponseEntity.ok(Map.of("success", false, "message", "Producto no disponible."));
         }
+
+        Store store = (Store) request.getAttribute("currentStore");
+        boolean isMadeToOrder = Boolean.TRUE.equals(product.getIsMadeToOrder());
 
         int availableStock = product.getStock();
         Double itemPrice = product.getDiscountPrice() != null && product.getDiscountPrice() > 0 ? product.getDiscountPrice() : product.getPrice();
@@ -126,17 +130,24 @@ public class CartController {
             return ResponseEntity.ok(Map.of("success", false, "message", "Debe seleccionar las opciones del producto."));
         }
 
-        int currentQtyInCart = cartManager.getItemQuantity(slug, productId, variantId);
-        int remainingStock = availableStock - currentQtyInCart;
+        int qtyToAdd = quantity;
 
-        if (remainingStock <= 0) {
-            response.put("success", false);
-            response.put("message", "Límite alcanzado. Solo disponemos de " + availableStock + " unidad(es).");
-            response.put("cartCount", cartManager.getCartCount(slug));
-            return ResponseEntity.ok(response);
+        // Producto bajo pedido: el stock guardado (0, porque nunca se le pidió al
+        // comerciante que lo llenara) no debe limitar nada — se agrega la
+        // cantidad pedida tal cual.
+        if (!isMadeToOrder) {
+            int currentQtyInCart = cartManager.getItemQuantity(slug, productId, variantId);
+            int remainingStock = availableStock - currentQtyInCart;
+
+            if (remainingStock <= 0) {
+                response.put("success", false);
+                response.put("message", "Límite alcanzado. Solo disponemos de " + availableStock + " unidad(es).");
+                response.put("cartCount", cartManager.getCartCount(slug));
+                return ResponseEntity.ok(response);
+            }
+
+            qtyToAdd = Math.min(quantity, remainingStock);
         }
-
-        int qtyToAdd = Math.min(quantity, remainingStock);
 
         CartItemDto item = CartItemDto.builder()
                 .productId(product.getId())
@@ -146,6 +157,7 @@ public class CartController {
                 .price(itemPrice)
                 .quantity(qtyToAdd)
                 .imageUrl(imageUrl)
+                .isMadeToOrder(isMadeToOrder)
                 .build();
 
         cartManager.addItem(slug, item);
@@ -195,6 +207,14 @@ public class CartController {
             @PathVariable String slug, @RequestParam String customerName, @RequestParam String customerPhone,
             @RequestParam(required = false) String customerDocument, @RequestParam String address,
             @RequestParam String city, @RequestParam(required = false) String notes) {
+        boolean hasMadeToOrderItem = cartManager.getCart(slug).stream()
+                .anyMatch(item -> Boolean.TRUE.equals(item.getIsMadeToOrder()));
+        if (hasMadeToOrderItem) {
+            // Defensa en el backend: aunque el botón de Wompi esté oculto en la
+            // vista, no dejamos pasar el pago directo si hay algo bajo pedido.
+            return "redirect:/s/" + slug + "/cart/checkout?error=true";
+        }
+
         try {
             Order order = orderService.createOrderFromCart(slug, customerName, customerPhone, customerDocument, address, city, notes, OrderChannel.ONLINE);
             return "redirect:/s/" + slug + "/order/" + order.getId() + "/success";
@@ -218,9 +238,14 @@ public class CartController {
 
     @GetMapping("/checkout")
     public String showCheckout(@PathVariable String slug, Model model) {
-        if (cartManager.getCart(slug).isEmpty()) return "redirect:/s/" + slug + "/cart";
-        model.addAttribute("cartItems", cartManager.getCart(slug));
+        java.util.List<CartItemDto> cart = cartManager.getCart(slug);
+        if (cart.isEmpty()) return "redirect:/s/" + slug + "/cart";
+
+        boolean hasMadeToOrderItem = cart.stream().anyMatch(item -> Boolean.TRUE.equals(item.getIsMadeToOrder()));
+
+        model.addAttribute("cartItems", cart);
         model.addAttribute("cartTotal", cartManager.getTotal(slug));
+        model.addAttribute("hasMadeToOrderItem", hasMadeToOrderItem);
         model.addAttribute("pageTitle", "Finalizar Compra");
         return "storefront/checkout";
     }

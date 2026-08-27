@@ -21,6 +21,7 @@ public class CartItemDto {
     private Double price;
     private Integer quantity;
     private String imageUrl;
+    private Boolean isMadeToOrder;
 
     public Double getSubtotal() {
         return this.price * this.quantity;
