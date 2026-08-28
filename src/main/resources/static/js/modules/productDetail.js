@@ -153,8 +153,8 @@ Storevo.ProductDetail = {
                 }
 
                 btnCart.disabled = false;
-                btnCart.classList.remove('bg-slate-300', 'cursor-not-allowed');
-                btnCart.classList.add('bg-brand', 'hover:bg-brand/90');
+                btnCart.classList.remove('bg-slate-100', 'text-slate-400', 'border-slate-200', 'cursor-not-allowed');
+                btnCart.classList.add('bg-white', 'text-brand', 'border-brand', 'hover:bg-brand', 'hover:text-white');
                 btnCart.innerHTML = `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg> <span>Agregar a la Bolsa</span>`;
             } else {
                 variantInput.value = '';
@@ -162,8 +162,8 @@ Storevo.ProductDetail = {
                 stockDisplay.className = 'text-xs text-red-500 mt-2 font-bold transition-colors';
 
                 btnCart.disabled = true;
-                btnCart.classList.remove('bg-brand', 'hover:bg-brand/90');
-                btnCart.classList.add('bg-slate-300', 'cursor-not-allowed');
+                btnCart.classList.remove('bg-white', 'text-brand', 'border-brand', 'hover:bg-brand', 'hover:text-white');
+                btnCart.classList.add('bg-slate-100', 'text-slate-400', 'border-slate-200', 'cursor-not-allowed');
                 btnCart.innerHTML = `<span>Agotado</span>`;
             }
         } else {
@@ -172,8 +172,8 @@ Storevo.ProductDetail = {
             stockDisplay.className = 'text-xs text-orange-500 mt-2 font-bold transition-colors';
 
             btnCart.disabled = true;
-            btnCart.classList.remove('bg-brand', 'hover:bg-brand/90');
-            btnCart.classList.add('bg-slate-300', 'cursor-not-allowed');
+            btnCart.classList.remove('bg-white', 'text-brand', 'border-brand', 'hover:bg-brand', 'hover:text-white');
+            btnCart.classList.add('bg-slate-100', 'text-slate-400', 'border-slate-200', 'cursor-not-allowed');
             btnCart.innerHTML = `<span>No disponible</span>`;
         }
     },
@@ -203,7 +203,7 @@ Storevo.ProductDetail = {
         // 3. Inyectar SKU de la variante seleccionada si la trae del backend
         if (variant && variant.sku) {
             const skuRow = document.createElement('div');
-            row.className = 'flex justify-between py-2 border-b border-slate-200/60 dynamic-spec opacity-0 transition-opacity duration-300';
+            skuRow.className = 'flex justify-between py-2 border-b border-slate-200/60 dynamic-spec opacity-0 transition-opacity duration-300';
             skuRow.innerHTML = `
                 <span class="text-slate-500 font-medium">SKU</span>
                 <span class="text-slate-900 font-mono font-bold text-sm text-right">${variant.sku}</span>

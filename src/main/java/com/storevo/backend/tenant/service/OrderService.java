@@ -5,6 +5,7 @@ import com.storevo.backend.admin.model.IntegrationType;
 import com.storevo.backend.admin.model.Store;
 import com.storevo.backend.admin.model.StoreIntegration;
 import com.storevo.backend.admin.repository.StoreIntegrationRepository;
+import com.storevo.backend.config.tenant.TenantContext;
 import com.storevo.backend.tenant.dto.CartItemDto;
 import com.storevo.backend.tenant.exception.InsufficientStockException;
 import com.storevo.backend.tenant.exception.InvalidOrderStatusException;
@@ -13,6 +14,8 @@ import com.storevo.backend.tenant.exception.ShipmentRequiredException;
 import com.storevo.backend.tenant.model.*;
 import com.storevo.backend.tenant.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +32,10 @@ public class OrderService {
     private final CartManager cartManager;
     private final InventoryService inventoryService;
     private final StoreIntegrationRepository integrationRepository;
+
+    @Autowired
+    @Lazy
+    private OrderService self; // Auto-referencia para aislar transacciones internas
 
     @Transactional(readOnly = true)
     public List<Order> getAllOrders() {
@@ -48,13 +55,12 @@ public class OrderService {
         order.getInternalNotes().size();
         order.getShipments().size();
 
-        // --- NUEVO FIX: Despertar la transportadora de cada envío ---
+        // Despertar la transportadora de cada envío
         order.getShipments().forEach(shipment -> {
             if (shipment.getCarrier() != null) {
                 shipment.getCarrier().getName();
             }
         });
-        // -----------------------------------------------------------
 
         return order;
     }
@@ -67,8 +73,7 @@ public class OrderService {
             throw new IllegalArgumentException("El carrito está vacío");
         }
 
-        // El método de pago inicial depende del canal: por WhatsApp todavía no hay
-        // ningún cobro asociado, así que no tiene sentido dejar "Wompi / Tarjeta" puesto.
+        // El método de pago inicial depende del canal
         String initialPaymentMethod = channel == OrderChannel.WHATSAPP ? "Pendiente por WhatsApp" : "Wompi / Tarjeta";
 
         Order order = Order.builder()
@@ -123,7 +128,7 @@ public class OrderService {
         return savedOrder;
     }
 
-    // Arma el mensaje de WhatsApp para un pedido ya creado (usado por el flujo del Plan 1).
+    // Arma el mensaje de WhatsApp para un pedido ya creado
     public String buildWhatsappMessage(Order order) {
         StringBuilder sb = new StringBuilder();
         sb.append("Hola, quiero realizar este pedido en Storevo:\n\n");
@@ -182,7 +187,7 @@ public class OrderService {
                 .build();
 
         order.getHistory().add(historyObj);
-        orderRepository.save(order); // Guardado explícito forzado
+        orderRepository.save(order);
 
         return historyObj;
     }
@@ -215,38 +220,95 @@ public class OrderService {
         }
     }
 
-    @Transactional
+    // SIN @Transactional para evitar mantener una transacción abierta
+// durante la consulta HTTP a Wompi.
     public void verifyTransactionWithWompi(Store store, Long orderId, String wompiTransactionId) {
-        Order order = orderRepository.findById(orderId).orElse(null);
-        if (order == null || order.getStatus() != OrderStatus.PENDING) return;
-
         try {
+            // 1. Asegurar el contexto del tenant antes de consultar el pedido
+            TenantContext.setCurrentTenant(store.getSchemaName());
+
+            Order order = orderRepository.findById(orderId).orElse(null);
+
+            if (order == null || order.getStatus() != OrderStatus.PENDING) {
+                return;
+            }
+
+            // 2. Cambiar temporalmente a la BD de administración
+            TenantContext.clear();
+
             StoreIntegration wompiConfig = integrationRepository
-                    .findByStoreAndIntegrationTypeAndIsActiveTrue(store, IntegrationType.WOMPI)
+                    .findByStoreAndIntegrationTypeAndIsActiveTrue(
+                            store,
+                            IntegrationType.WOMPI
+                    )
                     .orElse(null);
 
-            // Sin esta config no sabemos si la tienda opera en sandbox o producción,
-            // así que no adivinamos: dejamos que sea el webhook el que confirme luego.
-            if (wompiConfig == null) return;
+            if (wompiConfig == null) {
+                return;
+            }
+
+            // 3. Volver al tenant de la tienda
+            TenantContext.setCurrentTenant(store.getSchemaName());
 
             String baseUrl = "PRODUCTION".equals(wompiConfig.getEnvironment())
                     ? "https://production.wompi.co/v1/transactions/"
                     : "https://sandbox.wompi.co/v1/transactions/";
 
             RestTemplate restTemplate = new RestTemplate();
-            ResponseEntity<JsonNode> response = restTemplate.getForEntity(baseUrl + wompiTransactionId, JsonNode.class);
 
-            if (response.getBody() != null && response.getStatusCode().is2xxSuccessful()) {
-                String definitiveStatus = response.getBody().get("data").get("status").asText();
+            ResponseEntity<JsonNode> response = restTemplate.getForEntity(
+                    baseUrl + wompiTransactionId,
+                    JsonNode.class
+            );
 
+            // 4. Procesar respuesta de Wompi
+            if (response.getBody() != null
+                    && response.getStatusCode().is2xxSuccessful()) {
+
+                JsonNode data = response.getBody().get("data");
+
+                if (data == null || !data.has("status")) {
+                    return;
+                }
+
+                String definitiveStatus = data.get("status").asText();
+
+                // 5. Actualizar el pedido mediante el proxy de Spring.
+                // Esto crea una transacción independiente en el tenant.
                 if ("APPROVED".equals(definitiveStatus)) {
-                    updateOrderStatus(orderId, OrderStatus.PAID, EventOrigin.WEBHOOK, null);
-                } else if ("DECLINED".equals(definitiveStatus) || "ERROR".equals(definitiveStatus) || "VOIDED".equals(definitiveStatus)) {
-                    updateOrderStatus(orderId, OrderStatus.CANCELLED, EventOrigin.WEBHOOK, null);
+
+                    self.updateOrderStatus(
+                            orderId,
+                            OrderStatus.PAID,
+                            EventOrigin.WEBHOOK,
+                            null
+                    );
+
+                } else if ("DECLINED".equals(definitiveStatus)
+                        || "ERROR".equals(definitiveStatus)
+                        || "VOIDED".equals(definitiveStatus)) {
+
+                    self.updateOrderStatus(
+                            orderId,
+                            OrderStatus.CANCELLED,
+                            EventOrigin.WEBHOOK,
+                            null
+                    );
                 }
             }
+
         } catch (Exception e) {
-            System.out.println("Error API Wompi: " + e.getMessage());
+
+            System.out.println(
+                    "Error verificando transacción Wompi: "
+                            + e.getMessage()
+            );
+
+        } finally {
+
+            // 6. Garantizar que el hilo nunca termine con el contexto
+            // apuntando a la BD de administración.
+            TenantContext.setCurrentTenant(store.getSchemaName());
         }
     }
 }

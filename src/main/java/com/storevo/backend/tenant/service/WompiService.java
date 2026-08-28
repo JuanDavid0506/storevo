@@ -68,8 +68,7 @@ public class WompiService {
 
         // 3. DATOS DE LA TRANSACCIÓN
         String publicKey = wompiConfig.getApiKey();
-        String integritySecret = wompiConfig.getApiSecret(); // Secreto de integridad
-        String environment = wompiConfig.getEnvironment();
+        String integritySecret = wompiConfig.getExtraData();        String environment = wompiConfig.getEnvironment();
         String currency = "COP";
 
         // Referencia única

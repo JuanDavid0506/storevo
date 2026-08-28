@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 
 @Controller
 @RequestMapping("/s/{slug}/order")
@@ -29,22 +28,6 @@ public class OrderController {
     private final StoreSettingsService storeSettingsService;
     private final OrderService orderService;
     private final WompiService wompiService;
-
-    @ModelAttribute
-    public void setupTenant(@PathVariable String slug, Model model, HttpServletRequest request) {
-        Store store = (Store) request.getAttribute("currentStore");
-        if (store == null) {
-            throw new RuntimeException("Tienda no encontrada en la petición");
-        }
-
-        // 1. PRIMERO leemos los settings
-        model.addAttribute("store", store);
-        model.addAttribute("settings", storeSettingsService.getSettingsByStore(store));
-        model.addAttribute("slug", slug);
-
-        // 2. LUEGO bajamos el switch
-        TenantContext.setCurrentTenant(store.getSchemaName());
-    }
 
     @GetMapping("/{id}/success")
     public String orderSuccess(@PathVariable String slug, @PathVariable Long id, HttpServletRequest request, Model model) {
@@ -57,9 +40,13 @@ public class OrderController {
         model.addAttribute("pageTitle", "Pagar Pedido");
 
         try {
-            // Portero + bóveda: valida el plan y trae las credenciales de ESTA tienda,
-            // ya no las llaves globales de application.yml.
+            // 1. Apagamos el switch para buscar las llaves de Wompi en la BD de Administración
+            TenantContext.clear();
+
             WompiCheckoutData checkoutData = wompiService.prepareCheckout(store, order);
+
+            // 2. Volvemos a bajar el switch hacia la BD de la tienda
+            TenantContext.setCurrentTenant(store.getSchemaName());
 
             String scheme = request.getHeader("X-Forwarded-Proto") != null ? request.getHeader("X-Forwarded-Proto") : request.getScheme();
             String serverName = request.getServerName();
@@ -75,8 +62,10 @@ public class OrderController {
             model.addAttribute("wompiSignature", checkoutData.getSignature());
             model.addAttribute("wompiRedirectUrl", redirectUrl);
         } catch (RuntimeException e) {
-            // La tienda no tiene el plan, o no ha configurado Wompi todavía: mostramos
-            // la página igual (el pedido ya quedó registrado) pero sin el botón de pago roto.
+            // Restauramos el contexto de forma segura si ocurre un error o si no hay llaves
+            TenantContext.setCurrentTenant(store.getSchemaName());
+            e.printStackTrace();
+
             model.addAttribute("paymentAvailable", false);
             model.addAttribute("paymentErrorMessage", e.getMessage());
         }
@@ -90,15 +79,17 @@ public class OrderController {
                 .orElseThrow(() -> new OrderNotFoundException(id));
 
         Store store = (Store) request.getAttribute("currentStore");
+
+        // Apagamos el switch antes de consultar configuraciones globales
+        TenantContext.clear();
         var settings = storeSettingsService.getSettingsByStore(store);
+        TenantContext.setCurrentTenant(store.getSchemaName());
 
         model.addAttribute("order", order);
         model.addAttribute("pageTitle", "Pedido enviado por WhatsApp");
 
         String rawWhatsapp = settings != null ? settings.getWhatsapp() : null;
         if (rawWhatsapp == null || rawWhatsapp.isBlank()) {
-            // La tienda todavía no configuró su número de WhatsApp: mostramos la
-            // confirmación igual (el pedido ya quedó registrado) pero sin el botón.
             model.addAttribute("whatsappConfigured", false);
         } else {
             String message = orderService.buildWhatsappMessage(order);
@@ -111,31 +102,12 @@ public class OrderController {
         return "storefront/order-whatsapp";
     }
 
-    // Deja el número solo con dígitos y le antepone el indicativo de Colombia (57)
-    // si detecta un celular local de 10 dígitos sin indicativo. Si el comerciante
-    // ya guardó el número con indicativo, se respeta tal cual.
     private String normalizeWhatsappNumber(String raw) {
         String digitsOnly = raw.replaceAll("[^0-9]", "");
         if (digitsOnly.length() == 10) {
             return "57" + digitsOnly;
         }
         return digitsOnly;
-    }
-
-    private String generateSha256(String input) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(input.getBytes(StandardCharsets.UTF_8));
-            StringBuilder hexString = new StringBuilder(2 * hash.length);
-            for (byte b : hash) {
-                String hex = Integer.toHexString(0xff & b);
-                if (hex.length() == 1) hexString.append('0');
-                hexString.append(hex);
-            }
-            return hexString.toString();
-        } catch (Exception e) {
-            throw new RuntimeException("Error generando firma criptográfica", e);
-        }
     }
 
     @GetMapping("/{id}/wompi-result")
@@ -146,26 +118,26 @@ public class OrderController {
             HttpServletRequest request,
             Model model) {
 
-        // 1. Verificamos la transacción en Wompi en tiempo real
         if (wompiTransactionId != null) {
             Store store = (Store) request.getAttribute("currentStore");
             orderService.verifyTransactionWithWompi(store, id, wompiTransactionId);
         }
 
-        // 2. Volvemos a consultar la base de datos para obtener el estado ACTUALIZADO
+        // Blindamos el contexto al regresar de consultar en Wompi
+        Store store = (Store) request.getAttribute("currentStore");
+        TenantContext.setCurrentTenant(store.getSchemaName());
+
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new OrderNotFoundException(id));
 
         model.addAttribute("order", order);
         model.addAttribute("wompiTransactionId", wompiTransactionId);
 
-        // 3. Verificamos el estado para decidir qué pantalla mostrar
         if (order.getStatus() == OrderStatus.CANCELLED) {
             model.addAttribute("pageTitle", "Pago Rechazado");
             return "storefront/order-failed";
         }
 
-        // Si fue exitoso o sigue pendiente
         model.addAttribute("pageTitle", "Resultado del Pago");
         return "storefront/order-result";
     }

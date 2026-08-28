@@ -1,7 +1,8 @@
 package com.storevo.backend.tenant.controller;
 
 import com.storevo.backend.admin.model.Store;
-import com.storevo.backend.admin.service.StoreSettingsService;
+import com.storevo.backend.admin.model.IntegrationType;
+import com.storevo.backend.admin.repository.StoreIntegrationRepository;
 import com.storevo.backend.config.tenant.TenantContext;
 import com.storevo.backend.tenant.dto.CartItemDto;
 import com.storevo.backend.tenant.model.Order;
@@ -12,11 +13,12 @@ import com.storevo.backend.tenant.repository.ProductVariantRepository;
 import com.storevo.backend.tenant.service.CartManager;
 import com.storevo.backend.tenant.service.OrderService;
 import com.storevo.backend.tenant.service.ProductService;
+import com.storevo.backend.tenant.service.WishlistManager;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.transaction.annotation.Transactional; // <-- NUEVA IMPORTACIÓN
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -31,25 +33,12 @@ import java.util.stream.Collectors;
 public class CartController {
 
     private final CartManager cartManager;
+    private final WishlistManager wishlistManager;
     private final ProductService productService;
-    private final StoreSettingsService storeSettingsService;
     private final OrderService orderService;
     private final ProductVariantRepository variantRepository;
+    private final StoreIntegrationRepository integrationRepository; // <-- NUEVO: Para consultar si Wompi existe
 
-    @ModelAttribute
-    public void setupTenant(@PathVariable String slug, Model model, HttpServletRequest request) {
-        Store store = (Store) request.getAttribute("currentStore");
-        if (store == null) throw new RuntimeException("Tienda no encontrada");
-
-        model.addAttribute("store", store);
-        model.addAttribute("settings", storeSettingsService.getSettingsByStore(store));
-        model.addAttribute("slug", slug);
-
-        TenantContext.setCurrentTenant(store.getSchemaName());
-        model.addAttribute("cartCount", cartManager.getCartCount(slug));
-    }
-
-    // NUEVO: Agregamos la transacción de lectura para que Hibernate traiga las relaciones lazy
     @GetMapping
     @Transactional(readOnly = true)
     public String viewCart(@PathVariable String slug, Model model) {
@@ -81,7 +70,27 @@ public class CartController {
         return "storefront/cart";
     }
 
-    // NUEVO: Agregamos la transacción de lectura para las imágenes de la variante
+    @PostMapping("/add")
+    @Transactional(readOnly = true)
+    public String addToCartTraditional(
+            @PathVariable String slug,
+            @RequestParam Long productId,
+            @RequestParam(required = false) Long variantId,
+            @RequestParam(defaultValue = "1") Integer quantity,
+            HttpServletRequest request,
+            RedirectAttributes redirectAttributes) {
+
+        ResponseEntity<Map<String, Object>> response = addToCartAjax(slug, productId, variantId, quantity, request);
+
+        if (Boolean.TRUE.equals(response.getBody().get("success"))) {
+            redirectAttributes.addFlashAttribute("cartSuccess", response.getBody().get("message"));
+        } else {
+            redirectAttributes.addFlashAttribute("cartError", response.getBody().get("message"));
+        }
+
+        return "redirect:/s/" + slug + "/cart";
+    }
+
     @PostMapping("/add-ajax")
     @ResponseBody
     @Transactional(readOnly = true)
@@ -121,7 +130,6 @@ public class CartController {
                     .map(ov -> ov.getValueName())
                     .collect(Collectors.joining(" • "));
 
-            // Gracias al @Transactional superior, esta llamada getImages() funcionará perfectamente
             if (variant.getImages() != null && !variant.getImages().isEmpty()) {
                 imageUrl = variant.getImages().get(0).getThumbnailUrl();
                 if (imageUrl == null) imageUrl = variant.getImages().get(0).getSecureUrl();
@@ -132,9 +140,6 @@ public class CartController {
 
         int qtyToAdd = quantity;
 
-        // Producto bajo pedido: el stock guardado (0, porque nunca se le pidió al
-        // comerciante que lo llenara) no debe limitar nada — se agrega la
-        // cantidad pedida tal cual.
         if (!isMadeToOrder) {
             int currentQtyInCart = cartManager.getItemQuantity(slug, productId, variantId);
             int remainingStock = availableStock - currentQtyInCart;
@@ -206,20 +211,24 @@ public class CartController {
     public String processCheckout(
             @PathVariable String slug, @RequestParam String customerName, @RequestParam String customerPhone,
             @RequestParam(required = false) String customerDocument, @RequestParam String address,
-            @RequestParam String city, @RequestParam(required = false) String notes) {
+            @RequestParam String city, @RequestParam(required = false) String notes,
+            RedirectAttributes redirectAttributes) { // <-- NUEVO: Para pasar el mensaje de error
+
         boolean hasMadeToOrderItem = cartManager.getCart(slug).stream()
                 .anyMatch(item -> Boolean.TRUE.equals(item.getIsMadeToOrder()));
+
         if (hasMadeToOrderItem) {
-            // Defensa en el backend: aunque el botón de Wompi esté oculto en la
-            // vista, no dejamos pasar el pago directo si hay algo bajo pedido.
-            return "redirect:/s/" + slug + "/cart/checkout?error=true";
+            redirectAttributes.addFlashAttribute("checkoutError", "Tu carrito tiene productos bajo pedido. Por favor, utiliza el botón de WhatsApp.");
+            return "redirect:/s/" + slug + "/cart/checkout";
         }
 
         try {
             Order order = orderService.createOrderFromCart(slug, customerName, customerPhone, customerDocument, address, city, notes, OrderChannel.ONLINE);
             return "redirect:/s/" + slug + "/order/" + order.getId() + "/success";
         } catch (Exception e) {
-            return "redirect:/s/" + slug + "/cart/checkout?error=true";
+            e.printStackTrace(); // <-- VITAL: Escupe la línea exacta del fallo en la consola
+            redirectAttributes.addFlashAttribute("checkoutError", e.getMessage() != null ? e.getMessage() : "Error interno de base de datos. Revisa la consola.");
+            return "redirect:/s/" + slug + "/cart/checkout";
         }
     }
 
@@ -227,25 +236,40 @@ public class CartController {
     public String processCheckoutWhatsapp(
             @PathVariable String slug, @RequestParam String customerName, @RequestParam String customerPhone,
             @RequestParam(required = false) String customerDocument, @RequestParam String address,
-            @RequestParam String city, @RequestParam(required = false) String notes) {
+            @RequestParam String city, @RequestParam(required = false) String notes,
+            RedirectAttributes redirectAttributes) {
         try {
             Order order = orderService.createOrderFromCart(slug, customerName, customerPhone, customerDocument, address, city, notes, OrderChannel.WHATSAPP);
             return "redirect:/s/" + slug + "/order/" + order.getId() + "/whatsapp";
         } catch (Exception e) {
-            return "redirect:/s/" + slug + "/cart/checkout?error=true";
+            e.printStackTrace();
+            redirectAttributes.addFlashAttribute("checkoutError", e.getMessage() != null ? e.getMessage() : "Error interno. Revisa la consola.");
+            return "redirect:/s/" + slug + "/cart/checkout";
         }
     }
 
     @GetMapping("/checkout")
-    public String showCheckout(@PathVariable String slug, Model model) {
+    public String showCheckout(@PathVariable String slug, HttpServletRequest request, Model model) {
         java.util.List<CartItemDto> cart = cartManager.getCart(slug);
         if (cart.isEmpty()) return "redirect:/s/" + slug + "/cart";
 
         boolean hasMadeToOrderItem = cart.stream().anyMatch(item -> Boolean.TRUE.equals(item.getIsMadeToOrder()));
 
+        Store store = (Store) request.getAttribute("currentStore");
+
+        // 1. Apagamos el contexto temporalmente para volver a la BD de Administración
+        TenantContext.clear();
+
+        // 2. Consultamos la integración de Wompi (ahora sí buscará en la tabla correcta)
+        boolean wompiEnabled = integrationRepository.findByStoreAndIntegrationTypeAndIsActiveTrue(store, IntegrationType.WOMPI).isPresent();
+
+        // 3. Volvemos a bajar el switch hacia la base de datos de la Tienda
+        TenantContext.setCurrentTenant(store.getSchemaName());
+
         model.addAttribute("cartItems", cart);
         model.addAttribute("cartTotal", cartManager.getTotal(slug));
         model.addAttribute("hasMadeToOrderItem", hasMadeToOrderItem);
+        model.addAttribute("wompiEnabled", wompiEnabled);
         model.addAttribute("pageTitle", "Finalizar Compra");
         return "storefront/checkout";
     }

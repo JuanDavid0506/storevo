@@ -1,62 +1,123 @@
 package com.storevo.backend.tenant.service;
 
 import com.storevo.backend.tenant.dto.CartItemDto;
-import org.springframework.stereotype.Component;
-import org.springframework.web.context.annotation.SessionScope;
+import com.storevo.backend.tenant.model.CartItem;
+import com.storevo.backend.tenant.model.Product;
+import com.storevo.backend.tenant.model.ProductVariant;
+import com.storevo.backend.tenant.repository.CartItemRepository;
+import com.storevo.backend.tenant.repository.ProductRepository;
+import com.storevo.backend.tenant.repository.ProductVariantRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
-@Component
-@SessionScope
+@Service
+@RequiredArgsConstructor
 public class CartManager {
 
-    private final Map<String, List<CartItemDto>> storeCarts = new HashMap<>();
+    private final CartItemRepository cartItemRepository;
+    private final ProductRepository productRepository;
+    private final ProductVariantRepository variantRepository;
 
-    public List<CartItemDto> getCart(String slug) {
-        return storeCarts.computeIfAbsent(slug, k -> new ArrayList<>());
+    @Transactional(readOnly = true)
+    public List<CartItemDto> getCart(String sessionId) {
+        if (sessionId == null) return List.of();
+
+        List<CartItem> dbItems = cartItemRepository.findBySessionId(sessionId);
+        return dbItems.stream().map(item -> {
+            Product p = item.getProduct();
+            ProductVariant v = item.getVariant();
+
+            double finalPrice = p.getPrice();
+            if (p.getDiscountPrice() != null && p.getDiscountPrice() > 0) {
+                finalPrice = p.getDiscountPrice();
+            }
+            if (v != null && v.getPrice() != null) {
+                finalPrice = v.getPrice();
+            }
+
+            String imageUrl = (p.getImages() != null && !p.getImages().isEmpty())
+                    ? p.getImages().get(0).getSecureUrl()
+                    : null;
+
+            return CartItemDto.builder()
+                    .productId(p.getId())
+                    .variantId(v != null ? v.getId() : null)
+                    .name(p.getName())
+                    .price(finalPrice)
+                    .quantity(item.getQuantity())
+                    .imageUrl(imageUrl)
+                    .isMadeToOrder(p.getIsMadeToOrder())
+                    .build();
+        }).collect(Collectors.toList());
     }
 
-    // ACTUALIZADO: Filtra por Producto Y Variante
-    public int getItemQuantity(String slug, Long productId, Long variantId) {
-        return getCart(slug).stream()
-                .filter(item -> item.getProductId().equals(productId) && Objects.equals(item.getVariantId(), variantId))
-                .mapToInt(CartItemDto::getQuantity)
-                .findFirst()
+    @Transactional(readOnly = true)
+    public int getItemQuantity(String sessionId, Long productId, Long variantId) {
+        if (sessionId == null) return 0;
+        return cartItemRepository.findBySessionIdAndProductIdAndVariantId(sessionId, productId, variantId)
+                .map(CartItem::getQuantity)
                 .orElse(0);
     }
 
-    public void addItem(String slug, CartItemDto newItem) {
-        List<CartItemDto> cart = getCart(slug);
+    @Transactional
+    public void addItem(String sessionId, CartItemDto newItem) {
+        if (sessionId == null) return;
 
-        Optional<CartItemDto> existingItem = cart.stream()
-                .filter(item -> item.getProductId().equals(newItem.getProductId()) && Objects.equals(item.getVariantId(), newItem.getVariantId()))
-                .findFirst();
+        Optional<CartItem> existingOpt = cartItemRepository.findBySessionIdAndProductIdAndVariantId(
+                sessionId, newItem.getProductId(), newItem.getVariantId());
 
-        if (existingItem.isPresent()) {
-            existingItem.get().setQuantity(existingItem.get().getQuantity() + newItem.getQuantity());
+        if (existingOpt.isPresent()) {
+            CartItem existing = existingOpt.get();
+            existing.setQuantity(existing.getQuantity() + newItem.getQuantity());
+            cartItemRepository.save(existing);
         } else {
-            cart.add(newItem);
+            Product product = productRepository.findById(newItem.getProductId())
+                    .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
+
+            ProductVariant variant = null;
+            if (newItem.getVariantId() != null) {
+                variant = variantRepository.findById(newItem.getVariantId()).orElse(null);
+            }
+
+            CartItem newItemEntity = CartItem.builder()
+                    .sessionId(sessionId)
+                    .product(product)
+                    .variant(variant)
+                    .quantity(newItem.getQuantity())
+                    .build();
+            cartItemRepository.save(newItemEntity);
         }
     }
 
-    // ACTUALIZADO: Elimina la línea exacta de la variante
-    public void removeItem(String slug, Long productId, Long variantId) {
-        getCart(slug).removeIf(item -> item.getProductId().equals(productId) && Objects.equals(item.getVariantId(), variantId));
+    @Transactional
+    public void removeItem(String sessionId, Long productId, Long variantId) {
+        if (sessionId == null) return;
+        cartItemRepository.deleteBySessionIdAndProductIdAndVariantId(sessionId, productId, variantId);
     }
 
-    public Double getTotal(String slug) {
-        return getCart(slug).stream()
+    @Transactional(readOnly = true)
+    public Double getTotal(String sessionId) {
+        return getCart(sessionId).stream()
                 .mapToDouble(CartItemDto::getSubtotal)
                 .sum();
     }
 
-    public int getCartCount(String slug) {
-        return getCart(slug).stream()
+    @Transactional(readOnly = true)
+    public int getCartCount(String sessionId) {
+        return getCart(sessionId).stream()
                 .mapToInt(CartItemDto::getQuantity)
                 .sum();
     }
 
-    public void clearCart(String slug) {
-        storeCarts.remove(slug);
+    @Transactional
+    public void clearCart(String sessionId) {
+        if (sessionId == null) return;
+        cartItemRepository.deleteBySessionId(sessionId);
     }
 }

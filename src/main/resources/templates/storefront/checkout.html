@@ -9,7 +9,7 @@
     <h1 class="text-3xl font-bold text-slate-900 mb-8 text-center">Datos de Envío</h1>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <form th:action="@{/s/{slug}/cart/checkout/process(slug=${slug})}" method="POST" class="bg-white p-6 md:p-8 rounded-xl shadow-sm border border-slate-200 space-y-4">
+        <form method="POST" class="bg-white p-6 md:p-8 rounded-xl shadow-sm border border-slate-200 space-y-4">
             <div>
                 <label class="block text-sm font-medium text-slate-700 mb-1">Nombre Completo</label>
                 <input type="text" name="customerName" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-brand focus:border-brand">
@@ -34,25 +34,35 @@
                 <label class="block text-sm font-medium text-slate-700 mb-1">Notas adicionales (Opcional)</label>
                 <textarea name="notes" rows="2" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-brand focus:border-brand"></textarea>
             </div>
+
+            <!-- Aviso visual si es un producto bajo pedido -->
             <div th:if="${hasMadeToOrderItem}" class="flex items-start gap-3 bg-amber-50 border border-amber-200 text-amber-800 text-sm font-medium p-4 rounded-xl mt-2">
                 <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"></path></svg>
                 <span>Este pedido contiene productos bajo pedido. Para continuar, coordina tu pedido por WhatsApp.</span>
             </div>
 
-            <button th:unless="${hasMadeToOrderItem}" type="submit" th:formaction="@{/s/{slug}/cart/checkout/process(slug=${slug})}" class="w-full bg-brand text-white font-bold py-3 rounded-lg shadow-md hover-bg-brand transition mt-4">
-                Confirmar Pedido
-            </button>
+            <!-- LOGICA CONDICIONAL DE RUTEO -->
+            <th:block th:with="requiresWhatsapp=${hasMadeToOrderItem or !wompiEnabled}">
 
-            <button th:if="${settings != null and settings.whatsapp != null and !#strings.isEmpty(settings.whatsapp)}"
-                    type="submit" th:formaction="@{/s/{slug}/cart/checkout/whatsapp(slug=${slug})}"
-                    th:class="${hasMadeToOrderItem} ? 'w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-lg shadow-md transition mt-4' : 'w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-lg shadow-md transition mt-3'">
-                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 004.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91C21.96 6.45 17.5 2 12.04 2zm5.83 14.16c-.25.7-1.45 1.33-2 1.42-.53.08-1.03.11-1.78-.11-.41-.12-.93-.29-1.6-.57-2.82-1.22-4.66-4.06-4.8-4.25-.14-.19-1.15-1.53-1.15-2.92s.72-2.07.98-2.35c.25-.28.54-.35.72-.35.18 0 .36 0 .52.01.17.01.39-.06.61.46.25.6.85 2.07.92 2.22.07.15.12.32.02.52-.09.19-.14.32-.28.49-.14.17-.29.37-.42.5-.14.14-.28.29-.12.57.16.28.71 1.17 1.53 1.9 1.05.94 1.94 1.23 2.22 1.37.28.14.45.12.61-.07.17-.19.7-.82.89-1.1.19-.28.37-.23.62-.14.25.09 1.6.75 1.87.89.28.14.46.21.53.32.07.12.07.68-.18 1.38z"></path></svg>
-                Enviar pedido por WhatsApp
-            </button>
+                <!-- BOTÓN 1: PAGAR AHORA (Solo si Wompi está habilitado Y no hay productos bajo pedido) -->
+                <button th:if="${!requiresWhatsapp}" type="submit" th:formaction="@{/s/{slug}/cart/checkout/process(slug=${slug})}" class="w-full bg-slate-900 text-white font-bold py-3 rounded-lg shadow-md hover:bg-slate-800 transition mt-4">
+                    Pagar ahora
+                </button>
 
-            <p th:if="${hasMadeToOrderItem and (settings == null or settings.whatsapp == null or #strings.isEmpty(settings.whatsapp))}" class="text-xs text-red-500 text-center mt-3">
-                Esta tienda todavía no configuró su WhatsApp para recibir pedidos bajo pedido. Contáctala directamente.
-            </p>
+                <!-- BOTÓN 2: WHATSAPP (Si Wompi NO está habilitado O si hay productos bajo pedido) -->
+                <button th:if="${requiresWhatsapp and settings != null and settings.whatsapp != null and !#strings.isEmpty(settings.whatsapp)}"
+                        type="submit" th:formaction="@{/s/{slug}/cart/checkout/whatsapp(slug=${slug})}"
+                        class="w-full flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#1ebd5c] text-white font-bold py-3 rounded-lg shadow-md transition mt-4">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.305-.88-.653-1.473-1.46-1.646-1.757-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+                    Enviar pedido por WhatsApp
+                </button>
+
+                <!-- AVISO DE ERROR: (Si el flujo requiere WhatsApp pero la tienda no lo configuró) -->
+                <p th:if="${requiresWhatsapp and (settings == null or settings.whatsapp == null or #strings.isEmpty(settings.whatsapp))}" class="text-xs text-red-500 text-center mt-3 font-bold">
+                    Esta tienda no ha configurado su WhatsApp para recibir pedidos. Contáctala directamente.
+                </p>
+
+            </th:block>
         </form>
 
         <div class="bg-slate-50 p-6 rounded-xl border border-slate-200 h-fit">

@@ -12,15 +12,19 @@ Storevo.Cart = {
                     const response = await fetch(ajaxAction, {
                         method: 'POST',
                         body: new URLSearchParams(formData),
-                        credentials: 'include',
+                        credentials: 'same-origin', // <-- VITAL para no perder la sesión
                         headers: {
                             'Content-Type': 'application/x-www-form-urlencoded'
                         }
                     });
                     if (response.ok) {
                         const data = await response.json();
-                        Storevo.Cart.updateGlobalCounter(data.cartCount, true);
-                        Storevo.UI.Toast.show('¡Producto agregado a tu bolsa!', 'success');
+                        if(data.success) {
+                            Storevo.Cart.updateGlobalCounter(data.cartCount, true);
+                            Storevo.UI.Toast.show(data.message, data.isWarning ? 'warning' : 'success');
+                        } else {
+                            Storevo.UI.Toast.show(data.message, 'error');
+                        }
                     }
                 } catch (error) {
                     console.error('Error al agregar a la bolsa:', error);
@@ -30,73 +34,81 @@ Storevo.Cart = {
         });
     },
 
-    toggleItem: function(btn, slug, productId) {
-        const emptyIcon = btn.querySelector('.icon-empty');
-        const filledIcon = btn.querySelector('.icon-filled');
-        const isAdded = !filledIcon.classList.contains('hidden');
-
-        const formData = new FormData();
-        formData.append('productId', productId);
-
+    // REEMPLAZA A toggleItem. El catálogo NO debe remover productos del carrito.
+    addItem: function(btn, slug, productId) {
         if(btn.classList.contains('pointer-events-none')) return;
         btn.classList.add('pointer-events-none');
 
-        if (isAdded) {
-            fetch(`/s/${slug}/cart/remove-ajax`, { method: 'POST', body: formData })
-                .then(r => r.json())
-                .then(data => {
-                    if(data.success) {
-                        filledIcon.classList.add('hidden');
-                        emptyIcon.classList.remove('hidden');
-                        btn.classList.remove('bg-white', 'border-brand');
-                        btn.classList.add('bg-white/90');
-                        Storevo.Cart.updateGlobalCounter(data.cartCount, true);
-                        Storevo.UI.Toast.show(data.message, 'success');
-                    }
-                }).finally(() => btn.classList.remove('pointer-events-none'));
-        } else {
-            formData.append('quantity', 1);
-            fetch(`/s/${slug}/cart/add-ajax`, { method: 'POST', body: formData })
-                .then(r => r.json())
-                .then(data => {
-                    if(data.success) {
-                        emptyIcon.classList.add('hidden');
-                        filledIcon.classList.remove('hidden');
-                        btn.classList.remove('bg-white/90');
-                        btn.classList.add('bg-white', 'border-brand');
-                        Storevo.Cart.updateGlobalCounter(data.cartCount, true);
-                        Storevo.UI.Toast.show(data.message, data.isWarning ? 'warning' : 'success');
-                    } else {
-                        Storevo.UI.Toast.show(data.message, 'error');
-                    }
-                }).finally(() => btn.classList.remove('pointer-events-none'));
-        }
-    },
-
-    buyNowFast: function(slug, productId) {
         const formData = new FormData();
         formData.append('productId', productId);
         formData.append('quantity', 1);
 
-        fetch(`/s/${slug}/cart/add-ajax`, { method: 'POST', body: formData })
+        fetch(`/s/${slug}/cart/add-ajax`, {
+            method: 'POST',
+            body: formData,
+            credentials: 'same-origin' // <-- VITAL
+        })
+            .then(r => r.json())
+            .then(data => {
+                if(data.success) {
+                    // Actualizamos estado visual (opcional, si quieres que el botón cambie)
+                    const emptyIcon = btn.querySelector('.icon-empty');
+                    const filledIcon = btn.querySelector('.icon-filled');
+                    if(emptyIcon && filledIcon) {
+                        emptyIcon.classList.add('hidden');
+                        filledIcon.classList.remove('hidden');
+                        btn.classList.remove('bg-white/90');
+                        btn.classList.add('bg-white', 'border-brand');
+                    }
+                    Storevo.Cart.updateGlobalCounter(data.cartCount, true);
+                    Storevo.UI.Toast.show(data.message, data.isWarning ? 'warning' : 'success');
+                } else {
+                    Storevo.UI.Toast.show(data.message, 'error');
+                }
+            }).finally(() => btn.classList.remove('pointer-events-none'));
+    },
+
+    // NUEVA LÓGICA DE COMPRA DIRECTA (Respeta las variantes)
+    buyNowFast: function(slug, productId, hasVariants, productUrl) {
+        if (hasVariants) {
+            // Si tiene variantes, lo mandamos a la ficha del producto obligatoriamente
+            window.location.href = productUrl;
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('productId', productId);
+        formData.append('quantity', 1);
+
+        fetch(`/s/${slug}/cart/add-ajax`, {
+            method: 'POST',
+            body: formData,
+            credentials: 'same-origin' // <-- VITAL
+        })
             .then(res => res.json())
             .then(data => {
-                if(data.success) window.location.href = `/s/${slug}/cart/checkout`;
-                else Storevo.UI.Toast.show(data.message, 'error');
+                if(data.success) {
+                    window.location.href = `/s/${slug}/cart/checkout`;
+                } else {
+                    Storevo.UI.Toast.show(data.message, 'error');
+                }
             });
     },
 
     updateGlobalCounter: function(value, isAbsolute = false) {
-        const badge = document.getElementById('navCartCounter');
-        if (badge) {
-            if (isAbsolute) {
-                badge.textContent = value;
-            } else {
-                let current = parseInt(badge.textContent) || 0;
-                let newVal = current + value;
-                badge.textContent = newVal < 0 ? 0 : newVal;
+        // Actualiza ambas IDs posibles según los HTML proporcionados
+        const badges = [document.getElementById('navCartCounter'), document.getElementById('cart-counter-badge')];
+        badges.forEach(badge => {
+            if (badge) {
+                if (isAbsolute) {
+                    badge.textContent = value;
+                } else {
+                    let current = parseInt(badge.textContent) || 0;
+                    let newVal = current + value;
+                    badge.textContent = newVal < 0 ? 0 : newVal;
+                }
             }
-        }
+        });
     },
 
     addWithQty: function(btn, slug, productId) {
@@ -111,7 +123,11 @@ Storevo.Cart = {
         btn.classList.add('opacity-75', 'pointer-events-none');
         textSpan.innerHTML = 'Procesando...';
 
-        fetch(`/s/${slug}/cart/add-ajax`, { method: 'POST', body: formData })
+        fetch(`/s/${slug}/cart/add-ajax`, {
+            method: 'POST',
+            body: formData,
+            credentials: 'same-origin' // <-- VITAL
+        })
             .then(res => res.json())
             .then(data => {
                 btn.classList.remove('opacity-75', 'pointer-events-none');
@@ -142,20 +158,23 @@ Storevo.Cart = {
         formData.append('productId', productId);
         formData.append('quantity', qty);
 
-        fetch(`/s/${slug}/cart/add-ajax`, { method: 'POST', body: formData })
+        fetch(`/s/${slug}/cart/add-ajax`, {
+            method: 'POST',
+            body: formData,
+            credentials: 'same-origin' // <-- VITAL
+        })
             .then(res => res.json())
             .then(data => {
-                if(data.success) window.location.href = `/s/${slug}/cart`;
+                if(data.success) window.location.href = `/s/${slug}/cart/checkout`; // Corregido: va directo al checkout
                 else Storevo.UI.Toast.show(data.message, 'error');
             });
     }
 };
 
-// Inicializar listeners del carrito
 document.addEventListener('DOMContentLoaded', Storevo.Cart.initForms);
 
 // Puente de Retrocompatibilidad
-window.toggleCartItem = Storevo.Cart.toggleItem;
+window.addItemToCart = Storevo.Cart.addItem; // Actualiza tus vistas HTML de toggleCartItem a addItemToCart
 window.buyNowFast = Storevo.Cart.buyNowFast;
 window.updateCartGlobalCounter = Storevo.Cart.updateGlobalCounter;
 window.addToCartWithQty = Storevo.Cart.addWithQty;

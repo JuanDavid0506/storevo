@@ -35,7 +35,6 @@
           <img id="main-product-image" th:src="${product.mainImageUrl != null ? product.mainImageUrl : '/img/placeholder.jpg'}" th:alt="${product.name}" class="w-full h-full object-cover transition-opacity duration-300">
         </div>
 
-        <!-- GALERÍA BLINDADA CONTRA DUPLICADOS -->
         <div th:if="${product.images != null and product.images.size() > 1}" class="grid grid-cols-5 sm:grid-cols-6 gap-3">
           <th:block th:with="seenUrls=${new java.util.HashSet()}">
             <button th:each="img : ${product.images}"
@@ -99,7 +98,36 @@
             </div>
 
             <div class="w-full sm:w-2/3 flex flex-col gap-3 justify-end">
-              <button id="btn-add-cart" type="submit" th:disabled="${blockedByStock}" th:class="${blockedByStock ? 'h-14 w-full bg-slate-300 text-white font-bold rounded-xl cursor-not-allowed text-lg' : 'h-14 w-full bg-brand hover:bg-brand/90 text-white font-bold rounded-xl shadow-lg shadow-brand/30 transition-all flex items-center justify-center gap-2 text-lg'}">
+
+              <!-- BOTÓN 1: COMPRAR AHORA (Producto Normal) -->
+              <button th:if="${!product.isMadeToOrder}"
+                      type="button"
+                      th:disabled="${blockedByStock}"
+                      th:onclick="buyNowDetail(this, [[${slug}]])"
+                      th:class="${blockedByStock ? 'h-14 w-full bg-slate-300 text-white font-bold rounded-xl cursor-not-allowed text-lg' : 'h-14 w-full bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 text-lg'}">
+                ⚡ <span th:text="${blockedByStock ? 'Agotado' : 'Comprar ahora'}">Comprar ahora</span>
+              </button>
+
+              <!-- BOTÓN 1 ALTERNATIVO: WHATSAPP DIRECTO (Bajo Pedido) -->
+              <th:block th:if="${product.isMadeToOrder}">
+                <a th:if="${settings.whatsapp != null and !settings.whatsapp.isBlank()}"
+                   th:with="price=${product.discountPrice != null and product.discountPrice > 0 ? product.discountPrice : product.price}"
+                   th:href="'https://wa.me/' + ${#strings.replace(settings.whatsapp, ' ', '')} + '?text=' + ${#uri.escapeQueryParam('Hola, estoy interesado en el producto ' + product.name + '. Precio mostrado: $' + #numbers.formatDecimal(price, 1, 'POINT', 0, 'COMMA') + '. Quisiera consultar disponibilidad y realizar mi pedido.', 'UTF-8')}"
+                   target="_blank"
+                   class="h-14 w-full bg-[#25D366] hover:bg-[#1ebd5c] text-white font-bold rounded-xl shadow-lg shadow-green-500/30 transition-all flex items-center justify-center gap-2 text-lg">
+                  <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.305-.88-.653-1.473-1.46-1.646-1.757-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+                  <span>Pedir por WhatsApp</span>
+                </a>
+                <button type="button" th:if="${settings.whatsapp == null or settings.whatsapp.isBlank()}"
+                        onclick="Storevo.UI.Toast.show('WhatsApp no configurado por la tienda', 'warning')"
+                        class="h-14 w-full bg-slate-300 text-white font-bold rounded-xl cursor-not-allowed flex items-center justify-center gap-2 text-lg">
+                  <span>WhatsApp no disponible</span>
+                </button>
+              </th:block>
+
+              <!-- BOTÓN 2: AGREGAR A LA BOLSA (Para ambos) -->
+              <button id="btn-add-cart" type="submit" th:disabled="${blockedByStock}"
+                      th:class="${blockedByStock ? 'h-14 w-full bg-slate-100 text-slate-400 font-bold rounded-xl cursor-not-allowed text-lg border-2 border-slate-200' : 'h-14 w-full bg-white text-brand border-2 border-brand hover:bg-brand hover:text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 text-lg'}">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
                 <span th:text="${blockedByStock ? 'Agotado' : 'Agregar a la Bolsa'}">Agregar a la Bolsa</span>
               </button>
@@ -114,7 +142,6 @@
           </div>
         </form>
 
-        <!-- SECCIÓN DE ESPECIFICACIONES (Acordeón Desplegable) -->
         <div th:if="${(product.attributes != null and !product.attributes.isEmpty()) or product.hasVariants}" class="mt-8 border-t border-slate-100">
           <button type="button"
                   onclick="document.getElementById('specs-content').classList.toggle('hidden'); document.getElementById('specs-icon').classList.toggle('rotate-180');"
@@ -125,11 +152,9 @@
             </span>
           </button>
 
-          <!-- Contenedor Oculto por defecto (hidden) -->
           <div id="specs-content" class="pb-6 hidden transition-all duration-300">
             <div class="bg-slate-50/50 p-5 sm:p-6 rounded-xl border border-slate-100">
               <div id="specs-list" class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2">
-                <!-- Globales (Protegidos contra valores vacíos) -->
                 <th:block th:if="${product.attributes != null}">
                   <div th:each="attr : ${product.attributes}"
                        th:if="${attr.value != null and !attr.value.trim().isEmpty()}"
@@ -138,19 +163,56 @@
                     <span class="text-slate-900 font-bold text-right" th:text="${attr.value}">Valor</span>
                   </div>
                 </th:block>
-                <!-- Los dinámicos (Color, Talla, SKU) caerán aquí mediante el JS -->
               </div>
             </div>
           </div>
         </div>
-        <!-- FIN DE ESPECIFICACIONES -->
 
       </div>
     </div>
   </div>
 </div>
+
 <th:block layout:fragment="scripts">
   <script th:src="@{/js/modules/productDetail.js}"></script>
+  <script th:inline="javascript">
+    function buyNowDetail(btn, slug) {
+      const form = document.getElementById('add-to-cart-form');
+      const formData = new FormData(form);
+
+      if (window.PRODUCT_HAS_VARIANTS && !formData.get('variantId')) {
+        Storevo.UI.Toast.show('Por favor selecciona las opciones del producto.', 'warning');
+        document.querySelectorAll('.option-error').forEach(el => el.classList.remove('hidden'));
+        return;
+      }
+
+      const originalText = btn.innerHTML;
+      btn.classList.add('opacity-75', 'pointer-events-none');
+      btn.innerHTML = '<span class="animate-pulse">Procesando...</span>';
+
+      fetch(form.action.replace('/add', '/add-ajax'), {
+        method: 'POST',
+        body: new URLSearchParams(formData),
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+      })
+              .then(res => res.json())
+              .then(data => {
+                if(data.success) {
+                  window.location.href = `/s/${slug}/cart/checkout`;
+                } else {
+                  Storevo.UI.Toast.show(data.message, 'error');
+                  btn.classList.remove('opacity-75', 'pointer-events-none');
+                  btn.innerHTML = originalText;
+                }
+              })
+              .catch(err => {
+                Storevo.UI.Toast.show('Ocurrió un error de red.', 'error');
+                btn.classList.remove('opacity-75', 'pointer-events-none');
+                btn.innerHTML = originalText;
+              });
+    }
+  </script>
 </th:block>
 </body>
 </html>

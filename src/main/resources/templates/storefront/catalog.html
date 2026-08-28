@@ -29,10 +29,10 @@
                     </a>
 
                     <div th:if="${hasMultiple}" class="absolute inset-0 flex items-center justify-between px-2 opacity-0 group-hover/gallery:opacity-100 transition-opacity duration-300 pointer-events-none z-20">
-                        <button type="button" th:data-target="'gallery-img-' + ${p.id}" th:data-images="${#strings.listJoin(p.images.![filePath], ',')}" onclick="Storevo.Gallery.prev(event, this)" class="w-8 h-8 rounded-full bg-white/90 hover:bg-white text-slate-800 flex items-center justify-center shadow-lg pointer-events-auto transition-transform hover:scale-110">
+                        <button type="button" th:data-target="'gallery-img-' + ${p.id}" th:data-images="${#strings.listJoin(p.images.![secureUrl], ',')}" onclick="Storevo.Gallery.prev(event, this)" class="w-8 h-8 rounded-full bg-white/90 hover:bg-white text-slate-800 flex items-center justify-center shadow-lg pointer-events-auto transition-transform hover:scale-110">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path></svg>
                         </button>
-                        <button type="button" th:data-target="'gallery-img-' + ${p.id}" th:data-images="${#strings.listJoin(p.images.![filePath], ',')}" onclick="Storevo.Gallery.next(event, this)" class="w-8 h-8 rounded-full bg-white/90 hover:bg-white text-slate-800 flex items-center justify-center shadow-lg pointer-events-auto transition-transform hover:scale-110">
+                        <button type="button" th:data-target="'gallery-img-' + ${p.id}" th:data-images="${#strings.listJoin(p.images.![secureUrl], ',')}" onclick="Storevo.Gallery.next(event, this)" class="w-8 h-8 rounded-full bg-white/90 hover:bg-white text-slate-800 flex items-center justify-center shadow-lg pointer-events-auto transition-transform hover:scale-110">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
                         </button>
                     </div>

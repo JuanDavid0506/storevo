@@ -10,7 +10,11 @@ Storevo.Wishlist = {
         const formData = new FormData();
         formData.append('productId', productId);
 
-        fetch(`/s/${slug}/wishlist/toggle-ajax`, { method: 'POST', body: formData })
+        fetch(`/s/${slug}/wishlist/toggle-ajax`, {
+            method: 'POST',
+            body: formData,
+            credentials: 'same-origin' // <-- VITAL para no perder el estado
+        })
             .then(r => r.json())
             .then(data => {
                 if(data.success) {
@@ -37,6 +41,5 @@ Storevo.Wishlist = {
     }
 };
 
-// Puente de Retrocompatibilidad
 window.toggleWishlistItem = Storevo.Wishlist.toggleItem;
 window.updateWishlistGlobalCounter = Storevo.Wishlist.updateGlobalCounter;
