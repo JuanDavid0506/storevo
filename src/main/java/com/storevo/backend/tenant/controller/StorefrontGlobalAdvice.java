@@ -44,7 +44,7 @@ public class StorefrontGlobalAdvice {
             return;
         }
 
-        // --- NUEVO: Generación e Inyección de la Cédula (Cookie UUID a 30 días) ---
+        // --- GENERACIÓN DE LA CÉDULA (COOKIE UUID) ---
         String guestId = null;
         if (request.getCookies() != null) {
             for (Cookie cookie : request.getCookies()) {
@@ -55,7 +55,6 @@ public class StorefrontGlobalAdvice {
             }
         }
 
-        // Si es su primera vez en la tienda, le creamos la cédula
         if (guestId == null) {
             guestId = UUID.randomUUID().toString();
             Cookie cookie = new Cookie("storevo_guest_id", guestId);
@@ -65,9 +64,8 @@ public class StorefrontGlobalAdvice {
             response.addCookie(cookie);
         }
 
-        // Guardamos el guestId en el request para que los Managers lo lean fácilmente
+        // Guardamos el guestId en el request para que el Controlador lo lea
         request.setAttribute("guestId", guestId);
-        // --------------------------------------------------------------------------
 
         // 1. Consultar base de datos de ADMIN antes de cambiar el contexto
         model.addAttribute("store", store);
@@ -81,9 +79,9 @@ public class StorefrontGlobalAdvice {
         model.addAttribute("categories", categoryService.getAllCategories());
         model.addAttribute("navCategories", categoryService.getNavCategories());
 
-        // (Aún pasamos solo el slug; en el siguiente paso los Managers leerán el guestId)
-        model.addAttribute("cartCount", cartManager.getCartCount(slug));
-        model.addAttribute("wishlistCount", wishlistManager.getWishlistCount(slug));
-        model.addAttribute("wishlistProductIds", wishlistManager.getWishlist(slug));
+        // --- LA MAGIA ESTÁ AQUÍ: Ahora consultamos usando la cédula (guestId) ---
+        model.addAttribute("cartCount", cartManager.getCartCount(guestId));
+        model.addAttribute("wishlistCount", wishlistManager.getWishlistCount(guestId));
+        model.addAttribute("wishlistProductIds", wishlistManager.getWishlist(guestId));
     }
 }

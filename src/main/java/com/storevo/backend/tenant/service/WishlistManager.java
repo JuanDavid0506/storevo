@@ -53,6 +53,6 @@ public class WishlistManager {
     @Transactional(readOnly = true)
     public int getWishlistCount(String sessionId) {
         if (sessionId == null) return 0;
-        return (int) wishlistRepository.findBySessionId(sessionId).size();
+        return wishlistRepository.findBySessionId(sessionId).size();
     }
 }

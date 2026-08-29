@@ -12,7 +12,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -41,9 +40,10 @@ public class CartManager {
                 finalPrice = v.getPrice();
             }
 
-            String imageUrl = (p.getImages() != null && !p.getImages().isEmpty())
-                    ? p.getImages().get(0).getSecureUrl()
-                    : null;
+            String imageUrl = null;
+            if (p.getImages() != null && !p.getImages().isEmpty()) {
+                imageUrl = p.getImages().get(0).getSecureUrl();
+            }
 
             return CartItemDto.builder()
                     .productId(p.getId())
