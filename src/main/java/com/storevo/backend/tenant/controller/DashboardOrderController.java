@@ -66,29 +66,44 @@ public class DashboardOrderController {
 
         Long currentUserId = 1L; // Temporal
 
-        System.out.println("🚀 [ADMIN] Solicitud de cambio de estado recibida. Nuevo estado: " + status.name());
-
         Map<String, Object> response = new HashMap<>();
-        try {
-            OrderHistory history = orderService.updateOrderStatus(id, status, EventOrigin.ADMIN, currentUserId);
 
-            response.put("success", true);
+        // Paso 1: el cambio real. Si esto falla, sí es un error de verdad — nada
+        // quedó guardado, así que reportamos success:false con razón.
+        OrderHistory history;
+        try {
+            history = orderService.updateOrderStatus(id, status, EventOrigin.ADMIN, currentUserId);
+        } catch (ShipmentRequiredException e) {
+            response.put("success", false);
+            response.put("message", "Operación rechazada: " + e.getMessage());
+            return ResponseEntity.ok(response);
+        } catch (InvalidOrderStatusException e) {
+            response.put("success", false);
+            response.put("message", "Operación rechazada: Transición de estado no permitida.");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            e.printStackTrace(); // Para poder diagnosticar si vuelve a pasar
+            response.put("success", false);
+            response.put("message", "Ocurrió un error al actualizar el estado.");
+            return ResponseEntity.ok(response);
+        }
+
+        // Paso 2: el cambio YA quedó guardado en este punto. Armar la respuesta
+        // para la UI es un paso aparte — si algo aquí fallara, no debe reportarse
+        // como si el cambio no hubiera funcionado (por eso es un try/catch
+        // separado, con datos de respaldo en vez de marcar success:false).
+        response.put("success", true);
+        try {
             response.put("message", "Estado actualizado correctamente a " + status.getDisplayName());
             response.put("history", mapHistoryToDto(history));
             response.put("newBadge", status.getBadgeClasses());
             response.put("newName", status.getDisplayName());
-
-            System.out.println("✅ [ADMIN] Estado guardado en BD exitosamente.");
-
-        } catch (ShipmentRequiredException e) {
-            response.put("success", false);
-            response.put("message", "Operación rechazada: " + e.getMessage());
-        } catch (InvalidOrderStatusException e) {
-            response.put("success", false);
-            response.put("message", "Operación rechazada: Transición de estado no permitida.");
         } catch (Exception e) {
-            response.put("success", false);
-            response.put("message", "Ocurrió un error al actualizar el estado.");
+            e.printStackTrace();
+            response.put("message", "Estado actualizado correctamente a " + status.getDisplayName());
+            response.put("newBadge", status.getBadgeClasses());
+            response.put("newName", status.getDisplayName());
+            response.put("needsRefresh", true); // La UI recarga solo si esto viene en true
         }
 
         return ResponseEntity.ok(response);
@@ -103,15 +118,25 @@ public class DashboardOrderController {
         Long currentUserId = 1L; // Temporal
 
         Map<String, Object> response = new HashMap<>();
-        try {
-            OrderNote internalNote = orderService.addInternalNote(id, note, currentUserId);
 
-            response.put("success", true);
+        OrderNote internalNote;
+        try {
+            internalNote = orderService.addInternalNote(id, note, currentUserId);
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.put("success", false);
+            response.put("message", "Error al guardar la nota interna.");
+            return ResponseEntity.ok(response);
+        }
+
+        response.put("success", true);
+        try {
             response.put("message", "Nota interna agregada");
             response.put("note", mapNoteToDto(internalNote));
         } catch (Exception e) {
-            response.put("success", false);
-            response.put("message", "Error al guardar la nota interna.");
+            e.printStackTrace();
+            response.put("message", "Nota interna agregada");
+            response.put("needsRefresh", true);
         }
 
         return ResponseEntity.ok(response);
@@ -144,10 +169,12 @@ public class DashboardOrderController {
     private Map<String, Object> mapHistoryToDto(OrderHistory history) {
         Map<String, Object> dto = new HashMap<>();
         dto.put("id", history.getId());
-        dto.put("eventType", history.getEventType().name());
-        dto.put("origin", history.getOrigin().name());
+        dto.put("eventType", history.getEventType() != null ? history.getEventType().name() : "SYSTEM_EVENT");
+        dto.put("origin", history.getOrigin() != null ? history.getOrigin().name() : "ADMIN");
         dto.put("description", history.getDescription());
-        dto.put("createdAt", history.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
+        dto.put("createdAt", history.getCreatedAt() != null
+                ? history.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+                : java.time.LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
         dto.put("createdBy", "Admin (ID: " + history.getUserId() + ")");
         return dto;
     }
@@ -156,7 +183,9 @@ public class DashboardOrderController {
         Map<String, Object> dto = new HashMap<>();
         dto.put("id", note.getId());
         dto.put("note", note.getNote());
-        dto.put("createdAt", note.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
+        dto.put("createdAt", note.getCreatedAt() != null
+                ? note.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+                : java.time.LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
         dto.put("createdBy", "Admin (ID: " + note.getUserId() + ")");
         return dto;
     }

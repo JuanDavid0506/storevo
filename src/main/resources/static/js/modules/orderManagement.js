@@ -100,18 +100,47 @@ Storevo.OrderManagement = {
                 body: `status=${encodeURIComponent(statusVal)}`
             });
 
+            if (!response.ok) {
+                throw new Error('HTTP ' + response.status);
+            }
+
             const data = await response.json();
 
             if (data.success) {
                 if(Storevo.UI && Storevo.UI.Toast) Storevo.UI.Toast.show(data.message, 'success');
-                setTimeout(() => {
-                    window.location.href = window.location.href.split('?')[0];
-                }, 1200);
+
+                // Actualiza el badge de estado en el encabezado, sin recargar.
+                const badge = document.getElementById('main-status-badge');
+                if (badge && data.newBadge && data.newName) {
+                    badge.textContent = data.newName;
+                    badge.className = 'text-xs uppercase tracking-wider font-bold px-3 py-1 rounded-full border ' + data.newBadge;
+                }
+
+                // Agrega el evento a la línea de tiempo, sin recargar.
+                if (data.history) this.prependToTimeline(data.history);
+
+                // El selector debe reflejar el nuevo estado actual. Nota: las
+                // opciones que quedan bloqueadas para el SIGUIENTE cambio (según
+                // las reglas de transición) solo se recalculan al recargar la
+                // página — esta actualización solo corrige cuál aparece marcada.
+                const select = document.getElementById('new-status');
+                if (select) select.value = statusVal;
+
+                this.setLoading(submitBtn, false, '<span>Actualizar Flujo</span>');
+
+                if (data.needsRefresh) {
+                    // Caso de respaldo poco común: el cambio sí se guardó, pero no
+                    // pudimos armar los datos para actualizar la pantalla en vivo.
+                    // Avisamos y dejamos que el usuario decida recargar, en vez de
+                    // hacerlo automáticamente por él.
+                    if(Storevo.UI && Storevo.UI.Toast) Storevo.UI.Toast.show('Actualiza la página para ver el detalle completo.', 'warning');
+                }
             } else {
                 if(Storevo.UI && Storevo.UI.Toast) Storevo.UI.Toast.show(data.message, 'error');
                 this.setLoading(submitBtn, false, '<span>Actualizar Flujo</span>');
             }
         } catch (error) {
+            console.error('Error actualizando estado del pedido:', error);
             if(Storevo.UI && Storevo.UI.Toast) Storevo.UI.Toast.show('Error al comunicar con el servidor.', 'error');
             this.setLoading(submitBtn, false, '<span>Actualizar Flujo</span>');
         }
@@ -136,16 +165,24 @@ Storevo.OrderManagement = {
                 body: `note=${encodeURIComponent(note)}`
             });
 
+            if (!response.ok) {
+                throw new Error('HTTP ' + response.status);
+            }
+
             const data = await response.json();
 
             if (data.success) {
                 if(Storevo.UI && Storevo.UI.Toast) Storevo.UI.Toast.show(data.message, 'success');
                 textarea.value = '';
-                this.prependToNotes(data.note);
+                if (data.note) this.prependToNotes(data.note);
+                if (data.needsRefresh) {
+                    if(Storevo.UI && Storevo.UI.Toast) Storevo.UI.Toast.show('Actualiza la página para ver la nota completa.', 'warning');
+                }
             } else {
                 if(Storevo.UI && Storevo.UI.Toast) Storevo.UI.Toast.show(data.message, 'error');
             }
         } catch (error) {
+            console.error('Error guardando nota interna:', error);
             if(Storevo.UI && Storevo.UI.Toast) Storevo.UI.Toast.show('Error de red al guardar nota.', 'error');
         } finally {
             this.setLoading(submitBtn, false, 'Guardar Nota');
