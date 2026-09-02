@@ -2,25 +2,7 @@ window.Storevo = window.Storevo || {};
 
 Storevo.OrderManagement = {
     init: function() {
-        this.bindEvents();
-    },
-
-    bindEvents: function() {
-        const statusForm = document.getElementById('status-update-form');
-        const noteForm = document.getElementById('internal-note-form');
-        const shipmentForm = document.getElementById('shipment-form');
-
-        if (statusForm) {
-            statusForm.addEventListener('submit', (e) => this.handleStatusUpdate(e));
-        }
-
-        if (noteForm) {
-            noteForm.addEventListener('submit', (e) => this.handleAddNote(e));
-        }
-
-        if (shipmentForm) {
-            shipmentForm.addEventListener('submit', (e) => this.handleShipmentSubmit(e));
-        }
+        // Inicializado sin eventos globales para evadir scripts intrusos
     },
 
     getApiBaseUrl: function() {
@@ -29,10 +11,25 @@ Storevo.OrderManagement = {
         return `/dashboard/${slug}/orders/${orderId}`;
     },
 
+    // --- LA LLAVE MAESTRA: Capturar el Token CSRF de Spring Security ---
+    getSecurityHeaders: function() {
+        const headers = {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        };
+
+        const csrfToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+        const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+
+        if (csrfToken && csrfHeader) {
+            headers[csrfHeader] = csrfToken; // Inyecta el token en las cabeceras
+        }
+
+        return headers;
+    },
+
     openShipmentModal: function() {
         const modal = document.getElementById('shipment-modal');
         const content = document.getElementById('shipment-modal-content');
-
         modal.classList.remove('hidden');
         setTimeout(() => {
             modal.classList.remove('opacity-0');
@@ -44,36 +41,32 @@ Storevo.OrderManagement = {
     closeShipmentModal: function() {
         const modal = document.getElementById('shipment-modal');
         const content = document.getElementById('shipment-modal-content');
-
         modal.classList.add('opacity-0');
         content.classList.remove('scale-100');
         content.classList.add('scale-95');
-
         setTimeout(() => {
             modal.classList.add('hidden');
             document.getElementById('shipment-form').reset();
         }, 300);
     },
 
-    handleShipmentSubmit: async function(e) {
-        e.preventDefault();
-        const submitBtn = e.target.querySelector('button[type="submit"]');
-        const formData = new FormData(e.target);
+    handleShipmentSubmit: async function() {
+        const form = document.getElementById('shipment-form');
+        if (!form.reportValidity()) return;
 
+        const submitBtn = form.querySelector('button[onclick*="handleShipmentSubmit"]');
+        const formData = new FormData(form);
         const params = new URLSearchParams();
-        for (const pair of formData) {
-            params.append(pair[0], pair[1]);
-        }
+        for (const pair of formData) { params.append(pair[0], pair[1]); }
 
         this.setLoading(submitBtn, true);
 
         try {
             const response = await fetch(`${this.getApiBaseUrl()}/shipments-ajax`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                headers: this.getSecurityHeaders(), // <-- Usamos las cabeceras seguras
                 body: params.toString()
             });
-
             const data = await response.json();
 
             if (data.success) {
@@ -84,18 +77,17 @@ Storevo.OrderManagement = {
                 if(Storevo.UI && Storevo.UI.Toast) Storevo.UI.Toast.show(data.message, 'error');
             }
         } catch (error) {
-            console.error(error);
-            if(Storevo.UI && Storevo.UI.Toast) Storevo.UI.Toast.show('Error de conexión', 'error');
+            if(Storevo.UI && Storevo.UI.Toast) Storevo.UI.Toast.show('Error de servidor. Verifica la consola.', 'error');
         } finally {
-            this.setLoading(submitBtn, false, 'Generar Envío Seguro');
+            this.setLoading(submitBtn, false, '<span>Generar Envío Seguro</span>');
         }
     },
 
-    handleStatusUpdate: async function(e) {
-        e.preventDefault();
-        const form = e.target;
-        const submitBtn = form.querySelector('button[type="submit"]');
+    handleStatusUpdate: async function() {
+        const form = document.getElementById('status-update-form');
+        if (!form.reportValidity()) return;
 
+        const submitBtn = form.querySelector('button[onclick*="handleStatusUpdate"]');
         const formData = new FormData(form);
         const statusVal = formData.get('status');
 
@@ -104,7 +96,7 @@ Storevo.OrderManagement = {
         try {
             const response = await fetch(`${this.getApiBaseUrl()}/status-ajax`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                headers: this.getSecurityHeaders(), // <-- Usamos las cabeceras seguras
                 body: `status=${encodeURIComponent(statusVal)}`
             });
 
@@ -112,29 +104,23 @@ Storevo.OrderManagement = {
 
             if (data.success) {
                 if(Storevo.UI && Storevo.UI.Toast) Storevo.UI.Toast.show(data.message, 'success');
-
-                // Recarga limpia a la URL base sin parámetros ?status=
                 setTimeout(() => {
-                    const cleanUrl = window.location.href.split('?')[0];
-                    window.location.href = cleanUrl;
+                    window.location.href = window.location.href.split('?')[0];
                 }, 1200);
-
             } else {
                 if(Storevo.UI && Storevo.UI.Toast) Storevo.UI.Toast.show(data.message, 'error');
+                this.setLoading(submitBtn, false, '<span>Actualizar Flujo</span>');
             }
         } catch (error) {
-            console.error(error);
-            if(Storevo.UI && Storevo.UI.Toast) Storevo.UI.Toast.show('Error de conexión', 'error');
-        } finally {
+            if(Storevo.UI && Storevo.UI.Toast) Storevo.UI.Toast.show('Error al comunicar con el servidor.', 'error');
             this.setLoading(submitBtn, false, '<span>Actualizar Flujo</span>');
         }
     },
 
-    handleAddNote: async function(e) {
-        e.preventDefault();
+    handleAddNote: async function() {
         const textarea = document.getElementById('internal-note-text');
         const note = textarea.value.trim();
-        const submitBtn = e.target.querySelector('button[type="submit"]');
+        const submitBtn = document.querySelector('#internal-note-form button[onclick*="handleAddNote"]');
 
         if (!note) {
             if(Storevo.UI && Storevo.UI.Toast) Storevo.UI.Toast.show('La nota no puede estar vacía', 'warning');
@@ -146,7 +132,7 @@ Storevo.OrderManagement = {
         try {
             const response = await fetch(`${this.getApiBaseUrl()}/notes-ajax`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                headers: this.getSecurityHeaders(), // <-- Usamos las cabeceras seguras
                 body: `note=${encodeURIComponent(note)}`
             });
 
@@ -160,8 +146,7 @@ Storevo.OrderManagement = {
                 if(Storevo.UI && Storevo.UI.Toast) Storevo.UI.Toast.show(data.message, 'error');
             }
         } catch (error) {
-            console.error(error);
-            if(Storevo.UI && Storevo.UI.Toast) Storevo.UI.Toast.show('Error al guardar la nota', 'error');
+            if(Storevo.UI && Storevo.UI.Toast) Storevo.UI.Toast.show('Error de red al guardar nota.', 'error');
         } finally {
             this.setLoading(submitBtn, false, 'Guardar Nota');
         }
@@ -193,7 +178,6 @@ Storevo.OrderManagement = {
                 <p class="text-sm text-slate-400">${historyObj.description}</p>
             </div>
         `;
-
         container.insertBefore(div, container.firstChild);
     },
 
@@ -211,11 +195,11 @@ Storevo.OrderManagement = {
             <p class="text-sm text-slate-300 mb-2">${noteObj.note}</p>
             <p class="text-xs font-mono text-slate-500">${noteObj.createdAt} • ${noteObj.createdBy}</p>
         `;
-
         container.insertBefore(div, container.firstChild);
     },
 
     setLoading: function(btn, isLoading, originalText = '') {
+        if (!btn) return;
         if (isLoading) {
             btn.disabled = true;
             btn.classList.add('opacity-70', 'cursor-not-allowed');

@@ -59,7 +59,6 @@
                         Logística y Envíos
                     </h3>
 
-                    <!-- Botón Dinámico -->
                     <button th:if="${order.status.name() == 'PACKED'}" onclick="Storevo.OrderManagement.openShipmentModal()" class="bg-storevo-500 hover:bg-storevo-600 text-white font-bold py-1.5 px-4 rounded-lg transition text-xs shadow-md flex items-center gap-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
                         Despachar Pedido
@@ -130,9 +129,12 @@
                 <form id="internal-note-form" class="mb-6">
                     <div class="relative">
                         <textarea id="internal-note-text" rows="2" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-sm text-white placeholder-slate-500 focus:ring-storevo-500 focus:border-storevo-500 outline-none resize-none" placeholder="Escribe un recordatorio o detalle para el equipo..."></textarea>
-                        <button type="submit" class="absolute bottom-3 right-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-bold py-1.5 px-4 rounded-md transition text-xs">
+
+                        <!-- BOTÓN MODIFICADO 1 -->
+                        <button type="button" onclick="Storevo.OrderManagement.handleAddNote()" class="absolute bottom-3 right-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-bold py-1.5 px-4 rounded-md transition text-xs">
                             Guardar Nota
                         </button>
+
                     </div>
                 </form>
                 <div id="notes-container" class="space-y-3">
@@ -156,7 +158,6 @@
                     <input type="hidden" id="order-id" th:value="${order.id}">
                     <input type="hidden" id="store-slug" th:value="${slug}">
 
-                    <!-- LA SOLUCIÓN DEL BLOQUEO -->
                     <select id="new-status" name="status" class="w-full bg-slate-950 border border-slate-700 text-slate-300 text-sm font-medium rounded-lg focus:ring-storevo-500 px-3 py-3 outline-none disabled:opacity-50">
                         <option th:each="state : ${orderStatuses}"
                                 th:value="${state.name()}"
@@ -166,9 +167,11 @@
                         </option>
                     </select>
 
-                    <button type="submit" class="w-full bg-storevo-500 hover:bg-storevo-600 text-white px-4 py-3 rounded-lg font-bold transition shadow-md shadow-storevo-500/20 flex items-center justify-center gap-2">
+                    <!-- BOTÓN MODIFICADO 2 -->
+                    <button type="button" onclick="Storevo.OrderManagement.handleStatusUpdate()" class="w-full bg-storevo-500 hover:bg-storevo-600 text-white px-4 py-3 rounded-lg font-bold transition shadow-md shadow-storevo-500/20 flex items-center justify-center gap-2">
                         <span>Actualizar Flujo</span>
                     </button>
+
                     <p class="text-[10px] text-slate-500 text-center mt-1">El sistema bloquea saltos lógicos no permitidos.</p>
                 </form>
             </div>
@@ -231,9 +234,12 @@
 
                 <div class="mt-6 pt-5 border-t border-slate-800 flex justify-end gap-3">
                     <button type="button" onclick="Storevo.OrderManagement.closeShipmentModal()" class="px-5 py-2.5 text-sm font-bold text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition">Cancelar</button>
-                    <button type="submit" class="bg-storevo-500 hover:bg-storevo-600 text-white px-6 py-2.5 rounded-lg font-bold transition shadow-md shadow-storevo-500/20 flex items-center gap-2">
+
+                    <!-- BOTÓN MODIFICADO 3 -->
+                    <button type="button" onclick="Storevo.OrderManagement.handleShipmentSubmit()" class="bg-storevo-500 hover:bg-storevo-600 text-white px-6 py-2.5 rounded-lg font-bold transition shadow-md shadow-storevo-500/20 flex items-center gap-2">
                         <span>Generar Envío Seguro</span>
                     </button>
+
                 </div>
             </form>
         </div>
@@ -241,7 +247,8 @@
 </div>
 
 <th:block layout:fragment="scripts">
-    <script th:src="@{/js/modules/orderManagement.js}"></script>
+    <!-- Forzamos la descarga del nuevo script con v=3 -->
+    <script th:src="@{/js/modules/orderManagement.js?v=3}"></script>
 </th:block>
 </body>
 </html>
