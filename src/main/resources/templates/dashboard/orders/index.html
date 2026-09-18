@@ -7,45 +7,51 @@
 </head>
 <body>
 <div layout:fragment="content">
-    <div class="flex justify-between items-center mb-6">
+
+    <!-- CABECERA -->
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-6">
         <div>
             <h2 class="text-2xl font-bold text-white flex items-center gap-3">
                 Pedidos
                 <span id="total-items-counter" class="bg-slate-800 text-storevo-400 text-xs font-black px-2.5 py-1 rounded-full border border-slate-700" th:text="${page.totalElements}">0</span>
             </h2>
-            <p class="text-sm text-slate-400 mt-1">Administra todo el ciclo de vida de las compras de tus clientes.</p>
+            <p class="text-sm text-slate-400 mt-1 leading-snug">Administra todo el ciclo de vida de las compras de tus clientes.</p>
         </div>
     </div>
 
     <!-- PANEL DE BÚSQUEDA Y FILTROS -->
-    <!-- Importante: ID filter-form -->
     <form id="filter-form" th:action="@{/dashboard/{slug}/orders(slug=${slug})}" method="GET" class="bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-800 shadow-sm flex flex-col gap-4 mb-6"
           th:with="clearFiltersUrl=@{|/dashboard/${slug}/orders|},
                  hasActiveFilters=${(param.q != null and not #strings.isEmpty(param.q[0]))
                    or (param.status != null and not #strings.isEmpty(param.status[0]))
                    or (param.channel != null and not #strings.isEmpty(param.channel[0]))}">
 
-        <div class="flex flex-col xl:flex-row justify-between gap-4">
-            <div class="flex flex-col sm:flex-row sm:flex-wrap items-center gap-3 flex-1">
-                <div class="w-full sm:w-auto" th:replace="~{components/ui/listing :: search('Buscar por # pedido, cliente o teléfono...')}"></div>
-                <div th:replace="~{components/ui/listing :: filter-select('status', 'Todos los estados', ${statusOptions}, 'key', 'value')}"></div>
-                <div th:replace="~{components/ui/listing :: filter-select('channel', 'Todos los canales', ${channelOptions}, 'key', 'value')}"></div>
-                <div th:replace="~{components/ui/listing :: clear-filters(${clearFiltersUrl}, ${hasActiveFilters})}"></div>
+        <!-- Contenedor adaptativo: flex-col en móvil, filas en escritorio -->
+        <div class="flex flex-col xl:flex-row justify-between gap-5 xl:gap-4">
+
+            <!-- Grupo Izquierdo: Buscador y Filtros -->
+            <div class="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 flex-1">
+                <div class="w-full sm:w-auto sm:flex-1 min-w-0 sm:min-w-[250px]" th:replace="~{components/ui/listing :: search('Buscar por #, cliente o teléfono...')}"></div>
+                <div class="w-full sm:w-auto" th:replace="~{components/ui/listing :: filter-select('status', 'Todos los estados', ${statusOptions}, 'key', 'value')}"></div>
+                <div class="w-full sm:w-auto" th:replace="~{components/ui/listing :: filter-select('channel', 'Todos los canales', ${channelOptions}, 'key', 'value')}"></div>
+                <div class="w-full sm:w-auto flex justify-center sm:block" th:replace="~{components/ui/listing :: clear-filters(${clearFiltersUrl}, ${hasActiveFilters})}"></div>
             </div>
 
-            <div class="flex items-center gap-3 self-end xl:self-auto">
-                <div th:replace="~{components/ui/listing :: sort(${ {'newest': 'Más recientes', 'oldest': 'Más antiguos', 'total_desc': 'Mayor total', 'total_asc': 'Menor total'} })}"></div>
-                <div th:replace="~{components/ui/listing :: page-size()}"></div>
+            <!-- Grupo Derecho: Ordenamiento y Paginación -->
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full xl:w-auto border-t border-slate-800/60 pt-4 xl:border-0 xl:pt-0">
+                <div class="w-full sm:w-auto" th:replace="~{components/ui/listing :: sort(${ {'newest': 'Más recientes', 'oldest': 'Más antiguos', 'total_desc': 'Mayor total', 'total_asc': 'Menor total'} })}"></div>
+                <div class="w-full sm:w-auto" th:replace="~{components/ui/listing :: page-size()}"></div>
             </div>
         </div>
 
+        <!-- Chips -->
         <div th:replace="~{components/ui/listing :: active-filters-chips}"></div>
 
-        <!-- Input oculto para que listing.js sepa la página actual -->
         <input type="hidden" name="page" id="page-input" th:value="${page.number}">
+        <input type="hidden" name="size" id="size-input" th:value="${currentSize}">
     </form>
 
-    <!-- ZONA AJAX -->
+    <!-- ZONA AJAX: RESULTADOS -->
     <div id="listing-content" th:fragment="listing-content" class="relative transition-opacity duration-200">
 
         <div id="loading-overlay" class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-10 rounded-xl">
@@ -58,9 +64,11 @@
 
         <div th:unless="${page.empty}">
             <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm text-slate-400">
-                        <thead class="text-xs uppercase bg-slate-800 text-slate-300">
+                <!-- Se oculta el overflow en móvil (layout de tarjetas) y se permite auto en desktop (layout de tabla) -->
+                <div class="overflow-hidden lg:overflow-x-auto">
+                    <!-- En móvil la tabla es block, en LG es table -->
+                    <table class="w-full text-left text-sm text-slate-400 block lg:table">
+                        <thead class="text-xs uppercase bg-slate-800 text-slate-300 hidden lg:table-header-group">
                         <tr>
                             <th scope="col" class="px-6 py-4 font-bold">Pedido</th>
                             <th scope="col" class="px-6 py-4 font-bold">Fecha</th>
@@ -71,28 +79,43 @@
                             <th scope="col" class="px-6 py-4 font-bold text-right">Acción</th>
                         </tr>
                         </thead>
-                        <tbody class="divide-y divide-slate-800">
+                        <tbody class="divide-y divide-slate-800/60 lg:divide-slate-800 block lg:table-row-group relative">
 
-                        <tr th:each="order : ${orders}" class="hover:bg-slate-800/50 transition cursor-pointer" th:onclick="|window.location.href='@{/dashboard/{slug}/orders/{id}(slug=${slug},id=${order.id})}'|">
-                            <td class="px-6 py-4 font-black text-white text-base">
+                        <!-- Cada TR es un CSS Grid de 2 columnas en móvil, y un table-row normal en Desktop -->
+                        <tr th:each="order : ${orders}" class="hover:bg-slate-800/50 transition cursor-pointer grid grid-cols-2 gap-y-3 gap-x-2 p-4 lg:p-0 lg:table-row" th:onclick="|window.location.href='@{/dashboard/{slug}/orders/{id}(slug=${slug},id=${order.id})}'|">
+
+                            <!-- 1. Pedido y Canal (Móvil: Arriba Izquierda) -->
+                            <td class="col-span-1 flex items-center lg:table-cell lg:px-6 lg:py-4 font-black text-white text-base">
                                 <span th:text="'#' + ${order.id}">#1</span>
                                 <span th:text="${order.channel.getDisplayName()}"
                                       th:class="'ml-2 text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full border ' + ${order.channel.getBadgeClasses()}"></span>
                             </td>
-                            <td class="px-6 py-4" th:text="${#temporals.format(order.createdAt, 'dd/MM/yyyy')}">Fecha</td>
-                            <td class="px-6 py-4">
-                                <p class="font-bold text-white" th:text="${order.customerName}">Nombre</p>
-                                <p class="text-xs text-slate-500" th:text="${order.city}">Ciudad</p>
+
+                            <!-- 2. Fecha (Móvil: Arriba Derecha) -->
+                            <td class="col-span-1 flex items-center justify-end lg:justify-start lg:table-cell lg:px-6 lg:py-4 text-xs lg:text-sm text-slate-500 lg:text-slate-400" th:text="${#temporals.format(order.createdAt, 'dd/MM/yyyy')}">Fecha</td>
+
+                            <!-- 3. Cliente (Móvil: Fila Completa) -->
+                            <td class="col-span-2 lg:col-span-1 lg:table-cell lg:px-6 lg:py-4">
+                                <p class="font-bold text-white text-base lg:text-sm" th:text="${order.customerName}">Nombre</p>
+                                <p class="text-xs text-slate-500 mt-0.5 lg:mt-0" th:text="${order.city}">Ciudad</p>
                             </td>
-                            <td class="px-6 py-4 font-medium" th:text="${order.getTotalItemsCount()} + ' prod.'">1 prod.</td>
-                            <td class="px-6 py-4 font-black text-storevo-400" th:text="${order.total != null ? '$ ' + #numbers.formatDecimal(order.total, 1, 'POINT', 0, 'COMMA') : '$ 0'}">$0</td>
-                            <td class="px-6 py-4">
+
+                            <!-- 4. Artículos (Móvil: Abajo Izquierda) -->
+                            <td class="col-span-1 flex items-center lg:table-cell lg:px-6 lg:py-4 font-medium" th:text="${order.getTotalItemsCount()} + ' prod.'">1 prod.</td>
+
+                            <!-- 5. Total (Móvil: Abajo Derecha) -->
+                            <td class="col-span-1 flex items-center justify-end lg:justify-start lg:table-cell lg:px-6 lg:py-4 font-black text-storevo-400 text-base lg:text-sm" th:text="${order.total != null ? '$ ' + #numbers.formatDecimal(order.total, 1, 'POINT', 0, 'COMMA') : '$ 0'}">$0</td>
+
+                            <!-- 6. Estado (Móvil: Pie Izquierda) -->
+                            <td class="col-span-1 flex items-center lg:table-cell lg:px-6 lg:py-4 pt-2 lg:pt-4">
                                 <span th:text="${order.status.getDisplayName()}"
                                       th:class="'text-[10px] uppercase tracking-wider font-bold px-3 py-1.5 rounded-full border ' + ${order.status.getBadgeClasses()}">
                                 </span>
                             </td>
-                            <td class="px-6 py-4 text-right">
-                                <a th:href="@{/dashboard/{slug}/orders/{id}(slug=${slug}, id=${order.id})}" class="text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-2 rounded-lg font-medium transition inline-block">Gestionar</a>
+
+                            <!-- 7. Acción (Móvil: Pie Derecha) -->
+                            <td class="col-span-1 flex items-center justify-end lg:table-cell lg:px-6 lg:py-4 text-right pt-2 lg:pt-4">
+                                <a th:href="@{/dashboard/{slug}/orders/{id}(slug=${slug}, id=${order.id})}" class="text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 lg:border-none px-4 py-2 lg:px-3 lg:py-2 rounded-lg font-medium transition inline-block text-xs lg:text-sm">Gestionar</a>
                             </td>
                         </tr>
                         </tbody>
@@ -100,14 +123,12 @@
                 </div>
             </div>
 
-            <div class="mt-6">
-                <!-- Se inyecta la paginación genérica mapeada al objeto 'page' -->
+            <div class="mt-6 overflow-x-auto pb-2">
                 <div th:replace="~{components/ui/listing :: pagination(${page})}"></div>
             </div>
         </div>
     </div>
 
-    <!-- Script de listing genérico -->
     <div th:replace="~{components/ui/listing :: scripts}"></div>
 </div>
 </body>
