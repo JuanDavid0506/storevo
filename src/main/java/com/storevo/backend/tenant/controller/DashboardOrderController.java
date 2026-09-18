@@ -30,8 +30,8 @@ import java.util.Map;
 public class DashboardOrderController {
 
     private final OrderService orderService;
-    private final CarrierRepository carrierRepository; // FASE 3.2
-    private final ShipmentService shipmentService;     // FASE 3.2
+    private final CarrierRepository carrierRepository;
+    private final ShipmentService shipmentService;
 
     @ModelAttribute
     public void setupTenant(@PathVariable String slug, Model model, HttpServletRequest request) {
@@ -53,9 +53,9 @@ public class DashboardOrderController {
             @RequestParam(defaultValue = "newest") String sort,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
+            HttpServletRequest request,
             Model model) {
 
-        // Valores fuera de lo permitido se normalizan en lugar de fallar o cargar todo.
         int safePage = Math.max(page, 0);
         int safeSize = ALLOWED_PAGE_SIZES.contains(size) ? size : 10;
 
@@ -65,21 +65,35 @@ public class DashboardOrderController {
         Page<Order> ordersPage = orderService.searchOrders(
                 q, statusFilter, channelFilter, sort, PageRequest.of(safePage, safeSize));
 
-        model.addAttribute("orders", ordersPage);
+        // Inyectar resultados (se inyecta como 'page' para que el fragmento genérico lo entienda)
+        model.addAttribute("page", ordersPage);
+        model.addAttribute("orders", ordersPage.getContent());
 
-        // Opciones de filtro construidas desde los enums (fuente única de verdad).
+        // Inyectar estado actual para mantener los selectores y paginación
+        model.addAttribute("currentSearch", q);
+        model.addAttribute("currentStatus", statusFilter);
+        model.addAttribute("currentChannel", channelFilter);
+        model.addAttribute("currentSort", sort);
+        model.addAttribute("currentSize", safeSize);
+
         Map<String, String> statusOptions = new LinkedHashMap<>();
         Arrays.stream(OrderStatus.values()).forEach(s -> statusOptions.put(s.name(), s.getDisplayName()));
         Map<String, String> channelOptions = new LinkedHashMap<>();
         Arrays.stream(OrderChannel.values()).forEach(c -> channelOptions.put(c.name(), c.getDisplayName()));
+
         model.addAttribute("statusOptions", statusOptions);
         model.addAttribute("channelOptions", channelOptions);
-
         model.addAttribute("pageTitle", "Gestión de Pedidos");
+
+        // Responder con el fragmento HTML si la petición viene del AJAX de listing.js
+        boolean isAjax = "XMLHttpRequest".equals(request.getHeader("X-Requested-With"));
+        if (isAjax) {
+            return "dashboard/orders/index :: listing-content";
+        }
+
         return "dashboard/orders/index";
     }
 
-    // Un valor de enum inválido en la URL (manipulada a mano) equivale a "sin filtro".
     private static <E extends Enum<E>> E parseEnum(Class<E> type, String value) {
         if (value == null || value.isBlank()) return null;
         try {
@@ -94,26 +108,16 @@ public class DashboardOrderController {
         Order order = orderService.getOrderById(id);
         model.addAttribute("order", order);
         model.addAttribute("orderStatuses", OrderStatus.values());
-
-        // FASE 3.2: Cargamos las transportadoras activas para el Modal
         model.addAttribute("carriers", carrierRepository.findByIsActiveTrueOrderByNameAsc());
-
         model.addAttribute("pageTitle", "Pedido #" + order.getId());
         return "dashboard/orders/detail";
     }
 
     @PostMapping("/{id}/status-ajax")
     @ResponseBody
-    public ResponseEntity<Map<String, Object>> updateStatusAjax(
-            @PathVariable Long id,
-            @RequestParam OrderStatus status) {
-
+    public ResponseEntity<Map<String, Object>> updateStatusAjax(@PathVariable Long id, @RequestParam OrderStatus status) {
         Long currentUserId = 1L; // Temporal
-
         Map<String, Object> response = new HashMap<>();
-
-        // Paso 1: el cambio real. Si esto falla, sí es un error de verdad — nada
-        // quedó guardado, así que reportamos success:false con razón.
         OrderHistory history;
         try {
             history = orderService.updateOrderStatus(id, status, EventOrigin.ADMIN, currentUserId);
@@ -126,16 +130,11 @@ public class DashboardOrderController {
             response.put("message", "Operación rechazada: Transición de estado no permitida.");
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            e.printStackTrace(); // Para poder diagnosticar si vuelve a pasar
             response.put("success", false);
             response.put("message", "Ocurrió un error al actualizar el estado.");
             return ResponseEntity.ok(response);
         }
 
-        // Paso 2: el cambio YA quedó guardado en este punto. Armar la respuesta
-        // para la UI es un paso aparte — si algo aquí fallara, no debe reportarse
-        // como si el cambio no hubiera funcionado (por eso es un try/catch
-        // separado, con datos de respaldo en vez de marcar success:false).
         response.put("success", true);
         try {
             response.put("message", "Estado actualizado correctamente a " + status.getDisplayName());
@@ -143,31 +142,23 @@ public class DashboardOrderController {
             response.put("newBadge", status.getBadgeClasses());
             response.put("newName", status.getDisplayName());
         } catch (Exception e) {
-            e.printStackTrace();
             response.put("message", "Estado actualizado correctamente a " + status.getDisplayName());
             response.put("newBadge", status.getBadgeClasses());
             response.put("newName", status.getDisplayName());
-            response.put("needsRefresh", true); // La UI recarga solo si esto viene en true
+            response.put("needsRefresh", true);
         }
-
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/{id}/notes-ajax")
     @ResponseBody
-    public ResponseEntity<Map<String, Object>> addInternalNoteAjax(
-            @PathVariable Long id,
-            @RequestParam String note) {
-
+    public ResponseEntity<Map<String, Object>> addInternalNoteAjax(@PathVariable Long id, @RequestParam String note) {
         Long currentUserId = 1L; // Temporal
-
         Map<String, Object> response = new HashMap<>();
-
         OrderNote internalNote;
         try {
             internalNote = orderService.addInternalNote(id, note, currentUserId);
         } catch (Exception e) {
-            e.printStackTrace();
             response.put("success", false);
             response.put("message", "Error al guardar la nota interna.");
             return ResponseEntity.ok(response);
@@ -178,15 +169,12 @@ public class DashboardOrderController {
             response.put("message", "Nota interna agregada");
             response.put("note", mapNoteToDto(internalNote));
         } catch (Exception e) {
-            e.printStackTrace();
             response.put("message", "Nota interna agregada");
             response.put("needsRefresh", true);
         }
-
         return ResponseEntity.ok(response);
     }
 
-    // --- NUEVO FASE 3.2: Endpoint para procesar el Modal de Despacho ---
     @PostMapping("/{id}/shipments-ajax")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> createShipmentAjax(
@@ -197,7 +185,6 @@ public class DashboardOrderController {
             @RequestParam(required = false) String dimensions) {
 
         Long currentUserId = 1L; // Temporal
-
         Map<String, Object> response = new HashMap<>();
         try {
             Shipment shipment = shipmentService.createManualShipment(id, carrierId, trackingNumber, weight, dimensions, currentUserId);
