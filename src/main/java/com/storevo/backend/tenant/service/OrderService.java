@@ -16,6 +16,10 @@ import com.storevo.backend.tenant.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,6 +46,37 @@ public class OrderService {
         List<Order> orders = orderRepository.findAllByOrderByCreatedAtDesc();
         orders.forEach(order -> order.getItems().size());
         return orders;
+    }
+
+    /**
+     * Listado paginado del dashboard. Búsqueda, filtros y orden se resuelven en base de datos.
+     * El orden se mapea desde una lista blanca (nunca se pasa el texto del usuario a Sort),
+     * y siempre se desempata por id para que la paginación sea estable cuando hay totales iguales.
+     */
+    @Transactional(readOnly = true)
+    public Page<Order> searchOrders(String q, OrderStatus status, OrderChannel channel, String sortStr, Pageable pageable) {
+        String term = (q == null) ? "" : q.trim();
+        if (term.startsWith("#")) term = term.substring(1).trim(); // "#123" → "123"
+        Long orderId = null;
+        if (term.matches("\\d{1,18}")) orderId = Long.valueOf(term);
+        String normalizedQ = term.isEmpty() ? null : term;
+
+        Sort sort;
+        switch (sortStr == null ? "" : sortStr) {
+            case "oldest":     sort = Sort.by("createdAt").ascending().and(Sort.by("id").ascending()); break;
+            case "total_desc": sort = Sort.by("total").descending().and(Sort.by("id").descending()); break;
+            case "total_asc":  sort = Sort.by("total").ascending().and(Sort.by("id").ascending()); break;
+            case "newest":
+            default:           sort = Sort.by("createdAt").descending().and(Sort.by("id").descending()); break;
+        }
+
+        Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+        Page<Order> page = orderRepository.searchOrders(normalizedQ, orderId, status, channel, sortedPageable);
+
+        // open-in-view está desactivado: la tabla muestra la cantidad de artículos,
+        // así que se inicializan los items de la página actual (máx. 100), no de todos los pedidos.
+        page.getContent().forEach(order -> order.getItems().size());
+        return page;
     }
 
     @Transactional(readOnly = true)
@@ -221,7 +256,7 @@ public class OrderService {
     }
 
     // SIN @Transactional para evitar mantener una transacción abierta
-// durante la consulta HTTP a Wompi.
+    // durante la consulta HTTP a Wompi.
     public void verifyTransactionWithWompi(Store store, Long orderId, String wompiTransactionId) {
         try {
             // 1. Asegurar el contexto del tenant antes de consultar el pedido

@@ -10,13 +10,18 @@ import com.storevo.backend.tenant.service.OrderService;
 import com.storevo.backend.tenant.service.ShipmentService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 @Controller
@@ -38,11 +43,50 @@ public class DashboardOrderController {
         TenantContext.setCurrentTenant(store.getSchemaName());
     }
 
+    private static final List<Integer> ALLOWED_PAGE_SIZES = List.of(10, 20, 50, 100);
+
     @GetMapping
-    public String listOrders(Model model) {
-        model.addAttribute("orders", orderService.getAllOrders());
+    public String listOrders(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String channel,
+            @RequestParam(defaultValue = "newest") String sort,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            Model model) {
+
+        // Valores fuera de lo permitido se normalizan en lugar de fallar o cargar todo.
+        int safePage = Math.max(page, 0);
+        int safeSize = ALLOWED_PAGE_SIZES.contains(size) ? size : 10;
+
+        OrderStatus statusFilter = parseEnum(OrderStatus.class, status);
+        OrderChannel channelFilter = parseEnum(OrderChannel.class, channel);
+
+        Page<Order> ordersPage = orderService.searchOrders(
+                q, statusFilter, channelFilter, sort, PageRequest.of(safePage, safeSize));
+
+        model.addAttribute("orders", ordersPage);
+
+        // Opciones de filtro construidas desde los enums (fuente única de verdad).
+        Map<String, String> statusOptions = new LinkedHashMap<>();
+        Arrays.stream(OrderStatus.values()).forEach(s -> statusOptions.put(s.name(), s.getDisplayName()));
+        Map<String, String> channelOptions = new LinkedHashMap<>();
+        Arrays.stream(OrderChannel.values()).forEach(c -> channelOptions.put(c.name(), c.getDisplayName()));
+        model.addAttribute("statusOptions", statusOptions);
+        model.addAttribute("channelOptions", channelOptions);
+
         model.addAttribute("pageTitle", "Gestión de Pedidos");
         return "dashboard/orders/index";
+    }
+
+    // Un valor de enum inválido en la URL (manipulada a mano) equivale a "sin filtro".
+    private static <E extends Enum<E>> E parseEnum(Class<E> type, String value) {
+        if (value == null || value.isBlank()) return null;
+        try {
+            return Enum.valueOf(type, value.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 
     @GetMapping("/{id}")
