@@ -43,7 +43,7 @@ public class DashboardOrderController {
         TenantContext.setCurrentTenant(store.getSchemaName());
     }
 
-    private static final List<Integer> ALLOWED_PAGE_SIZES = List.of(10, 20, 50, 100);
+    private static final List<Integer> ALLOWED_PAGE_SIZES = List.of(10, 12, 15, 20, 24, 25, 48, 50, 100);
 
     @GetMapping
     public String listOrders(
@@ -84,12 +84,6 @@ public class DashboardOrderController {
         model.addAttribute("statusOptions", statusOptions);
         model.addAttribute("channelOptions", channelOptions);
         model.addAttribute("pageTitle", "Gestión de Pedidos");
-
-        // Responder con el fragmento HTML si la petición viene del AJAX de listing.js
-        boolean isAjax = "XMLHttpRequest".equals(request.getHeader("X-Requested-With"));
-        if (isAjax) {
-            return "dashboard/orders/index :: listing-content";
-        }
 
         return "dashboard/orders/index";
     }

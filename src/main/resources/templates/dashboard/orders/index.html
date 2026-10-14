@@ -34,7 +34,7 @@
     </div>
 
     <!-- PANEL DE BÚSQUEDA Y FILTROS -->
-    <form id="filter-form" th:action="@{/dashboard/{slug}/orders(slug=${slug})}" method="GET" class="bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-800 shadow-sm flex flex-col gap-4 mb-6"
+    <form id="listing-form" th:action="@{/dashboard/{slug}/orders(slug=${slug})}" method="GET" class="bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-800 shadow-sm flex flex-col gap-4 mb-6"
           th:with="clearFiltersUrl=@{|/dashboard/${slug}/orders|},
                  hasActiveFilters=${(param.q != null and not #strings.isEmpty(param.q[0]))
                    or (param.status != null and not #strings.isEmpty(param.status[0]))
@@ -70,22 +70,16 @@
             </div>
         </div>
 
-        <div th:replace="~{components/ui/listing :: active-filters-chips}"></div>
-
-        <input type="hidden" name="page" id="page-input" th:value="${page.number}">
-        <input type="hidden" name="size" id="size-input" th:value="${currentSize}">
+        <div id="active-filters-chips-container" class="flex-1 min-w-0">
+            <div th:replace="~{components/ui/listing :: active-filters-chips}"></div>
+        </div>
     </form>
 
     <!-- WRAPPER DE VISTA (Controlado por JS) -->
-    <!-- Este contenedor se queda afuera del fragmento AJAX para no perder la clase CSS de la vista al cambiar de página -->
     <div id="orders-view-wrapper" class="view-table">
 
         <!-- ZONA AJAX: RESULTADOS -->
-        <div id="listing-content" th:fragment="listing-content" class="relative transition-opacity duration-200">
-
-            <div id="loading-overlay" class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-10 rounded-xl">
-                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-brand"></div>
-            </div>
+        <div id="listing-results-container" th:fragment="listing-content" class="relative transition-opacity duration-200">
 
             <div th:if="${page.empty}">
                 <div th:replace="~{components/ui/listing :: empty-state('Aún no hay pedidos', 'No se encontraron pedidos con los filtros actuales o aún no has recibido ninguno en tu tienda.', 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4', @{|/dashboard/${slug}/orders|})}"></div>
@@ -197,24 +191,36 @@
         </div>
     </div>
 
-    <!-- Script de listados AJAX base (No se modifica) -->
+    <!-- Script de listados AJAX base -->
     <div th:replace="~{components/ui/listing :: scripts}"></div>
 </div>
 
 <!-- Lógica Local de Vistas: Solo se ejecuta para Pedidos -->
 <th:block layout:fragment="scripts">
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        (function() {
+            window.Storevo = window.Storevo || {};
+            if (!Storevo.getTenantKey) {
+                Storevo.getTenantKey = function(baseKey) {
+                    const match = window.location.pathname.match(/^\/dashboard\/([^/]+)/);
+                    return baseKey + '_' + (match ? match[1] : 'default');
+                };
+            }
 
             // Función para sincronizar la UI y las clases del contenedor
             window.updateOrdersViewUI = function() {
                 const isDesktop = window.innerWidth >= 1024; // lg breakpoint en Tailwind
-                const view = isDesktop
-                    ? (localStorage.getItem('orders_view_desktop') || 'table')
-                    : (localStorage.getItem('orders_view_mobile') || 'grid');
+                const desktopKey = Storevo.getTenantKey('orders_view_desktop');
+                const mobileKey = Storevo.getTenantKey('orders_view_mobile');
 
-                // Aplicar la vista al Wrapper
-                document.getElementById('orders-view-wrapper').className = 'view-' + view;
+                const view = isDesktop
+                    ? (localStorage.getItem(desktopKey) || 'table')
+                    : (localStorage.getItem(mobileKey) || 'grid');
+
+                const wrapper = document.getElementById('orders-view-wrapper');
+                if (wrapper) {
+                    wrapper.className = 'view-' + view;
+                }
 
                 // Resetear botones
                 document.querySelectorAll('.view-btn').forEach(btn => {
@@ -233,33 +239,25 @@
             // Función disparada por los botones
             window.setOrdersView = function(view) {
                 const isDesktop = window.innerWidth >= 1024;
-                if (isDesktop) {
-                    localStorage.setItem('orders_view_desktop', view);
-                } else {
-                    localStorage.setItem('orders_view_mobile', view);
-                }
-                updateOrdersViewUI();
+                const key = isDesktop
+                    ? Storevo.getTenantKey('orders_view_desktop')
+                    : Storevo.getTenantKey('orders_view_mobile');
+
+                localStorage.setItem(key, view);
+                window.updateOrdersViewUI();
             };
 
-            // Escuchar cambios de tamaño para rotar vistas automáticamente si cruza el breakpoint
-            window.addEventListener('resize', () => {
-                // Pequeño debounce manual para no saturar
-                clearTimeout(window.resizeTimer);
-                window.resizeTimer = setTimeout(updateOrdersViewUI, 150);
-            });
+            // Aplicar inmediatamente y al terminar de cargar el DOM
+            window.updateOrdersViewUI();
+            document.addEventListener('DOMContentLoaded', () => {
+                window.updateOrdersViewUI();
 
-            // Inicializar en primera carga
-            updateOrdersViewUI();
-
-            // Hook vital: Re-aplicar clases cuando AJAX (listing.js) recargue el contenido interno
-            // Al escuchar cambios en #listing-content, si se vacía y se llena, re-pintamos botones
-            const observer = new MutationObserver((mutations) => {
-                updateOrdersViewUI();
+                window.addEventListener('resize', () => {
+                    clearTimeout(window.resizeTimer);
+                    window.resizeTimer = setTimeout(window.updateOrdersViewUI, 150);
+                });
             });
-            const config = { childList: true, subtree: false };
-            const target = document.getElementById('listing-content');
-            if(target) observer.observe(target, config);
-        });
+        })();
     </script>
 </th:block>
 </body>

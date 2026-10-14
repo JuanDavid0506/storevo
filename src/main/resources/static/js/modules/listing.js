@@ -11,10 +11,23 @@ if (!Storevo.getTenantKey) {
 }
 
 Storevo.Listing = {
+    // Clave única en localStorage por tienda y por sección (orders, products, customers, etc.)
+    getPageSizeKey: function() {
+        const sectionMatch = window.location.pathname.match(/^\/dashboard\/[^/]+\/([^/?#]+)/);
+        const section = sectionMatch ? sectionMatch[1] : 'general';
+        return Storevo.getTenantKey('storevo_page_size_' + section);
+    },
+
     // === MOTOR AJAX TIPO REACT ===
     submitForm: function() {
         const form = document.getElementById('listing-form');
         if (!form) return;
+
+        // Guardar siempre la preferencia actual del selector de tamaño antes de enviar
+        const sizeSelect = form.querySelector('select[name="size"]');
+        if (sizeSelect && sizeSelect.value) {
+            localStorage.setItem(Storevo.Listing.getPageSizeKey(), sizeSelect.value);
+        }
 
         const formData = new FormData(form);
         const params = new URLSearchParams();
@@ -26,6 +39,12 @@ Storevo.Listing = {
             }
         }
 
+        // Si no venía en el form pero existe en localStorage, mantener el size recordado
+        const savedSize = localStorage.getItem(Storevo.Listing.getPageSizeKey());
+        if (!params.has('size') && savedSize) {
+            params.set('size', savedSize);
+        }
+
         const url = `${window.location.pathname}?${params.toString()}`;
         Storevo.Listing.fetchResults(url);
     },
@@ -33,6 +52,12 @@ Storevo.Listing = {
     goToPage: function(pageNumber) {
         const url = new URL(window.location.href);
         url.searchParams.set('page', pageNumber);
+
+        const savedSize = localStorage.getItem(Storevo.Listing.getPageSizeKey());
+        if (!url.searchParams.has('size') && savedSize) {
+            url.searchParams.set('size', savedSize);
+        }
+
         Storevo.Listing.fetchResults(url.toString());
     },
 
@@ -93,12 +118,60 @@ Storevo.Listing = {
                     const savedView = localStorage.getItem(Storevo.getTenantKey('storevo_admin_products_view')) || 'cards';
                     Storevo.ProductsList.setView(savedView);
                 }
+
+                if (typeof window.updateOrdersViewUI === 'function') {
+                    window.updateOrdersViewUI();
+                }
             })
             .catch(err => {
                 console.error("Error cargando listado, recargando de forma nativa...", err);
                 // Si falla por seguridad o red, caemos de pie a una recarga normal
                 window.location.href = url;
             });
+    },
+
+    // --- PERSISTENCIA PERMANENTE DEL TAMAÑO DE PÁGINA ---
+    initPageSizePersistence: function() {
+        const form = document.getElementById('listing-form');
+        if (!form) return;
+
+        const sizeSelect = form.querySelector('select[name="size"]');
+        if (!sizeSelect) return;
+
+        const storageKey = Storevo.Listing.getPageSizeKey();
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlSize = urlParams.get('size');
+        const savedSize = localStorage.getItem(storageKey);
+
+        // Escuchar cambios directos en el selector para guardarlos de inmediato
+        if (!sizeSelect.dataset.persistenceInitialized) {
+            sizeSelect.dataset.persistenceInitialized = 'true';
+            sizeSelect.addEventListener('change', () => {
+                if (sizeSelect.value) {
+                    localStorage.setItem(storageKey, sizeSelect.value);
+                }
+            });
+        }
+
+        // Caso 1: La URL ya trae ?size=X -> sincronizamos localStorage y el select visual
+        if (urlSize) {
+            localStorage.setItem(storageKey, urlSize);
+            if (sizeSelect.value !== urlSize) {
+                const exists = Array.from(sizeSelect.options).some(opt => opt.value === urlSize);
+                if (exists) sizeSelect.value = urlSize;
+            }
+            return;
+        }
+
+        // Caso 2: La URL no trae ?size=, pero el usuario tenía una preferencia guardada
+        if (savedSize) {
+            const optionExists = Array.from(sizeSelect.options).some(opt => opt.value === savedSize);
+            if (optionExists && sizeSelect.value !== savedSize) {
+                sizeSelect.value = savedSize;
+                // Aplicamos automáticamente su preferencia guardada
+                Storevo.Listing.submitForm();
+            }
+        }
     },
 
     // --- COMPONENTES ORIGINALES ADAPTADOS ---
@@ -353,6 +426,7 @@ Storevo.Listing = {
     },
 
     initListingUX: function() {
+        Storevo.Listing.initPageSizePersistence();
         Storevo.Listing.initCategoryCombobox();
         Storevo.Listing.initFilterChips();
         Storevo.Listing.initSearchDebounce();
