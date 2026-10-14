@@ -4,6 +4,20 @@
       layout:decorate="~{layouts/dashboard-layout}">
 <head>
     <title>Gestión de Pedidos</title>
+    <style>
+        /* Reglas de visibilidad estrictas para asegurar que el AJAX no rompa la vista activa */
+        #orders-view-wrapper.view-table .order-view-grid,
+        #orders-view-wrapper.view-table .order-view-compact { display: none !important; }
+        #orders-view-wrapper.view-table .order-view-table { display: block !important; }
+
+        #orders-view-wrapper.view-grid .order-view-table,
+        #orders-view-wrapper.view-grid .order-view-compact { display: none !important; }
+        #orders-view-wrapper.view-grid .order-view-grid { display: grid !important; }
+
+        #orders-view-wrapper.view-compact .order-view-table,
+        #orders-view-wrapper.view-compact .order-view-grid { display: none !important; }
+        #orders-view-wrapper.view-compact .order-view-compact { display: flex !important; }
+    </style>
 </head>
 <body>
 <div layout:fragment="content">
@@ -26,7 +40,6 @@
                    or (param.status != null and not #strings.isEmpty(param.status[0]))
                    or (param.channel != null and not #strings.isEmpty(param.channel[0]))}">
 
-        <!-- Contenedor adaptativo: flex-col en móvil, filas en escritorio -->
         <div class="flex flex-col xl:flex-row justify-between gap-5 xl:gap-4">
 
             <!-- Grupo Izquierdo: Buscador y Filtros -->
@@ -37,99 +50,217 @@
                 <div class="w-full sm:w-auto flex justify-center sm:block" th:replace="~{components/ui/listing :: clear-filters(${clearFiltersUrl}, ${hasActiveFilters})}"></div>
             </div>
 
-            <!-- Grupo Derecho: Ordenamiento y Paginación -->
-            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full xl:w-auto border-t border-slate-800/60 pt-4 xl:border-0 xl:pt-0">
+            <!-- Grupo Derecho: Selector de Vistas, Ordenamiento y Paginación -->
+            <div class="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 w-full xl:w-auto border-t border-slate-800/60 pt-4 xl:border-0 xl:pt-0">
+
+                <!-- Opciones de Vista: PC (Tabla / Tarjetas) -->
+                <div class="hidden lg:flex items-center bg-slate-800/80 rounded-lg p-1 border border-slate-700/50">
+                    <button type="button" onclick="setOrdersView('table')" class="view-btn view-btn-table px-3 py-1.5 rounded-md text-sm font-medium transition">Tabla</button>
+                    <button type="button" onclick="setOrdersView('grid')" class="view-btn view-btn-grid px-3 py-1.5 rounded-md text-sm font-medium transition">Tarjetas</button>
+                </div>
+
+                <!-- Opciones de Vista: Celular (Tarjetas / Compacta) -->
+                <div class="flex lg:hidden items-center bg-slate-800/80 rounded-lg p-1 border border-slate-700/50 w-full sm:w-auto">
+                    <button type="button" onclick="setOrdersView('grid')" class="view-btn view-btn-grid flex-1 px-3 py-1.5 rounded-md text-sm font-medium text-center transition">Tarjetas</button>
+                    <button type="button" onclick="setOrdersView('compact')" class="view-btn view-btn-compact flex-1 px-3 py-1.5 rounded-md text-sm font-medium text-center transition">Compacta</button>
+                </div>
+
                 <div class="w-full sm:w-auto" th:replace="~{components/ui/listing :: sort(${ {'newest': 'Más recientes', 'oldest': 'Más antiguos', 'total_desc': 'Mayor total', 'total_asc': 'Menor total'} })}"></div>
-                <div class="w-full sm:w-auto" th:replace="~{components/ui/listing :: page-size()}"></div>
+                <div class="w-full sm:w-auto hidden sm:block" th:replace="~{components/ui/listing :: page-size()}"></div>
             </div>
         </div>
 
-        <!-- Chips -->
         <div th:replace="~{components/ui/listing :: active-filters-chips}"></div>
 
         <input type="hidden" name="page" id="page-input" th:value="${page.number}">
         <input type="hidden" name="size" id="size-input" th:value="${currentSize}">
     </form>
 
-    <!-- ZONA AJAX: RESULTADOS -->
-    <div id="listing-content" th:fragment="listing-content" class="relative transition-opacity duration-200">
+    <!-- WRAPPER DE VISTA (Controlado por JS) -->
+    <!-- Este contenedor se queda afuera del fragmento AJAX para no perder la clase CSS de la vista al cambiar de página -->
+    <div id="orders-view-wrapper" class="view-table">
 
-        <div id="loading-overlay" class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-10 rounded-xl">
-            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-brand"></div>
-        </div>
+        <!-- ZONA AJAX: RESULTADOS -->
+        <div id="listing-content" th:fragment="listing-content" class="relative transition-opacity duration-200">
 
-        <div th:if="${page.empty}">
-            <div th:replace="~{components/ui/listing :: empty-state('Aún no hay pedidos', 'No se encontraron pedidos con los filtros actuales o aún no has recibido ninguno en tu tienda.', 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4', @{|/dashboard/${slug}/orders|})}"></div>
-        </div>
-
-        <div th:unless="${page.empty}">
-            <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
-                <!-- Se oculta el overflow en móvil (layout de tarjetas) y se permite auto en desktop (layout de tabla) -->
-                <div class="overflow-hidden lg:overflow-x-auto">
-                    <!-- En móvil la tabla es block, en LG es table -->
-                    <table class="w-full text-left text-sm text-slate-400 block lg:table">
-                        <thead class="text-xs uppercase bg-slate-800 text-slate-300 hidden lg:table-header-group">
-                        <tr>
-                            <th scope="col" class="px-6 py-4 font-bold">Pedido</th>
-                            <th scope="col" class="px-6 py-4 font-bold">Fecha</th>
-                            <th scope="col" class="px-6 py-4 font-bold">Cliente</th>
-                            <th scope="col" class="px-6 py-4 font-bold">Artículos</th>
-                            <th scope="col" class="px-6 py-4 font-bold">Total</th>
-                            <th scope="col" class="px-6 py-4 font-bold">Estado</th>
-                            <th scope="col" class="px-6 py-4 font-bold text-right">Acción</th>
-                        </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-800/60 lg:divide-slate-800 block lg:table-row-group relative">
-
-                        <!-- Cada TR es un CSS Grid de 2 columnas en móvil, y un table-row normal en Desktop -->
-                        <tr th:each="order : ${orders}" class="hover:bg-slate-800/50 transition cursor-pointer grid grid-cols-2 gap-y-3 gap-x-2 p-4 lg:p-0 lg:table-row" th:onclick="|window.location.href='@{/dashboard/{slug}/orders/{id}(slug=${slug},id=${order.id})}'|">
-
-                            <!-- 1. Pedido y Canal (Móvil: Arriba Izquierda) -->
-                            <td class="col-span-1 flex items-center lg:table-cell lg:px-6 lg:py-4 font-black text-white text-base">
-                                <span th:text="'#' + ${order.id}">#1</span>
-                                <span th:text="${order.channel.getDisplayName()}"
-                                      th:class="'ml-2 text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full border ' + ${order.channel.getBadgeClasses()}"></span>
-                            </td>
-
-                            <!-- 2. Fecha (Móvil: Arriba Derecha) -->
-                            <td class="col-span-1 flex items-center justify-end lg:justify-start lg:table-cell lg:px-6 lg:py-4 text-xs lg:text-sm text-slate-500 lg:text-slate-400" th:text="${#temporals.format(order.createdAt, 'dd/MM/yyyy')}">Fecha</td>
-
-                            <!-- 3. Cliente (Móvil: Fila Completa) -->
-                            <td class="col-span-2 lg:col-span-1 lg:table-cell lg:px-6 lg:py-4">
-                                <p class="font-bold text-white text-base lg:text-sm" th:text="${order.customerName}">Nombre</p>
-                                <p class="text-xs text-slate-500 mt-0.5 lg:mt-0" th:text="${order.city}">Ciudad</p>
-                            </td>
-
-                            <!-- 4. Artículos (Móvil: Abajo Izquierda) -->
-                            <td class="col-span-1 flex items-center lg:table-cell lg:px-6 lg:py-4 font-medium" th:text="${order.getTotalItemsCount()} + ' prod.'">1 prod.</td>
-
-                            <!-- 5. Total (Móvil: Abajo Derecha) -->
-                            <td class="col-span-1 flex items-center justify-end lg:justify-start lg:table-cell lg:px-6 lg:py-4 font-black text-storevo-400 text-base lg:text-sm" th:text="${order.total != null ? '$ ' + #numbers.formatDecimal(order.total, 1, 'POINT', 0, 'COMMA') : '$ 0'}">$0</td>
-
-                            <!-- 6. Estado (Móvil: Pie Izquierda) -->
-                            <td class="col-span-1 flex items-center lg:table-cell lg:px-6 lg:py-4 pt-2 lg:pt-4">
-                                <span th:text="${order.status.getDisplayName()}"
-                                      th:class="'text-[10px] uppercase tracking-wider font-bold px-3 py-1.5 rounded-full border ' + ${order.status.getBadgeClasses()}">
-                                </span>
-                            </td>
-
-                            <!-- 7. Acción (Móvil: Pie Derecha) -->
-                            <td class="col-span-1 flex items-center justify-end lg:table-cell lg:px-6 lg:py-4 text-right pt-2 lg:pt-4">
-                                <a th:href="@{/dashboard/{slug}/orders/{id}(slug=${slug}, id=${order.id})}" class="text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 lg:border-none px-4 py-2 lg:px-3 lg:py-2 rounded-lg font-medium transition inline-block text-xs lg:text-sm">Gestionar</a>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </div>
+            <div id="loading-overlay" class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-10 rounded-xl">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-brand"></div>
             </div>
 
-            <div class="mt-6 overflow-x-auto pb-2">
-                <div th:replace="~{components/ui/listing :: pagination(${page})}"></div>
+            <div th:if="${page.empty}">
+                <div th:replace="~{components/ui/listing :: empty-state('Aún no hay pedidos', 'No se encontraron pedidos con los filtros actuales o aún no has recibido ninguno en tu tienda.', 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4', @{|/dashboard/${slug}/orders|})}"></div>
+            </div>
+
+            <div th:unless="${page.empty}">
+
+                <!-- 1. VISTA TABLA (Escritorio por defecto) -->
+                <div class="order-view-table bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-slate-400">
+                            <thead class="text-xs uppercase bg-slate-800 text-slate-300">
+                            <tr>
+                                <th scope="col" class="px-6 py-4 font-bold">Pedido</th>
+                                <th scope="col" class="px-6 py-4 font-bold">Fecha</th>
+                                <th scope="col" class="px-6 py-4 font-bold">Cliente</th>
+                                <th scope="col" class="px-6 py-4 font-bold">Artículos</th>
+                                <th scope="col" class="px-6 py-4 font-bold">Total</th>
+                                <th scope="col" class="px-6 py-4 font-bold">Estado</th>
+                                <th scope="col" class="px-6 py-4 font-bold text-right">Acción</th>
+                            </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-800">
+                            <tr th:each="order : ${orders}" class="hover:bg-slate-800/50 transition cursor-pointer" th:onclick="|window.location.href='@{/dashboard/{slug}/orders/{id}(slug=${slug},id=${order.id})}'|">
+                                <td class="px-6 py-4 font-black text-white text-base whitespace-nowrap">
+                                    <span th:text="'#' + ${order.id}">#1</span>
+                                    <span th:text="${order.channel.getDisplayName()}" th:class="'ml-2 text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full border ' + ${order.channel.getBadgeClasses()}"></span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap" th:text="${#temporals.format(order.createdAt, 'dd/MM/yyyy')}">Fecha</td>
+                                <td class="px-6 py-4">
+                                    <p class="font-bold text-white truncate max-w-[150px]" th:text="${order.customerName}">Nombre</p>
+                                    <p class="text-xs text-slate-500 truncate max-w-[150px]" th:text="${order.city}">Ciudad</p>
+                                </td>
+                                <td class="px-6 py-4 font-medium whitespace-nowrap" th:text="${order.getTotalItemsCount()} + ' prod.'">1 prod.</td>
+                                <td class="px-6 py-4 font-black text-storevo-400 whitespace-nowrap" th:text="${order.total != null ? '$ ' + #numbers.formatDecimal(order.total, 1, 'POINT', 0, 'COMMA') : '$ 0'}">$0</td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span th:text="${order.status.getDisplayName()}" th:class="'text-[10px] uppercase tracking-wider font-bold px-3 py-1.5 rounded-full border ' + ${order.status.getBadgeClasses()}"></span>
+                                </td>
+                                <td class="px-6 py-4 text-right whitespace-nowrap">
+                                    <a th:href="@{/dashboard/{slug}/orders/{id}(slug=${slug}, id=${order.id})}" class="text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-2 rounded-lg font-medium transition inline-block">Gestionar</a>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 2. VISTA TARJETAS (Móvil por defecto / Alternativa escritorio) -->
+                <div class="order-view-grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div th:each="order : ${orders}" class="bg-slate-900 border border-slate-800 rounded-xl p-5 hover:border-slate-700 transition flex flex-col gap-4 shadow-sm group">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="font-black text-white text-lg" th:text="'#' + ${order.id}"></span>
+                                    <span th:text="${order.channel.getDisplayName()}" th:class="'text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full border ' + ${order.channel.getBadgeClasses()}"></span>
+                                </div>
+                                <p class="text-xs text-slate-500 font-medium" th:text="${#temporals.format(order.createdAt, 'dd MMM, yyyy - HH:mm')}"></p>
+                            </div>
+                            <span th:text="${order.status.getDisplayName()}" th:class="'text-[10px] uppercase tracking-wider font-bold px-3 py-1.5 rounded-full border ' + ${order.status.getBadgeClasses()}"></span>
+                        </div>
+                        <div class="py-3 border-y border-slate-800/60 flex justify-between items-center">
+                            <div class="min-w-0 pr-3">
+                                <p class="font-bold text-slate-200 text-sm truncate" th:text="${order.customerName}"></p>
+                                <p class="text-xs text-slate-500 mt-0.5 truncate" th:text="${order.city}"></p>
+                            </div>
+                            <div class="text-right flex-shrink-0">
+                                <p class="text-xs text-slate-400 mb-0.5" th:text="${order.getTotalItemsCount()} + ' prod.'"></p>
+                                <p class="font-black text-storevo-400 text-base" th:text="${order.total != null ? '$ ' + #numbers.formatDecimal(order.total, 1, 'POINT', 0, 'COMMA') : '$ 0'}"></p>
+                            </div>
+                        </div>
+                        <div class="flex justify-end mt-auto">
+                            <a th:href="@{/dashboard/{slug}/orders/{id}(slug=${slug}, id=${order.id})}" class="text-slate-300 hover:text-white bg-slate-800 group-hover:bg-brand group-hover:border-brand border border-slate-700 px-4 py-2 rounded-lg font-bold transition-all text-sm flex items-center gap-2">
+                                Gestionar
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. VISTA COMPACTA (Alternativa Móvil) -->
+                <div class="order-view-compact flex-col gap-2">
+                    <div th:each="order : ${orders}" th:onclick="|window.location.href='@{/dashboard/{slug}/orders/{id}(slug=${slug},id=${order.id})}'|"
+                         class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 hover:border-slate-700 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer shadow-sm group">
+
+                        <div class="flex items-center gap-2.5 overflow-hidden w-full">
+                            <span class="font-black text-white text-base flex-shrink-0" th:text="'#' + ${order.id}"></span>
+                            <span class="text-slate-600 hidden xs:inline">·</span>
+                            <span class="text-slate-300 text-sm font-medium truncate" th:text="${order.customerName}"></span>
+                            <span class="text-slate-600">·</span>
+                            <span class="font-black text-storevo-400 text-sm flex-shrink-0" th:text="${order.total != null ? '$' + #numbers.formatDecimal(order.total, 1, 'POINT', 0, 'COMMA') : '$0'}"></span>
+                        </div>
+
+                        <div class="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto border-t border-slate-800 sm:border-0 pt-2 sm:pt-0 mt-1 sm:mt-0">
+                            <div class="flex items-center gap-2">
+                                <span th:text="${order.status.getDisplayName()}" th:class="'text-[10px] uppercase tracking-wider font-bold px-2.5 py-1 rounded border ' + ${order.status.getBadgeClasses()}"></span>
+                            </div>
+                            <span class="text-slate-500 group-hover:text-brand transition-colors bg-slate-800 p-1.5 rounded-lg">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Paginación Común -->
+                <div class="mt-6 overflow-x-auto pb-2">
+                    <div th:replace="~{components/ui/listing :: pagination(${page})}"></div>
+                </div>
             </div>
         </div>
     </div>
 
+    <!-- Script de listados AJAX base (No se modifica) -->
     <div th:replace="~{components/ui/listing :: scripts}"></div>
 </div>
+
+<!-- Lógica Local de Vistas: Solo se ejecuta para Pedidos -->
+<th:block layout:fragment="scripts">
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // Función para sincronizar la UI y las clases del contenedor
+            window.updateOrdersViewUI = function() {
+                const isDesktop = window.innerWidth >= 1024; // lg breakpoint en Tailwind
+                const view = isDesktop
+                    ? (localStorage.getItem('orders_view_desktop') || 'table')
+                    : (localStorage.getItem('orders_view_mobile') || 'grid');
+
+                // Aplicar la vista al Wrapper
+                document.getElementById('orders-view-wrapper').className = 'view-' + view;
+
+                // Resetear botones
+                document.querySelectorAll('.view-btn').forEach(btn => {
+                    btn.classList.remove('bg-slate-700', 'text-white', 'shadow-md', 'border-slate-600');
+                    btn.classList.add('text-slate-400', 'bg-transparent', 'border-transparent');
+                });
+
+                // Activar botones correctos
+                const activeBtns = document.querySelectorAll('.view-btn-' + view);
+                activeBtns.forEach(btn => {
+                    btn.classList.add('bg-slate-700', 'text-white', 'shadow-md', 'border-slate-600');
+                    btn.classList.remove('text-slate-400', 'bg-transparent', 'border-transparent');
+                });
+            };
+
+            // Función disparada por los botones
+            window.setOrdersView = function(view) {
+                const isDesktop = window.innerWidth >= 1024;
+                if (isDesktop) {
+                    localStorage.setItem('orders_view_desktop', view);
+                } else {
+                    localStorage.setItem('orders_view_mobile', view);
+                }
+                updateOrdersViewUI();
+            };
+
+            // Escuchar cambios de tamaño para rotar vistas automáticamente si cruza el breakpoint
+            window.addEventListener('resize', () => {
+                // Pequeño debounce manual para no saturar
+                clearTimeout(window.resizeTimer);
+                window.resizeTimer = setTimeout(updateOrdersViewUI, 150);
+            });
+
+            // Inicializar en primera carga
+            updateOrdersViewUI();
+
+            // Hook vital: Re-aplicar clases cuando AJAX (listing.js) recargue el contenido interno
+            // Al escuchar cambios en #listing-content, si se vacía y se llena, re-pintamos botones
+            const observer = new MutationObserver((mutations) => {
+                updateOrdersViewUI();
+            });
+            const config = { childList: true, subtree: false };
+            const target = document.getElementById('listing-content');
+            if(target) observer.observe(target, config);
+        });
+    </script>
+</th:block>
 </body>
 </html>
