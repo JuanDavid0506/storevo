@@ -7,6 +7,7 @@
 </head>
 <body>
 <div layout:fragment="content" class="max-w-6xl mx-auto">
+
     <!-- Header -->
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <div class="flex items-center gap-4">
@@ -27,7 +28,6 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- COLUMNA IZQUIERDA -->
         <div class="lg:col-span-2 space-y-6">
-
             <!-- Productos -->
             <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
                 <h3 class="text-lg font-bold text-white mb-4">Artículos comprados</h3>
@@ -56,9 +56,8 @@
                 <div class="flex justify-between items-center mb-4 border-b border-slate-800 pb-3">
                     <h3 class="text-base font-bold text-white flex items-center gap-2">
                         <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
-                        Logística y Envíos
+                        Logística y Envío
                     </h3>
-
                     <button th:if="${order.status.name() == 'PACKED'}" onclick="Storevo.OrderManagement.openShipmentModal()" class="bg-storevo-500 hover:bg-storevo-600 text-white font-bold py-1.5 px-4 rounded-lg transition text-xs shadow-md flex items-center gap-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
                         Despachar Pedido
@@ -81,7 +80,6 @@
                         </div>
                         <div class="flex items-center flex-wrap gap-x-4 gap-y-2 mt-3 pt-3 border-t border-slate-800/50">
                             <span class="text-sm text-slate-400">Guía: <strong class="text-slate-200 font-mono tracking-wide" th:text="${shipment.trackingNumber != null and !shipment.trackingNumber.isEmpty() ? shipment.trackingNumber : 'Sin número de guía'}"></strong></span>
-
                             <a th:if="${shipment.getDynamicTrackingUrl() != null}" th:href="${shipment.getDynamicTrackingUrl()}" target="_blank" class="text-storevo-400 hover:text-storevo-300 text-sm font-medium flex items-center gap-1 bg-storevo-500/10 px-2 py-1 rounded">
                                 Rastrear en línea <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
                             </a>
@@ -93,12 +91,29 @@
             <!-- Cliente y Logística Básico -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
-                    <h3 class="text-base font-bold text-white mb-4 flex items-center gap-2">
-                        <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
-                        Información del Cliente
-                    </h3>
-                    <p class="font-bold text-slate-300" th:text="${order.customerName}"></p>
-                    <p class="text-sm text-slate-400 mt-1" th:text="${order.customerPhone}"></p>
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-base font-bold text-white flex items-center gap-2">
+                            <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                            Información del Cliente
+                        </h3>
+                        <a th:href="@{/dashboard/{slug}/customers(slug=${slug}, q=${order.customerPhone != null ? order.customerPhone : order.customerName})}"
+                           class="text-xs font-bold text-storevo-400 hover:text-storevo-300 transition">
+                            Ver en clientes →
+                        </a>
+                    </div>
+
+                    <p class="font-bold text-slate-200" th:text="${order.customerName}"></p>
+
+                    <div class="flex items-center justify-between mt-1">
+                        <p class="text-sm text-slate-400" th:text="${order.customerPhone}"></p>
+                        <a th:if="${order.customerPhone != null and !#strings.isEmpty(order.customerPhone)}"
+                           th:href="'https://wa.me/' + ${#strings.replace(#strings.replace(order.customerPhone, ' ', ''), '+', '')}"
+                           target="_blank" rel="noopener"
+                           class="inline-flex items-center gap-1 text-xs font-bold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg transition">
+                            <span>WhatsApp</span>
+                        </a>
+                    </div>
+
                     <div class="mt-4 pt-4 border-t border-slate-800">
                         <p class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Método de Pago</p>
                         <p class="text-sm text-slate-300 font-medium flex items-center gap-2">
@@ -129,18 +144,15 @@
                 <form id="internal-note-form" class="mb-6">
                     <div class="relative">
                         <textarea id="internal-note-text" rows="2" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-sm text-white placeholder-slate-500 focus:ring-storevo-500 focus:border-storevo-500 outline-none resize-none" placeholder="Escribe un recordatorio o detalle para el equipo..."></textarea>
-
-                        <!-- BOTÓN MODIFICADO 1 -->
                         <button type="button" onclick="Storevo.OrderManagement.handleAddNote()" class="absolute bottom-3 right-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-bold py-1.5 px-4 rounded-md transition text-xs">
                             Guardar Nota
                         </button>
-
                     </div>
                 </form>
                 <div id="notes-container" class="space-y-3">
                     <div th:each="note : ${order.internalNotes}" class="bg-slate-950 p-4 rounded-lg border border-slate-800/50">
                         <p class="text-sm text-slate-300 mb-2" th:text="${note.note}"></p>
-                        <p class="text-xs font-mono text-slate-500" th:text="${#temporals.format(note.createdAt, 'dd/MM/yyyy HH:mm')} + ' • Admin (ID: ' + ${note.userId} + ')'"></p>
+                        <p class="text-xs font-mono text-slate-500" th:text="${#temporals.format(note.createdAt, 'dd/MM/yyyy HH:mm')} + ' · Admin (ID: ' + ${note.userId} + ')'"></p>
                     </div>
                     <div th:if="${#lists.isEmpty(order.internalNotes)}" id="no-notes-msg" class="text-center py-4 text-sm text-slate-600">
                         No hay notas internas en este pedido.
@@ -151,13 +163,11 @@
 
         <!-- COLUMNA DERECHA: Flujo de Estados y Timeline -->
         <div class="space-y-6">
-            <!-- Actualizar Estado -->
             <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
                 <h3 class="text-base font-bold text-white mb-3">Actualizar Estado</h3>
                 <form id="status-update-form" class="flex flex-col gap-3">
                     <input type="hidden" id="order-id" th:value="${order.id}">
                     <input type="hidden" id="store-slug" th:value="${slug}">
-
                     <select id="new-status" name="status" class="w-full bg-slate-950 border border-slate-700 text-slate-300 text-sm font-medium rounded-lg focus:ring-storevo-500 px-3 py-3 outline-none disabled:opacity-50">
                         <option th:each="state : ${orderStatuses}"
                                 th:value="${state.name()}"
@@ -166,12 +176,9 @@
                                 th:disabled="${(!order.status.canTransitionTo(state) and state != order.status) or (state.name() == 'SHIPPED' and #lists.isEmpty(order.shipments))}">
                         </option>
                     </select>
-
-                    <!-- BOTÓN MODIFICADO 2 -->
                     <button type="button" onclick="Storevo.OrderManagement.handleStatusUpdate()" class="w-full bg-storevo-500 hover:bg-storevo-600 text-white px-4 py-3 rounded-lg font-bold transition shadow-md shadow-storevo-500/20 flex items-center justify-center gap-2">
                         <span>Actualizar Flujo</span>
                     </button>
-
                     <p class="text-[10px] text-slate-500 text-center mt-1">El sistema bloquea saltos lógicos no permitidos.</p>
                 </form>
             </div>
@@ -179,14 +186,12 @@
             <!-- TIMELINE -->
             <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
                 <h3 class="text-base font-bold text-white mb-6">Línea de Tiempo</h3>
-
                 <div class="relative border-l-2 border-slate-800 ml-3" id="timeline-container">
                     <div th:each="event : ${order.history}" class="mb-8 ml-6 relative timeline-item">
                         <span th:if="${event.eventType.name() == 'SYSTEM_EVENT'}" class="absolute flex items-center justify-center w-6 h-6 bg-slate-900 rounded-full -left-[35px] ring-4 ring-slate-900 text-slate-400 border border-slate-700"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg></span>
                         <span th:if="${event.eventType.name() == 'STATE_CHANGE'}" class="absolute flex items-center justify-center w-6 h-6 bg-slate-900 rounded-full -left-[35px] ring-4 ring-slate-900 text-storevo-400 border border-storevo-500/50"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></span>
-
                         <div class="flex flex-col">
-                            <span class="text-xs text-slate-500 font-medium mb-1" th:text="${#temporals.format(event.createdAt, 'dd/MM/yyyy HH:mm')} + ' • Origen: ' + ${event.origin.name()}">Fecha</span>
+                            <span class="text-xs text-slate-500 font-medium mb-1" th:text="${#temporals.format(event.createdAt, 'dd/MM/yyyy HH:mm')} + ' · Origen: ' + ${event.origin.name()}">Fecha</span>
                             <h4 class="text-sm font-bold text-white mb-0.5" th:text="${event.eventType.name() == 'SYSTEM_EVENT' ? 'Sistema' : 'Estado Actualizado'}"></h4>
                             <p class="text-sm text-slate-400" th:text="${event.description}"></p>
                         </div>
@@ -208,7 +213,6 @@
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
             </div>
-
             <form id="shipment-form" class="p-6 space-y-5">
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Transportadora *</label>
@@ -231,15 +235,11 @@
                         <input type="text" name="dimensions" id="shipment-dimensions" class="w-full bg-slate-950 border border-slate-700 text-slate-300 text-sm rounded-lg focus:ring-storevo-500 focus:border-storevo-500 px-4 py-3 outline-none" placeholder="20x20x15">
                     </div>
                 </div>
-
                 <div class="mt-6 pt-5 border-t border-slate-800 flex justify-end gap-3">
                     <button type="button" onclick="Storevo.OrderManagement.closeShipmentModal()" class="px-5 py-2.5 text-sm font-bold text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition">Cancelar</button>
-
-                    <!-- BOTÓN MODIFICADO 3 -->
                     <button type="button" onclick="Storevo.OrderManagement.handleShipmentSubmit()" class="bg-storevo-500 hover:bg-storevo-600 text-white px-6 py-2.5 rounded-lg font-bold transition shadow-md shadow-storevo-500/20 flex items-center gap-2">
                         <span>Generar Envío Seguro</span>
                     </button>
-
                 </div>
             </form>
         </div>
@@ -247,7 +247,6 @@
 </div>
 
 <th:block layout:fragment="scripts">
-    <!-- Forzamos la descarga del nuevo script con v=3 -->
     <script th:src="@{/js/modules/orderManagement.js?v=3}"></script>
 </th:block>
 </body>

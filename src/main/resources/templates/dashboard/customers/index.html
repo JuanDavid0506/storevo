@@ -4,80 +4,331 @@
       layout:decorate="~{layouts/dashboard-layout}">
 <head>
   <title>Mis Clientes</title>
+  <style>
+    #customers-view-wrapper.view-table .customer-view-grid,
+    #customers-view-wrapper.view-table .customer-view-compact { display: none !important; }
+    #customers-view-wrapper.view-table .customer-view-table { display: block !important; }
+
+    #customers-view-wrapper.view-grid .customer-view-table,
+    #customers-view-wrapper.view-grid .customer-view-compact { display: none !important; }
+    #customers-view-wrapper.view-grid .customer-view-grid { display: grid !important; }
+
+    #customers-view-wrapper.view-compact .customer-view-table,
+    #customers-view-wrapper.view-compact .customer-view-grid { display: none !important; }
+    #customers-view-wrapper.view-compact .customer-view-compact { display: flex !important; }
+  </style>
 </head>
 <body>
-<div layout:fragment="content" class="space-y-6">
+<div layout:fragment="content" class="space-y-6"
+     th:with="customerList=${customers != null ? customers : (page != null ? page.content : {})},
+              totalCount=${page != null ? page.totalElements : (customers != null ? #lists.size(customers) : 0)}">
 
-  <!-- Encabezado -->
-  <div class="flex justify-between items-center mb-6">
+  <!-- CABECERA -->
+  <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-6">
     <div>
-      <h2 class="text-2xl font-bold text-white">Directorio de Clientes</h2>
-      <p class="text-sm text-slate-400 mt-1">Conoce a tus compradores, su historial de pedidos y valor total generado.</p>
+      <h2 class="text-2xl font-bold text-white flex items-center gap-3">
+        Directorio de Clientes
+        <span id="total-items-counter" class="bg-slate-800 text-storevo-400 text-xs font-black px-2.5 py-1 rounded-full border border-slate-700"
+              th:text="${totalCount}">0</span>
+      </h2>
+      <p class="text-sm text-slate-400 mt-1">Conoce a tus compradores, los canales donde han comprado, su historial de pedidos y valor total generado.</p>
     </div>
   </div>
 
-  <!-- Tabla de Clientes -->
-  <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
-    <div class="overflow-x-auto">
-      <table class="w-full text-left text-sm text-slate-400">
-        <thead class="text-xs uppercase bg-slate-800 text-slate-300 border-b border-slate-800">
-        <tr>
-          <th scope="col" class="px-6 py-4 font-medium">Cliente</th>
-          <th scope="col" class="px-6 py-4 font-medium">Ciudad</th>
-          <th scope="col" class="px-6 py-4 font-medium text-center">Pedidos</th>
-          <th scope="col" class="px-6 py-4 font-medium">Total Gastado</th>
-          <th scope="col" class="px-6 py-4 font-medium text-right">Última Compra</th>
-        </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-800/60">
+  <!-- PANEL DE BÚSQUEDA Y FILTROS -->
+  <form id="listing-form" th:action="@{/dashboard/{slug}/customers(slug=${slug})}" method="GET"
+        class="bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-800 shadow-sm flex flex-col gap-4 mb-6"
+        th:with="clearFiltersUrl=@{|/dashboard/${slug}/customers|},
+                   hasActiveFilters=${(param.q != null and not #strings.isEmpty(param.q[0]))
+                     or (param.type != null and not #strings.isEmpty(param.type[0]))
+                     or (param.channel != null and not #strings.isEmpty(param.channel[0]))}">
 
-        <!-- Estado Vacío -->
-        <tr th:if="${#lists.isEmpty(customers)}">
-          <td colspan="5" class="px-6 py-10 text-center text-slate-500">
-            Aún no tienes clientes registrados. Los datos aparecerán cuando recibas tu primer pedido.
-          </td>
-        </tr>
+    <div class="flex flex-col xl:flex-row justify-between gap-5 xl:gap-4">
+      <!-- Grupo Izquierdo: Buscador y Filtros -->
+      <div class="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 flex-1">
+        <div class="w-full sm:w-auto sm:flex-1 min-w-0 sm:min-w-[260px]"
+             th:replace="~{components/ui/listing :: search('Buscar por nombre, documento, teléfono o ciudad...')}"></div>
 
-        <!-- Iteración de Clientes -->
-        <tr th:each="customer : ${customers}" class="hover:bg-slate-800/30 transition-colors">
-          <td class="px-6 py-4">
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-full bg-storevo-500/10 text-storevo-400 flex items-center justify-center font-bold uppercase"
-                   th:text="${#strings.substring(customer.name, 0, 1)}">
-                A
+        <select name="type" data-auto-submit="true" data-filter="true"
+                class="w-full sm:w-auto px-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-300 focus:border-storevo-500 focus:ring-1 focus:ring-storevo-500 cursor-pointer appearance-none pr-8">
+          <option value="">Frecuencia de compra</option>
+          <option value="recurrent" th:selected="${param.type != null and param.type[0] == 'recurrent'}">Recurrentes (2+ pedidos)</option>
+          <option value="single" th:selected="${param.type != null and param.type[0] == 'single'}">1 pedido</option>
+        </select>
+
+        <select name="channel" data-auto-submit="true" data-filter="true"
+                class="w-full sm:w-auto px-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-300 focus:border-storevo-500 focus:ring-1 focus:ring-storevo-500 cursor-pointer appearance-none pr-8">
+          <option value="">Con compras en cualquier canal</option>
+          <option value="WHATSAPP" th:selected="${param.channel != null and param.channel[0] == 'WHATSAPP'}">Ha comprado por WhatsApp</option>
+          <option value="WEB" th:selected="${param.channel != null and param.channel[0] == 'WEB'}">Ha comprado por Tienda Online</option>
+        </select>
+
+        <div class="w-full sm:w-auto flex justify-center sm:block"
+             th:replace="~{components/ui/listing :: clear-filters(${clearFiltersUrl}, ${hasActiveFilters})}"></div>
+      </div>
+
+      <!-- Grupo Derecho: Selector de Vistas, Ordenamiento y Paginación -->
+      <div class="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 w-full xl:w-auto border-t border-slate-800/60 pt-4 xl:border-0 xl:pt-0">
+        <!-- Opciones de Vista: PC (Tabla / Tarjetas) -->
+        <div class="hidden lg:flex items-center bg-slate-800/80 rounded-lg p-1 border border-slate-700/50">
+          <button type="button" onclick="Storevo.CustomersList.setView('table')" class="view-btn view-btn-table px-3 py-1.5 rounded-md text-sm font-medium transition">Tabla</button>
+          <button type="button" onclick="Storevo.CustomersList.setView('grid')" class="view-btn view-btn-grid px-3 py-1.5 rounded-md text-sm font-medium transition">Tarjetas</button>
+        </div>
+
+        <!-- Opciones de Vista: Celular (Tarjetas / Compacta) -->
+        <div class="flex lg:hidden items-center bg-slate-800/80 rounded-lg p-1 border border-slate-700/50 w-full sm:w-auto">
+          <button type="button" onclick="Storevo.CustomersList.setView('grid')" class="view-btn view-btn-grid flex-1 px-3 py-1.5 rounded-md text-sm font-medium text-center transition">Tarjetas</button>
+          <button type="button" onclick="Storevo.CustomersList.setView('compact')" class="view-btn view-btn-compact flex-1 px-3 py-1.5 rounded-md text-sm font-medium text-center transition">Compacta</button>
+        </div>
+
+        <div class="w-full sm:w-auto"
+             th:replace="~{components/ui/listing :: sort(${ {'last_order_desc': 'Última compra reciente', 'spent_desc': 'Mayor total gastado', 'orders_desc': 'Más pedidos', 'name_asc': 'Nombre (A-Z)'} })}"></div>
+
+        <div th:if="${page != null}" class="w-full sm:w-auto hidden sm:block"
+             th:replace="~{components/ui/listing :: page-size()}"></div>
+      </div>
+    </div>
+
+    <div id="active-filters-chips-container" class="flex-1 min-w-0">
+      <div th:replace="~{components/ui/listing :: active-filters-chips}"></div>
+    </div>
+  </form>
+
+  <!-- WRAPPER DE VISTAS -->
+  <div id="customers-view-wrapper" class="view-table">
+    <div id="listing-results-container" th:fragment="listing-content" class="relative transition-opacity duration-200">
+
+      <!-- ESTADO VACÍO -->
+      <div th:if="${#lists.isEmpty(customerList)}">
+        <div th:replace="~{components/ui/listing :: empty-state('Aún no tienes clientes registrados', 'Los datos aparecerán cuando recibas tu primer pedido por WhatsApp o pago en línea.', 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z', @{|/dashboard/${slug}/customers|})}"></div>
+      </div>
+
+      <div th:unless="${#lists.isEmpty(customerList)}">
+
+        <!-- ========================================== -->
+        <!-- 1. VISTA TABLA (Escritorio por defecto)    -->
+        <!-- ========================================== -->
+        <div class="customer-view-table bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-400">
+              <thead class="text-xs uppercase bg-slate-800 text-slate-300 border-b border-slate-800">
+              <tr>
+                <th scope="col" class="px-6 py-4 font-bold">Cliente</th>
+                <th scope="col" class="px-6 py-4 font-bold">Ciudad</th>
+                <!-- ENCABEZADO DE LA COLUMNA CANALES -->
+                <th scope="col" class="px-6 py-4 font-bold">Canales de Compra</th>
+                <th scope="col" class="px-6 py-4 font-bold text-center">Pedidos</th>
+                <th scope="col" class="px-6 py-4 font-bold">Total Gastado</th>
+                <th scope="col" class="px-6 py-4 font-bold">Última Compra</th>
+                <th scope="col" class="px-6 py-4 font-bold text-right">Acciones</th>
+              </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800/60">
+              <tr th:each="customer : ${customerList}"
+                  class="customer-item hover:bg-slate-800/40 transition-colors"
+                  th:attr="data-search=${(customer.name != null ? customer.name : '') + ' ' + (customer.phone != null ? customer.phone : '') + ' ' + (customer.city != null ? customer.city : '') + ' ' + (customer.document != null ? customer.document : '')},
+                                         data-orders=${customer.totalOrders != null ? customer.totalOrders : 0},
+                                         data-spent=${customer.totalSpent != null ? customer.totalSpent : 0}">
+
+                <!-- Columna 1: Cliente + Teléfono + Documento -->
+                <td class="px-6 py-4">
+                  <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-storevo-500/10 text-storevo-400 border border-storevo-500/20 flex items-center justify-center font-bold uppercase flex-shrink-0"
+                         th:text="${customer.name != null and !#strings.isEmpty(customer.name) ? #strings.substring(customer.name, 0, 1) : 'C'}">
+                      A
+                    </div>
+                    <div class="min-w-0">
+                      <div class="flex items-center gap-2">
+                        <p class="font-bold text-white truncate" th:text="${customer.name}">Nombre</p>
+                        <span th:if="${customer.totalOrders != null and customer.totalOrders > 1}"
+                              class="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                                    Recurrente
+                                                </span>
+                      </div>
+                      <div class="flex items-center flex-wrap gap-2 mt-0.5 text-xs text-slate-500">
+                                                <span class="flex items-center gap-1">
+                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+                                                    <span th:text="${customer.phone}">Teléfono</span>
+                                                </span>
+                        <span th:if="${customer.document != null and !#strings.isEmpty(customer.document)}"
+                              class="font-mono text-[11px] text-slate-400 bg-slate-800/80 px-1.5 py-0.5 rounded border border-slate-700"
+                              th:text="'Doc: ' + ${customer.document}">
+                                                </span>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+
+                <!-- Columna 2: Ciudad -->
+                <td class="px-6 py-4 text-slate-300" th:text="${customer.city != null and !#strings.isEmpty(customer.city) ? customer.city : '—'}">
+                  Ciudad
+                </td>
+
+                <!-- Columna 3: AQUÍ VA EL FRAGMENTO DE CANALES DE COMPRA -->
+                <td class="px-6 py-4">
+                  <div class="flex flex-wrap items-center gap-1.5">
+                    <th:block th:if="${customer.channels != null and not #lists.isEmpty(customer.channels)}">
+                                            <span th:each="ch : ${customer.channels}"
+                                                  th:text="${ch.getDisplayName()}"
+                                                  th:class="'text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full border ' + ${ch.getBadgeClasses()}">
+                                            </span>
+                    </th:block>
+                    <span th:if="${customer.channels == null or #lists.isEmpty(customer.channels)}"
+                          class="text-xs text-slate-600">—</span>
+                  </div>
+                </td>
+
+                <!-- Columna 4: Total Pedidos -->
+                <td class="px-6 py-4 text-center">
+                                    <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-800 text-xs font-bold text-slate-300"
+                                          th:text="${customer.totalOrders}">0</span>
+                </td>
+
+                <!-- Columna 5: Total Gastado -->
+                <td class="px-6 py-4 font-bold text-storevo-400 whitespace-nowrap"
+                    th:text="${customer.totalSpent != null ? '$ ' + #numbers.formatDecimal(customer.totalSpent, 1, 'POINT', 0, 'COMMA') : '$ 0'}">
+                  $0
+                </td>
+
+                <!-- Columna 6: Última Compra -->
+                <td class="px-6 py-4 text-xs text-slate-500 whitespace-nowrap"
+                    th:text="${customer.lastOrderDate != null ? #temporals.format(customer.lastOrderDate, 'dd/MM/yyyy HH:mm') : '—'}">
+                  Fecha
+                </td>
+
+                <!-- Columna 7: Acciones -->
+                <td class="px-6 py-4 text-right whitespace-nowrap" onclick="event.stopPropagation();">
+                  <div class="inline-flex items-center justify-end gap-2">
+                    <a th:if="${customer.phone != null and !#strings.isEmpty(customer.phone)}"
+                       th:href="'https://wa.me/' + ${#strings.replace(#strings.replace(customer.phone, ' ', ''), '+', '')}"
+                       target="_blank" rel="noopener"
+                       title="Escribir por WhatsApp"
+                       class="p-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 rounded-lg transition">
+                      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 004.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91C21.96 6.45 17.5 2 12.04 2zm5.83 14.16c-.25.7-1.45 1.33-2 1.42-.53.08-1.03.11-1.78-.11-.41-.12-.93-.29-1.6-.57-2.82-1.22-4.66-4.06-4.8-4.25-.14-.19-1.15-1.53-1.15-2.92s.72-2.07.98-2.35c.25-.28.54-.35.72-.35.18 0 .36 0 .52.01.17.01.39-.06.61.46.25.6.85 2.07.92 2.22.07.15.12.32.02.52-.09.19-.14.32-.28.49-.14.17-.29.37-.42.5-.14.14-.28.29-.12.57.16.28.71 1.17 1.53 1.9 1.05.94 1.94 1.23 2.22 1.37.28.14.45.12.61-.07.17-.19.7-.82.89-1.1.19-.28.37-.23.62-.14.25.09 1.6.75 1.87.89.28.14.46.21.53.32.07.12.07.68-.18 1.38z"></path></svg>
+                    </a>
+                    <a th:href="@{/dashboard/{slug}/customers/detail(slug=${slug}, phone=${customer.phone})}"
+                       class="text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold transition inline-flex items-center gap-1.5">
+                      <span>Ver cliente</span>
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </a>
+                  </div>
+                </td>
+              </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- 2. VISTA TARJETAS (Móvil / Alternativa PC) -->
+        <!-- ========================================== -->
+        <div class="customer-view-grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div th:each="customer : ${customerList}"
+               class="customer-item bg-slate-900 border border-slate-800 rounded-xl p-5 hover:border-slate-700 transition flex flex-col gap-4 shadow-sm"
+               th:attr="data-search=${(customer.name != null ? customer.name : '') + ' ' + (customer.phone != null ? customer.phone : '') + ' ' + (customer.city != null ? customer.city : '') + ' ' + (customer.document != null ? customer.document : '')},
+                                  data-orders=${customer.totalOrders != null ? customer.totalOrders : 0},
+                                  data-spent=${customer.totalSpent != null ? customer.totalSpent : 0}">
+            <div class="flex justify-between items-start gap-3">
+              <div class="flex items-center gap-3 min-w-0">
+                <div class="w-11 h-11 rounded-full bg-storevo-500/10 text-storevo-400 border border-storevo-500/20 flex items-center justify-center font-bold uppercase flex-shrink-0"
+                     th:text="${customer.name != null and !#strings.isEmpty(customer.name) ? #strings.substring(customer.name, 0, 1) : 'C'}">C</div>
+                <div class="min-w-0">
+                  <h3 class="font-bold text-white text-base truncate" th:text="${customer.name}">Nombre</h3>
+                  <p class="text-xs text-slate-400 truncate" th:text="${customer.phone}">Teléfono</p>
+                </div>
               </div>
-              <div>
-                <p class="font-bold text-white" th:text="${customer.name}">Nombre</p>
-                <p class="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
-                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
-                  <span th:text="${customer.phone}">Teléfono</span>
-                </p>
+              <!-- Canales en la esquina superior de la tarjeta -->
+              <div class="flex flex-wrap justify-end gap-1" th:if="${customer.channels != null and not #lists.isEmpty(customer.channels)}">
+                                <span th:each="ch : ${customer.channels}"
+                                      th:text="${ch.getDisplayName()}"
+                                      th:class="'text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full border ' + ${ch.getBadgeClasses()}">
+                                </span>
               </div>
             </div>
-          </td>
 
-          <td class="px-6 py-4 text-slate-300" th:text="${customer.city}">
-            Ciudad
-          </td>
+            <div class="py-3 border-y border-slate-800/60 grid grid-cols-3 gap-2 text-center">
+              <div>
+                <p class="text-[10px] uppercase font-bold text-slate-500">Ciudad</p>
+                <p class="text-xs font-semibold text-slate-200 truncate mt-0.5" th:text="${customer.city != null and !#strings.isEmpty(customer.city) ? customer.city : '—'}">Ciudad</p>
+              </div>
+              <div>
+                <p class="text-[10px] uppercase font-bold text-slate-500">Pedidos</p>
+                <p class="text-xs font-black text-white mt-0.5" th:text="${customer.totalOrders}">0</p>
+              </div>
+              <div>
+                <p class="text-[10px] uppercase font-bold text-slate-500">Total Gastado</p>
+                <p class="text-xs font-black text-storevo-400 mt-0.5"
+                   th:text="${customer.totalSpent != null ? '$ ' + #numbers.formatDecimal(customer.totalSpent, 1, 'POINT', 0, 'COMMA') : '$ 0'}">$0</p>
+              </div>
+            </div>
 
-          <td class="px-6 py-4 text-center">
-                        <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-800 text-xs font-bold text-slate-300"
-                              th:text="${customer.totalOrders}">0</span>
-          </td>
+            <div class="flex items-center justify-between gap-2 mt-auto">
+                            <span class="text-[11px] text-slate-500"
+                                  th:text="${customer.lastOrderDate != null ? 'Últ. compra: ' + #temporals.format(customer.lastOrderDate, 'dd/MM/yyyy') : ''}"></span>
+              <div class="flex items-center gap-2">
+                <a th:if="${customer.phone != null and !#strings.isEmpty(customer.phone)}"
+                   th:href="'https://wa.me/' + ${#strings.replace(#strings.replace(customer.phone, ' ', ''), '+', '')}"
+                   target="_blank" rel="noopener"
+                   class="p-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 rounded-lg transition"
+                   title="Contactar por WhatsApp">
+                  <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 004.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91C21.96 6.45 17.5 2 12.04 2zm5.83 14.16c-.25.7-1.45 1.33-2 1.42-.53.08-1.03.11-1.78-.11-.41-.12-.93-.29-1.6-.57-2.82-1.22-4.66-4.06-4.8-4.25-.14-.19-1.15-1.53-1.15-2.92s.72-2.07.98-2.35c.25-.28.54-.35.72-.35.18 0 .36 0 .52.01.17.01.39-.06.61.46.25.6.85 2.07.92 2.22.07.15.12.32.02.52-.09.19-.14.32-.28.49-.14.17-.29.37-.42.5-.14.14-.28.29-.12.57.16.28.71 1.17 1.53 1.9 1.05.94 1.94 1.23 2.22 1.37.28.14.45.12.61-.07.17-.19.7-.82.89-1.1.19-.28.37-.23.62-.14.25.09 1.6.75 1.87.89.28.14.46.21.53.32.07.12.07.68-.18 1.38z"></path></svg>
+                </a>
+                <a th:href="@{/dashboard/{slug}/customers/detail(slug=${slug}, phone=${customer.phone})}"
+                   class="text-slate-200 hover:text-white bg-slate-800 hover:bg-storevo-500 border border-slate-700 px-3.5 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5">
+                  <span>Ver cliente</span>
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
 
-          <td class="px-6 py-4 font-bold text-storevo-400" th:text="${customer.totalSpent != null ? '$ ' + #numbers.formatDecimal(customer.totalSpent, 1, 'POINT', 0, 'COMMA') : '$ 0'}">
-            $0
-          </td>
+        <!-- ========================================== -->
+        <!-- 3. VISTA COMPACTA (Alternativa Móvil)      -->
+        <!-- ========================================== -->
+        <div class="customer-view-compact flex-col gap-2">
+          <div th:each="customer : ${customerList}"
+               class="customer-item bg-slate-900 border border-slate-800 rounded-xl p-3.5 hover:border-slate-700 transition flex items-center justify-between gap-3 shadow-sm"
+               th:attr="data-search=${(customer.name != null ? customer.name : '') + ' ' + (customer.phone != null ? customer.phone : '') + ' ' + (customer.city != null ? customer.city : '') + ' ' + (customer.document != null ? customer.document : '')},
+                                  data-orders=${customer.totalOrders != null ? customer.totalOrders : 0},
+                                  data-spent=${customer.totalSpent != null ? customer.totalSpent : 0}">
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2 flex-wrap">
+                <p class="font-bold text-white text-sm truncate" th:text="${customer.name}">Nombre</p>
+                <span class="text-xs text-slate-500" th:text="'(' + ${customer.totalOrders} + ' ped.)'"></span>
+                <th:block th:if="${customer.channels != null and not #lists.isEmpty(customer.channels)}">
+                                    <span th:each="ch : ${customer.channels}"
+                                          th:text="${ch.getDisplayName()}"
+                                          th:class="'text-[8px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded-full border ' + ${ch.getBadgeClasses()}">
+                                    </span>
+                </th:block>
+              </div>
+              <p class="text-xs text-slate-400 truncate mt-0.5" th:text="${customer.phone} + ' · ' + ${customer.city}"></p>
+            </div>
+            <div class="flex items-center gap-2.5 flex-shrink-0">
+                            <span class="font-black text-storevo-400 text-sm"
+                                  th:text="${customer.totalSpent != null ? '$ ' + #numbers.formatDecimal(customer.totalSpent, 1, 'POINT', 0, 'COMMA') : '$ 0'}">$0</span>
+              <a th:href="@{/dashboard/{slug}/customers/detail(slug=${slug}, phone=${customer.phone})}"
+                 class="text-slate-400 hover:text-white bg-slate-800 p-2 rounded-lg">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+              </a>
+            </div>
+          </div>
+        </div>
 
-          <td class="px-6 py-4 text-right text-xs text-slate-500"
-              th:text="${#temporals.format(customer.lastOrderDate, 'dd/MM/yyyy HH:mm')}">
-            Fecha
-          </td>
-        </tr>
-        </tbody>
-      </table>
+        <!-- Paginación Global -->
+        <div th:if="${page != null}" class="mt-6 overflow-x-auto pb-2">
+          <div th:replace="~{components/ui/listing :: pagination(${page})}"></div>
+        </div>
+      </div>
     </div>
   </div>
+
+  <div th:replace="~{components/ui/listing :: scripts}"></div>
 </div>
+
+<th:block layout:fragment="scripts">
+  <script th:src="@{/js/modules/customersList.js}"></script>
+</th:block>
 </body>
 </html>

@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/dashboard-layout}">
+<head>
+    <title th:text="${customer.name + ' | Clientes'}">Detalle del Cliente</title>
+</head>
+<body>
+<div layout:fragment="content" class="max-w-6xl mx-auto space-y-6">
+
+    <!-- CABECERA -->
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div class="flex items-center gap-4">
+            <a th:href="@{|/dashboard/${slug}/customers|}" class="bg-slate-800 p-2 rounded-lg text-slate-400 hover:text-white transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            </a>
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-full bg-storevo-500/15 text-storevo-400 border border-storevo-500/30 flex items-center justify-center font-black text-lg uppercase"
+                     th:text="${customer.name != null and !#strings.isEmpty(customer.name) ? #strings.substring(customer.name, 0, 1) : 'C'}">C</div>
+                <div>
+                    <div class="flex items-center gap-2.5 flex-wrap">
+                        <h2 class="text-2xl font-black text-white" th:text="${customer.name}">Nombre del Cliente</h2>
+                        <span th:if="${customer.totalOrders != null and customer.totalOrders > 1}"
+                              class="text-xs uppercase tracking-wider font-bold px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            Cliente Recurrente
+                        </span>
+                    </div>
+                    <!-- Punto 2: Mostrar los canales utilizados por el cliente o el último canal registrado -->
+                    <div class="flex items-center gap-2 mt-1 flex-wrap">
+                        <span class="text-xs text-slate-400">Canales de compra:</span>
+                        <th:block th:if="${customerChannels != null and not #lists.isEmpty(customerChannels)}">
+                            <span th:each="ch : ${customerChannels}"
+                                  th:text="${ch.getDisplayName()}"
+                                  th:class="'text-[10px] uppercase tracking-wider font-bold px-2.5 py-0.5 rounded-full border ' + ${ch.getBadgeClasses()}">
+                            </span>
+                        </th:block>
+                        <span th:if="${customerChannels == null or #lists.isEmpty(customerChannels)}"
+                              class="text-xs text-slate-500">Registrado en pedidos</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-3 w-full sm:w-auto">
+            <a th:if="${customer.phone != null and !#strings.isEmpty(customer.phone)}"
+               th:href="'https://wa.me/' + ${#strings.replace(#strings.replace(customer.phone, ' ', ''), '+', '')}"
+               target="_blank" rel="noopener"
+               class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 font-bold py-2.5 px-4 rounded-xl text-sm transition">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 004.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91C21.96 6.45 17.5 2 12.04 2zm5.83 14.16c-.25.7-1.45 1.33-2 1.42-.53.08-1.03.11-1.78-.11-.41-.12-.93-.29-1.6-.57-2.82-1.22-4.66-4.06-4.8-4.25-.14-.19-1.15-1.53-1.15-2.92s.72-2.07.98-2.35c.25-.28.54-.35.72-.35.18 0 .36 0 .52.01.17.01.39-.06.61.46.25.6.85 2.07.92 2.22.07.15.12.32.02.52-.09.19-.14.32-.28.49-.14.17-.29.37-.42.5-.14.14-.28.29-.12.57.16.28.71 1.17 1.53 1.9 1.05.94 1.94 1.23 2.22 1.37.28.14.45.12.61-.07.17-.19.7-.82.89-1.1.19-.28.37-.23.62-.14.25.09 1.6.75 1.87.89.28.14.46.21.53.32.07.12.07.68-.18 1.38z"></path></svg>
+                <span>Escribir por WhatsApp</span>
+            </a>
+            <button type="button" onclick="Storevo.CustomerDetail.openEditModal()"
+                    class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 font-bold py-2.5 px-4 rounded-xl text-sm transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                <span>Editar Datos</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- COLUMNA IZQUIERDA (2/3): KPIs e Historial de Pedidos -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- KPIs -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+                    <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Total Gastado</p>
+                    <p class="text-2xl font-black text-storevo-400 mt-1"
+                       th:text="${customer.totalSpent != null ? '$ ' + #numbers.formatDecimal(customer.totalSpent, 1, 'POINT', 0, 'COMMA') : '$ 0'}">$0</p>
+                </div>
+                <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+                    <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Pedidos Realizados</p>
+                    <p class="text-2xl font-black text-white mt-1" th:text="${customer.totalOrders != null ? customer.totalOrders : 0}">0</p>
+                </div>
+                <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+                    <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Última Compra</p>
+                    <p class="text-base font-bold text-slate-200 mt-2"
+                       th:text="${customer.lastOrderDate != null ? #temporals.format(customer.lastOrderDate, 'dd/MM/yyyy HH:mm') : '—'}">—</p>
+                </div>
+            </div>
+
+            <!-- Historial de Pedidos -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
+                <div class="px-6 py-4 border-b border-slate-800 flex justify-between items-center">
+                    <h3 class="text-base font-bold text-white">Historial de Pedidos</h3>
+                </div>
+                <div th:if="${#lists.isEmpty(customerOrders)}" class="p-8 text-center text-sm text-slate-500">
+                    No se encontraron pedidos asociados a este cliente.
+                </div>
+                <div th:unless="${#lists.isEmpty(customerOrders)}" class="overflow-x-auto">
+                    <table class="w-full text-left text-sm text-slate-400">
+                        <thead class="text-xs uppercase bg-slate-950 text-slate-500 border-b border-slate-800">
+                        <tr>
+                            <th class="px-6 py-3.5 font-bold">Pedido</th>
+                            <th class="px-6 py-3.5 font-bold">Fecha</th>
+                            <th class="px-6 py-3.5 font-bold">Canal</th>
+                            <th class="px-6 py-3.5 font-bold">Total</th>
+                            <th class="px-6 py-3.5 font-bold">Estado</th>
+                            <th class="px-6 py-3.5 font-bold text-right">Acción</th>
+                        </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800/60">
+                        <tr th:each="ord : ${customerOrders}" class="hover:bg-slate-800/40 transition">
+                            <td class="px-6 py-4 font-black text-white" th:text="'#' + ${ord.id}">#1</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-xs" th:text="${#temporals.format(ord.createdAt, 'dd/MM/yyyy HH:mm')}">Fecha</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span th:text="${ord.channel.getDisplayName()}"
+                                      th:class="'text-[10px] uppercase tracking-wider font-bold px-2.5 py-0.5 rounded-full border ' + ${ord.channel.getBadgeClasses()}"></span>
+                            </td>
+                            <td class="px-6 py-4 font-bold text-storevo-400 whitespace-nowrap"
+                                th:text="${ord.total != null ? '$ ' + #numbers.formatDecimal(ord.total, 1, 'POINT', 0, 'COMMA') : '$ 0'}">$0</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span th:text="${ord.status.getDisplayName()}"
+                                      th:class="'text-[10px] uppercase tracking-wider font-bold px-2.5 py-1 rounded-full border ' + ${ord.status.getBadgeClasses()}"></span>
+                            </td>
+                            <td class="px-6 py-4 text-right">
+                                <a th:href="@{/dashboard/{slug}/orders/{id}(slug=${slug}, id=${ord.id})}"
+                                   class="text-xs font-bold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg transition">
+                                    Ver detalle
+                                </a>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- COLUMNA DERECHA (1/3): Contacto, Logística y Datos Fiscales (Punto 3: siempre accesibles) -->
+        <div class="space-y-6">
+            <!-- Contacto -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm space-y-3">
+                <h3 class="text-base font-bold text-white border-b border-slate-800 pb-3">Datos de Contacto</h3>
+                <div>
+                    <p class="text-xs text-slate-500 font-bold uppercase">Teléfono / WhatsApp</p>
+                    <p class="text-sm text-slate-200 font-medium mt-0.5" th:text="${customer.phone ?: 'No registrado'}"></p>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-500 font-bold uppercase">Correo Electrónico</p>
+                    <p class="text-sm text-slate-200 font-medium mt-0.5" th:text="${customerEmail ?: 'No registrado'}"></p>
+                </div>
+            </div>
+
+            <!-- Datos Logísticos y de Entrega -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm space-y-3">
+                <h3 class="text-base font-bold text-white border-b border-slate-800 pb-3">Dirección y Logística</h3>
+                <div>
+                    <p class="text-xs text-slate-500 font-bold uppercase">Ciudad</p>
+                    <p class="text-sm text-slate-200 font-medium mt-0.5" th:text="${customer.city ?: 'No registrada'}"></p>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-500 font-bold uppercase">Dirección de Entrega</p>
+                    <p class="text-sm text-slate-200 font-medium mt-0.5" th:text="${customerAddress ?: 'No registrada'}"></p>
+                </div>
+            </div>
+
+            <!-- Datos Fiscales / Facturación (Almacenados sin bloqueo por plan) -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm space-y-3">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <h3 class="text-base font-bold text-white">Identificación y Facturación</h3>
+                    <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">DIAN / Guías</span>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-500 font-bold uppercase">Documento (CC / NIT)</p>
+                    <p class="text-sm text-slate-200 font-mono font-bold mt-0.5" th:text="${customerDocument ?: 'Consumidor Final (222222222222)'}"></p>
+                </div>
+                <div th:if="${customerLegalName != null and !#strings.isEmpty(customerLegalName)}">
+                    <p class="text-xs text-slate-500 font-bold uppercase">Razón Social / Nombre Fiscal</p>
+                    <p class="text-sm text-slate-200 font-medium mt-0.5" th:text="${customerLegalName}"></p>
+                </div>
+                <div th:if="${customerTaxRegime != null and !#strings.isEmpty(customerTaxRegime)}">
+                    <p class="text-xs text-slate-500 font-bold uppercase">Responsabilidad Tributaria</p>
+                    <p class="text-sm text-slate-200 font-medium mt-0.5" th:text="${customerTaxRegime}"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE EDICIÓN DE DATOS DEL CLIENTE -->
+    <div id="customer-edit-modal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div id="customer-edit-modal-content" class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl transform scale-95 transition-transform duration-300 overflow-hidden">
+            <div class="p-6 border-b border-slate-800 flex justify-between items-center">
+                <h3 class="text-lg font-bold text-white">Actualizar Datos del Cliente</h3>
+                <button type="button" onclick="Storevo.CustomerDetail.closeEditModal()" class="text-slate-400 hover:text-white bg-slate-800 p-1.5 rounded-lg">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <form th:action="@{|/dashboard/${slug}/customers/update|}" method="POST" class="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+                <input type="hidden" name="originalPhone" th:value="${customer.phone}">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Nombre Completo *</label>
+                        <input type="text" name="name" th:value="${customer.name}" required class="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Teléfono / WhatsApp *</label>
+                        <input type="text" name="phone" th:value="${customer.phone}" required class="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white text-sm">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Tipo Doc.</label>
+                        <select name="documentType" id="modal-doc-type" onchange="Storevo.CustomerDetail.toggleNitField(this.value)" class="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white text-sm">
+                            <option value="CC">CC - Cédula</option>
+                            <option value="NIT">NIT - Empresa</option>
+                            <option value="CE">CE - Extranjería</option>
+                            <option value="PP">Pasaporte</option>
+                        </select>
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Número de Documento</label>
+                        <div class="flex gap-2">
+                            <input type="text" name="document" th:value="${customerDocument}" class="flex-1 px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white text-sm font-mono" placeholder="Ej: 1020304050">
+                            <input type="text" name="verificationDigit" id="modal-nit-dv" maxlength="1" class="hidden w-14 text-center px-2 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white text-sm font-mono" placeholder="DV">
+                        </div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Correo Electrónico</label>
+                        <input type="email" name="email" th:value="${customerEmail}" class="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white text-sm" placeholder="cliente@correo.com">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Ciudad</label>
+                        <input type="text" name="city" th:value="${customer.city}" class="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white text-sm">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Dirección de Entrega</label>
+                    <input type="text" name="address" th:value="${customerAddress}" class="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white text-sm">
+                </div>
+                <div class="pt-4 border-t border-slate-800 flex justify-end gap-3">
+                    <button type="button" onclick="Storevo.CustomerDetail.closeEditModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-sm font-bold">Cancelar</button>
+                    <button type="submit" class="px-5 py-2 bg-storevo-500 hover:bg-storevo-600 text-white rounded-lg text-sm font-bold shadow-lg shadow-storevo-500/20">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<th:block layout:fragment="scripts">
+    <script th:src="@{/js/modules/customerDetail.js}"></script>
+</th:block>
+</body>
+</html>
