@@ -5,7 +5,6 @@
 <head>
     <title>Gestión de Pedidos</title>
     <style>
-        /* Reglas de visibilidad estrictas para asegurar que el AJAX no rompa la vista activa */
         #orders-view-wrapper.view-table .order-view-grid,
         #orders-view-wrapper.view-table .order-view-compact { display: none !important; }
         #orders-view-wrapper.view-table .order-view-table { display: block !important; }
@@ -17,10 +16,22 @@
         #orders-view-wrapper.view-compact .order-view-table,
         #orders-view-wrapper.view-compact .order-view-grid { display: none !important; }
         #orders-view-wrapper.view-compact .order-view-compact { display: flex !important; }
+
+        /* Reemplaza el ícono gris nativo por nuestra área clicable sobre el SVG blanco */
+        .custom-date-input::-webkit-calendar-picker-indicator {
+            opacity: 0;
+            cursor: pointer;
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 2.5rem;
+            height: 100%;
+            margin: 0;
+        }
     </style>
 </head>
 <body>
-<!-- class="space-y-6" sobrescribe el max-w-7xl mx-auto del layout para ocupar todo el ancho igual que Productos -->
 <div layout:fragment="content" class="space-y-6">
 
     <!-- CABECERA -->
@@ -34,13 +45,16 @@
         </div>
     </div>
 
-    <!-- PANEL DE BÚSQUEDA Y FILTROS (Misma arquitectura visual que Productos) -->
+    <!-- PANEL DE BÚSQUEDA Y FILTROS -->
     <form id="listing-form" th:action="@{/dashboard/{slug}/orders(slug=${slug})}" method="GET"
           class="bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-800 shadow-sm flex flex-col gap-4"
           th:with="clearFiltersUrl=@{|/dashboard/${slug}/orders|},
                    hasActiveFilters=${(param.q != null and not #strings.isEmpty(param.q[0]))
                      or (param.status != null and not #strings.isEmpty(param.status[0]))
-                     or (param.channel != null and not #strings.isEmpty(param.channel[0]))}">
+                     or (param.channel != null and not #strings.isEmpty(param.channel[0]))
+                     or (param.datePreset != null and not #strings.isEmpty(param.datePreset[0]))
+                     or (param.fromDate != null and not #strings.isEmpty(param.fromDate[0]))
+                     or (param.toDate != null and not #strings.isEmpty(param.toDate[0]))}">
 
         <!-- Fila 1: Buscador y Filtros a la izquierda / Ordenamiento y Tamaño a la derecha -->
         <div class="flex flex-col xl:flex-row justify-between gap-4">
@@ -48,6 +62,48 @@
                 <div class="w-full sm:w-auto" th:replace="~{components/ui/listing :: search('Buscar por #, cliente o teléfono...')}"></div>
                 <div class="w-full sm:w-auto" th:replace="~{components/ui/listing :: filter-select('status', 'Todos los estados', ${statusOptions}, 'key', 'value')}"></div>
                 <div class="w-full sm:w-auto" th:replace="~{components/ui/listing :: filter-select('channel', 'Todos los canales', ${channelOptions}, 'key', 'value')}"></div>
+
+                <!-- Filtro de Fechas -->
+                <div class="w-full sm:w-auto" th:replace="~{components/ui/listing :: filter-select('datePreset', 'Todas las fechas', ${datePresetOptions}, 'key', 'value')}"></div>
+
+                <!-- Rango Personalizado con Ícono de Calendario Blanco -->
+                <div id="custom-date-range"
+                     th:classappend="${(param.datePreset != null and param.datePreset[0] == 'custom') or (param.fromDate != null and not #strings.isEmpty(param.fromDate[0])) or (param.toDate != null and not #strings.isEmpty(param.toDate[0]))} ? 'flex' : 'hidden'"
+                     class="flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+
+                    <!-- Caja DESDE -->
+                    <label data-date-picker-box
+                           class="group relative flex items-center justify-between gap-2 bg-slate-900 hover:bg-slate-800/80 border border-slate-700 hover:border-slate-500 rounded-xl pl-3.5 pr-9 py-2 cursor-pointer transition-all focus-within:border-storevo-500 focus-within:ring-1 focus-within:ring-storevo-500">
+                        <span class="text-xs font-bold text-slate-400 group-hover:text-slate-200 uppercase select-none">Desde</span>
+                        <input type="date" name="fromDate" id="order-from-date"
+                               th:value="${param.fromDate != null ? param.fromDate[0] : ''}"
+                               data-filter="true" data-chip-prefix="Desde: "
+                               class="custom-date-input bg-transparent text-sm font-medium text-white focus:outline-none cursor-pointer [color-scheme:dark]">
+                        <!-- Ícono de calendario blanco -->
+                        <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white group-hover:text-storevo-400 group-hover:scale-110 transition-all">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                        </span>
+                    </label>
+
+                    <!-- Caja HASTA -->
+                    <label data-date-picker-box
+                           class="group relative flex items-center justify-between gap-2 bg-slate-900 hover:bg-slate-800/80 border border-slate-700 hover:border-slate-500 rounded-xl pl-3.5 pr-9 py-2 cursor-pointer transition-all focus-within:border-storevo-500 focus-within:ring-1 focus-within:ring-storevo-500">
+                        <span class="text-xs font-bold text-slate-400 group-hover:text-slate-200 uppercase select-none">Hasta</span>
+                        <input type="date" name="toDate" id="order-to-date"
+                               th:value="${param.toDate != null ? param.toDate[0] : ''}"
+                               data-filter="true" data-chip-prefix="Hasta: "
+                               class="custom-date-input bg-transparent text-sm font-medium text-white focus:outline-none cursor-pointer [color-scheme:dark]">
+                        <!-- Ícono de calendario blanco -->
+                        <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white group-hover:text-storevo-400 group-hover:scale-110 transition-all">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                        </span>
+                    </label>
+                </div>
+
                 <div th:replace="~{components/ui/listing :: clear-filters(${clearFiltersUrl}, ${hasActiveFilters})}"></div>
             </div>
 
@@ -57,25 +113,21 @@
             </div>
         </div>
 
-        <!-- Fila 2: Chips de Filtros Activos y Selector de Vistas (Tabla / Tarjetas / Compacto) -->
+        <!-- Fila 2: Chips de Filtros Activos y Selector de Vistas -->
         <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-t border-slate-800 pt-4 mt-2 w-full">
             <div id="active-filters-chips-container" class="flex-1 min-w-0">
                 <div th:replace="~{components/ui/listing :: active-filters-chips}"></div>
             </div>
 
-            <!-- SELECTOR DE VISTAS RESPONSIVO IGUAL A PRODUCTOS -->
             <div class="flex items-center bg-slate-950 border border-slate-800 p-1 rounded-xl w-fit flex-shrink-0 ml-auto lg:ml-0">
-                <!-- Botón Tabla: Visible en PC -->
                 <button type="button" onclick="setOrdersView('table')" class="view-btn view-btn-table hidden sm:flex px-3 py-1.5 text-sm font-bold rounded-lg text-slate-500 hover:text-slate-300 transition-all items-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
                     <span>Tabla</span>
                 </button>
-                <!-- Botón Tarjetas: Visible en ambos -->
                 <button type="button" onclick="setOrdersView('grid')" class="view-btn view-btn-grid flex px-3 py-1.5 text-sm font-bold rounded-lg text-slate-500 hover:text-slate-300 transition-all items-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
                     <span>Tarjetas</span>
                 </button>
-                <!-- Botón Compacto: Visible en Móvil -->
                 <button type="button" onclick="setOrdersView('compact')" class="view-btn view-btn-compact flex sm:hidden px-3 py-1.5 text-sm font-bold rounded-lg text-slate-500 hover:text-slate-300 transition-all items-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
                     <span>Compacto</span>
@@ -84,9 +136,8 @@
         </div>
     </form>
 
-    <!-- WRAPPER DE VISTA (Controlado por JS) -->
+    <!-- WRAPPER DE VISTA -->
     <div id="orders-view-wrapper" class="view-table">
-        <!-- ZONA AJAX: RESULTADOS -->
         <div id="listing-results-container" th:fragment="listing-content" class="relative transition-opacity duration-200">
 
             <div th:if="${page.empty}">
@@ -94,7 +145,7 @@
             </div>
 
             <div th:unless="${page.empty}">
-                <!-- 1. VISTA TABLA (Escritorio por defecto) -->
+                <!-- 1. VISTA TABLA -->
                 <div class="order-view-table bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-sm">
                     <div class="overflow-x-auto">
                         <table class="w-full text-left text-sm text-slate-400 min-w-[900px]">
@@ -134,7 +185,7 @@
                     </div>
                 </div>
 
-                <!-- 2. VISTA TARJETAS (Escala a 4 columnas en pantallas grandes para llenar todo el ancho) -->
+                <!-- 2. VISTA TARJETAS -->
                 <div class="order-view-grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                     <div th:each="order : ${orders}" class="bg-slate-900 border border-slate-800 rounded-2xl p-5 hover:border-storevo-500/50 hover:shadow-xl transition-all duration-300 flex flex-col gap-4 shadow-sm group">
                         <div class="flex justify-between items-start gap-2">
@@ -166,7 +217,7 @@
                     </div>
                 </div>
 
-                <!-- 3. VISTA COMPACTA (Alternativa Móvil) -->
+                <!-- 3. VISTA COMPACTA -->
                 <div class="order-view-compact flex-col gap-2">
                     <div th:each="order : ${orders}" th:onclick="|window.location.href='@{/dashboard/{slug}/orders/{id}(slug=${slug},id=${order.id})}'|"
                          class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 hover:border-slate-700 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer shadow-sm group">
@@ -196,11 +247,9 @@
         </div>
     </div>
 
-    <!-- Script de listados AJAX base -->
     <div th:replace="~{components/ui/listing :: scripts}"></div>
 </div>
 
-<!-- Lógica de Vistas separada en archivo JS externo -->
 <th:block layout:fragment="scripts">
     <script th:src="@{/js/modules/ordersList.js}"></script>
 </th:block>

@@ -25,6 +25,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -48,18 +51,73 @@ public class OrderService {
         return orders;
     }
 
-    /**
-     * Listado paginado del dashboard. Búsqueda, filtros y orden se resuelven en base de datos.
-     * El orden se mapea desde una lista blanca (nunca se pasa el texto del usuario a Sort),
-     * y siempre se desempata por id para que la paginación sea estable cuando hay totales iguales.
-     */
     @Transactional(readOnly = true)
     public Page<Order> searchOrders(String q, OrderStatus status, OrderChannel channel, String sortStr, Pageable pageable) {
+        return searchOrders(q, status, channel, null, null, null, sortStr, pageable);
+    }
+
+    /**
+     * Listado paginado del dashboard. Búsqueda, estado, canal, fechas y orden se resuelven en base de datos.
+     * - "last_7_days": hoy + 6 días anteriores.
+     * - "last_30_days": hoy + 29 días anteriores.
+     */
+    @Transactional(readOnly = true)
+    public Page<Order> searchOrders(
+            String q,
+            OrderStatus status,
+            OrderChannel channel,
+            String datePreset,
+            LocalDate customFrom,
+            LocalDate customTo,
+            String sortStr,
+            Pageable pageable) {
+
         String term = (q == null) ? "" : q.trim();
-        if (term.startsWith("#")) term = term.substring(1).trim(); // "#123" → "123"
+        if (term.startsWith("#")) term = term.substring(1).trim(); // "#123" -> "123"
         Long orderId = null;
         if (term.matches("\\d{1,18}")) orderId = Long.valueOf(term);
         String normalizedQ = term.isEmpty() ? null : term;
+
+        LocalDateTime fromDateTime = null;
+        LocalDateTime toDateTime = null;
+        LocalDate today = LocalDate.now();
+
+        if (datePreset != null && !datePreset.isBlank()) {
+            switch (datePreset.trim().toLowerCase()) {
+                case "today":
+                    fromDateTime = today.atStartOfDay();
+                    toDateTime = today.atTime(LocalTime.MAX);
+                    break;
+                case "yesterday":
+                    LocalDate yesterday = today.minusDays(1);
+                    fromDateTime = yesterday.atStartOfDay();
+                    toDateTime = yesterday.atTime(LocalTime.MAX);
+                    break;
+                case "last_7_days":
+                    fromDateTime = today.minusDays(6).atStartOfDay();
+                    toDateTime = today.atTime(LocalTime.MAX);
+                    break;
+                case "last_30_days":
+                    fromDateTime = today.minusDays(29).atStartOfDay();
+                    toDateTime = today.atTime(LocalTime.MAX);
+                    break;
+                case "this_month":
+                    fromDateTime = today.withDayOfMonth(1).atStartOfDay();
+                    toDateTime = today.atTime(LocalTime.MAX);
+                    break;
+                case "custom":
+                    if (customFrom != null && customTo != null && customFrom.isAfter(customTo)) {
+                        fromDateTime = customTo.atStartOfDay();
+                        toDateTime = customFrom.atTime(LocalTime.MAX);
+                    } else {
+                        if (customFrom != null) fromDateTime = customFrom.atStartOfDay();
+                        if (customTo != null) toDateTime = customTo.atTime(LocalTime.MAX);
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
 
         Sort sort;
         switch (sortStr == null ? "" : sortStr) {
@@ -71,10 +129,9 @@ public class OrderService {
         }
 
         Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
-        Page<Order> page = orderRepository.searchOrders(normalizedQ, orderId, status, channel, sortedPageable);
+        Page<Order> page = orderRepository.searchOrders(
+                normalizedQ, orderId, status, channel, fromDateTime, toDateTime, sortedPageable);
 
-        // open-in-view está desactivado: la tabla muestra la cantidad de artículos,
-        // así que se inicializan los items de la página actual (máx. 100), no de todos los pedidos.
         page.getContent().forEach(order -> order.getItems().size());
         return page;
     }
@@ -84,13 +141,11 @@ public class OrderService {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new OrderNotFoundException(id));
 
-        // Evitamos LazyInitializationException "despertando" las colecciones
         order.getItems().size();
         order.getHistory().size();
         order.getInternalNotes().size();
         order.getShipments().size();
 
-        // Despertar la transportadora de cada envío
         order.getShipments().forEach(shipment -> {
             if (shipment.getCarrier() != null) {
                 shipment.getCarrier().getName();
@@ -108,7 +163,6 @@ public class OrderService {
             throw new IllegalArgumentException("El carrito está vacío");
         }
 
-        // El método de pago inicial depende del canal
         String initialPaymentMethod = channel == OrderChannel.WHATSAPP ? "Pendiente por WhatsApp" : "Wompi / Tarjeta";
 
         Order order = Order.builder()
@@ -163,7 +217,6 @@ public class OrderService {
         return savedOrder;
     }
 
-    // Arma el mensaje de WhatsApp para un pedido ya creado
     public String buildWhatsappMessage(Order order) {
         StringBuilder sb = new StringBuilder();
         sb.append("Hola, quiero realizar este pedido en Storevo:\n\n");
@@ -255,11 +308,8 @@ public class OrderService {
         }
     }
 
-    // SIN @Transactional para evitar mantener una transacción abierta
-    // durante la consulta HTTP a Wompi.
     public void verifyTransactionWithWompi(Store store, Long orderId, String wompiTransactionId) {
         try {
-            // 1. Asegurar el contexto del tenant antes de consultar el pedido
             TenantContext.setCurrentTenant(store.getSchemaName());
 
             Order order = orderRepository.findById(orderId).orElse(null);
@@ -268,7 +318,6 @@ public class OrderService {
                 return;
             }
 
-            // 2. Cambiar temporalmente a la BD de administración
             TenantContext.clear();
 
             StoreIntegration wompiConfig = integrationRepository
@@ -282,7 +331,6 @@ public class OrderService {
                 return;
             }
 
-            // 3. Volver al tenant de la tienda
             TenantContext.setCurrentTenant(store.getSchemaName());
 
             String baseUrl = "PRODUCTION".equals(wompiConfig.getEnvironment())
@@ -296,7 +344,6 @@ public class OrderService {
                     JsonNode.class
             );
 
-            // 4. Procesar respuesta de Wompi
             if (response.getBody() != null
                     && response.getStatusCode().is2xxSuccessful()) {
 
@@ -308,21 +355,16 @@ public class OrderService {
 
                 String definitiveStatus = data.get("status").asText();
 
-                // 5. Actualizar el pedido mediante el proxy de Spring.
-                // Esto crea una transacción independiente en el tenant.
                 if ("APPROVED".equals(definitiveStatus)) {
-
                     self.updateOrderStatus(
                             orderId,
                             OrderStatus.PAID,
                             EventOrigin.WEBHOOK,
                             null
                     );
-
                 } else if ("DECLINED".equals(definitiveStatus)
                         || "ERROR".equals(definitiveStatus)
                         || "VOIDED".equals(definitiveStatus)) {
-
                     self.updateOrderStatus(
                             orderId,
                             OrderStatus.CANCELLED,
@@ -333,16 +375,8 @@ public class OrderService {
             }
 
         } catch (Exception e) {
-
-            System.out.println(
-                    "Error verificando transacción Wompi: "
-                            + e.getMessage()
-            );
-
+            System.out.println("Error verificando transacción Wompi: " + e.getMessage());
         } finally {
-
-            // 6. Garantizar que el hilo nunca termine con el contexto
-            // apuntando a la BD de administración.
             TenantContext.setCurrentTenant(store.getSchemaName());
         }
     }

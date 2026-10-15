@@ -17,7 +17,9 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -50,6 +52,9 @@ public class DashboardOrderController {
             @RequestParam(required = false) String q,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String channel,
+            @RequestParam(required = false) String datePreset,
+            @RequestParam(required = false) String fromDate,
+            @RequestParam(required = false) String toDate,
             @RequestParam(defaultValue = "newest") String sort,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -61,28 +66,49 @@ public class DashboardOrderController {
 
         OrderStatus statusFilter = parseEnum(OrderStatus.class, status);
         OrderChannel channelFilter = parseEnum(OrderChannel.class, channel);
+        LocalDate parsedFromDate = parseLocalDate(fromDate);
+        LocalDate parsedToDate = parseLocalDate(toDate);
+
+        // Si el usuario envió fechas manuales sin preset, asumimos "custom"
+        String effectivePreset = datePreset;
+        if ((effectivePreset == null || effectivePreset.isBlank())
+                && (parsedFromDate != null || parsedToDate != null)) {
+            effectivePreset = "custom";
+        }
 
         Page<Order> ordersPage = orderService.searchOrders(
-                q, statusFilter, channelFilter, sort, PageRequest.of(safePage, safeSize));
+                q, statusFilter, channelFilter, effectivePreset, parsedFromDate, parsedToDate,
+                sort, PageRequest.of(safePage, safeSize));
 
-        // Inyectar resultados (se inyecta como 'page' para que el fragmento genérico lo entienda)
         model.addAttribute("page", ordersPage);
         model.addAttribute("orders", ordersPage.getContent());
 
-        // Inyectar estado actual para mantener los selectores y paginación
         model.addAttribute("currentSearch", q);
         model.addAttribute("currentStatus", statusFilter);
         model.addAttribute("currentChannel", channelFilter);
+        model.addAttribute("currentDatePreset", effectivePreset);
+        model.addAttribute("currentFromDate", fromDate);
+        model.addAttribute("currentToDate", toDate);
         model.addAttribute("currentSort", sort);
         model.addAttribute("currentSize", safeSize);
 
         Map<String, String> statusOptions = new LinkedHashMap<>();
         Arrays.stream(OrderStatus.values()).forEach(s -> statusOptions.put(s.name(), s.getDisplayName()));
+
         Map<String, String> channelOptions = new LinkedHashMap<>();
         Arrays.stream(OrderChannel.values()).forEach(c -> channelOptions.put(c.name(), c.getDisplayName()));
 
+        Map<String, String> datePresetOptions = new LinkedHashMap<>();
+        datePresetOptions.put("today", "Hoy");
+        datePresetOptions.put("yesterday", "Ayer");
+        datePresetOptions.put("last_7_days", "Últimos 7 días");
+        datePresetOptions.put("last_30_days", "Últimos 30 días");
+        datePresetOptions.put("this_month", "Este mes");
+        datePresetOptions.put("custom", "Rango personalizado...");
+
         model.addAttribute("statusOptions", statusOptions);
         model.addAttribute("channelOptions", channelOptions);
+        model.addAttribute("datePresetOptions", datePresetOptions);
         model.addAttribute("pageTitle", "Gestión de Pedidos");
 
         return "dashboard/orders/index";
@@ -93,6 +119,15 @@ public class DashboardOrderController {
         try {
             return Enum.valueOf(type, value.trim().toUpperCase());
         } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    private static LocalDate parseLocalDate(String value) {
+        if (value == null || value.isBlank()) return null;
+        try {
+            return LocalDate.parse(value.trim());
+        } catch (DateTimeParseException e) {
             return null;
         }
     }
@@ -110,7 +145,7 @@ public class DashboardOrderController {
     @PostMapping("/{id}/status-ajax")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> updateStatusAjax(@PathVariable Long id, @RequestParam OrderStatus status) {
-        Long currentUserId = 1L; // Temporal
+        Long currentUserId = 1L;
         Map<String, Object> response = new HashMap<>();
         OrderHistory history;
         try {
@@ -147,7 +182,7 @@ public class DashboardOrderController {
     @PostMapping("/{id}/notes-ajax")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> addInternalNoteAjax(@PathVariable Long id, @RequestParam String note) {
-        Long currentUserId = 1L; // Temporal
+        Long currentUserId = 1L;
         Map<String, Object> response = new HashMap<>();
         OrderNote internalNote;
         try {
@@ -178,7 +213,7 @@ public class DashboardOrderController {
             @RequestParam(required = false) Double weight,
             @RequestParam(required = false) String dimensions) {
 
-        Long currentUserId = 1L; // Temporal
+        Long currentUserId = 1L;
         Map<String, Object> response = new HashMap<>();
         try {
             Shipment shipment = shipmentService.createManualShipment(id, carrierId, trackingNumber, weight, dimensions, currentUserId);

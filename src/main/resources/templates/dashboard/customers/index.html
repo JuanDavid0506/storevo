@@ -24,7 +24,7 @@
               totalCount=${page != null ? page.totalElements : (customers != null ? #lists.size(customers) : 0)}">
 
   <!-- CABECERA -->
-  <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-6">
+  <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
     <div>
       <h2 class="text-2xl font-bold text-white flex items-center gap-3">
         Directorio de Clientes
@@ -35,18 +35,18 @@
     </div>
   </div>
 
-  <!-- PANEL DE BÚSQUEDA Y FILTROS -->
+  <!-- PANEL DE BÚSQUEDA Y FILTROS (Mismo diseño de 2 filas que Productos y Pedidos) -->
   <form id="listing-form" th:action="@{/dashboard/{slug}/customers(slug=${slug})}" method="GET"
-        class="bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-800 shadow-sm flex flex-col gap-4 mb-6"
+        class="bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-800 shadow-sm flex flex-col gap-4"
         th:with="clearFiltersUrl=@{|/dashboard/${slug}/customers|},
                    hasActiveFilters=${(param.q != null and not #strings.isEmpty(param.q[0]))
                      or (param.type != null and not #strings.isEmpty(param.type[0]))
                      or (param.channel != null and not #strings.isEmpty(param.channel[0]))}">
 
-    <div class="flex flex-col xl:flex-row justify-between gap-5 xl:gap-4">
-      <!-- Grupo Izquierdo: Buscador y Filtros -->
+    <!-- Fila 1: Buscador y Filtros a la izquierda / Ordenamiento y Tamaño a la derecha -->
+    <div class="flex flex-col xl:flex-row justify-between gap-4">
       <div class="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 flex-1">
-        <div class="w-full sm:w-auto sm:flex-1 min-w-0 sm:min-w-[260px]"
+        <div class="w-full sm:w-auto"
              th:replace="~{components/ui/listing :: search('Buscar por nombre, documento, teléfono o ciudad...')}"></div>
 
         <select name="type" data-auto-submit="true" data-filter="true"
@@ -63,34 +63,38 @@
           <option value="WEB" th:selected="${param.channel != null and param.channel[0] == 'WEB'}">Ha comprado por Tienda Online</option>
         </select>
 
-        <div class="w-full sm:w-auto flex justify-center sm:block"
-             th:replace="~{components/ui/listing :: clear-filters(${clearFiltersUrl}, ${hasActiveFilters})}"></div>
+        <div th:replace="~{components/ui/listing :: clear-filters(${clearFiltersUrl}, ${hasActiveFilters})}"></div>
       </div>
 
-      <!-- Grupo Derecho: Selector de Vistas, Ordenamiento y Paginación -->
-      <div class="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 w-full xl:w-auto border-t border-slate-800/60 pt-4 xl:border-0 xl:pt-0">
-        <!-- Opciones de Vista: PC (Tabla / Tarjetas) -->
-        <div class="hidden lg:flex items-center bg-slate-800/80 rounded-lg p-1 border border-slate-700/50">
-          <button type="button" onclick="Storevo.CustomersList.setView('table')" class="view-btn view-btn-table px-3 py-1.5 rounded-md text-sm font-medium transition">Tabla</button>
-          <button type="button" onclick="Storevo.CustomersList.setView('grid')" class="view-btn view-btn-grid px-3 py-1.5 rounded-md text-sm font-medium transition">Tarjetas</button>
-        </div>
-
-        <!-- Opciones de Vista: Celular (Tarjetas / Compacta) -->
-        <div class="flex lg:hidden items-center bg-slate-800/80 rounded-lg p-1 border border-slate-700/50 w-full sm:w-auto">
-          <button type="button" onclick="Storevo.CustomersList.setView('grid')" class="view-btn view-btn-grid flex-1 px-3 py-1.5 rounded-md text-sm font-medium text-center transition">Tarjetas</button>
-          <button type="button" onclick="Storevo.CustomersList.setView('compact')" class="view-btn view-btn-compact flex-1 px-3 py-1.5 rounded-md text-sm font-medium text-center transition">Compacta</button>
-        </div>
-
-        <div class="w-full sm:w-auto"
-             th:replace="~{components/ui/listing :: sort(${ {'last_order_desc': 'Última compra reciente', 'spent_desc': 'Mayor total gastado', 'orders_desc': 'Más pedidos', 'name_asc': 'Nombre (A-Z)'} })}"></div>
-
-        <div th:if="${page != null}" class="w-full sm:w-auto hidden sm:block"
-             th:replace="~{components/ui/listing :: page-size()}"></div>
+      <div class="flex items-center gap-3 self-end xl:self-auto">
+        <div th:replace="~{components/ui/listing :: sort(${ {'last_order_desc': 'Última compra reciente', 'spent_desc': 'Mayor total gastado', 'orders_desc': 'Más pedidos', 'name_asc': 'Nombre (A-Z)'} })}"></div>
+        <div th:if="${page != null}" th:replace="~{components/ui/listing :: page-size()}"></div>
       </div>
     </div>
 
-    <div id="active-filters-chips-container" class="flex-1 min-w-0">
-      <div th:replace="~{components/ui/listing :: active-filters-chips}"></div>
+    <!-- Fila 2: Chips de Filtros Activos y Selector de Vistas -->
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-t border-slate-800 pt-4 mt-2 w-full">
+      <div id="active-filters-chips-container" class="flex-1 min-w-0">
+        <div th:replace="~{components/ui/listing :: active-filters-chips}"></div>
+      </div>
+
+      <div class="flex items-center bg-slate-950 border border-slate-800 p-1 rounded-xl w-fit flex-shrink-0 ml-auto lg:ml-0">
+        <!-- Botón Tabla: Visible en PC -->
+        <button type="button" onclick="Storevo.CustomersList.setView('table')" class="view-btn view-btn-table hidden sm:flex px-3 py-1.5 text-sm font-bold rounded-lg text-slate-500 hover:text-slate-300 transition-all items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+          <span>Tabla</span>
+        </button>
+        <!-- Botón Tarjetas: Visible en ambos -->
+        <button type="button" onclick="Storevo.CustomersList.setView('grid')" class="view-btn view-btn-grid flex px-3 py-1.5 text-sm font-bold rounded-lg text-slate-500 hover:text-slate-300 transition-all items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+          <span>Tarjetas</span>
+        </button>
+        <!-- Botón Compacto: Visible en Móvil -->
+        <button type="button" onclick="Storevo.CustomersList.setView('compact')" class="view-btn view-btn-compact flex sm:hidden px-3 py-1.5 text-sm font-bold rounded-lg text-slate-500 hover:text-slate-300 transition-all items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+          <span>Compacto</span>
+        </button>
+      </div>
     </div>
   </form>
 
@@ -98,45 +102,39 @@
   <div id="customers-view-wrapper" class="view-table">
     <div id="listing-results-container" th:fragment="listing-content" class="relative transition-opacity duration-200">
 
-      <!-- ESTADO VACÍO -->
       <div th:if="${#lists.isEmpty(customerList)}">
         <div th:replace="~{components/ui/listing :: empty-state('Aún no tienes clientes registrados', 'Los datos aparecerán cuando recibas tu primer pedido por WhatsApp o pago en línea.', 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z', @{|/dashboard/${slug}/customers|})}"></div>
       </div>
 
       <div th:unless="${#lists.isEmpty(customerList)}">
 
-        <!-- ========================================== -->
-        <!-- 1. VISTA TABLA (Escritorio por defecto)    -->
-        <!-- ========================================== -->
-        <div class="customer-view-table bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
+        <!-- 1. VISTA TABLA -->
+        <div class="customer-view-table bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-sm">
           <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm text-slate-400">
-              <thead class="text-xs uppercase bg-slate-800 text-slate-300 border-b border-slate-800">
+            <table class="w-full text-left text-sm text-slate-400 min-w-[900px]">
+              <thead class="text-xs uppercase bg-slate-950 text-slate-500 border-b border-slate-800">
               <tr>
-                <th scope="col" class="px-6 py-4 font-bold">Cliente</th>
-                <th scope="col" class="px-6 py-4 font-bold">Ciudad</th>
-                <!-- ENCABEZADO DE LA COLUMNA CANALES -->
-                <th scope="col" class="px-6 py-4 font-bold">Canales de Compra</th>
-                <th scope="col" class="px-6 py-4 font-bold text-center">Pedidos</th>
-                <th scope="col" class="px-6 py-4 font-bold">Total Gastado</th>
-                <th scope="col" class="px-6 py-4 font-bold">Última Compra</th>
-                <th scope="col" class="px-6 py-4 font-bold text-right">Acciones</th>
+                <th scope="col" class="px-6 py-4 font-bold tracking-wider">Cliente</th>
+                <th scope="col" class="px-6 py-4 font-bold tracking-wider">Ciudad</th>
+                <th scope="col" class="px-6 py-4 font-bold tracking-wider">Canales de Compra</th>
+                <th scope="col" class="px-6 py-4 font-bold tracking-wider text-center">Pedidos</th>
+                <th scope="col" class="px-6 py-4 font-bold tracking-wider">Total Gastado</th>
+                <th scope="col" class="px-6 py-4 font-bold tracking-wider">Última Compra</th>
+                <th scope="col" class="px-6 py-4 font-bold tracking-wider text-right">Acciones</th>
               </tr>
               </thead>
               <tbody class="divide-y divide-slate-800/60">
               <tr th:each="customer : ${customerList}"
-                  class="customer-item hover:bg-slate-800/40 transition-colors"
+                  class="customer-item hover:bg-slate-800/40 transition-colors cursor-pointer"
+                  th:onclick="|window.location.href='@{/dashboard/{slug}/customers/detail(slug=${slug}, phone=${customer.phone})}'|"
                   th:attr="data-search=${(customer.name != null ? customer.name : '') + ' ' + (customer.phone != null ? customer.phone : '') + ' ' + (customer.city != null ? customer.city : '') + ' ' + (customer.document != null ? customer.document : '')},
                                          data-orders=${customer.totalOrders != null ? customer.totalOrders : 0},
                                          data-spent=${customer.totalSpent != null ? customer.totalSpent : 0}">
 
-                <!-- Columna 1: Cliente + Teléfono + Documento -->
                 <td class="px-6 py-4">
                   <div class="flex items-center gap-3">
                     <div class="w-10 h-10 rounded-full bg-storevo-500/10 text-storevo-400 border border-storevo-500/20 flex items-center justify-center font-bold uppercase flex-shrink-0"
-                         th:text="${customer.name != null and !#strings.isEmpty(customer.name) ? #strings.substring(customer.name, 0, 1) : 'C'}">
-                      A
-                    </div>
+                         th:text="${customer.name != null and !#strings.isEmpty(customer.name) ? #strings.substring(customer.name, 0, 1) : 'C'}">A</div>
                     <div class="min-w-0">
                       <div class="flex items-center gap-2">
                         <p class="font-bold text-white truncate" th:text="${customer.name}">Nombre</p>
@@ -152,19 +150,14 @@
                                                 </span>
                         <span th:if="${customer.document != null and !#strings.isEmpty(customer.document)}"
                               class="font-mono text-[11px] text-slate-400 bg-slate-800/80 px-1.5 py-0.5 rounded border border-slate-700"
-                              th:text="'Doc: ' + ${customer.document}">
-                                                </span>
+                              th:text="'Doc: ' + ${customer.document}"></span>
                       </div>
                     </div>
                   </div>
                 </td>
 
-                <!-- Columna 2: Ciudad -->
-                <td class="px-6 py-4 text-slate-300" th:text="${customer.city != null and !#strings.isEmpty(customer.city) ? customer.city : '—'}">
-                  Ciudad
-                </td>
+                <td class="px-6 py-4 text-slate-300" th:text="${customer.city != null and !#strings.isEmpty(customer.city) ? customer.city : '—'}">Ciudad</td>
 
-                <!-- Columna 3: AQUÍ VA EL FRAGMENTO DE CANALES DE COMPRA -->
                 <td class="px-6 py-4">
                   <div class="flex flex-wrap items-center gap-1.5">
                     <th:block th:if="${customer.channels != null and not #lists.isEmpty(customer.channels)}">
@@ -178,25 +171,17 @@
                   </div>
                 </td>
 
-                <!-- Columna 4: Total Pedidos -->
                 <td class="px-6 py-4 text-center">
                                     <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-800 text-xs font-bold text-slate-300"
                                           th:text="${customer.totalOrders}">0</span>
                 </td>
 
-                <!-- Columna 5: Total Gastado -->
-                <td class="px-6 py-4 font-bold text-storevo-400 whitespace-nowrap"
-                    th:text="${customer.totalSpent != null ? '$ ' + #numbers.formatDecimal(customer.totalSpent, 1, 'POINT', 0, 'COMMA') : '$ 0'}">
-                  $0
-                </td>
+                <td class="px-6 py-4 font-black text-storevo-400 whitespace-nowrap"
+                    th:text="${customer.totalSpent != null ? '$ ' + #numbers.formatDecimal(customer.totalSpent, 1, 'POINT', 0, 'COMMA') : '$ 0'}">$0</td>
 
-                <!-- Columna 6: Última Compra -->
                 <td class="px-6 py-4 text-xs text-slate-500 whitespace-nowrap"
-                    th:text="${customer.lastOrderDate != null ? #temporals.format(customer.lastOrderDate, 'dd/MM/yyyy HH:mm') : '—'}">
-                  Fecha
-                </td>
+                    th:text="${customer.lastOrderDate != null ? #temporals.format(customer.lastOrderDate, 'dd/MM/yyyy HH:mm') : '—'}">Fecha</td>
 
-                <!-- Columna 7: Acciones -->
                 <td class="px-6 py-4 text-right whitespace-nowrap" onclick="event.stopPropagation();">
                   <div class="inline-flex items-center justify-end gap-2">
                     <a th:if="${customer.phone != null and !#strings.isEmpty(customer.phone)}"
@@ -207,9 +192,8 @@
                       <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 004.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91C21.96 6.45 17.5 2 12.04 2zm5.83 14.16c-.25.7-1.45 1.33-2 1.42-.53.08-1.03.11-1.78-.11-.41-.12-.93-.29-1.6-.57-2.82-1.22-4.66-4.06-4.8-4.25-.14-.19-1.15-1.53-1.15-2.92s.72-2.07.98-2.35c.25-.28.54-.35.72-.35.18 0 .36 0 .52.01.17.01.39-.06.61.46.25.6.85 2.07.92 2.22.07.15.12.32.02.52-.09.19-.14.32-.28.49-.14.17-.29.37-.42.5-.14.14-.28.29-.12.57.16.28.71 1.17 1.53 1.9 1.05.94 1.94 1.23 2.22 1.37.28.14.45.12.61-.07.17-.19.7-.82.89-1.1.19-.28.37-.23.62-.14.25.09 1.6.75 1.87.89.28.14.46.21.53.32.07.12.07.68-.18 1.38z"></path></svg>
                     </a>
                     <a th:href="@{/dashboard/{slug}/customers/detail(slug=${slug}, phone=${customer.phone})}"
-                       class="text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold transition inline-flex items-center gap-1.5">
-                      <span>Ver cliente</span>
-                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                       class="text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-2 rounded-lg font-medium transition inline-block">
+                      Ver cliente
                     </a>
                   </div>
                 </td>
@@ -219,12 +203,10 @@
           </div>
         </div>
 
-        <!-- ========================================== -->
-        <!-- 2. VISTA TARJETAS (Móvil / Alternativa PC) -->
-        <!-- ========================================== -->
-        <div class="customer-view-grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- 2. VISTA TARJETAS (4 columnas en pantallas grandes igual que Pedidos) -->
+        <div class="customer-view-grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
           <div th:each="customer : ${customerList}"
-               class="customer-item bg-slate-900 border border-slate-800 rounded-xl p-5 hover:border-slate-700 transition flex flex-col gap-4 shadow-sm"
+               class="customer-item bg-slate-900 border border-slate-800 rounded-2xl p-5 hover:border-storevo-500/50 hover:shadow-xl transition-all duration-300 flex flex-col gap-4 shadow-sm group"
                th:attr="data-search=${(customer.name != null ? customer.name : '') + ' ' + (customer.phone != null ? customer.phone : '') + ' ' + (customer.city != null ? customer.city : '') + ' ' + (customer.document != null ? customer.document : '')},
                                   data-orders=${customer.totalOrders != null ? customer.totalOrders : 0},
                                   data-spent=${customer.totalSpent != null ? customer.totalSpent : 0}">
@@ -237,7 +219,6 @@
                   <p class="text-xs text-slate-400 truncate" th:text="${customer.phone}">Teléfono</p>
                 </div>
               </div>
-              <!-- Canales en la esquina superior de la tarjeta -->
               <div class="flex flex-wrap justify-end gap-1" th:if="${customer.channels != null and not #lists.isEmpty(customer.channels)}">
                                 <span th:each="ch : ${customer.channels}"
                                       th:text="${ch.getDisplayName()}"
@@ -274,21 +255,20 @@
                   <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 004.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91C21.96 6.45 17.5 2 12.04 2zm5.83 14.16c-.25.7-1.45 1.33-2 1.42-.53.08-1.03.11-1.78-.11-.41-.12-.93-.29-1.6-.57-2.82-1.22-4.66-4.06-4.8-4.25-.14-.19-1.15-1.53-1.15-2.92s.72-2.07.98-2.35c.25-.28.54-.35.72-.35.18 0 .36 0 .52.01.17.01.39-.06.61.46.25.6.85 2.07.92 2.22.07.15.12.32.02.52-.09.19-.14.32-.28.49-.14.17-.29.37-.42.5-.14.14-.28.29-.12.57.16.28.71 1.17 1.53 1.9 1.05.94 1.94 1.23 2.22 1.37.28.14.45.12.61-.07.17-.19.7-.82.89-1.1.19-.28.37-.23.62-.14.25.09 1.6.75 1.87.89.28.14.46.21.53.32.07.12.07.68-.18 1.38z"></path></svg>
                 </a>
                 <a th:href="@{/dashboard/{slug}/customers/detail(slug=${slug}, phone=${customer.phone})}"
-                   class="text-slate-200 hover:text-white bg-slate-800 hover:bg-storevo-500 border border-slate-700 px-3.5 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5">
+                   class="text-slate-300 hover:text-white bg-slate-800 group-hover:bg-storevo-500 group-hover:border-storevo-500 border border-slate-700 px-4 py-2 rounded-lg font-bold transition-all text-sm flex items-center gap-2">
                   <span>Ver cliente</span>
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                 </a>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- ========================================== -->
-        <!-- 3. VISTA COMPACTA (Alternativa Móvil)      -->
-        <!-- ========================================== -->
+        <!-- 3. VISTA COMPACTA -->
         <div class="customer-view-compact flex-col gap-2">
           <div th:each="customer : ${customerList}"
-               class="customer-item bg-slate-900 border border-slate-800 rounded-xl p-3.5 hover:border-slate-700 transition flex items-center justify-between gap-3 shadow-sm"
+               th:onclick="|window.location.href='@{/dashboard/{slug}/customers/detail(slug=${slug}, phone=${customer.phone})}'|"
+               class="customer-item bg-slate-900 border border-slate-800 rounded-xl p-3.5 hover:border-slate-700 transition flex items-center justify-between gap-3 cursor-pointer shadow-sm group"
                th:attr="data-search=${(customer.name != null ? customer.name : '') + ' ' + (customer.phone != null ? customer.phone : '') + ' ' + (customer.city != null ? customer.city : '') + ' ' + (customer.document != null ? customer.document : '')},
                                   data-orders=${customer.totalOrders != null ? customer.totalOrders : 0},
                                   data-spent=${customer.totalSpent != null ? customer.totalSpent : 0}">
@@ -308,10 +288,9 @@
             <div class="flex items-center gap-2.5 flex-shrink-0">
                             <span class="font-black text-storevo-400 text-sm"
                                   th:text="${customer.totalSpent != null ? '$ ' + #numbers.formatDecimal(customer.totalSpent, 1, 'POINT', 0, 'COMMA') : '$ 0'}">$0</span>
-              <a th:href="@{/dashboard/{slug}/customers/detail(slug=${slug}, phone=${customer.phone})}"
-                 class="text-slate-400 hover:text-white bg-slate-800 p-2 rounded-lg">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-              </a>
+              <span class="text-slate-500 group-hover:text-storevo-400 transition-colors bg-slate-800 p-1.5 rounded-lg">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                            </span>
             </div>
           </div>
         </div>

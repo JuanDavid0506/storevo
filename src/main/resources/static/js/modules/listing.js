@@ -1,9 +1,6 @@
 window.Storevo = window.Storevo || {};
 
 if (!Storevo.getTenantKey) {
-    // Namespacing por tenant: evita que un dato de sessionStorage/localStorage de una tienda
-    // se filtre a otra si el mismo usuario administra varias tiendas desde el mismo navegador.
-    // Autodefensivo: se define una sola vez, sin importar qué archivo cargue primero.
     Storevo.getTenantKey = function(baseKey) {
         const match = window.location.pathname.match(/^\/dashboard\/([^/]+)/);
         return baseKey + '_' + (match ? match[1] : 'default');
@@ -11,11 +8,44 @@ if (!Storevo.getTenantKey) {
 }
 
 Storevo.Listing = {
-    // Clave única en localStorage por tienda y por sección (orders, products, customers, etc.)
-    getPageSizeKey: function() {
+    alertParams: ['success', 'deleted', 'restored', 'hard_deleted', 'activated', 'deactivated'],
+
+    getCurrentSection: function() {
         const sectionMatch = window.location.pathname.match(/^\/dashboard\/[^/]+\/([^/?#]+)/);
-        const section = sectionMatch ? sectionMatch[1] : 'general';
-        return Storevo.getTenantKey('storevo_page_size_' + section);
+        return sectionMatch ? sectionMatch[1] : 'general';
+    },
+
+    getPageSizeKey: function() {
+        return Storevo.getTenantKey('storevo_page_size_' + Storevo.Listing.getCurrentSection());
+    },
+
+    getListingStateKey: function() {
+        return Storevo.getTenantKey('storevo_listing_state_' + Storevo.Listing.getCurrentSection());
+    },
+
+    saveListingState: function(params) {
+        const cleanParams = new URLSearchParams(params.toString());
+        Storevo.Listing.alertParams.forEach(p => cleanParams.delete(p));
+
+        const queryStr = cleanParams.toString();
+        const stateKey = Storevo.Listing.getListingStateKey();
+
+        if (queryStr) {
+            sessionStorage.setItem(stateKey, queryStr);
+        } else {
+            sessionStorage.removeItem(stateKey);
+        }
+
+        if (Storevo.Navigation && typeof Storevo.Navigation.syncReturnLinks === 'function') {
+            Storevo.Navigation.syncReturnLinks();
+        }
+    },
+
+    clearSavedState: function() {
+        sessionStorage.removeItem(Storevo.Listing.getListingStateKey());
+        if (Storevo.Navigation && typeof Storevo.Navigation.syncReturnLinks === 'function') {
+            Storevo.Navigation.syncReturnLinks();
+        }
     },
 
     // === MOTOR AJAX TIPO REACT ===
@@ -23,7 +53,6 @@ Storevo.Listing = {
         const form = document.getElementById('listing-form');
         if (!form) return;
 
-        // Guardar siempre la preferencia actual del selector de tamaño antes de enviar
         const sizeSelect = form.querySelector('select[name="size"]');
         if (sizeSelect && sizeSelect.value) {
             localStorage.setItem(Storevo.Listing.getPageSizeKey(), sizeSelect.value);
@@ -32,20 +61,30 @@ Storevo.Listing = {
         const formData = new FormData(form);
         const params = new URLSearchParams();
 
-        // Solo metemos en la URL los filtros que tengan valor
         for (const [key, value] of formData.entries()) {
             if (value && value.trim() !== '') {
                 params.append(key, value);
             }
         }
 
-        // Si no venía en el form pero existe en localStorage, mantener el size recordado
+        // Si el preset no es "custom", no arrastrar fechas manuales en la URL
+        if (params.get('datePreset') !== 'custom') {
+            params.delete('fromDate');
+            params.delete('toDate');
+        }
+
         const savedSize = localStorage.getItem(Storevo.Listing.getPageSizeKey());
         if (!params.has('size') && savedSize) {
             params.set('size', savedSize);
         }
 
-        const url = `${window.location.pathname}?${params.toString()}`;
+        // Guardamos el estado actual de filtros (si eligió "Todos", status viene vacío y limpia el filtro anterior)
+        Storevo.Listing.saveListingState(params);
+
+        const url = params.toString()
+            ? `${window.location.pathname}?${params.toString()}`
+            : window.location.pathname;
+
         Storevo.Listing.fetchResults(url);
     },
 
@@ -58,15 +97,15 @@ Storevo.Listing = {
             url.searchParams.set('size', savedSize);
         }
 
+        Storevo.Listing.saveListingState(url.searchParams);
         Storevo.Listing.fetchResults(url.toString());
     },
 
     fetchResults: function(url, isPopState = false) {
         const container = document.getElementById('listing-results-container');
-        const formContainer = document.getElementById('listing-form'); // <-- Capturamos el formulario entero
+        const formContainer = document.getElementById('listing-form');
         const counter = document.getElementById('total-items-counter');
 
-        // 1. Efecto visual de carga
         if (container) {
             container.style.opacity = '0.4';
             container.style.pointerEvents = 'none';
@@ -76,30 +115,25 @@ Storevo.Listing = {
             formContainer.style.pointerEvents = 'none';
         }
 
-        // 2. Traer HTML en segundo plano
         fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
             .then(response => response.text())
             .then(html => {
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(html, 'text/html');
 
-                // 3. Reemplazo quirúrgico en el DOM
                 const newContainer = doc.getElementById('listing-results-container');
                 if (newContainer && container) container.innerHTML = newContainer.innerHTML;
 
-                // <-- REEMPLAZAMOS EL FORMULARIO ENTERO (Para actualizar Pills y Botón Limpiar)
                 const newForm = doc.getElementById('listing-form');
                 if (newForm && formContainer) formContainer.innerHTML = newForm.innerHTML;
 
                 const newCounter = doc.getElementById('total-items-counter');
                 if (newCounter && counter) counter.textContent = newCounter.textContent;
 
-                // 4. Actualizar barra del navegador (History API)
                 if (!isPopState) {
                     window.history.pushState({path: url}, '', url);
                 }
 
-                // 5. Quitar efecto de carga
                 if (container) {
                     container.style.opacity = '1';
                     container.style.pointerEvents = 'auto';
@@ -109,8 +143,7 @@ Storevo.Listing = {
                     formContainer.style.pointerEvents = 'auto';
                 }
 
-                // 6. Reiniciar TODOS los componentes en el HTML nuevo
-                Storevo.Listing.initListingUX();
+                Storevo.Listing.initListingUX(true);
 
                 if (window.Storevo.ProductsList) {
                     Storevo.ProductsList.initSelection();
@@ -118,77 +151,205 @@ Storevo.Listing = {
                     const savedView = localStorage.getItem(Storevo.getTenantKey('storevo_admin_products_view')) || 'cards';
                     Storevo.ProductsList.setView(savedView);
                 }
-
                 if (typeof window.updateOrdersViewUI === 'function') {
                     window.updateOrdersViewUI();
+                }
+                if (typeof window.updateCustomersViewUI === 'function') {
+                    window.updateCustomersViewUI();
                 }
             })
             .catch(err => {
                 console.error("Error cargando listado, recargando de forma nativa...", err);
-                // Si falla por seguridad o red, caemos de pie a una recarga normal
                 window.location.href = url;
             });
     },
 
-    // --- PERSISTENCIA PERMANENTE DEL TAMAÑO DE PÁGINA ---
-    initPageSizePersistence: function() {
+    // --- PERSISTENCIA DE FILTROS Y TAMAÑO DE PÁGINA AL VOLVER ---
+    initStatePersistence: function() {
         const form = document.getElementById('listing-form');
         if (!form) return;
 
         const sizeSelect = form.querySelector('select[name="size"]');
-        if (!sizeSelect) return;
+        const sizeStorageKey = Storevo.Listing.getPageSizeKey();
+        const stateStorageKey = Storevo.Listing.getListingStateKey();
 
-        const storageKey = Storevo.Listing.getPageSizeKey();
-        const urlParams = new URLSearchParams(window.location.search);
-        const urlSize = urlParams.get('size');
-        const savedSize = localStorage.getItem(storageKey);
-
-        // Escuchar cambios directos en el selector para guardarlos de inmediato
-        if (!sizeSelect.dataset.persistenceInitialized) {
+        if (sizeSelect && !sizeSelect.dataset.persistenceInitialized) {
             sizeSelect.dataset.persistenceInitialized = 'true';
             sizeSelect.addEventListener('change', () => {
                 if (sizeSelect.value) {
-                    localStorage.setItem(storageKey, sizeSelect.value);
+                    localStorage.setItem(sizeStorageKey, sizeSelect.value);
                 }
             });
         }
 
-        // Caso 1: La URL ya trae ?size=X -> sincronizamos localStorage y el select visual
-        if (urlSize) {
-            localStorage.setItem(storageKey, urlSize);
-            if (sizeSelect.value !== urlSize) {
-                const exists = Array.from(sizeSelect.options).some(opt => opt.value === urlSize);
-                if (exists) sizeSelect.value = urlSize;
+        const currentUrlParams = new URLSearchParams(window.location.search);
+        // Ignorar parámetros de alertas Toast (?success, ?activated, etc.)
+        Storevo.Listing.alertParams.forEach(p => currentUrlParams.delete(p));
+
+        const hasUrlFilters = Array.from(currentUrlParams.keys()).length > 0;
+        const savedStateQuery = sessionStorage.getItem(stateStorageKey);
+        const savedSize = localStorage.getItem(sizeStorageKey);
+
+        // Caso 1: La URL ya trae filtros activos -> sincronizar memoria con la URL actual
+        if (hasUrlFilters) {
+            if (currentUrlParams.has('size')) {
+                const urlSize = currentUrlParams.get('size');
+                localStorage.setItem(sizeStorageKey, urlSize);
+                if (sizeSelect && sizeSelect.value !== urlSize) {
+                    sizeSelect.value = urlSize;
+                }
             }
+            Storevo.Listing.saveListingState(currentUrlParams);
             return;
         }
 
-        // Caso 2: La URL no trae ?size=, pero el usuario tenía una preferencia guardada
-        if (savedSize) {
+        // Caso 2: Llegó a la URL limpia (ej. tras editar/guardar/ocultar un producto) pero había filtros guardados
+        if (savedStateQuery) {
+            const restoredParams = new URLSearchParams(savedStateQuery);
+            if (!restoredParams.has('size') && savedSize) {
+                restoredParams.set('size', savedSize);
+            }
+            const restoredUrl = `${window.location.pathname}?${restoredParams.toString()}`;
+            window.history.replaceState({path: restoredUrl}, '', restoredUrl);
+            Storevo.Listing.fetchResults(restoredUrl, true);
+            return;
+        }
+
+        // Caso 3: No había filtros guardados, pero sí preferencia de cantidad por página
+        if (savedSize && sizeSelect) {
             const optionExists = Array.from(sizeSelect.options).some(opt => opt.value === savedSize);
             if (optionExists && sizeSelect.value !== savedSize) {
                 sizeSelect.value = savedSize;
-                // Aplicamos automáticamente su preferencia guardada
                 Storevo.Listing.submitForm();
             }
         }
     },
 
-    // --- COMPONENTES ORIGINALES ADAPTADOS ---
+    // --- INTERCEPTAR EL BOTÓN "LIMPIAR" PARA BORRAR LA MEMORIA DE FILTROS ---
+    initClearFiltersButtons: function() {
+        const basePath = window.location.pathname;
+        const selectors = '[data-clear-all-filters="true"], a[title="Borrar todos los filtros"], #listing-results-container a';
+
+        document.querySelectorAll(selectors).forEach(link => {
+            if (link.dataset.clearInitialized) return;
+
+            const linkUrl = new URL(link.href, window.location.origin);
+            const isClearLink = link.hasAttribute('data-clear-all-filters')
+                || link.getAttribute('title') === 'Borrar todos los filtros'
+                || (linkUrl.pathname === basePath && linkUrl.search === '');
+
+            if (!isClearLink) return;
+            link.dataset.clearInitialized = 'true';
+
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                Storevo.Listing.clearSavedState();
+
+                const savedSize = localStorage.getItem(Storevo.Listing.getPageSizeKey());
+                const cleanUrl = savedSize ? `${basePath}?size=${savedSize}` : basePath;
+
+                window.history.pushState({path: cleanUrl}, '', cleanUrl);
+                Storevo.Listing.fetchResults(cleanUrl, true);
+            });
+        });
+    },
+
+    // --- GESTIÓN DEL FILTRO DE FECHAS Y AUTO-SUBMIT AJAX ---
+    initDateAndSelectFilters: function() {
+        const form = document.getElementById('listing-form');
+        if (!form) return;
+
+        const presetSelect = form.querySelector('select[name="datePreset"]');
+        const customContainer = document.getElementById('custom-date-range');
+        const fromInput = form.querySelector('input[name="fromDate"]');
+        const toInput = form.querySelector('input[name="toDate"]');
+
+        form.querySelectorAll('[data-date-picker-box]').forEach(box => {
+            if (box.dataset.pickerBoxInitialized) return;
+            box.dataset.pickerBoxInitialized = 'true';
+
+            box.addEventListener('click', () => {
+                const input = box.querySelector('input[type="date"]');
+                if (input && typeof input.showPicker === 'function') {
+                    try {
+                        input.showPicker();
+                    } catch (err) {
+                        input.focus();
+                    }
+                }
+            });
+        });
+
+        form.querySelectorAll('[data-auto-submit="true"]').forEach(selectEl => {
+            if (selectEl.dataset.ajaxSelectInitialized) return;
+            selectEl.dataset.ajaxSelectInitialized = 'true';
+
+            selectEl.addEventListener('change', (e) => {
+                e.stopImmediatePropagation();
+
+                if (selectEl.name === 'datePreset') {
+                    if (selectEl.value === 'custom') {
+                        if (customContainer) {
+                            customContainer.classList.remove('hidden');
+                            customContainer.classList.add('flex');
+                        }
+                        if (fromInput && !fromInput.value) {
+                            fromInput.focus();
+                            if (typeof fromInput.showPicker === 'function') {
+                                try { fromInput.showPicker(); } catch (err) {}
+                            }
+                            return;
+                        }
+                    } else {
+                        if (fromInput) fromInput.value = '';
+                        if (toInput) toInput.value = '';
+                        if (customContainer) {
+                            customContainer.classList.add('hidden');
+                            customContainer.classList.remove('flex');
+                        }
+                    }
+                }
+
+                Storevo.Listing.submitForm();
+            });
+        });
+
+        [fromInput, toInput].forEach(dateInput => {
+            if (!dateInput || dateInput.dataset.dateInitialized) return;
+            dateInput.dataset.dateInitialized = 'true';
+
+            dateInput.addEventListener('change', () => {
+                if (presetSelect && presetSelect.value !== 'custom') {
+                    presetSelect.value = 'custom';
+                }
+                Storevo.Listing.submitForm();
+            });
+        });
+    },
+
     initFilterChips: function() {
         const form = document.getElementById('listing-form');
         const chipsContainer = document.getElementById('active-filters-chips');
         if (!form || !chipsContainer) return;
 
         const fields = form.querySelectorAll('[data-filter="true"]');
+        const fromInput = form.querySelector('input[name="fromDate"]');
+        const toInput = form.querySelector('input[name="toDate"]');
+        const presetSelect = form.querySelector('select[name="datePreset"]');
         chipsContainer.innerHTML = '';
 
         fields.forEach(field => {
             if (!field.value) return;
 
+            if (field.name === 'datePreset' && field.value === 'custom' && ((fromInput && fromInput.value) || (toInput && toInput.value))) {
+                return;
+            }
+
             let label;
             if (field.dataset.chipLabel) {
                 label = field.dataset.chipLabel;
+            } else if (field.dataset.chipPrefix) {
+                label = field.dataset.chipPrefix + field.value;
             } else if (field.tagName === 'SELECT') {
                 const opt = field.options[field.selectedIndex];
                 label = opt ? opt.textContent.trim() : field.value;
@@ -207,6 +368,16 @@ Storevo.Listing = {
             removeBtn.innerHTML = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>';
             removeBtn.onclick = () => {
                 field.value = '';
+                if (field.name === 'datePreset') {
+                    if (fromInput) fromInput.value = '';
+                    if (toInput) toInput.value = '';
+                } else if ((field.name === 'fromDate' || field.name === 'toDate') && presetSelect && presetSelect.value === 'custom') {
+                    const remainingFrom = fromInput ? fromInput.value : '';
+                    const remainingTo = toInput ? toInput.value : '';
+                    if (!remainingFrom && !remainingTo) {
+                        presetSelect.value = '';
+                    }
+                }
                 Storevo.Listing.submitForm();
             };
 
@@ -335,6 +506,7 @@ Storevo.Listing = {
                 selectBtn.textContent = displayText;
                 selectBtn.onclick = () => selectNode(node, isRoot);
                 row.appendChild(selectBtn);
+
                 wrapper.appendChild(row);
 
                 if (hasChildren) {
@@ -345,11 +517,13 @@ Storevo.Listing = {
                         childrenContainer.appendChild(renderNode(child, false, query, selectedId));
                     });
                     wrapper.appendChild(childrenContainer);
+
                     chevronBtn.onclick = () => {
                         const nowHidden = childrenContainer.classList.toggle('hidden');
                         chevronBtn.classList.toggle('rotate-90', !nowHidden);
                     };
                 }
+
                 return wrapper;
             }
 
@@ -357,6 +531,7 @@ Storevo.Listing = {
                 treeContainer.innerHTML = '';
                 const selectedId = hiddenInput.value;
                 const normalizedQuery = (query || '').trim().toLowerCase();
+
                 const visibleRoots = tree.filter(node => !normalizedQuery || nodeMatchesQuery(node, normalizedQuery));
 
                 if (visibleRoots.length === 0) {
@@ -425,14 +600,21 @@ Storevo.Listing = {
         });
     },
 
-    initListingUX: function() {
-        Storevo.Listing.initPageSizePersistence();
+    initListingUX: function(skipInitialRestore = false) {
+        if (!skipInitialRestore) {
+            Storevo.Listing.initStatePersistence();
+        }
+        Storevo.Listing.initDateAndSelectFilters();
         Storevo.Listing.initCategoryCombobox();
         Storevo.Listing.initFilterChips();
+        Storevo.Listing.initClearFiltersButtons();
         Storevo.Listing.initSearchDebounce();
         Storevo.Listing.restoreSearchFocus();
 
-        // Escuchar el Enter natural del formulario
+        if (Storevo.Navigation && typeof Storevo.Navigation.syncReturnLinks === 'function') {
+            Storevo.Navigation.syncReturnLinks();
+        }
+
         const form = document.getElementById('listing-form');
         if (form && !form.dataset.ajaxInitialized) {
             form.dataset.ajaxInitialized = 'true';
@@ -444,7 +626,6 @@ Storevo.Listing = {
     }
 };
 
-// Escuchar el botón de "Atrás" del navegador para navegar sin recargar
 window.addEventListener('popstate', function(e) {
     if (e.state && e.state.path) {
         Storevo.Listing.fetchResults(e.state.path, true);
@@ -453,13 +634,12 @@ window.addEventListener('popstate', function(e) {
     }
 });
 
-// Registrar el estado inicial del History API
 if (!window.history.state) {
     window.history.replaceState({path: window.location.href}, '', window.location.href);
 }
 
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', Storevo.Listing.initListingUX);
+    document.addEventListener('DOMContentLoaded', () => Storevo.Listing.initListingUX(false));
 } else {
-    Storevo.Listing.initListingUX();
+    Storevo.Listing.initListingUX(false);
 }

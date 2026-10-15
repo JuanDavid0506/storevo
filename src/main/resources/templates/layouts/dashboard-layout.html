@@ -3,13 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <!-- ETIQUETAS CSRF (Solo se renderizan si Spring Security tiene CSRF activado) -->
     <meta name="_csrf" th:if="${_csrf != null}" th:content="${_csrf.token}"/>
     <meta name="_csrf_header" th:if="${_csrf != null}" th:content="${_csrf.headerName}"/>
-
     <title layout:title-pattern="$CONTENT_TITLE | Storevo">Dashboard</title>
-
     <link rel="stylesheet" th:href="@{/css/app.css}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
@@ -22,14 +19,13 @@
     <!-- 1. CONTENEDOR FIJO (Topbar + Subheader) No hace scroll -->
     <div class="flex-shrink-0 z-20 bg-slate-950 border-b border-slate-800">
         <div th:replace="~{components/dashboard/topbar :: topbar}"></div>
-
         <!-- Espacio reservado para los headers específicos de cada página -->
         <th:block layout:fragment="subheader"></th:block>
     </div>
 
-    <!-- 2. CONTENEDOR SCROLLEABLE (Formularios, tablas, etc.) -->
+    <!-- 2. CONTENEDOR SCROLLEABLE (Ocupa todo el ancho por defecto) -->
     <main class="flex-1 overflow-x-hidden overflow-y-auto bg-slate-950 p-6">
-        <div class="max-w-7xl mx-auto" layout:fragment="content">
+        <div class="w-full space-y-6" layout:fragment="content">
         </div>
     </main>
 
@@ -39,6 +35,7 @@
 <script th:src="@{/js/ui/toast.js}"></script>
 <script th:src="@{/js/ui/modal.js}"></script>
 <script th:src="@{/js/ui/alerts.js}"></script>
+
 <th:block layout:fragment="scripts"></th:block>
 </body>
 </html>
