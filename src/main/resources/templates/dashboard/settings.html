@@ -6,7 +6,6 @@
     <title>Configuración de Mi Tienda</title>
 </head>
 <body>
-
 <div layout:fragment="content">
 
     <!-- Mensaje de Éxito -->
@@ -21,14 +20,17 @@
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
             <span class="hidden sm:inline">Mi Tienda</span>
         </button>
+
         <button type="button" onclick="cambiarPestana('wompi')" id="tab-wompi" class="tab-btn flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 border border-transparent">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
             <span class="hidden sm:inline">Wompi</span>
         </button>
+
         <button type="button" onclick="cambiarPestana('mipaquete')" id="tab-mipaquete" class="tab-btn flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 border border-transparent">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"></path></svg>
             <span class="hidden sm:inline">Mi Paquete</span>
         </button>
+
         <button type="button" onclick="cambiarPestana('dian')" id="tab-dian" class="tab-btn flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 border border-transparent">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
             <span class="hidden sm:inline">DIAN</span>
@@ -39,27 +41,32 @@
     <form th:action="@{|/dashboard/${slug}/settings|}" th:object="${settings}" method="POST" class="space-y-8 relative">
 
         <!-- ========================================== -->
-        <!-- PESTAÑA 1: MI TIENDA (Tu código original)  -->
+        <!-- PESTAÑA 1: MI TIENDA                       -->
         <!-- ========================================== -->
         <div id="content-general" class="tab-content block space-y-8">
             <div class="bg-slate-900 border border-slate-800 rounded-xl shadow-sm overflow-hidden">
-                <div class="px-6 py-5 border-b border-slate-800">
-                    <h3 class="text-lg font-medium text-white">Información General</h3>
-                    <p class="text-sm text-slate-400 mt-1">Los datos principales de tu negocio.</p>
+                <div class="px-6 py-5 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <h3 class="text-lg font-medium text-white">Información General</h3>
+                        <p class="text-sm text-slate-400 mt-1">Los datos principales y colores base de tu negocio.</p>
+                    </div>
+                    <a th:href="@{|/dashboard/${slug}/template|}"
+                       class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-storevo-500/15 hover:bg-storevo-500/25 text-storevo-300 border border-storevo-500/30 text-xs font-bold transition self-start sm:self-auto">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path></svg>
+                        <span>Abrir Editor Visual de Plantilla</span>
+                    </a>
                 </div>
                 <div class="px-6 py-6 space-y-6">
                     <div th:replace="~{components/ui/fragments :: input('storeName', 'Nombre Comercial', 'text', 'Ej: Moda Urbana', *{storeName})}"></div>
 
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div th:replace="~{components/ui/fragments :: input('emailContact', 'Correo de Contacto', 'email', 'contacto@mitienda.com', *{emailContact})}"></div>
-
                         <div>
                             <label for="primaryColor" class="block text-sm font-medium text-slate-300 mb-1">Color Primario</label>
                             <div class="flex items-center gap-3">
                                 <input type="color" id="primaryColor" th:field="*{primaryColor}" class="h-10 w-full rounded bg-slate-950 border border-slate-800 cursor-pointer">
                             </div>
                         </div>
-
                         <div>
                             <label for="secondaryColor" class="block text-sm font-medium text-slate-300 mb-1">Color Secundario</label>
                             <div class="flex items-center gap-3">
@@ -103,11 +110,11 @@
                             </div>
                             <label class="relative inline-flex items-center cursor-pointer">
                                 <input type="checkbox" th:field="*{showShippingPolicy}" class="sr-only peer">
-                                <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand"></div>
+                                <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-storevo-500"></div>
                             </label>
                         </div>
                         <div>
-                            <textarea th:field="*{shippingPolicyText}" rows="3" class="w-full bg-slate-950 border border-slate-700 rounded-lg text-slate-300 p-3 text-sm focus:border-brand focus:ring-1 focus:ring-brand outline-none transition-all" placeholder="Escribe aquí tu política de envíos..."></textarea>
+                            <textarea th:field="*{shippingPolicyText}" rows="3" class="w-full bg-slate-950 border border-slate-700 rounded-lg text-slate-300 p-3 text-sm focus:border-storevo-500 focus:ring-1 focus:ring-storevo-500 outline-none transition-all" placeholder="Escribe aquí tu política de envíos..."></textarea>
                         </div>
                     </div>
 
@@ -119,11 +126,11 @@
                             </div>
                             <label class="relative inline-flex items-center cursor-pointer">
                                 <input type="checkbox" th:field="*{showReturnPolicy}" class="sr-only peer">
-                                <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand"></div>
+                                <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-storevo-500"></div>
                             </label>
                         </div>
                         <div>
-                            <textarea th:field="*{returnPolicyText}" rows="3" class="w-full bg-slate-950 border border-slate-700 rounded-lg text-slate-300 p-3 text-sm focus:border-brand focus:ring-1 focus:ring-brand outline-none transition-all" placeholder="Escribe aquí tu política de devoluciones..."></textarea>
+                            <textarea th:field="*{returnPolicyText}" rows="3" class="w-full bg-slate-950 border border-slate-700 rounded-lg text-slate-300 p-3 text-sm focus:border-storevo-500 focus:ring-1 focus:ring-storevo-500 outline-none transition-all" placeholder="Escribe aquí tu política de devoluciones..."></textarea>
                         </div>
                     </div>
                 </div>
@@ -147,7 +154,6 @@
             <div class="bg-slate-900 border border-slate-800 rounded-xl shadow-sm overflow-hidden">
                 <div class="px-6 py-5 border-b border-slate-800 flex justify-between items-center">
                     <h3 class="text-lg font-medium text-white">Credenciales y Entorno</h3>
-                    <!-- Toggle Switch Wompi -->
                     <label class="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" th:field="*{wompiActive}" class="sr-only peer">
                         <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-500"></div>
@@ -168,13 +174,12 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-300 mb-1">Llave Privada (prv_...) <span class="text-indigo-400 text-xs">(Dejar en blanco para no cambiar)</span></label>
-                        <input type="password" th:field="*{wompiPrivateKey}" class="w-full px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm placeholder-slate-600" placeholder="••••••••••••••••••••••••••••••••">
+                        <input type="password" th:field="*{wompiPrivateKey}" class="w-full px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm placeholder-slate-600" placeholder="••••••••••••••••••••••••">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-300 mb-1">Secreto de Integridad (Eventos) <span class="text-indigo-400 text-xs">(Dejar en blanco para no cambiar)</span></label>
-                        <input type="password" th:field="*{wompiEventsSecret}" class="w-full px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm placeholder-slate-600" placeholder="••••••••••••••••••••••••••••••••">
+                        <input type="password" th:field="*{wompiEventsSecret}" class="w-full px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm placeholder-slate-600" placeholder="••••••••••••••••••••••••">
                     </div>
-
                     <div class="pt-2 border-t border-slate-800">
                         <button type="button" id="btnProbarWompi" class="text-sm font-medium px-4 py-2 bg-slate-800 hover:bg-slate-700 text-indigo-300 rounded-lg border border-slate-700 transition-colors flex items-center gap-2">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
@@ -204,7 +209,6 @@
             <div class="bg-slate-900 border border-slate-800 rounded-xl shadow-sm overflow-hidden">
                 <div class="px-6 py-5 border-b border-slate-800 flex justify-between items-center">
                     <h3 class="text-lg font-medium text-white">Credenciales de API</h3>
-                    <!-- Toggle Switch Mi Paquete -->
                     <label class="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" th:field="*{miPaqueteActive}" class="sr-only peer">
                         <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-500"></div>
@@ -246,7 +250,7 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-300 mb-1">Ciudad de recogida</label>
-                        <input type="text" th:field="*{shippingPickupCity}" class="w-full px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-sky-500" placeholder="Bogotá">
+                        <input type="text" th:field="*{shippingPickupCity}" class="w-full px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-sky-500" placeholder="Bogotá D.C.">
                     </div>
                     <div class="md:col-span-2">
                         <label class="block text-sm font-medium text-slate-300 mb-1">Dirección de bodega/recogida</label>
@@ -274,35 +278,26 @@
             <a th:href="@{|/dashboard/${slug}|}" class="bg-slate-800 hover:bg-slate-700 text-white font-medium py-2 px-6 rounded-lg border border-slate-700 transition duration-200">Descartar</a>
             <div th:replace="~{components/ui/fragments :: btn-primary('Guardar Configuración', 'submit')}"></div>
         </div>
-
     </form>
 
     <!-- SCRIPT DE TABS -->
     <script>
         function cambiarPestana(pestanaActiva) {
-            // Ocultar todos los contenidos
             document.querySelectorAll('.tab-content').forEach(el => {
                 el.classList.add('hidden');
                 el.classList.remove('block');
             });
-
-            // Mostrar contenido actual
             document.getElementById('content-' + pestanaActiva).classList.remove('hidden');
             document.getElementById('content-' + pestanaActiva).classList.add('block');
 
-            // Resetear botones
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.className = "tab-btn flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 border border-transparent";
             });
 
-            // Activar botón seleccionado
             const btnActivo = document.getElementById('tab-' + pestanaActiva);
             btnActivo.className = "tab-btn flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all bg-indigo-500/15 text-indigo-300 border border-indigo-500/25";
         }
 
-        // Botón "Probar conexión" de Wompi: manda la llave pública y el ambiente
-        // que están escritos AHORA MISMO en el formulario (sin necesidad de guardar
-        // primero) al endpoint que valida contra la API pública de Wompi.
         document.getElementById('btnProbarWompi').addEventListener('click', function() {
             const boton = this;
             const resultado = document.getElementById('resultadoProbarWompi');
@@ -329,20 +324,18 @@
                         resultado.textContent = '✓ Conexión exitosa: ' + data.merchantName;
                     } else {
                         resultado.className = 'text-sm mt-2 text-red-400 font-medium';
-                        resultado.textContent = '✗ ' + data.message;
+                        resultado.textContent = '✕ ' + data.message;
                     }
                 })
                 .catch(() => {
                     resultado.className = 'text-sm mt-2 text-red-400 font-medium';
-                    resultado.textContent = '✗ No se pudo contactar a Storevo para hacer la prueba.';
+                    resultado.textContent = '✕ No se pudo contactar a Storevo para hacer la prueba.';
                 })
                 .finally(() => {
                     boton.disabled = false;
                 });
         });
     </script>
-
 </div>
-
 </body>
 </html>

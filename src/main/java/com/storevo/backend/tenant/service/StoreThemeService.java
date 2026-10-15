@@ -34,6 +34,14 @@ public class StoreThemeService {
     @Lazy
     private StoreThemeService self;
 
+    private static final Set<String> ALLOWED_FONTS = Set.of(
+            "Inter", "Plus Jakarta Sans", "Montserrat", "Playfair Display", "Lora", "DM Sans"
+    );
+
+    private static final Set<String> ALLOWED_RADII = Set.of(
+            "0px", "0.375rem", "0.75rem", "1rem", "1.5rem"
+    );
+
     /**
      * Obtiene la configuración del tema (Publicado o Borrador) y resuelve los productos de cada sección.
      */
@@ -79,10 +87,15 @@ public class StoreThemeService {
                                 .primaryColor(primary)
                                 .secondaryColor(secondary)
                                 .build());
+                    } else if (!useDraft) {
+                        // Sincronizar con StoreSettings en la vista publicada por si el comerciante cambió colores en Configuración -> Mi Tienda
+                        parsed.getGlobalStyles().setPrimaryColor(primary);
+                        parsed.getGlobalStyles().setSecondaryColor(secondary);
                     }
                     if (parsed.getSections() == null) {
                         parsed.setSections(new ArrayList<>());
                     }
+                    sanitizeThemeConfig(store.getSlug(), parsed);
                     return parsed;
                 } catch (Exception e) {
                     System.out.println("Error leyendo JSON de plantilla, usando tema por defecto: " + e.getMessage());
@@ -133,17 +146,15 @@ public class StoreThemeService {
     }
 
     /**
-     * Guarda el borrador del tema en la BD administrativa.
+     * Guarda el borrador del tema en la BD administrativa SIN sobrescribir los colores publicados de la tienda.
      */
     public void saveDraftTheme(Store store, ThemeConfigDto themeConfig) {
         String tenantSchema = store.getSchemaName();
         try {
-            sanitizeThemeConfig(themeConfig);
+            sanitizeThemeConfig(store.getSlug(), themeConfig);
             String json = objectMapper.writeValueAsString(themeConfig);
             TenantContext.clear();
-            self.updateThemeColumnsInAdminDb(store.getId(), json, null,
-                    themeConfig.getGlobalStyles() != null ? themeConfig.getGlobalStyles().getPrimaryColor() : null,
-                    themeConfig.getGlobalStyles() != null ? themeConfig.getGlobalStyles().getSecondaryColor() : null);
+            self.updateThemeColumnsInAdminDb(store.getId(), json, null, null, null);
         } catch (Exception e) {
             throw new RuntimeException("No se pudo guardar el borrador de la plantilla: " + e.getMessage(), e);
         } finally {
@@ -152,22 +163,35 @@ public class StoreThemeService {
     }
 
     /**
-     * Publica el tema en la tienda pública.
+     * Publica el tema en la tienda pública y sincroniza los colores primarios y secundarios en StoreSettings.
      */
     public void publishTheme(Store store, ThemeConfigDto themeConfig) {
         String tenantSchema = store.getSchemaName();
         try {
-            sanitizeThemeConfig(themeConfig);
+            sanitizeThemeConfig(store.getSlug(), themeConfig);
             String json = objectMapper.writeValueAsString(themeConfig);
             TenantContext.clear();
-            self.updateThemeColumnsInAdminDb(store.getId(), json, json,
+            self.updateThemeColumnsInAdminDb(
+                    store.getId(),
+                    json,
+                    json,
                     themeConfig.getGlobalStyles() != null ? themeConfig.getGlobalStyles().getPrimaryColor() : null,
-                    themeConfig.getGlobalStyles() != null ? themeConfig.getGlobalStyles().getSecondaryColor() : null);
+                    themeConfig.getGlobalStyles() != null ? themeConfig.getGlobalStyles().getSecondaryColor() : null
+            );
         } catch (Exception e) {
             throw new RuntimeException("No se pudo publicar la plantilla: " + e.getMessage(), e);
         } finally {
             TenantContext.setCurrentTenant(tenantSchema);
         }
+    }
+
+    /**
+     * Descarta los cambios no publicados del borrador y restaura la última versión publicada de la tienda.
+     */
+    public ThemeConfigDto discardDraftToPublished(Store store) {
+        ThemeConfigDto publishedTheme = getRawThemeConfig(store, false);
+        saveDraftTheme(store, publishedTheme);
+        return publishedTheme;
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
@@ -201,8 +225,8 @@ public class StoreThemeService {
 
     public ThemeConfigDto buildDefaultTheme(String storeName, String primaryColor, String secondaryColor, String bannerUrl) {
         String safeStoreName = (storeName != null && !storeName.isBlank()) ? storeName : "Nuestra Tienda";
-        String safePrimary = (primaryColor != null && !primaryColor.isBlank()) ? primaryColor : "#6366f1";
-        String safeSecondary = (secondaryColor != null && !secondaryColor.isBlank()) ? secondaryColor : "#0f172a";
+        String safePrimary = sanitizeHexColor(primaryColor, "#6366f1");
+        String safeSecondary = sanitizeHexColor(secondaryColor, "#0f172a");
 
         ThemeGlobalStylesDto globalStyles = ThemeGlobalStylesDto.builder()
                 .primaryColor(safePrimary)
@@ -282,8 +306,30 @@ public class StoreThemeService {
                 .build();
     }
 
-    private void sanitizeThemeConfig(ThemeConfigDto config) {
-        if (config == null || config.getSections() == null) return;
+    private void sanitizeThemeConfig(String slug, ThemeConfigDto config) {
+        if (config == null) return;
+
+        ThemeGlobalStylesDto gs = config.getGlobalStyles();
+        if (gs == null) {
+            gs = new ThemeGlobalStylesDto();
+            config.setGlobalStyles(gs);
+        }
+        gs.setPrimaryColor(sanitizeHexColor(gs.getPrimaryColor(), "#6366f1"));
+        gs.setSecondaryColor(sanitizeHexColor(gs.getSecondaryColor(), "#0f172a"));
+        gs.setBackgroundColor(sanitizeHexColor(gs.getBackgroundColor(), "#f8fafc"));
+        gs.setTextColor(sanitizeHexColor(gs.getTextColor(), "#0f172a"));
+
+        if (gs.getHeadingFont() == null || !ALLOWED_FONTS.contains(gs.getHeadingFont().trim())) {
+            gs.setHeadingFont("Inter");
+        }
+        if (gs.getBodyFont() == null || !ALLOWED_FONTS.contains(gs.getBodyFont().trim())) {
+            gs.setBodyFont("Inter");
+        }
+        if (gs.getBorderRadius() == null || !ALLOWED_RADII.contains(gs.getBorderRadius().trim())) {
+            gs.setBorderRadius("1rem");
+        }
+
+        if (config.getSections() == null) return;
         for (ThemeSectionDto sec : config.getSections()) {
             if (sec.getId() == null || sec.getId().isBlank()) {
                 sec.setId("sec_" + UUID.randomUUID().toString().substring(0, 8));
@@ -292,8 +338,12 @@ public class StoreThemeService {
                 sec.getSettings().replaceAll((k, v) -> {
                     if (v instanceof String str) {
                         String trimmed = str.trim();
-                        if (k.toLowerCase().endsWith("url") && trimmed.toLowerCase().startsWith("javascript:")) {
-                            return "";
+                        String lowerKey = k.toLowerCase();
+                        if (lowerKey.endsWith("color")) {
+                            return sanitizeHexColor(trimmed, "#0f172a");
+                        }
+                        if (lowerKey.endsWith("url")) {
+                            return normalizeSectionUrl(slug, trimmed, lowerKey.contains("image"));
                         }
                         return trimmed;
                     }
@@ -301,5 +351,52 @@ public class StoreThemeService {
                 });
             }
         }
+    }
+
+    private String sanitizeHexColor(String raw, String fallback) {
+        if (raw == null) return fallback;
+        String clean = raw.trim();
+        if (clean.matches("^#[0-9a-fA-F]{6}$")) {
+            return clean;
+        }
+        return fallback;
+    }
+
+    private String normalizeSectionUrl(String slug, String rawUrl, boolean isImageUrl) {
+        if (rawUrl == null || rawUrl.isBlank()) return "";
+        String trimmed = rawUrl.trim();
+        String lower = trimmed.toLowerCase();
+
+        if (lower.startsWith("javascript:") || lower.startsWith("data:") || lower.startsWith("vbscript:")) {
+            return "";
+        }
+
+        if (isImageUrl) {
+            return trimmed;
+        }
+
+        if (lower.startsWith("www.") || lower.startsWith("wa.me/") || lower.startsWith("instagram.com/") || lower.startsWith("facebook.com/") || lower.startsWith("tiktok.com/")) {
+            return "https://" + trimmed;
+        }
+
+        if (lower.startsWith("http://") || lower.startsWith("https://") || lower.startsWith("#")) {
+            return trimmed;
+        }
+
+        if (slug != null && !slug.isBlank()) {
+            String prefix1 = "/s/" + slug;
+            String prefix2 = "s/" + slug;
+            if (trimmed.startsWith(prefix1)) {
+                trimmed = trimmed.substring(prefix1.length());
+            } else if (trimmed.startsWith(prefix2)) {
+                trimmed = trimmed.substring(prefix2.length());
+            }
+        }
+
+        if (trimmed.isEmpty()) {
+            return "/";
+        }
+
+        return trimmed.startsWith("/") ? trimmed : "/" + trimmed;
     }
 }

@@ -2,6 +2,7 @@ package com.storevo.backend.tenant.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.storevo.backend.admin.model.Store;
+import com.storevo.backend.admin.model.StoreSettings;
 import com.storevo.backend.config.tenant.TenantContext;
 import com.storevo.backend.tenant.dto.ThemeConfigDto;
 import com.storevo.backend.tenant.model.Category;
@@ -28,7 +29,7 @@ public class DashboardTemplateController {
     private final CloudinaryService cloudinaryService;
     private final ObjectMapper objectMapper;
 
-    private static final long MAX_BANNER_SIZE = 10 * 1024 * 1024; // 10 MB
+    private static final long MAX_BANNER_SIZE = 10L * 1024L * 1024L; // 10 MB
     private static final List<String> ALLOWED_TYPES = Arrays.asList("image/jpeg", "image/png", "image/webp");
 
     @GetMapping
@@ -48,7 +49,7 @@ public class DashboardTemplateController {
             e.printStackTrace();
         }
 
-        // 2. Obtener categorías para el selector de las vitrinas de productos
+        // 2. Obtener categorías para el selector de las vitrinas de productos y enlaces
         List<Map<String, Object>> flatCategories = new ArrayList<>();
         try {
             if (store != null) {
@@ -128,6 +129,32 @@ public class DashboardTemplateController {
         }
     }
 
+    @PostMapping("/discard-draft")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> discardDraft(
+            @PathVariable String slug,
+            HttpServletRequest request) {
+
+        Store store = (Store) request.getAttribute("currentStore");
+        if (store == null) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Tienda no encontrada."));
+        }
+
+        try {
+            ThemeConfigDto restored = storeThemeService.discardDraftToPublished(store);
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "theme", restored,
+                    "message", "Se descartaron los cambios y se restauró tu diseño publicado actual."
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of(
+                    "success", false,
+                    "message", "No se pudo restaurar la versión publicada."
+            ));
+        }
+    }
+
     @PostMapping("/reset")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> resetToDefault(
@@ -140,12 +167,19 @@ public class DashboardTemplateController {
         }
 
         try {
-            ThemeConfigDto defaultTheme = storeThemeService.buildDefaultTheme(store.getName(), "#6366f1", "#0f172a", null);
+            TenantContext.clear();
+            StoreSettings settings = storeThemeService.findSettingsInAdminDb(store.getId());
+            String primary = (settings != null && settings.getPrimaryColor() != null) ? settings.getPrimaryColor() : "#6366f1";
+            String secondary = (settings != null && settings.getSecondaryColor() != null) ? settings.getSecondaryColor() : "#0f172a";
+            String banner = settings != null ? settings.getBannerUrl() : null;
+            TenantContext.setCurrentTenant(store.getSchemaName());
+
+            ThemeConfigDto defaultTheme = storeThemeService.buildDefaultTheme(store.getName(), primary, secondary, banner);
             storeThemeService.saveDraftTheme(store, defaultTheme);
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "theme", defaultTheme,
-                    "message", "Borrador restablecido al diseño original."
+                    "message", "Borrador restablecido a la estructura inicial."
             ));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(Map.of(
