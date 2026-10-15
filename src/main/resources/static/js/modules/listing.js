@@ -707,8 +707,8 @@ Storevo.Listing = {
             Storevo.Listing.initStatePersistence();
         }
         Storevo.Listing.initDateAndSelectFilters();
-        Storevo.Listing.initCategoryCombobox();
-        Storevo.Listing.initFilterChips();
+        Storevo.Listing.initCategoryCombobox(); // <-- 1° Hidrata el nombre de la categoría desde el árbol JSON
+        Storevo.Listing.initFilterChips();      // <-- 2° Crea el chip usando ese nombre
         Storevo.Listing.initClearFiltersButtons();
         Storevo.Listing.initSearchDebounce();
         Storevo.Listing.restoreSearchFocus();
