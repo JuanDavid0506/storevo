@@ -435,14 +435,33 @@ Storevo.Listing = {
             const trigger = root.querySelector('[data-combobox-trigger]');
             const labelEl = root.querySelector('[data-combobox-label]');
             const quickClear = root.querySelector('[data-combobox-quick-clear]');
+            const chevronEl = root.querySelector('[data-combobox-chevron]');
             const panel = root.querySelector('[data-combobox-panel]');
             const searchInput = root.querySelector('[data-combobox-search]');
-            const treeContainer = root.querySelector('[data-combobox-tree]');
-            const clearBtn = root.querySelector('[data-combobox-clear]');
+            const headerContainer = root.querySelector('[data-combobox-header]');
+            const listContainer = root.querySelector('[data-combobox-tree]');
 
-            if (!hiddenInput || !trigger || !panel || !treeContainer || !labelEl) return;
+            if (!hiddenInput || !trigger || !panel || !listContainer || !labelEl) return;
 
-            const defaultLabel = labelEl.textContent.trim();
+            const defaultLabel = labelEl.textContent.trim() || 'Todas las categorías';
+
+            // Pila de navegación: [] = Raíz, [Hombres] = Nivel 2, [Hombres, Camisas] = Nivel 3
+            let navStack = [];
+
+            // Índice plano para cuando el usuario escribe en el buscador
+            const flatNodes = [];
+            function flatten(nodes, path) {
+                nodes.forEach(n => {
+                    const currentPath = path.concat([n]);
+                    flatNodes.push({
+                        node: n,
+                        path: currentPath,
+                        crumb: currentPath.map(item => item.name).join(' › ')
+                    });
+                    if (n.children && n.children.length) flatten(n.children, currentPath);
+                });
+            }
+            flatten(tree, []);
 
             function findNodePath(nodes, id, path) {
                 for (const node of nodes) {
@@ -456,106 +475,201 @@ Storevo.Listing = {
                 return null;
             }
 
-            function setSelection(id, displayLabel) {
+            function setSelection(id, pathArray) {
                 hiddenInput.value = id || '';
-                hiddenInput.dataset.chipLabel = id ? displayLabel : '';
-                labelEl.textContent = id ? displayLabel : defaultLabel;
+                if (id && pathArray && pathArray.length) {
+                    const lastNode = pathArray[pathArray.length - 1];
+                    const hasChildren = lastNode.children && lastNode.children.length > 0;
+                    const displayLabel = hasChildren ? ('Todo ' + lastNode.name) : lastNode.name;
+                    const fullCrumb = pathArray.map(n => n.name).join(' › ');
+
+                    hiddenInput.dataset.chipLabel = fullCrumb;
+                    labelEl.textContent = displayLabel;
+                    labelEl.classList.add('text-white', 'font-bold');
+                } else {
+                    hiddenInput.dataset.chipLabel = '';
+                    labelEl.textContent = defaultLabel;
+                    labelEl.classList.remove('text-white', 'font-bold');
+                }
                 if (quickClear) quickClear.classList.toggle('hidden', !id);
             }
 
-            function selectNode(node, isRoot) {
-                const displayLabel = isRoot ? ('Todo ' + node.name) : node.name;
-                setSelection(node.id, displayLabel);
+            function selectAndClose(id, pathArray) {
+                setSelection(id, pathArray);
                 closePanel();
                 Storevo.Listing.submitForm();
             }
 
-            function nodeMatchesQuery(node, query) {
-                if (node.name.toLowerCase().includes(query)) return true;
-                if (node.children) return node.children.some(child => nodeMatchesQuery(child, query));
-                return false;
-            }
+            // Renderiza la vista actual (una sola lista limpia)
+            function renderCurrentLevel() {
+                listContainer.innerHTML = '';
+                const selectedId = String(hiddenInput.value || '');
+                const currentParent = navStack.length > 0 ? navStack[navStack.length - 1] : null;
+                const currentNodes = currentParent ? (currentParent.children || []) : tree;
 
-            function renderNode(node, isRoot, query, selectedId) {
-                const wrapper = document.createElement('div');
-                const row = document.createElement('div');
-                row.className = 'flex items-center gap-1 rounded-lg hover:bg-slate-800/70';
+                // 1. Cabecera de navegación si estamos dentro de una categoría
+                if (headerContainer) {
+                    if (navStack.length === 0) {
+                        headerContainer.classList.add('hidden');
+                        headerContainer.innerHTML = '';
+                    } else {
+                        headerContainer.classList.remove('hidden');
+                        headerContainer.innerHTML = '';
 
-                const hasChildren = node.children && node.children.length > 0;
-                const forceOpen = !!query;
+                        const backBtn = document.createElement('button');
+                        backBtn.type = 'button';
+                        backBtn.className = 'flex items-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors flex-shrink-0';
+                        backBtn.innerHTML = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path></svg><span>Atrás</span>';
+                        backBtn.onclick = () => {
+                            navStack.pop();
+                            renderCurrentLevel();
+                        };
 
-                let chevronBtn = null;
-                if (hasChildren) {
-                    chevronBtn = document.createElement('button');
-                    chevronBtn.type = 'button';
-                    chevronBtn.className = 'p-1.5 text-slate-500 hover:text-white transition-transform flex-shrink-0' + (forceOpen ? ' rotate-90' : '');
-                    chevronBtn.innerHTML = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>';
-                    row.appendChild(chevronBtn);
+                        const crumbSpan = document.createElement('span');
+                        crumbSpan.className = 'text-xs font-bold text-storevo-400 truncate';
+                        crumbSpan.textContent = navStack.map(n => n.name).join(' / ');
+
+                        headerContainer.appendChild(backBtn);
+                        headerContainer.appendChild(crumbSpan);
+                    }
+                }
+
+                // 2. En Nivel Raíz: mostrar opción "Todas las categorías" arriba
+                if (navStack.length === 0) {
+                    const allBtn = document.createElement('button');
+                    allBtn.type = 'button';
+                    const isAllSelected = !selectedId;
+                    allBtn.className = 'w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ' +
+                        (isAllSelected ? 'bg-storevo-500/10 text-storevo-400 font-bold' : 'text-slate-300 hover:bg-slate-800 hover:text-white');
+                    allBtn.innerHTML = `<span>Todas las categorías</span>${isAllSelected ? '<svg class="w-4 h-4 text-storevo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>' : ''}`;
+                    allBtn.onclick = () => selectAndClose('', null);
+                    listContainer.appendChild(allBtn);
                 } else {
-                    const spacer = document.createElement('span');
-                    spacer.className = 'w-6 flex-shrink-0';
-                    row.appendChild(spacer);
+                    // Si estamos dentro de una carpeta (ej. Hombres), primer ítem: "Todo en Hombres"
+                    const parentSelected = String(currentParent.id) === selectedId;
+                    const allInParentBtn = document.createElement('button');
+                    allInParentBtn.type = 'button';
+                    allInParentBtn.className = 'w-full flex items-center justify-between px-3 py-2 mb-1 rounded-lg text-sm border transition-colors ' +
+                        (parentSelected
+                            ? 'bg-storevo-500/10 text-storevo-400 font-bold border-storevo-500/20'
+                            : 'bg-slate-950/60 text-slate-200 hover:bg-slate-800 hover:text-white border-slate-800 font-medium');
+                    allInParentBtn.innerHTML = `<span class="truncate">Todo en ${currentParent.name}</span><svg class="w-4 h-4 text-storevo-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
+                    allInParentBtn.onclick = () => selectAndClose(currentParent.id, navStack.slice());
+                    listContainer.appendChild(allInParentBtn);
                 }
 
-                const selectBtn = document.createElement('button');
-                selectBtn.type = 'button';
-                const displayText = isRoot ? ('Todo ' + node.name) : node.name;
-                const isSelected = String(node.id) === String(selectedId);
-                selectBtn.className = 'flex-1 text-left px-2 py-1.5 text-sm rounded-lg truncate transition-colors ' +
-                    (isSelected ? 'text-storevo-400 font-bold bg-storevo-500/10' : 'text-slate-300 hover:text-white');
-                selectBtn.textContent = displayText;
-                selectBtn.onclick = () => selectNode(node, isRoot);
-                row.appendChild(selectBtn);
-
-                wrapper.appendChild(row);
-
-                if (hasChildren) {
-                    const childrenContainer = document.createElement('div');
-                    childrenContainer.className = 'pl-4 border-l border-slate-800 ml-3' + (forceOpen ? '' : ' hidden');
-                    node.children.forEach(child => {
-                        if (query && !nodeMatchesQuery(child, query)) return;
-                        childrenContainer.appendChild(renderNode(child, false, query, selectedId));
-                    });
-                    wrapper.appendChild(childrenContainer);
-
-                    chevronBtn.onclick = () => {
-                        const nowHidden = childrenContainer.classList.toggle('hidden');
-                        chevronBtn.classList.toggle('rotate-90', !nowHidden);
-                    };
-                }
-
-                return wrapper;
-            }
-
-            function renderTree(query) {
-                treeContainer.innerHTML = '';
-                const selectedId = hiddenInput.value;
-                const normalizedQuery = (query || '').trim().toLowerCase();
-
-                const visibleRoots = tree.filter(node => !normalizedQuery || nodeMatchesQuery(node, normalizedQuery));
-
-                if (visibleRoots.length === 0) {
+                if (currentNodes.length === 0) {
                     const empty = document.createElement('p');
                     empty.className = 'text-center text-xs text-slate-500 py-4';
-                    empty.textContent = 'No se encontraron categorías.';
-                    treeContainer.appendChild(empty);
+                    empty.textContent = 'No hay categorías registradas.';
+                    listContainer.appendChild(empty);
                     return;
                 }
 
-                visibleRoots.forEach(node => {
-                    treeContainer.appendChild(renderNode(node, true, normalizedQuery, selectedId));
+                // 3. Renderizar las categorías del nivel actual
+                currentNodes.forEach(node => {
+                    const hasChildren = node.children && node.children.length > 0;
+                    const isSelected = String(node.id) === selectedId;
+                    const nodePath = navStack.concat([node]);
+
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-sm transition-colors ' +
+                        (isSelected ? 'bg-storevo-500/10 text-storevo-400 font-bold' : 'text-slate-300 hover:bg-slate-800 hover:text-white');
+
+                    const leftSpan = document.createElement('span');
+                    leftSpan.className = 'truncate';
+                    leftSpan.textContent = node.name;
+                    btn.appendChild(leftSpan);
+
+                    if (hasChildren) {
+                        const rightBadge = document.createElement('span');
+                        rightBadge.className = 'flex items-center gap-1 text-xs text-slate-500 font-bold flex-shrink-0';
+                        rightBadge.innerHTML = `<span>${node.children.length}</span><svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>`;
+                        btn.appendChild(rightBadge);
+
+                        // Clic en carpeta -> entra a ver sus subcategorías sin cerrar el menú
+                        btn.onclick = () => {
+                            navStack.push(node);
+                            renderCurrentLevel();
+                        };
+                    } else {
+                        if (isSelected) {
+                            const check = document.createElement('span');
+                            check.innerHTML = '<svg class="w-4 h-4 text-storevo-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>';
+                            btn.appendChild(check);
+                        }
+                        // Clic en categoría final -> selecciona y filtra de inmediato
+                        btn.onclick = () => selectAndClose(node.id, nodePath);
+                    }
+
+                    listContainer.appendChild(btn);
+                });
+            }
+
+            // Renderiza resultados directos con ruta cuando el usuario escribe en el buscador
+            function renderSearch(query) {
+                const q = (query || '').trim().toLowerCase();
+                if (!q) {
+                    renderCurrentLevel();
+                    return;
+                }
+
+                if (headerContainer) headerContainer.classList.add('hidden');
+                listContainer.innerHTML = '';
+
+                const matches = flatNodes.filter(item =>
+                    item.node.name.toLowerCase().includes(q) ||
+                    item.crumb.toLowerCase().includes(q)
+                );
+
+                if (matches.length === 0) {
+                    listContainer.innerHTML = '<p class="text-center text-xs text-slate-500 py-4">No se encontraron categorías.</p>';
+                    return;
+                }
+
+                const selectedId = String(hiddenInput.value || '');
+                matches.forEach(item => {
+                    const isSelected = String(item.node.id) === selectedId;
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'w-full text-left px-3 py-2 rounded-lg transition-colors flex flex-col ' +
+                        (isSelected ? 'bg-storevo-500/10 text-storevo-400' : 'hover:bg-slate-800 text-slate-200');
+
+                    btn.innerHTML = `
+                        <span class="text-sm font-bold truncate">${item.node.name}</span>
+                        <span class="text-xs text-slate-500 truncate">${item.crumb}</span>
+                    `;
+                    btn.onclick = () => selectAndClose(item.node.id, item.path);
+                    listContainer.appendChild(btn);
                 });
             }
 
             function openPanel() {
                 panel.classList.remove('hidden');
+                if (chevronEl) chevronEl.classList.add('rotate-180');
                 if (searchInput) searchInput.value = '';
-                renderTree('');
-                if (searchInput) searchInput.focus();
+
+                // Si ya hay una categoría seleccionada, abrir directamente en su carpeta
+                const currentPath = hiddenInput.value ? findNodePath(tree, hiddenInput.value, []) : null;
+                if (currentPath && currentPath.length > 0) {
+                    const last = currentPath[currentPath.length - 1];
+                    navStack = (last.children && last.children.length > 0)
+                        ? currentPath.slice()
+                        : currentPath.slice(0, -1);
+                } else {
+                    navStack = [];
+                }
+
+                renderCurrentLevel();
+                if (window.innerWidth >= 640 && searchInput) {
+                    searchInput.focus();
+                }
             }
 
             function closePanel() {
                 panel.classList.add('hidden');
+                if (chevronEl) chevronEl.classList.remove('rotate-180');
             }
 
             trigger.addEventListener('click', (e) => {
@@ -564,23 +678,14 @@ Storevo.Listing = {
             });
 
             if (searchInput) {
-                searchInput.addEventListener('input', () => renderTree(searchInput.value));
+                searchInput.addEventListener('input', () => renderSearch(searchInput.value));
                 searchInput.addEventListener('click', (e) => e.stopPropagation());
-            }
-
-            if (clearBtn) {
-                clearBtn.addEventListener('click', () => {
-                    setSelection('', '');
-                    closePanel();
-                    Storevo.Listing.submitForm();
-                });
             }
 
             if (quickClear) {
                 quickClear.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    setSelection('', '');
-                    Storevo.Listing.submitForm();
+                    selectAndClose('', null);
                 });
             }
 
@@ -591,10 +696,7 @@ Storevo.Listing = {
             if (hiddenInput.value) {
                 const path = findNodePath(tree, hiddenInput.value, []);
                 if (path && path.length) {
-                    const isRootSelection = path.length === 1;
-                    const lastNode = path[path.length - 1];
-                    const displayLabel = isRootSelection ? ('Todo ' + lastNode.name) : lastNode.name;
-                    setSelection(hiddenInput.value, displayLabel);
+                    setSelection(hiddenInput.value, path);
                 }
             }
         });
