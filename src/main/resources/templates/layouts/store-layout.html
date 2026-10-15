@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title layout:title-pattern="$CONTENT_TITLE | [[${settings.storeName}]]">Tienda</title>
 
-    <!-- Metadatos SEO y OpenGraph por defecto para compartir en WhatsApp y Redes -->
     <meta name="description" th:content="'Explora el catálogo oficial de ' + ${settings.storeName} + ' y realiza tu pedido fácil y seguro.'">
     <meta property="og:site_name" th:content="${settings.storeName}">
     <meta property="og:type" content="website">
@@ -15,12 +14,31 @@
     </th:block>
 
     <link rel="stylesheet" th:href="@{/css/app.css}">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Fuentes de Google Fonts para el Editor de Plantillas -->
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Inter:wght@300;400;500;600;700;900&family=Lora:wght@500;600;700&family=Montserrat:wght@400;600;700;800&family=Playfair+Display:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
 
-    <style th:inline="text">
+    <style th:inline="text"
+           th:with="pColor=${theme != null and theme.globalStyles != null and theme.globalStyles.primaryColor != null ? theme.globalStyles.primaryColor : (settings != null and settings.primaryColor != null ? settings.primaryColor : '#6366f1')},
+                    sColor=${theme != null and theme.globalStyles != null and theme.globalStyles.secondaryColor != null ? theme.globalStyles.secondaryColor : (settings != null and settings.secondaryColor != null ? settings.secondaryColor : '#0f172a')},
+                    bgColor=${theme != null and theme.globalStyles != null and theme.globalStyles.backgroundColor != null ? theme.globalStyles.backgroundColor : '#f8fafc'},
+                    txtColor=${theme != null and theme.globalStyles != null and theme.globalStyles.textColor != null ? theme.globalStyles.textColor : '#0f172a'},
+                    hFont=${theme != null and theme.globalStyles != null and theme.globalStyles.headingFont != null ? theme.globalStyles.headingFont : 'Inter'},
+                    bFont=${theme != null and theme.globalStyles != null and theme.globalStyles.bodyFont != null ? theme.globalStyles.bodyFont : 'Inter'}">
         :root {
-            --brand-color: [[${settings.primaryColor != null ? settings.primaryColor : '#000000'}]];
-            --brand-secondary: [[${settings.secondaryColor != null ? settings.secondaryColor : '#ffffff'}]];
+            --brand-color: [[${pColor}]];
+            --brand-secondary: [[${sColor}]];
+            --store-bg: [[${bgColor}]];
+            --store-text: [[${txtColor}]];
+            --font-heading: '[[${hFont}]]', sans-serif;
+            --font-body: '[[${bFont}]]', sans-serif;
+        }
+        body {
+            background-color: var(--store-bg) !important;
+            color: var(--store-text) !important;
+            font-family: var(--font-body) !important;
+        }
+        h1, h2, h3, h4 {
+            font-family: var(--font-heading) !important;
         }
         .bg-brand { background-color: var(--brand-color) !important; }
         .text-brand { color: var(--brand-color) !important; }

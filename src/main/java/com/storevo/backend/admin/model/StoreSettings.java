@@ -43,6 +43,13 @@ public class StoreSettings {
     @Column(name = "banner_url", length = 255)
     private String bannerUrl;
 
+    // --- MOTOR DE PLANTILLAS VISUALES (Borrador y Publicado) ---
+    @Column(name = "draft_theme_json", columnDefinition = "LONGTEXT")
+    private String draftThemeJson;
+
+    @Column(name = "published_theme_json", columnDefinition = "LONGTEXT")
+    private String publishedThemeJson;
+
     @Column(length = 50)
     private String whatsapp;
 
