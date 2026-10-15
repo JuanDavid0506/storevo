@@ -12,7 +12,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -32,20 +31,6 @@ public class StoreFrontController {
     private final CategoryService categoryService;
     private final StoreThemeService storeThemeService;
 
-    @ModelAttribute
-    public void injectGlobalTheme(
-            @RequestParam(required = false) String preview,
-            HttpServletRequest request,
-            Model model) {
-        Store store = (Store) request.getAttribute("currentStore");
-        if (store != null) {
-            boolean isDraftPreview = "draft".equalsIgnoreCase(preview);
-            ThemeConfigDto theme = storeThemeService.getRawThemeConfig(store, isDraftPreview);
-            model.addAttribute("theme", theme);
-            model.addAttribute("isDraftPreview", isDraftPreview);
-        }
-    }
-
     @GetMapping
     public String home(
             @RequestParam(required = false) String preview,
@@ -58,6 +43,7 @@ public class StoreFrontController {
         ThemeConfigDto theme = storeThemeService.getHydratedThemeForStorefront(store, isDraftPreview);
 
         model.addAttribute("theme", theme);
+        model.addAttribute("isDraftPreview", isDraftPreview);
         model.addAttribute("products", productService.getPublicCatalog(null));
         model.addAttribute("pageTitle", "Inicio");
         return "storefront/home";

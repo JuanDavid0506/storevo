@@ -101,7 +101,6 @@ Storevo.ProductDetail = {
         const groups = document.querySelectorAll('.variant-option-group');
         window.TOTAL_OPTIONS_COUNT = groups.length;
 
-        // Marcar visualmente opciones agotadas desde el inicio
         this.refreshOptionButtonsAvailability();
 
         groups.forEach(group => {
@@ -111,12 +110,12 @@ Storevo.ProductDetail = {
             btns.forEach(btn => {
                 btn.addEventListener('click', () => {
                     btns.forEach(b => {
-                        b.classList.remove('border-brand', 'text-brand', 'bg-brand/5', 'ring-2', 'ring-brand/20');
-                        b.classList.add('border-slate-200', 'text-slate-600', 'bg-white');
+                        b.classList.remove('border-brand', 'text-brand', 'ring-2', 'ring-brand/20');
+                        b.classList.add('border-slate-200', 'text-slate-700');
                     });
 
-                    btn.classList.remove('border-slate-200', 'text-slate-600', 'bg-white');
-                    btn.classList.add('border-brand', 'text-brand', 'bg-brand/5', 'ring-2', 'ring-brand/20');
+                    btn.classList.remove('border-slate-200', 'text-slate-700');
+                    btn.classList.add('border-brand', 'text-brand', 'ring-2', 'ring-brand/20');
 
                     this.state.selectedOptions[optName] = btn.getAttribute('data-value');
                     const errEl = group.querySelector('.option-error');
@@ -157,7 +156,6 @@ Storevo.ProductDetail = {
             group.querySelectorAll('.opt-btn').forEach(btn => {
                 const candidateVal = btn.getAttribute('data-value');
 
-                // Verificar si existe al menos una combinación con stock > 0 compatible con las demás opciones ya elegidas
                 const hasStock = window.PRODUCT_VARIANTS_DATA.some(v => {
                     if (v.stock <= 0) return false;
                     const parts = (v.signature || '').split('|');
@@ -215,7 +213,6 @@ Storevo.ProductDetail = {
                 priceDisplay.classList.remove('opacity-0');
             }, 150);
 
-            // Si la variante cuesta igual o más que el precio original tachado, ocultar el precio tachado
             if (oldPriceDisplay) {
                 const shouldHideOld = window.PRODUCT_ORIGINAL_PRICE > 0 && displayPrice >= window.PRODUCT_ORIGINAL_PRICE;
                 oldPriceDisplay.classList.toggle('hidden', shouldHideOld);
@@ -249,7 +246,7 @@ Storevo.ProductDetail = {
             if (isMadeToOrder || variant.stock > 0) {
                 variantInput.value = variant.id;
                 stockDisplay.textContent = isMadeToOrder ? 'Bajo pedido' : ('Stock disponible: ' + variant.stock);
-                stockDisplay.className = 'text-xs text-slate-500 mt-2 font-medium transition-colors';
+                stockDisplay.className = 'text-xs store-muted mt-2 font-medium transition-colors';
 
                 if (!isMadeToOrder && qtyInput) {
                     qtyInput.max = variant.stock;
@@ -260,13 +257,12 @@ Storevo.ProductDetail = {
 
                 if (btnCart) {
                     btnCart.disabled = false;
-                    btnCart.classList.remove('bg-slate-100', 'text-slate-400', 'border-slate-200', 'cursor-not-allowed');
-                    btnCart.classList.add('bg-white', 'text-brand', 'border-brand', 'hover:bg-brand', 'hover:text-white');
+                    btnCart.className = 'h-14 flex-1 bg-white text-slate-900 border-2 border-slate-200 hover:border-brand hover:text-brand font-bold rounded-xl transition-all flex items-center justify-center gap-2 text-base sm:text-lg px-4 shadow-sm';
                     btnCart.innerHTML = `<svg class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg> <span>Agregar a la Bolsa</span>`;
                 }
                 if (btnBuyNow) {
                     btnBuyNow.disabled = false;
-                    btnBuyNow.className = 'h-14 w-full bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 text-lg';
+                    btnBuyNow.className = 'h-14 w-full bg-brand hover-bg-brand text-white font-bold rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 text-lg';
                     btnBuyNow.innerHTML = '<span>Comprar ahora</span>';
                 }
             } else {
@@ -276,8 +272,7 @@ Storevo.ProductDetail = {
 
                 if (btnCart) {
                     btnCart.disabled = true;
-                    btnCart.classList.remove('bg-white', 'text-brand', 'border-brand', 'hover:bg-brand', 'hover:text-white');
-                    btnCart.classList.add('bg-slate-100', 'text-slate-400', 'border-slate-200', 'cursor-not-allowed');
+                    btnCart.className = 'h-14 flex-1 bg-slate-100 text-slate-400 font-bold rounded-xl cursor-not-allowed text-base sm:text-lg border-2 border-slate-200';
                     btnCart.innerHTML = `<span>Agotado</span>`;
                 }
                 if (btnBuyNow) {
@@ -293,8 +288,7 @@ Storevo.ProductDetail = {
 
             if (btnCart) {
                 btnCart.disabled = true;
-                btnCart.classList.remove('bg-white', 'text-brand', 'border-brand', 'hover:bg-brand', 'hover:text-white');
-                btnCart.classList.add('bg-slate-100', 'text-slate-400', 'border-slate-200', 'cursor-not-allowed');
+                btnCart.className = 'h-14 flex-1 bg-slate-100 text-slate-400 font-bold rounded-xl cursor-not-allowed text-base sm:text-lg border-2 border-slate-200';
                 btnCart.innerHTML = `<span>No disponible</span>`;
             }
             if (btnBuyNow) {
@@ -375,7 +369,6 @@ Storevo.ProductDetail = {
     }
 };
 
-// Puente de retrocompatibilidad global
 window.buyNowDetail = function(btn, slug) {
     Storevo.ProductDetail.buyNow(btn, slug);
 };

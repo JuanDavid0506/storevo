@@ -8,7 +8,6 @@ Storevo.ThemeEditor = {
     categories: [],
     activeSectionId: null,
     autoSaveTimer: null,
-    hasUnpublishedChanges: false,
 
     catalogDefinitions: {
         announcement_bar: {
@@ -169,34 +168,20 @@ Storevo.ThemeEditor = {
         this.initIframeBridgeListener();
     },
 
-    // Escuchar clics sobre las secciones directamente desde el Iframe de vista previa
     initIframeBridgeListener: function() {
         window.addEventListener('message', (e) => {
             if (e.origin !== window.location.origin || !e.data) return;
             if (e.data.type === 'storevo:select-section' && e.data.sectionId) {
-                this.setMobilePane('editor');
                 this.openInspector(e.data.sectionId);
+                this.setMobilePane('editor');
             }
         });
-    },
-
-    // Enviar estilos globales en vivo al Iframe en 0ms sin recargar la página
-    pushLiveStylesToIframe: function() {
-        const iframe = document.getElementById('storefront-preview-iframe');
-        if (!iframe || !iframe.contentWindow) return;
-        try {
-            iframe.contentWindow.postMessage({
-                type: 'storevo:live-styles',
-                styles: this.theme.globalStyles
-            }, window.location.origin);
-        } catch (e) {}
     },
 
     setMobilePane: function(pane) {
         const workspace = document.getElementById('theme-editor-workspace');
         const btnEditor = document.getElementById('btn-pane-editor');
         const btnPreview = document.getElementById('btn-pane-preview');
-
         if (workspace) workspace.setAttribute('data-mobile-pane', pane);
 
         if (btnEditor && btnPreview) {
@@ -204,14 +189,6 @@ Storevo.ThemeEditor = {
             const inactiveClass = 'px-2.5 py-1 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-white';
             btnEditor.className = pane === 'editor' ? activeClass : inactiveClass;
             btnPreview.className = pane === 'preview' ? activeClass : inactiveClass;
-        }
-    },
-
-    markUnpublishedChanges: function(hasChanges) {
-        this.hasUnpublishedChanges = hasChanges;
-        const badge = document.getElementById('unpublished-badge');
-        if (badge) {
-            badge.classList.toggle('hidden', !hasChanges);
         }
     },
 
@@ -281,7 +258,7 @@ Storevo.ThemeEditor = {
                     if (found) reordered.push(found);
                 });
                 this.theme.sections = reordered;
-                this.scheduleAutoSave();
+                this.scheduleAutoSave(true);
             }
         });
     },
@@ -323,10 +300,7 @@ Storevo.ThemeEditor = {
                         <p class="text-[11px] text-slate-500 truncate mt-0.5">${this.escapeHtml(subtitle)}</p>
                     </button>
                 </div>
-                <div class="flex items-center gap-0.5 flex-shrink-0">
-                    <button type="button" class="sec-dup-btn p-1.5 text-slate-500 hover:text-storevo-400 rounded-lg hover:bg-slate-800 transition" title="Duplicar sección">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-                    </button>
+                <div class="flex items-center gap-1 flex-shrink-0">
                     <button type="button" class="sec-toggle-btn p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition" title="${isEnabled ? 'Ocultar sección' : 'Mostrar sección'}">
                         ${isEnabled
                 ? '<svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>'
@@ -340,53 +314,21 @@ Storevo.ThemeEditor = {
             `;
 
             row.querySelector('.sec-edit-trigger').addEventListener('click', () => this.openInspector(sec.id));
-            row.querySelector('.sec-dup-btn').addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.duplicateSection(sec.id);
-            });
             row.querySelector('.sec-toggle-btn').addEventListener('click', (e) => {
                 e.stopPropagation();
                 sec.enabled = !isEnabled;
                 this.renderSectionsList();
-                this.scheduleAutoSave();
+                this.scheduleAutoSave(true);
             });
             row.querySelector('.sec-delete-btn').addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.theme.sections = this.theme.sections.filter(item => item.id !== sec.id);
                 this.renderSectionsList();
-                this.scheduleAutoSave();
+                this.scheduleAutoSave(true);
             });
 
             container.appendChild(row);
         });
-    },
-
-    duplicateSection: function(sectionId) {
-        const index = this.theme.sections.findIndex(s => s.id === sectionId);
-        if (index === -1) return;
-
-        const original = this.theme.sections[index];
-        const cloned = {
-            id: 'sec_' + Date.now().toString(36),
-            type: original.type,
-            enabled: true,
-            settings: JSON.parse(JSON.stringify(original.settings || {}))
-        };
-
-        this.theme.sections.splice(index + 1, 0, cloned);
-        this.renderSectionsList();
-        this.openInspector(cloned.id);
-        this.scheduleAutoSave();
-
-        if (Storevo.UI && Storevo.UI.Toast) {
-            Storevo.UI.Toast.show('Sección duplicada', 'success');
-        }
-    },
-
-    duplicateActiveSection: function() {
-        if (this.activeSectionId) {
-            this.duplicateSection(this.activeSectionId);
-        }
     },
 
     openInspector: function(sectionId) {
@@ -431,7 +373,7 @@ Storevo.ThemeEditor = {
                 const removeBtn = document.createElement('button');
                 removeBtn.type = 'button';
                 removeBtn.className = 'absolute top-1.5 right-1.5 bg-red-500 hover:bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded shadow';
-                removeBtn.textContent = 'Quitar imagen';
+                removeBtn.textContent = 'Quitar';
                 previewWrap.appendChild(imgEl);
                 previewWrap.appendChild(removeBtn);
 
@@ -477,7 +419,7 @@ Storevo.ThemeEditor = {
                                 urlInput.value = data.url;
                                 imgEl.src = data.url;
                                 previewWrap.classList.remove('hidden');
-                                this.scheduleAutoSave();
+                                this.scheduleAutoSave(true);
                                 if (Storevo.UI && Storevo.UI.Toast) {
                                     Storevo.UI.Toast.show('Imagen subida y aplicada', 'success');
                                 }
@@ -502,7 +444,7 @@ Storevo.ThemeEditor = {
                     urlInput.value = '';
                     imgEl.src = '';
                     previewWrap.classList.add('hidden');
-                    this.scheduleAutoSave();
+                    this.scheduleAutoSave(true);
                 });
 
                 urlInput.addEventListener('input', () => {
@@ -514,7 +456,7 @@ Storevo.ThemeEditor = {
                     } else {
                         previewWrap.classList.add('hidden');
                     }
-                    this.scheduleAutoSave();
+                    this.scheduleAutoSave(true);
                 });
 
                 actionsRow.appendChild(fileInput);
@@ -524,65 +466,6 @@ Storevo.ThemeEditor = {
                 imgBox.appendChild(urlInput);
                 wrapper.appendChild(imgBox);
 
-            } else if (field.type === 'url') {
-                // Selector asistido de destinos para usuarios sin conocimientos técnicos
-                const urlBox = document.createElement('div');
-                urlBox.className = 'space-y-1.5';
-
-                const presetSelect = document.createElement('select');
-                presetSelect.className = 'w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-300 focus:border-storevo-500 focus:outline-none';
-
-                const presetOpts = [
-                    { value: '/catalog', label: '📦 Ir a Todo el Catálogo' },
-                    { value: '/', label: '🏠 Ir al Inicio de la Tienda' }
-                ];
-                this.categories.forEach(c => {
-                    presetOpts.push({ value: `/catalog?category=${c.id}`, label: `📁 Categoría: ${c.name}` });
-                });
-                presetOpts.push({ value: '__custom__', label: '🔗 Enlace externo o personalizado...' });
-
-                let matchedPreset = false;
-                presetOpts.forEach(opt => {
-                    const o = document.createElement('option');
-                    o.value = opt.value;
-                    o.textContent = opt.label;
-                    if (opt.value !== '__custom__' && String(opt.value) === String(currentVal)) {
-                        o.selected = true;
-                        matchedPreset = true;
-                    }
-                    presetSelect.appendChild(o);
-                });
-                if (!matchedPreset) {
-                    presetSelect.value = '__custom__';
-                }
-
-                const customUrlInput = document.createElement('input');
-                customUrlInput.type = 'text';
-                customUrlInput.value = currentVal;
-                customUrlInput.placeholder = 'Ej: https://instagram.com/mitienda o /catalog';
-                customUrlInput.className = (matchedPreset ? 'hidden ' : '') + 'w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:border-storevo-500 focus:outline-none';
-
-                presetSelect.addEventListener('change', () => {
-                    if (presetSelect.value === '__custom__') {
-                        customUrlInput.classList.remove('hidden');
-                        customUrlInput.focus();
-                    } else {
-                        customUrlInput.classList.add('hidden');
-                        customUrlInput.value = presetSelect.value;
-                        sec.settings[field.key] = presetSelect.value;
-                        this.scheduleAutoSave();
-                    }
-                });
-
-                customUrlInput.addEventListener('input', () => {
-                    sec.settings[field.key] = customUrlInput.value;
-                    this.scheduleAutoSave();
-                });
-
-                urlBox.appendChild(presetSelect);
-                urlBox.appendChild(customUrlInput);
-                wrapper.appendChild(urlBox);
-
             } else if (field.type === 'textarea') {
                 const input = document.createElement('textarea');
                 input.rows = 3;
@@ -591,10 +474,9 @@ Storevo.ThemeEditor = {
                 input.className = 'w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:border-storevo-500 focus:outline-none';
                 input.addEventListener('input', () => {
                     sec.settings[field.key] = input.value;
-                    this.scheduleAutoSave();
+                    this.scheduleAutoSave(true);
                 });
                 wrapper.appendChild(input);
-
             } else if (field.type === 'select') {
                 const select = document.createElement('select');
                 select.className = 'w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:border-storevo-500 focus:outline-none';
@@ -607,33 +489,15 @@ Storevo.ThemeEditor = {
                 });
                 select.addEventListener('change', () => {
                     sec.settings[field.key] = select.value;
-
-                    // Si en product_grid el usuario selecciona una categoría, activamos source = CATEGORY automáticamente
-                    if (sec.type === 'product_grid') {
-                        if (field.key === 'source') {
-                            const catWrapper = container.querySelector('[data-field-key="categoryId"]');
-                            if (catWrapper) {
-                                catWrapper.classList.toggle('hidden', select.value !== 'CATEGORY');
-                            }
-                        } else if (field.key === 'categoryId' && select.value) {
-                            sec.settings.source = 'CATEGORY';
-                            const sourceSelect = container.querySelector('[data-field-key="source"] select');
-                            if (sourceSelect) sourceSelect.value = 'CATEGORY';
-                        }
+                    // Si elige una categoría en product_grid, cambiar source automáticamente a CATEGORY
+                    if (sec.type === 'product_grid' && field.key === 'categoryId' && select.value) {
+                        sec.settings['source'] = 'CATEGORY';
+                        const sourceSelect = container.querySelector('[data-field-key="source"] select');
+                        if (sourceSelect) sourceSelect.value = 'CATEGORY';
                     }
-
-                    this.scheduleAutoSave();
+                    this.scheduleAutoSave(true);
                 });
                 wrapper.appendChild(select);
-
-                // Ocultar inicialmente el selector de categoría en product_grid si source != CATEGORY
-                if (sec.type === 'product_grid' && field.key === 'categoryId') {
-                    const currentSource = sec.settings.source || 'NEWEST';
-                    if (currentSource !== 'CATEGORY') {
-                        wrapper.classList.add('hidden');
-                    }
-                }
-
             } else if (field.type === 'color') {
                 const colorRow = document.createElement('div');
                 colorRow.className = 'flex items-center gap-2';
@@ -651,20 +515,19 @@ Storevo.ThemeEditor = {
                 colorInput.addEventListener('input', () => {
                     hexInput.value = colorInput.value;
                     sec.settings[field.key] = colorInput.value;
-                    this.scheduleAutoSave();
+                    this.scheduleAutoSave(true);
                 });
                 hexInput.addEventListener('input', () => {
                     if (/^#[0-9a-fA-F]{6}$/.test(hexInput.value.trim())) {
                         colorInput.value = hexInput.value.trim();
                         sec.settings[field.key] = hexInput.value.trim();
-                        this.scheduleAutoSave();
+                        this.scheduleAutoSave(true);
                     }
                 });
 
                 colorRow.appendChild(colorInput);
                 colorRow.appendChild(hexInput);
                 wrapper.appendChild(colorRow);
-
             } else if (field.type === 'checkbox') {
                 const checkLabel = document.createElement('label');
                 checkLabel.className = 'flex items-center gap-2.5 cursor-pointer bg-slate-950 p-3 rounded-xl border border-slate-800';
@@ -674,7 +537,7 @@ Storevo.ThemeEditor = {
                 chk.className = 'w-4 h-4 rounded border-slate-700 text-storevo-500';
                 chk.addEventListener('change', () => {
                     sec.settings[field.key] = chk.checked;
-                    this.scheduleAutoSave();
+                    this.scheduleAutoSave(true);
                 });
                 const span = document.createElement('span');
                 span.className = 'text-xs font-medium text-slate-300';
@@ -683,7 +546,6 @@ Storevo.ThemeEditor = {
                 checkLabel.appendChild(span);
                 wrapper.innerHTML = '';
                 wrapper.appendChild(checkLabel);
-
             } else {
                 const input = document.createElement('input');
                 input.type = field.type || 'text';
@@ -692,7 +554,7 @@ Storevo.ThemeEditor = {
                 input.className = 'w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:border-storevo-500 focus:outline-none';
                 input.addEventListener('input', () => {
                     sec.settings[field.key] = input.value;
-                    this.scheduleAutoSave();
+                    this.scheduleAutoSave(true);
                 });
                 wrapper.appendChild(input);
             }
@@ -712,15 +574,37 @@ Storevo.ThemeEditor = {
         this.highlightSectionInIframe(null);
     },
 
+    duplicateActiveSection: function() {
+        if (!this.activeSectionId) return;
+        const idx = this.theme.sections.findIndex(s => s.id === this.activeSectionId);
+        if (idx === -1) return;
+
+        const original = this.theme.sections[idx];
+        const copy = {
+            id: 'sec_' + Date.now().toString(36),
+            type: original.type,
+            enabled: true,
+            settings: JSON.parse(JSON.stringify(original.settings || {}))
+        };
+
+        this.theme.sections.splice(idx + 1, 0, copy);
+        this.renderSectionsList();
+        this.openInspector(copy.id);
+        this.scheduleAutoSave(true);
+        if (Storevo.UI && Storevo.UI.Toast) {
+            Storevo.UI.Toast.show('Sección duplicada', 'success');
+        }
+    },
+
     getFieldsForType: function(type) {
-        const catOptions = [{ value: '', label: 'Selecciona una categoría...' }]
+        const catOptions = [{ value: '', label: 'Todas las categorías' }]
             .concat(this.categories.map(c => ({ value: String(c.id), label: c.name })));
 
         switch (type) {
             case 'announcement_bar':
                 return [
                     { key: 'text', label: 'Texto del anuncio', type: 'text', placeholder: 'Ej: Envío gratis en compras mayores a $150.000' },
-                    { key: 'linkUrl', label: 'Destino al hacer clic', type: 'url', defaultVal: '/catalog' },
+                    { key: 'linkUrl', label: 'Enlace al hacer clic (Opcional)', type: 'text', placeholder: '/catalog' },
                     { key: 'bgColor', label: 'Color de fondo', type: 'color', defaultVal: '#0f172a' },
                     { key: 'textColor', label: 'Color del texto', type: 'color', defaultVal: '#ffffff' }
                 ];
@@ -736,9 +620,9 @@ Storevo.ThemeEditor = {
                             { value: 'left', label: 'Izquierda' }
                         ]},
                     { key: 'buttonText', label: 'Texto del botón principal', type: 'text', placeholder: 'Ver Catálogo' },
-                    { key: 'buttonUrl', label: 'Destino del botón principal', type: 'url', defaultVal: '/catalog' },
+                    { key: 'buttonUrl', label: 'Enlace del botón principal', type: 'text', placeholder: '/catalog' },
                     { key: 'secondaryButtonText', label: 'Texto 2do botón (Opcional)', type: 'text', placeholder: 'Ofertas' },
-                    { key: 'secondaryButtonUrl', label: 'Destino 2do botón', type: 'url', defaultVal: '/catalog' },
+                    { key: 'secondaryButtonUrl', label: 'Enlace 2do botón', type: 'text', placeholder: '/catalog' },
                     { key: 'bgColor', label: 'Color de fondo (si no hay imagen)', type: 'color', defaultVal: '#6366f1' },
                     { key: 'textColor', label: 'Color del texto', type: 'color', defaultVal: '#ffffff' }
                 ];
@@ -751,7 +635,7 @@ Storevo.ThemeEditor = {
                             { value: 'OFFERS', label: 'Solo productos en oferta / descuento' },
                             { value: 'CATEGORY', label: 'Productos de una categoría específica' }
                         ]},
-                    { key: 'categoryId', label: 'Categoría a mostrar', type: 'select', options: catOptions },
+                    { key: 'categoryId', label: 'Categoría específica', type: 'select', options: catOptions },
                     { key: 'limit', label: 'Cantidad máxima de productos', type: 'select', options: [
                             { value: '4', label: '4 productos (1 fila)' },
                             { value: '8', label: '8 productos (2 filas)' },
@@ -771,14 +655,14 @@ Storevo.ThemeEditor = {
                     { key: 'card1Title', label: 'Tarjeta 1: Título', type: 'text' },
                     { key: 'card1Subtitle', label: 'Tarjeta 1: Subtítulo', type: 'text' },
                     { key: 'card1ButtonText', label: 'Tarjeta 1: Texto botón', type: 'text' },
-                    { key: 'card1ButtonUrl', label: 'Tarjeta 1: Destino botón', type: 'url', defaultVal: '/catalog' },
+                    { key: 'card1ButtonUrl', label: 'Tarjeta 1: Enlace botón', type: 'text' },
                     { key: 'card1BgColor', label: 'Tarjeta 1: Color de fondo', type: 'color', defaultVal: '#1e293b' },
                     { key: 'card2ImageUrl', label: 'Tarjeta 2: Imagen de Fondo', type: 'image' },
                     { key: 'card2Badge', label: 'Tarjeta 2: Etiqueta', type: 'text' },
                     { key: 'card2Title', label: 'Tarjeta 2: Título', type: 'text' },
                     { key: 'card2Subtitle', label: 'Tarjeta 2: Subtítulo', type: 'text' },
                     { key: 'card2ButtonText', label: 'Tarjeta 2: Texto botón', type: 'text' },
-                    { key: 'card2ButtonUrl', label: 'Tarjeta 2: Destino botón', type: 'url', defaultVal: '/catalog' },
+                    { key: 'card2ButtonUrl', label: 'Tarjeta 2: Enlace botón', type: 'text' },
                     { key: 'card2BgColor', label: 'Tarjeta 2: Color de fondo', type: 'color', defaultVal: '#4f46e5' }
                 ];
             case 'promo_banner':
@@ -788,7 +672,7 @@ Storevo.ThemeEditor = {
                     { key: 'title', label: 'Título de la promoción', type: 'text', placeholder: 'Promoción Especial' },
                     { key: 'subtitle', label: 'Descripción', type: 'textarea', placeholder: 'Detalles de tu promoción...' },
                     { key: 'buttonText', label: 'Texto del botón', type: 'text', placeholder: 'Comprar ahora' },
-                    { key: 'buttonUrl', label: 'Destino del botón', type: 'url', defaultVal: '/catalog' },
+                    { key: 'buttonUrl', label: 'Enlace del botón', type: 'text', placeholder: '/catalog' },
                     { key: 'bgColor', label: 'Color de fondo del bloque', type: 'color', defaultVal: '#0f172a' },
                     { key: 'textColor', label: 'Color del texto', type: 'color', defaultVal: '#ffffff' }
                 ];
@@ -892,6 +776,28 @@ Storevo.ThemeEditor = {
         }
     },
 
+    pushLiveStylesToIframe: function() {
+        const iframe = document.getElementById('storefront-preview-iframe');
+        if (!iframe || !iframe.contentWindow) return;
+        try {
+            iframe.contentWindow.postMessage({
+                type: 'storevo:live-styles',
+                styles: this.theme.globalStyles
+            }, window.location.origin);
+        } catch (e) {}
+    },
+
+    highlightSectionInIframe: function(sectionId) {
+        const iframe = document.getElementById('storefront-preview-iframe');
+        if (!iframe || !iframe.contentWindow) return;
+        try {
+            iframe.contentWindow.postMessage({
+                type: 'storevo:highlight-section',
+                sectionId: sectionId
+            }, window.location.origin);
+        } catch (e) {}
+    },
+
     getPresetsDefinitions: function() {
         const name = this.storeName || 'Nuestra Tienda';
         return [
@@ -899,7 +805,7 @@ Storevo.ThemeEditor = {
                 id: 'editorial_minimal',
                 name: 'Moda Editorial Minimalista',
                 tag: 'Ideal para Ropa y Calzado',
-                colors: ['#18181b', '#f8fafc', '#ffffff'],
+                colors: ['#18181b', '#27272a', '#f8fafc'],
                 description: 'Tipografía editorial elegante (Playfair Display), tonos sobrios en negro carbón y estructura limpia enfocada en fotografía.',
                 config: {
                     globalStyles: {
@@ -1021,8 +927,8 @@ Storevo.ThemeEditor = {
                     globalStyles: {
                         primaryColor: '#b45309',
                         secondaryColor: '#1c1917',
-                        backgroundColor: '#f8fafc',
-                        textColor: '#0f172a',
+                        backgroundColor: '#fafaf9',
+                        textColor: '#1c1917',
                         headingFont: 'Lora',
                         bodyFont: 'Inter',
                         borderRadius: '1.5rem'
@@ -1088,9 +994,9 @@ Storevo.ThemeEditor = {
     applyPreset: function(preset) {
         this.theme = JSON.parse(JSON.stringify(preset.config));
         this.activeSectionId = null;
-        this.markUnpublishedChanges(true);
         this.renderSectionsList();
         this.initGlobalStylesInputs();
+        this.markUnpublished(true);
         this.saveDraft(false, true);
         if (Storevo.UI && Storevo.UI.Toast) {
             Storevo.UI.Toast.show(`Plantilla "${preset.name}" aplicada en vista previa`, 'success');
@@ -1148,13 +1054,18 @@ Storevo.ThemeEditor = {
         this.scheduleAutoSave(true);
     },
 
+    markUnpublished: function(hasChanges) {
+        const badge = document.getElementById('unpublished-badge');
+        if (badge) badge.classList.toggle('hidden', !hasChanges);
+    },
+
     scheduleAutoSave: function(reloadIframe = true) {
-        this.markUnpublishedChanges(true);
+        this.markUnpublished(true);
         this.setSyncStatus('pending', 'Guardando borrador...');
         clearTimeout(this.autoSaveTimer);
         this.autoSaveTimer = setTimeout(() => {
             this.saveDraft(false, reloadIframe);
-        }, 650);
+        }, 600);
     },
 
     saveDraft: function(showToast = false, reloadIframe = true) {
@@ -1172,8 +1083,10 @@ Storevo.ThemeEditor = {
                 if (data.success) {
                     if (reloadIframe) {
                         this.reloadPreviewIframe();
+                    } else if (overlay) {
+                        overlay.classList.add('hidden');
                     }
-                    this.setSyncStatus('synced', 'Borrador guardado');
+                    this.setSyncStatus('synced', 'Borrador sincronizado');
                     if (showToast && Storevo.UI && Storevo.UI.Toast) {
                         Storevo.UI.Toast.show(data.message, 'success');
                     }
@@ -1203,7 +1116,7 @@ Storevo.ThemeEditor = {
             .then(r => r.json())
             .then(data => {
                 if (data.success) {
-                    this.markUnpublishedChanges(false);
+                    this.markUnpublished(false);
                     this.reloadPreviewIframe();
                     this.setSyncStatus('synced', '¡Publicado en tienda!');
                     if (Storevo.UI && Storevo.UI.Toast) {
@@ -1224,29 +1137,21 @@ Storevo.ThemeEditor = {
     },
 
     discardDraft: function() {
-        const executeDiscard = () => {
-            fetch(`/dashboard/${this.slug}/template/discard-draft`, { method: 'POST' })
-                .then(r => r.json())
-                .then(data => {
-                    if (data.success && data.theme) {
-                        this.theme = data.theme;
-                        this.markUnpublishedChanges(false);
-                        this.closeInspector();
-                        this.renderSectionsList();
-                        this.initGlobalStylesInputs();
-                        this.reloadPreviewIframe();
-                        if (Storevo.UI && Storevo.UI.Toast) {
-                            Storevo.UI.Toast.show(data.message, 'success');
-                        }
+        fetch(`/dashboard/${this.slug}/template/discard-draft`, { method: 'POST' })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success && data.theme) {
+                    this.theme = data.theme;
+                    this.markUnpublished(false);
+                    this.closeInspector();
+                    this.renderSectionsList();
+                    this.initGlobalStylesInputs();
+                    this.reloadPreviewIframe();
+                    if (Storevo.UI && Storevo.UI.Toast) {
+                        Storevo.UI.Toast.show(data.message, 'success');
                     }
-                });
-        };
-
-        if (Storevo.UI && Storevo.UI.Modal && typeof Storevo.UI.Modal.showConfirm === 'function') {
-            Storevo.UI.Modal.showConfirm('¿Descartar los cambios actuales del borrador y volver a tu diseño publicado?', executeDiscard);
-        } else if (confirm('¿Descartar los cambios actuales del borrador y volver a tu diseño publicado?')) {
-            executeDiscard();
-        }
+                }
+            });
     },
 
     resetTheme: function() {
@@ -1256,7 +1161,7 @@ Storevo.ThemeEditor = {
                 .then(data => {
                     if (data.success && data.theme) {
                         this.theme = data.theme;
-                        this.markUnpublishedChanges(true);
+                        this.markUnpublished(true);
                         this.closeInspector();
                         this.renderSectionsList();
                         this.initGlobalStylesInputs();
@@ -1269,8 +1174,8 @@ Storevo.ThemeEditor = {
         };
 
         if (Storevo.UI && Storevo.UI.Modal && typeof Storevo.UI.Modal.showConfirm === 'function') {
-            Storevo.UI.Modal.showConfirm('¿Restablecer el borrador a las secciones iniciales de fábrica?', executeReset);
-        } else if (confirm('¿Restablecer el borrador a las secciones iniciales de fábrica?')) {
+            Storevo.UI.Modal.showConfirm('¿Restablecer el borrador a la estructura inicial de fábrica?', executeReset);
+        } else if (confirm('¿Restablecer el borrador a la estructura inicial de fábrica?')) {
             executeReset();
         }
     },
@@ -1301,21 +1206,6 @@ Storevo.ThemeEditor = {
 
         iframe.addEventListener('load', onLoadHandler);
         iframe.src = `${this.previewUrl}&t=${Date.now()}`;
-    },
-
-    highlightSectionInIframe: function(sectionId) {
-        const iframe = document.getElementById('storefront-preview-iframe');
-        if (!iframe || !iframe.contentWindow) return;
-        try {
-            iframe.contentWindow.postMessage({
-                type: 'storevo:highlight-section',
-                sectionId: sectionId
-            }, window.location.origin);
-        } catch (e) {}
-    },
-
-    scrollToSectionInIframe: function(sectionId) {
-        this.highlightSectionInIframe(sectionId);
     },
 
     setSyncStatus: function(state, text) {

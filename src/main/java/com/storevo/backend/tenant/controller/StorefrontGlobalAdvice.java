@@ -3,8 +3,10 @@ package com.storevo.backend.tenant.controller;
 import com.storevo.backend.admin.model.Store;
 import com.storevo.backend.admin.service.StoreSettingsService;
 import com.storevo.backend.config.tenant.TenantContext;
+import com.storevo.backend.tenant.dto.ThemeConfigDto;
 import com.storevo.backend.tenant.service.CartManager;
 import com.storevo.backend.tenant.service.CategoryService;
+import com.storevo.backend.tenant.service.StoreThemeService;
 import com.storevo.backend.tenant.service.WishlistManager;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -28,6 +30,7 @@ import java.util.UUID;
 public class StorefrontGlobalAdvice {
 
     private final StoreSettingsService storeSettingsService;
+    private final StoreThemeService storeThemeService;
     private final CategoryService categoryService;
     private final CartManager cartManager;
     private final WishlistManager wishlistManager;
@@ -59,18 +62,24 @@ public class StorefrontGlobalAdvice {
             guestId = UUID.randomUUID().toString();
             Cookie cookie = new Cookie("storevo_guest_id", guestId);
             cookie.setMaxAge(30 * 24 * 60 * 60); // 30 días de vida
-            cookie.setPath("/"); // Disponible en toda la tienda
-            cookie.setHttpOnly(true); // Blindado contra ataques XSS
+            cookie.setPath("/");
+            cookie.setHttpOnly(true);
             response.addCookie(cookie);
         }
 
-        // Guardamos el guestId en el request para que el Controlador lo lea
         request.setAttribute("guestId", guestId);
 
         // 1. Consultar base de datos de ADMIN antes de cambiar el contexto
+        TenantContext.clear();
+        var settings = storeSettingsService.getSettingsByStore(store);
+        boolean isDraftPreview = "draft".equalsIgnoreCase(request.getParameter("preview"));
+        ThemeConfigDto theme = storeThemeService.getRawThemeConfig(store, isDraftPreview);
+
         model.addAttribute("store", store);
-        model.addAttribute("settings", storeSettingsService.getSettingsByStore(store));
+        model.addAttribute("settings", settings);
         model.addAttribute("slug", slug);
+        model.addAttribute("theme", theme);
+        model.addAttribute("isDraftPreview", isDraftPreview);
 
         // 2. Bajar el switch: Cambiar al esquema del Tenant
         TenantContext.setCurrentTenant(store.getSchemaName());
@@ -79,7 +88,7 @@ public class StorefrontGlobalAdvice {
         model.addAttribute("categories", categoryService.getAllCategories());
         model.addAttribute("navCategories", categoryService.getNavCategories());
 
-        // --- LA MAGIA ESTÁ AQUÍ: Ahora consultamos usando la cédula (guestId) ---
+        // 4. Contadores de Bolsa y Favoritos del visitante
         model.addAttribute("cartCount", cartManager.getCartCount(guestId));
         model.addAttribute("wishlistCount", wishlistManager.getWishlistCount(guestId));
         model.addAttribute("wishlistProductIds", wishlistManager.getWishlist(guestId));

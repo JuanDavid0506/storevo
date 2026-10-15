@@ -61,11 +61,13 @@
 <!-- 1. BARRA DE ANUNCIOS (ANNOUNCEMENT BAR)                                 -->
 <!-- ======================================================================= -->
 <div th:fragment="announcement-bar(sec)"
-     th:with="bgColor=${sec.settingStr('bgColor', '#0f172a')},
+     th:with="defaultAnnBg=${theme != null and theme.globalStyles != null and theme.globalStyles.secondaryColor != null ? theme.globalStyles.secondaryColor : '#0f172a'},
+              bgColor=${sec.settingStr('bgColor', defaultAnnBg)},
               textColor=${sec.settingStr('textColor', '#ffffff')},
               text=${sec.settingStr('text', '')},
-              rawUrl=${sec.settingStr('linkUrl', '')},
-              resolvedUrl=${rawUrl.startsWith('http') or rawUrl.startsWith('#') ? rawUrl : (rawUrl.startsWith('/s/' + slug) ? rawUrl : '/s/' + slug + (rawUrl.startsWith('/') ? rawUrl : '/' + rawUrl))}"
+              rawUrl=${#strings.trim(sec.settingStr('linkUrl', ''))},
+              isExtNoProto=${rawUrl.startsWith('www.') or rawUrl.startsWith('wa.me/')},
+              resolvedUrl=${isExtNoProto ? 'https://' + rawUrl : (rawUrl.startsWith('http') or rawUrl.startsWith('#') or rawUrl.startsWith('mailto:') or rawUrl.startsWith('tel:') ? rawUrl : (rawUrl.startsWith('/s/' + slug) ? rawUrl : '/s/' + slug + (rawUrl.startsWith('/') ? rawUrl : '/' + rawUrl)))}"
      th:if="${!#strings.isEmpty(text) or isDraftPreview}"
      th:style="|background-color: ${bgColor}; color: ${textColor};|"
      class="w-full py-2.5 px-4 text-center text-xs sm:text-sm font-bold tracking-wide transition-colors">
@@ -87,15 +89,18 @@
                   subtitle=${sec.settingStr('subtitle', 'Explora nuestro catálogo y descubre los mejores productos diseñados para ti.')},
                   badgeText=${sec.settingStr('badgeText', '')},
                   btnText=${sec.settingStr('buttonText', 'Ver Catálogo')},
-                  btnUrl=${sec.settingStr('buttonUrl', '/catalog')},
-                  resolvedBtnUrl=${btnUrl.startsWith('http') or btnUrl.startsWith('#') ? btnUrl : (btnUrl.startsWith('/s/' + slug) ? btnUrl : '/s/' + slug + (btnUrl.startsWith('/') ? btnUrl : '/' + btnUrl))},
+                  btnUrl=${#strings.trim(sec.settingStr('buttonUrl', '/catalog'))},
+                  isBtnExt=${btnUrl.startsWith('www.') or btnUrl.startsWith('wa.me/')},
+                  resolvedBtnUrl=${isBtnExt ? 'https://' + btnUrl : (btnUrl.startsWith('http') or btnUrl.startsWith('#') or btnUrl.startsWith('mailto:') or btnUrl.startsWith('tel:') ? btnUrl : (btnUrl.startsWith('/s/' + slug) ? btnUrl : '/s/' + slug + (btnUrl.startsWith('/') ? btnUrl : '/' + btnUrl)))},
                   secBtnText=${sec.settingStr('secondaryButtonText', '')},
-                  secBtnUrl=${sec.settingStr('secondaryButtonUrl', '/catalog')},
-                  resolvedSecBtnUrl=${secBtnUrl.startsWith('http') or secBtnUrl.startsWith('#') ? secBtnUrl : (secBtnUrl.startsWith('/s/' + slug) ? secBtnUrl : '/s/' + slug + (secBtnUrl.startsWith('/') ? secBtnUrl : '/' + secBtnUrl))},
+                  secBtnUrl=${#strings.trim(sec.settingStr('secondaryButtonUrl', '/catalog'))},
+                  isSecExt=${secBtnUrl.startsWith('www.') or secBtnUrl.startsWith('wa.me/')},
+                  resolvedSecBtnUrl=${isSecExt ? 'https://' + secBtnUrl : (secBtnUrl.startsWith('http') or secBtnUrl.startsWith('#') or secBtnUrl.startsWith('mailto:') or secBtnUrl.startsWith('tel:') ? secBtnUrl : (secBtnUrl.startsWith('/s/' + slug) ? secBtnUrl : '/s/' + slug + (secBtnUrl.startsWith('/') ? secBtnUrl : '/' + secBtnUrl)))},
                   imageUrl=${sec.settingStr('imageUrl', '')},
                   defaultHeroBg=${theme != null and theme.globalStyles != null and theme.globalStyles.primaryColor != null ? theme.globalStyles.primaryColor : (settings.primaryColor != null ? settings.primaryColor : '#6366f1')},
                   bgColor=${sec.settingStr('bgColor', defaultHeroBg)},
                   textColor=${sec.settingStr('textColor', '#ffffff')},
+                  primaryBtnTextColor=${!#strings.isEmpty(imageUrl) and textColor.equalsIgnoreCase('#ffffff') ? '#0f172a' : bgColor},
                   alignment=${sec.settingStr('alignment', 'center')},
                   overlayOpacity=${sec.settingInt('overlayOpacity', 50)}"
          th:style="|background-color: ${bgColor}; color: ${textColor};|"
@@ -127,7 +132,8 @@
              th:classappend="${alignment == 'left' ? 'justify-start' : 'justify-center'}">
             <a th:if="${!#strings.isEmpty(btnText)}"
                th:href="${resolvedBtnUrl}"
-               class="inline-block bg-white text-slate-900 font-bold py-3.5 px-8 rounded-xl shadow-lg hover:bg-slate-100 transition">
+               th:style="|background-color: ${textColor}; color: ${primaryBtnTextColor};|"
+               class="inline-block font-bold py-3.5 px-8 rounded-xl shadow-lg hover:opacity-90 transition">
                 <span th:text="${btnText}">Ver Catálogo</span>
             </a>
             <a th:if="${!#strings.isEmpty(secBtnText)}"
@@ -149,7 +155,7 @@
                   source=${sec.settingStr('source', 'NEWEST')},
                   showViewAll=${sec.settingBool('showViewAll', true)},
                   catId=${sec.settingLong('categoryId')},
-                  viewAllHref=${source == 'CATEGORY' and catId != null ? '/s/' + slug + '/catalog?category=' + catId : '/s/' + slug + '/catalog'},
+                  viewAllHref=${(source == 'CATEGORY' or catId != null) and catId != null and source != 'OFFERS' ? '/s/' + slug + '/catalog?category=' + catId : '/s/' + slug + '/catalog'},
                   gridProducts=${sec.resolvedProducts != null ? sec.resolvedProducts : products}"
          class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
 
@@ -238,6 +244,7 @@
                         <span th:if="${p.discountPrice != null and p.discountPrice > 0}" class="text-xs text-slate-400 line-through font-medium" th:text="${'$ ' + #numbers.formatDecimal(p.price, 1, 'POINT', 0, 'COMMA')}">$0</span>
                     </div>
 
+                    <!-- Botones unificados: Tanto "Comprar" como "Ver opciones" usan el Color Primario (bg-brand) -->
                     <div class="grid grid-cols-2 gap-2">
                         <a th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${p.id})}" class="flex items-center justify-center px-2 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors text-center">
                             Ver detalles
@@ -245,7 +252,7 @@
                         <button th:if="${!p.hasVariants and !isOutOfStock}" type="button" th:data-slug="${slug}" th:data-id="${p.id}" onclick="buyNowFast(this.getAttribute('data-slug'), this.getAttribute('data-id'))" class="flex items-center justify-center px-2 py-2 text-xs font-bold text-white bg-brand hover-bg-brand rounded-lg transition-colors shadow-md text-center">
                             Comprar
                         </button>
-                        <a th:if="${p.hasVariants and !isOutOfStock}" th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${p.id})}" class="flex items-center justify-center px-2 py-2 text-xs font-bold text-white bg-slate-800 hover:bg-slate-900 rounded-lg transition-colors shadow-md text-center">
+                        <a th:if="${p.hasVariants and !isOutOfStock}" th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${p.id})}" class="flex items-center justify-center px-2 py-2 text-xs font-bold text-white bg-brand hover-bg-brand rounded-lg transition-colors shadow-md text-center">
                             Ver opciones
                         </a>
                         <button th:if="${isOutOfStock}" type="button" disabled class="flex items-center justify-center px-2 py-2 text-xs font-bold text-slate-400 bg-slate-100 rounded-lg cursor-not-allowed text-center">
@@ -281,19 +288,18 @@
         <a th:each="cat : ${displayCats}"
            th:if="${cat.isActive and cat.parentCategory == null}"
            th:href="@{/s/{slug}/catalog(slug=${slug}, category=${cat.id})}"
-           class="group bg-white text-slate-900 hover:bg-slate-900 border border-slate-200 store-radius p-6 transition-all duration-300 shadow-sm hover:shadow-xl flex flex-col justify-between">
-            <div class="w-12 h-12 rounded-xl bg-slate-100 text-brand group-hover:text-white group-hover:bg-slate-800 flex items-center justify-center mb-4 transition-colors">
+           class="group bg-white text-slate-900 border border-slate-200 hover:border-brand store-radius p-6 transition-all duration-300 shadow-sm hover:shadow-xl flex flex-col justify-between">
+            <div class="w-12 h-12 rounded-xl bg-slate-100 text-brand group-hover:bg-brand group-hover:text-white flex items-center justify-center mb-4 transition-colors">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
             </div>
             <div>
-                <h3 class="text-lg font-black text-slate-900 group-hover:text-white transition-colors" th:text="${cat.name}">Categoría</h3>
-                <p class="text-xs text-slate-500 group-hover:text-slate-300 mt-1 line-clamp-2"
+                <h3 class="text-lg font-black text-slate-900 group-hover:text-brand transition-colors" th:text="${cat.name}">Categoría</h3>
+                <p class="text-xs text-slate-500 mt-1 line-clamp-2"
                    th:text="${cat.description != null and !cat.description.isBlank() ? cat.description : 'Explorar productos →'}"></p>
             </div>
         </a>
     </div>
 
-    <!-- Aviso guía en modo Editor si la tienda aún no tiene categorías creadas -->
     <div th:if="${#lists.isEmpty(displayCats) and isDraftPreview}" class="text-center py-10 px-4 bg-white text-slate-600 store-radius border border-dashed border-slate-300">
         <p class="font-bold text-slate-800 text-sm">Aún no tienes categorías activas en tu tienda</p>
         <p class="text-xs text-slate-500 mt-1">Crea tus categorías en el menú "Categorías" del panel administrativo y aparecerán automáticamente aquí.</p>
@@ -308,10 +314,12 @@
                   subtitle=${sec.settingStr('subtitle', 'Aprovecha nuestros precios especiales por tiempo limitado.')},
                   badgeText=${sec.settingStr('badgeText', 'Destacado')},
                   btnText=${sec.settingStr('buttonText', 'Comprar ahora')},
-                  btnUrl=${sec.settingStr('buttonUrl', '/catalog')},
-                  resolvedBtnUrl=${btnUrl.startsWith('http') or btnUrl.startsWith('#') ? btnUrl : (btnUrl.startsWith('/s/' + slug) ? btnUrl : '/s/' + slug + (btnUrl.startsWith('/') ? btnUrl : '/' + btnUrl))},
+                  btnUrl=${#strings.trim(sec.settingStr('buttonUrl', '/catalog'))},
+                  isBtnExt=${btnUrl.startsWith('www.') or btnUrl.startsWith('wa.me/')},
+                  resolvedBtnUrl=${isBtnExt ? 'https://' + btnUrl : (btnUrl.startsWith('http') or btnUrl.startsWith('#') or btnUrl.startsWith('mailto:') or btnUrl.startsWith('tel:') ? btnUrl : (btnUrl.startsWith('/s/' + slug) ? btnUrl : '/s/' + slug + (btnUrl.startsWith('/') ? btnUrl : '/' + btnUrl)))},
                   imageUrl=${sec.settingStr('imageUrl', '')},
-                  bgColor=${sec.settingStr('bgColor', '#0f172a')},
+                  defaultPromoBg=${theme != null and theme.globalStyles != null and theme.globalStyles.secondaryColor != null ? theme.globalStyles.secondaryColor : '#0f172a'},
+                  bgColor=${sec.settingStr('bgColor', defaultPromoBg)},
                   textColor=${sec.settingStr('textColor', '#ffffff')}"
          class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
 
@@ -326,7 +334,8 @@
             <p th:if="${!#strings.isEmpty(subtitle)}" class="text-sm sm:text-base opacity-90 leading-relaxed" th:text="${subtitle}"></p>
             <div th:if="${!#strings.isEmpty(btnText)}" class="pt-2">
                 <a th:href="${resolvedBtnUrl}"
-                   class="inline-block bg-white text-slate-900 font-bold py-3 px-8 rounded-xl shadow-md hover:bg-slate-100 transition text-sm">
+                   th:style="|background-color: ${textColor}; color: ${bgColor};|"
+                   class="inline-block font-bold py-3 px-8 rounded-xl shadow-md hover:opacity-90 transition text-sm">
                     <span th:text="${btnText}">Ver oferta</span>
                 </a>
             </div>
@@ -345,22 +354,23 @@
                   b1Title=${sec.settingStr('card1Title', 'Nueva Temporada')},
                   b1Sub=${sec.settingStr('card1Subtitle', 'Conoce los últimos ingresos')},
                   b1Btn=${sec.settingStr('card1ButtonText', 'Explorar')},
-                  b1Url=${sec.settingStr('card1ButtonUrl', '/catalog')},
-                  resolvedB1Url=${b1Url.startsWith('http') or b1Url.startsWith('#') ? b1Url : (b1Url.startsWith('/s/' + slug) ? b1Url : '/s/' + slug + (b1Url.startsWith('/') ? b1Url : '/' + b1Url))},
+                  b1Url=${#strings.trim(sec.settingStr('card1ButtonUrl', '/catalog'))},
+                  isB1Ext=${b1Url.startsWith('www.') or b1Url.startsWith('wa.me/')},
+                  resolvedB1Url=${isB1Ext ? 'https://' + b1Url : (b1Url.startsWith('http') or b1Url.startsWith('#') or b1Url.startsWith('mailto:') or b1Url.startsWith('tel:') ? b1Url : (b1Url.startsWith('/s/' + slug) ? b1Url : '/s/' + slug + (b1Url.startsWith('/') ? b1Url : '/' + b1Url)))},
                   b1Img=${sec.settingStr('card1ImageUrl', '')},
                   b1Bg=${sec.settingStr('card1BgColor', '#1e293b')},
                   b2Badge=${sec.settingStr('card2Badge', 'Ofertas')},
                   b2Title=${sec.settingStr('card2Title', 'Descuentos Especiales')},
                   b2Sub=${sec.settingStr('card2Subtitle', 'Referencias seleccionadas a precios únicos')},
                   b2Btn=${sec.settingStr('card2ButtonText', 'Ver ofertas')},
-                  b2Url=${sec.settingStr('card2ButtonUrl', '/catalog')},
-                  resolvedB2Url=${b2Url.startsWith('http') or b2Url.startsWith('#') ? b2Url : (b2Url.startsWith('/s/' + slug) ? b2Url : '/s/' + slug + (b2Url.startsWith('/') ? b2Url : '/' + b2Url))},
+                  b2Url=${#strings.trim(sec.settingStr('card2ButtonUrl', '/catalog'))},
+                  isB2Ext=${b2Url.startsWith('www.') or b2Url.startsWith('wa.me/')},
+                  resolvedB2Url=${isB2Ext ? 'https://' + b2Url : (b2Url.startsWith('http') or b2Url.startsWith('#') or b2Url.startsWith('mailto:') or b2Url.startsWith('tel:') ? b2Url : (b2Url.startsWith('/s/' + slug) ? b2Url : '/s/' + slug + (b2Url.startsWith('/') ? b2Url : '/' + b2Url)))},
                   b2Img=${sec.settingStr('card2ImageUrl', '')},
                   b2Bg=${sec.settingStr('card2BgColor', '#4f46e5')}"
          class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <!-- Tarjeta 1 -->
         <div th:style="|background-color: ${b1Bg}; min-height: 280px;|"
              class="relative store-radius overflow-hidden p-8 flex flex-col justify-end text-white shadow-lg group">
             <div th:if="${!#strings.isEmpty(b1Img)}" class="absolute inset-0 z-0">
@@ -380,7 +390,6 @@
             </div>
         </div>
 
-        <!-- Tarjeta 2 -->
         <div th:style="|background-color: ${b2Bg}; min-height: 280px;|"
              class="relative store-radius overflow-hidden p-8 flex flex-col justify-end text-white shadow-lg group">
             <div th:if="${!#strings.isEmpty(b2Img)}" class="absolute inset-0 z-0">
@@ -517,10 +526,11 @@
                   waPhone=${#strings.length(waRaw) == 10 ? '57' + waRaw : waRaw}"
          class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
 
-    <div class="bg-slate-900 text-white store-radius p-8 sm:p-10 shadow-xl flex flex-col md:flex-row items-center justify-between gap-6">
+    <!-- Usa bg-secondary para reflejar el Color Secundario de la tienda -->
+    <div class="bg-secondary text-white store-radius p-8 sm:p-10 shadow-xl flex flex-col md:flex-row items-center justify-between gap-6">
         <div class="space-y-2 text-center md:text-left max-w-xl">
             <h2 class="text-2xl sm:text-3xl font-black tracking-tight" th:text="${title}">¿Tienes dudas?</h2>
-            <p class="text-slate-300 text-sm sm:text-base" th:text="${subtitle}"></p>
+            <p class="text-white/85 text-sm sm:text-base" th:text="${subtitle}"></p>
         </div>
         <div class="flex-shrink-0">
             <a th:if="${!#strings.isEmpty(waPhone)}"

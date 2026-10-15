@@ -37,7 +37,6 @@ public class StoreThemeService {
     private static final Set<String> ALLOWED_FONTS = Set.of(
             "Inter", "Plus Jakarta Sans", "Montserrat", "Playfair Display", "Lora", "DM Sans"
     );
-
     private static final Set<String> ALLOWED_RADII = Set.of(
             "0px", "0.375rem", "0.75rem", "1rem", "1.5rem"
     );
@@ -64,9 +63,9 @@ public class StoreThemeService {
             TenantContext.clear();
             StoreSettings settings = self.findSettingsInAdminDb(store.getId());
 
-            String primary = (settings != null && settings.getPrimaryColor() != null && !settings.getPrimaryColor().isBlank())
+            String primary = (settings != null && isValidHex(settings.getPrimaryColor()))
                     ? settings.getPrimaryColor() : "#6366f1";
-            String secondary = (settings != null && settings.getSecondaryColor() != null && !settings.getSecondaryColor().isBlank())
+            String secondary = (settings != null && isValidHex(settings.getSecondaryColor()))
                     ? settings.getSecondaryColor() : "#0f172a";
             String bannerUrl = settings != null ? settings.getBannerUrl() : null;
 
@@ -87,15 +86,11 @@ public class StoreThemeService {
                                 .primaryColor(primary)
                                 .secondaryColor(secondary)
                                 .build());
-                    } else if (!useDraft) {
-                        // Sincronizar con StoreSettings en la vista publicada por si el comerciante cambió colores en Configuración -> Mi Tienda
-                        parsed.getGlobalStyles().setPrimaryColor(primary);
-                        parsed.getGlobalStyles().setSecondaryColor(secondary);
                     }
                     if (parsed.getSections() == null) {
                         parsed.setSections(new ArrayList<>());
                     }
-                    sanitizeThemeConfig(store.getSlug(), parsed);
+                    sanitizeThemeConfig(parsed);
                     return parsed;
                 } catch (Exception e) {
                     System.out.println("Error leyendo JSON de plantilla, usando tema por defecto: " + e.getMessage());
@@ -130,7 +125,7 @@ public class StoreThemeService {
                 int limit = Math.max(1, Math.min(section.settingInt("limit", 8), 24));
 
                 List<Product> candidates;
-                if ("CATEGORY".equalsIgnoreCase(source) && categoryId != null) {
+                if (("CATEGORY".equalsIgnoreCase(source) || categoryId != null) && categoryId != null && !"OFFERS".equalsIgnoreCase(source)) {
                     candidates = productService.getPublicCatalog(categoryId);
                 } else if ("OFFERS".equalsIgnoreCase(source)) {
                     candidates = allProducts.stream()
@@ -146,12 +141,12 @@ public class StoreThemeService {
     }
 
     /**
-     * Guarda el borrador del tema en la BD administrativa SIN sobrescribir los colores publicados de la tienda.
+     * Guarda ÚNICAMENTE el borrador del tema sin alterar los colores publicados en StoreSettings.
      */
     public void saveDraftTheme(Store store, ThemeConfigDto themeConfig) {
         String tenantSchema = store.getSchemaName();
         try {
-            sanitizeThemeConfig(store.getSlug(), themeConfig);
+            sanitizeThemeConfig(themeConfig);
             String json = objectMapper.writeValueAsString(themeConfig);
             TenantContext.clear();
             self.updateThemeColumnsInAdminDb(store.getId(), json, null, null, null);
@@ -163,12 +158,12 @@ public class StoreThemeService {
     }
 
     /**
-     * Publica el tema en la tienda pública y sincroniza los colores primarios y secundarios en StoreSettings.
+     * Publica el tema en la tienda pública y sincroniza los colores primarios/secundarios con StoreSettings.
      */
     public void publishTheme(Store store, ThemeConfigDto themeConfig) {
         String tenantSchema = store.getSchemaName();
         try {
-            sanitizeThemeConfig(store.getSlug(), themeConfig);
+            sanitizeThemeConfig(themeConfig);
             String json = objectMapper.writeValueAsString(themeConfig);
             TenantContext.clear();
             self.updateThemeColumnsInAdminDb(
@@ -186,12 +181,12 @@ public class StoreThemeService {
     }
 
     /**
-     * Descarta los cambios no publicados del borrador y restaura la última versión publicada de la tienda.
+     * Descarta los cambios no publicados en borrador y restaura la última versión publicada.
      */
-    public ThemeConfigDto discardDraftToPublished(Store store) {
-        ThemeConfigDto publishedTheme = getRawThemeConfig(store, false);
-        saveDraftTheme(store, publishedTheme);
-        return publishedTheme;
+    public ThemeConfigDto discardDraft(Store store) {
+        ThemeConfigDto published = getRawThemeConfig(store, false);
+        saveDraftTheme(store, published);
+        return published;
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
@@ -214,10 +209,10 @@ public class StoreThemeService {
         if (publishedJson != null) {
             settings.setPublishedThemeJson(publishedJson);
         }
-        if (primaryColor != null && primaryColor.matches("^#[0-9a-fA-F]{6}$")) {
+        if (isValidHex(primaryColor)) {
             settings.setPrimaryColor(primaryColor);
         }
-        if (secondaryColor != null && secondaryColor.matches("^#[0-9a-fA-F]{6}$")) {
+        if (isValidHex(secondaryColor)) {
             settings.setSecondaryColor(secondaryColor);
         }
         entityManager.merge(settings);
@@ -225,8 +220,8 @@ public class StoreThemeService {
 
     public ThemeConfigDto buildDefaultTheme(String storeName, String primaryColor, String secondaryColor, String bannerUrl) {
         String safeStoreName = (storeName != null && !storeName.isBlank()) ? storeName : "Nuestra Tienda";
-        String safePrimary = sanitizeHexColor(primaryColor, "#6366f1");
-        String safeSecondary = sanitizeHexColor(secondaryColor, "#0f172a");
+        String safePrimary = isValidHex(primaryColor) ? primaryColor : "#6366f1";
+        String safeSecondary = isValidHex(secondaryColor) ? secondaryColor : "#0f172a";
 
         ThemeGlobalStylesDto globalStyles = ThemeGlobalStylesDto.builder()
                 .primaryColor(safePrimary)
@@ -306,29 +301,30 @@ public class StoreThemeService {
                 .build();
     }
 
-    private void sanitizeThemeConfig(String slug, ThemeConfigDto config) {
+    private void sanitizeThemeConfig(ThemeConfigDto config) {
         if (config == null) return;
 
+        // 1. Sanitizar GlobalStyles contra inyección CSS
         ThemeGlobalStylesDto gs = config.getGlobalStyles();
         if (gs == null) {
             gs = new ThemeGlobalStylesDto();
             config.setGlobalStyles(gs);
         }
-        gs.setPrimaryColor(sanitizeHexColor(gs.getPrimaryColor(), "#6366f1"));
-        gs.setSecondaryColor(sanitizeHexColor(gs.getSecondaryColor(), "#0f172a"));
-        gs.setBackgroundColor(sanitizeHexColor(gs.getBackgroundColor(), "#f8fafc"));
-        gs.setTextColor(sanitizeHexColor(gs.getTextColor(), "#0f172a"));
-
-        if (gs.getHeadingFont() == null || !ALLOWED_FONTS.contains(gs.getHeadingFont().trim())) {
+        if (!isValidHex(gs.getPrimaryColor())) gs.setPrimaryColor("#6366f1");
+        if (!isValidHex(gs.getSecondaryColor())) gs.setSecondaryColor("#0f172a");
+        if (!isValidHex(gs.getBackgroundColor())) gs.setBackgroundColor("#f8fafc");
+        if (!isValidHex(gs.getTextColor())) gs.setTextColor("#0f172a");
+        if (gs.getHeadingFont() == null || !ALLOWED_FONTS.contains(gs.getHeadingFont())) {
             gs.setHeadingFont("Inter");
         }
-        if (gs.getBodyFont() == null || !ALLOWED_FONTS.contains(gs.getBodyFont().trim())) {
+        if (gs.getBodyFont() == null || !ALLOWED_FONTS.contains(gs.getBodyFont())) {
             gs.setBodyFont("Inter");
         }
-        if (gs.getBorderRadius() == null || !ALLOWED_RADII.contains(gs.getBorderRadius().trim())) {
+        if (gs.getBorderRadius() == null || !ALLOWED_RADII.contains(gs.getBorderRadius())) {
             gs.setBorderRadius("1rem");
         }
 
+        // 2. Sanitizar Secciones
         if (config.getSections() == null) return;
         for (ThemeSectionDto sec : config.getSections()) {
             if (sec.getId() == null || sec.getId().isBlank()) {
@@ -338,12 +334,11 @@ public class StoreThemeService {
                 sec.getSettings().replaceAll((k, v) -> {
                     if (v instanceof String str) {
                         String trimmed = str.trim();
-                        String lowerKey = k.toLowerCase();
-                        if (lowerKey.endsWith("color")) {
-                            return sanitizeHexColor(trimmed, "#0f172a");
+                        if (k.toLowerCase().endsWith("url") && trimmed.toLowerCase().startsWith("javascript:")) {
+                            return "";
                         }
-                        if (lowerKey.endsWith("url")) {
-                            return normalizeSectionUrl(slug, trimmed, lowerKey.contains("image"));
+                        if (k.toLowerCase().endsWith("color") && !trimmed.isEmpty() && !isValidHex(trimmed)) {
+                            return "#0f172a";
                         }
                         return trimmed;
                     }
@@ -353,50 +348,7 @@ public class StoreThemeService {
         }
     }
 
-    private String sanitizeHexColor(String raw, String fallback) {
-        if (raw == null) return fallback;
-        String clean = raw.trim();
-        if (clean.matches("^#[0-9a-fA-F]{6}$")) {
-            return clean;
-        }
-        return fallback;
-    }
-
-    private String normalizeSectionUrl(String slug, String rawUrl, boolean isImageUrl) {
-        if (rawUrl == null || rawUrl.isBlank()) return "";
-        String trimmed = rawUrl.trim();
-        String lower = trimmed.toLowerCase();
-
-        if (lower.startsWith("javascript:") || lower.startsWith("data:") || lower.startsWith("vbscript:")) {
-            return "";
-        }
-
-        if (isImageUrl) {
-            return trimmed;
-        }
-
-        if (lower.startsWith("www.") || lower.startsWith("wa.me/") || lower.startsWith("instagram.com/") || lower.startsWith("facebook.com/") || lower.startsWith("tiktok.com/")) {
-            return "https://" + trimmed;
-        }
-
-        if (lower.startsWith("http://") || lower.startsWith("https://") || lower.startsWith("#")) {
-            return trimmed;
-        }
-
-        if (slug != null && !slug.isBlank()) {
-            String prefix1 = "/s/" + slug;
-            String prefix2 = "s/" + slug;
-            if (trimmed.startsWith(prefix1)) {
-                trimmed = trimmed.substring(prefix1.length());
-            } else if (trimmed.startsWith(prefix2)) {
-                trimmed = trimmed.substring(prefix2.length());
-            }
-        }
-
-        if (trimmed.isEmpty()) {
-            return "/";
-        }
-
-        return trimmed.startsWith("/") ? trimmed : "/" + trimmed;
+    private boolean isValidHex(String color) {
+        return color != null && color.matches("^#[0-9a-fA-F]{6}$");
     }
 }
