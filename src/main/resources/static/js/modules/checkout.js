@@ -11,6 +11,8 @@ Storevo.Checkout = {
 
         const invoiceToggle = document.getElementById('toggle-electronic-invoice');
         const invoicePanel = document.getElementById('electronic-invoice-fields');
+        const docTypeSelect = document.getElementById('checkout-doc-type');
+        const nitDvInput = document.getElementById('checkout-nit-dv');
         const legalNameInput = document.getElementById('checkout-legal-name');
         const emailInput = document.getElementById('checkout-email');
         const emailReqBadge = document.getElementById('email-req-badge');
@@ -18,7 +20,11 @@ Storevo.Checkout = {
         // 1. Autocompletar datos previos del comprador en esta tienda
         try {
             const savedData = JSON.parse(localStorage.getItem(storageKey) || '{}');
-            const fields = ['customerName', 'customerPhone', 'customerEmail', 'customerDocument', 'city', 'address', 'documentType', 'taxRegime', 'legalName'];
+            const fields = [
+                'customerName', 'customerPhone', 'customerEmail',
+                'customerDocument', 'verificationDigit', 'city',
+                'address', 'documentType', 'taxRegime', 'legalName'
+            ];
             fields.forEach(fieldName => {
                 const input = form.querySelector(`[name="${fieldName}"]`);
                 if (input && savedData[fieldName] && !input.value) {
@@ -29,15 +35,21 @@ Storevo.Checkout = {
             console.warn('No se pudo recuperar el perfil local de checkout', e);
         }
 
-        // 2. Obligatoriedad dinámica según el flujo de compra y facturación electrónica
+        // 2. Obligatoriedad dinámica según el flujo de compra y facturación electrónica (incluyendo DV para NIT)
         const syncRequiredFields = () => {
             const needsInvoice = invoiceToggle && invoiceToggle.checked;
+            const isNit = needsInvoice && docTypeSelect && docTypeSelect.value === 'NIT';
 
             if (invoicePanel) {
                 invoicePanel.classList.toggle('hidden', !needsInvoice);
             }
             if (legalNameInput) {
                 legalNameInput.required = needsInvoice;
+            }
+            if (nitDvInput) {
+                nitDvInput.classList.toggle('hidden', !isNit);
+                nitDvInput.required = isNit;
+                if (!isNit) nitDvInput.value = '';
             }
             if (emailInput) {
                 const emailRequired = !requiresWhatsapp || needsInvoice;
@@ -50,22 +62,42 @@ Storevo.Checkout = {
 
         if (invoiceToggle) {
             invoiceToggle.addEventListener('change', syncRequiredFields);
-            syncRequiredFields();
         }
+        if (docTypeSelect) {
+            docTypeSelect.addEventListener('change', syncRequiredFields);
+        }
+        syncRequiredFields();
 
-        // 3. Guardar datos en localStorage al enviar para acelerar futuras compras
-        form.addEventListener('submit', () => {
+        // 3. Guardar datos en localStorage al enviar y prevenir doble envío
+        form.addEventListener('submit', (e) => {
+            if (form.dataset.submitting === 'true') {
+                e.preventDefault();
+                return;
+            }
+            form.dataset.submitting = 'true';
+
             try {
                 const profileToSave = {};
-                ['customerName', 'customerPhone', 'customerEmail', 'customerDocument', 'city', 'address', 'documentType', 'taxRegime', 'legalName'].forEach(fieldName => {
+                [
+                    'customerName', 'customerPhone', 'customerEmail',
+                    'customerDocument', 'verificationDigit', 'city',
+                    'address', 'documentType', 'taxRegime', 'legalName'
+                ].forEach(fieldName => {
                     const input = form.querySelector(`[name="${fieldName}"]`);
                     if (input && input.value) {
                         profileToSave[fieldName] = input.value.trim();
                     }
                 });
                 localStorage.setItem(storageKey, JSON.stringify(profileToSave));
-            } catch (e) {
-                console.warn('No se pudo guardar el perfil local de checkout', e);
+            } catch (err) {
+                console.warn('No se pudo guardar el perfil local de checkout', err);
+            }
+
+            const submitBtn = document.getElementById('btn-submit-checkout') || document.getElementById('btn-submit-whatsapp');
+            if (submitBtn) {
+                submitBtn.classList.add('opacity-75', 'pointer-events-none');
+                const span = submitBtn.querySelector('span');
+                if (span) span.textContent = 'Procesando tu pedido...';
             }
         });
     }

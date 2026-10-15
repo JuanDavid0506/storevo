@@ -4,62 +4,152 @@
     <title>Mi Bolsa</title>
 </head>
 <body>
-<div layout:fragment="content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-    <h1 class="text-3xl font-bold text-slate-900 mb-8">Bolsa de Compras</h1>
+<div layout:fragment="content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12">
 
-    <div th:if="${#lists.isEmpty(cartItems)}" class="text-center py-20 bg-white rounded-xl shadow-sm border border-slate-200">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Bolsa de Compras</h1>
+        <a th:unless="${#lists.isEmpty(cartItems)}"
+           th:href="@{/s/{slug}/catalog(slug=${slug})}"
+           class="text-sm font-bold text-slate-500 hover:text-brand transition inline-flex items-center gap-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            Seguir comprando
+        </a>
+    </div>
+
+    <!-- Alertas de actualización o límites de stock -->
+    <div th:if="${cartSuccess}" class="mb-6 bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-xl text-sm font-semibold flex items-center gap-2.5">
+        <svg class="w-5 h-5 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+        <span th:text="${cartSuccess}"></span>
+    </div>
+    <div th:if="${cartError}" class="mb-6 bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl text-sm font-semibold flex items-center gap-2.5">
+        <svg class="w-5 h-5 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+        <span th:text="${cartError}"></span>
+    </div>
+
+    <!-- Estado vacío -->
+    <div th:if="${#lists.isEmpty(cartItems)}" class="text-center py-20 bg-white rounded-2xl shadow-sm border border-slate-200 px-4">
         <svg class="w-20 h-20 mx-auto text-slate-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
         <h2 class="text-2xl font-bold text-slate-700 mb-2">Tu bolsa está vacía</h2>
         <p class="text-slate-500 mb-6">Parece que aún no has agregado productos.</p>
-        <a th:href="@{/s/{slug}/catalog(slug=${slug})}" class="bg-brand text-white font-bold py-3 px-8 rounded-lg">Ir al Catálogo</a>
+        <a th:href="@{/s/{slug}/catalog(slug=${slug})}" class="inline-block bg-brand text-white font-bold py-3 px-8 rounded-xl shadow-md hover-bg-brand transition">Ir al Catálogo</a>
     </div>
 
+    <!-- Lista de ítems y Resumen -->
     <div th:unless="${#lists.isEmpty(cartItems)}" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div class="lg:col-span-2 space-y-4">
-            <div th:each="item : ${cartItems}" class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex gap-4 items-center">
-                <div class="w-24 h-24 bg-slate-100 rounded-lg flex-shrink-0">
-                    <img th:if="${item.imageUrl}" th:src="${item.imageUrl}" class="w-full h-full object-cover rounded-lg">
-                </div>
-                <div class="flex-1">
-                    <h3 class="font-bold text-slate-900 text-lg" th:text="${item.name}">Producto</h3>
-                    <p th:if="${item.variantText != null}" class="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1" th:text="${item.variantText}"></p>
+            <div th:each="item : ${cartItems}"
+                 th:with="itemKey=${item.productId + '-' + item.variantId},
+                          isInvalid=${invalidItemKeys != null and invalidItemKeys.contains(itemKey)},
+                          maxStock=${itemMaxStock != null ? itemMaxStock.get(itemKey) : null},
+                          atMaxStock=${!item.isMadeToOrder and maxStock != null and item.quantity >= maxStock}"
+                 class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col sm:flex-row gap-4 sm:items-center justify-between">
 
-                    <p class="text-brand font-medium" th:text="${item.price != null ? '$ ' + #numbers.formatDecimal(item.price, 1, 'POINT', 0, 'COMMA') : '$ 0'}">$0</p>
-                    <p class="text-sm text-slate-500 mt-1" th:text="${'Cantidad: ' + item.quantity}"></p>
+                <div class="flex gap-4 items-start sm:items-center flex-1 min-w-0">
+                    <a th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${item.productId})}"
+                       class="w-20 h-20 sm:w-24 sm:h-24 bg-slate-100 rounded-xl flex-shrink-0 overflow-hidden border border-slate-100 block">
+                        <img th:src="${item.imageUrl != null ? item.imageUrl : '/img/placeholder.jpg'}"
+                             th:alt="${item.name}"
+                             class="w-full h-full object-cover">
+                    </a>
+
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <a th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${item.productId})}"
+                               class="font-bold text-slate-900 hover:text-brand text-base sm:text-lg leading-snug transition truncate"
+                               th:text="${item.name}">Producto</a>
+                            <span th:if="${item.isMadeToOrder}"
+                                  class="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                                Bajo pedido
+                            </span>
+                        </div>
+
+                        <p th:if="${item.variantText != null and !item.variantText.isBlank()}"
+                           class="text-xs font-bold text-slate-500 uppercase tracking-wide mt-0.5"
+                           th:text="${item.variantText}"></p>
+
+                        <p class="text-brand font-bold text-sm mt-1"
+                           th:text="${item.price != null ? '$ ' + #numbers.formatDecimal(item.price, 1, 'POINT', 0, 'COMMA') + ' c/u' : '$ 0'}">$0</p>
+
+                        <!-- Controles de Cantidad (- / +) -->
+                        <div th:if="${!isInvalid}" class="flex items-center gap-3 mt-3">
+                            <div class="inline-flex items-center border border-slate-200 rounded-xl bg-slate-50 overflow-hidden h-9">
+                                <form th:action="@{/s/{slug}/cart/update(slug=${slug})}" method="POST" class="m-0 h-full">
+                                    <input type="hidden" name="productId" th:value="${item.productId}">
+                                    <input type="hidden" name="variantId" th:value="${item.variantId}">
+                                    <input type="hidden" name="quantity" th:value="${item.quantity - 1}">
+                                    <button type="submit" class="w-8 h-full text-slate-600 hover:text-brand hover:bg-slate-100 transition flex items-center justify-center font-bold text-base" title="Disminuir cantidad">−</button>
+                                </form>
+
+                                <span class="px-3 text-sm font-bold text-slate-900 select-none" th:text="${item.quantity}">1</span>
+
+                                <form th:action="@{/s/{slug}/cart/update(slug=${slug})}" method="POST" class="m-0 h-full">
+                                    <input type="hidden" name="productId" th:value="${item.productId}">
+                                    <input type="hidden" name="variantId" th:value="${item.variantId}">
+                                    <input type="hidden" name="quantity" th:value="${item.quantity + 1}">
+                                    <button type="submit"
+                                            th:disabled="${atMaxStock}"
+                                            th:title="${atMaxStock ? 'Stock máximo disponible alcanzado' : 'Aumentar cantidad'}"
+                                            class="w-8 h-full text-slate-600 hover:text-brand hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition flex items-center justify-center font-bold text-base">+</button>
+                                </form>
+                            </div>
+
+                            <span th:if="${atMaxStock}" class="text-[11px] font-medium text-amber-600">
+                                Máx. disponible (<span th:text="${maxStock}"></span>)
+                            </span>
+                        </div>
+
+                        <!-- Aviso si el producto o variante ya no está disponible -->
+                        <div th:if="${isInvalid}" class="mt-3 bg-red-50 text-red-600 text-xs sm:text-sm font-bold p-3 rounded-xl border border-red-100 flex items-start gap-2">
+                            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                            <span>Este producto ya no está disponible. Por favor, elimínalo de tu bolsa para continuar.</span>
+                        </div>
+                    </div>
                 </div>
 
-                <div th:if="${invalidItemKeys != null and invalidItemKeys.contains(item.productId + '-' + item.variantId)}" class="mt-3 bg-red-50 text-red-600 text-sm font-bold p-3 rounded-lg border border-red-100 flex items-start gap-2">
-                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                    <span>Este producto ya no está disponible. Por favor, elimínalo de tu bolsa.</span>
-                </div>
+                <!-- Subtotal y Botón Eliminar -->
+                <div class="flex sm:flex-col items-center sm:items-end justify-between border-t sm:border-t-0 border-slate-100 pt-3 sm:pt-0 gap-2 sm:gap-4 flex-shrink-0">
+                    <p class="font-black text-slate-900 text-lg"
+                       th:text="${item.subtotal != null ? '$ ' + #numbers.formatDecimal(item.subtotal, 1, 'POINT', 0, 'COMMA') : '$ 0'}">$0</p>
 
-                <div class="text-right flex flex-col items-end gap-4">
-                    <p class="font-bold text-slate-900" th:text="${item.subtotal != null ? '$ ' + #numbers.formatDecimal(item.subtotal, 1, 'POINT', 0, 'COMMA') : '$ 0'}">$0</p>
-                    <form th:action="@{/s/{slug}/cart/remove(slug=${slug})}" method="POST">
+                    <form th:action="@{/s/{slug}/cart/remove(slug=${slug})}" method="POST" class="m-0">
                         <input type="hidden" name="productId" th:value="${item.productId}">
                         <input type="hidden" name="variantId" th:value="${item.variantId}">
-                        <button type="submit" class="text-red-500 hover:text-red-700 text-sm font-medium">Eliminar</button>
+                        <button type="submit" class="text-red-500 hover:text-red-700 text-xs sm:text-sm font-bold inline-flex items-center gap-1 transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            Eliminar
+                        </button>
                     </form>
                 </div>
             </div>
         </div>
 
-        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-fit">
-            <h3 class="font-bold text-xl mb-4 border-b pb-4">Resumen de Compra</h3>
-            <div class="flex justify-between mb-4">
-                <span class="text-slate-600">Subtotal</span>
-                <span class="font-bold text-slate-900" th:text="${cartTotal != null ? '$ ' + #numbers.formatDecimal(cartTotal, 1, 'POINT', 0, 'COMMA') : '$ 0'}">$0</span>
+        <!-- Resumen de Compra -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-fit sticky top-24">
+            <h3 class="font-bold text-xl text-slate-900 mb-4 border-b border-slate-100 pb-4">Resumen de Compra</h3>
+            <div class="space-y-3 mb-6">
+                <div class="flex justify-between text-sm">
+                    <span class="text-slate-500">Subtotal productos</span>
+                    <span class="font-bold text-slate-900" th:text="${cartTotal != null ? '$ ' + #numbers.formatDecimal(cartTotal, 1, 'POINT', 0, 'COMMA') : '$ 0'}">$0</span>
+                </div>
+                <div class="flex justify-between text-sm">
+                    <span class="text-slate-500">Envío</span>
+                    <span class="text-xs font-semibold text-slate-500">Se coordina en el siguiente paso</span>
+                </div>
+                <div class="border-t border-slate-100 pt-3 flex justify-between items-center">
+                    <span class="font-bold text-slate-900">Total estimado</span>
+                    <span class="font-black text-xl text-brand" th:text="${cartTotal != null ? '$ ' + #numbers.formatDecimal(cartTotal, 1, 'POINT', 0, 'COMMA') : '$ 0'}">$0</span>
+                </div>
             </div>
 
             <a th:if="${invalidItemKeys == null or invalidItemKeys.isEmpty()}"
                th:href="@{/s/{slug}/cart/checkout(slug=${slug})}"
-               class="block w-full text-center bg-brand text-white font-bold py-3 rounded-lg shadow-md hover-bg-brand transition">
+               class="block w-full text-center bg-brand text-white font-bold py-3.5 rounded-xl shadow-md hover-bg-brand transition">
                 Continuar Compra
             </a>
 
             <button th:unless="${invalidItemKeys == null or invalidItemKeys.isEmpty()}"
                     type="button" disabled
-                    class="block w-full text-center bg-slate-300 text-white font-bold py-3 rounded-lg cursor-not-allowed">
+                    class="block w-full text-center bg-slate-300 text-white font-bold py-3.5 rounded-xl cursor-not-allowed">
                 Revisa tu bolsa
             </button>
         </div>

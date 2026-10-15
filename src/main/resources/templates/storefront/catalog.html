@@ -5,30 +5,93 @@
 </head>
 <body>
 <div layout:fragment="content" class="bg-white min-h-[70vh]">
+
     <div class="bg-slate-50 border-b border-slate-100 py-10">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h1 class="text-3xl font-black text-slate-900 tracking-tight" th:text="${currentCategory != null ? currentCategory.name : 'Todo el Catálogo'}">Catálogo</h1>
-            <p class="text-slate-500 mt-2" th:text="${currentCategory != null ? currentCategory.description : 'Explora todos nuestros productos disponibles.'}">Descripción</p>
+            <p class="text-slate-500 mt-2" th:text="${currentCategory != null and currentCategory.description != null and !currentCategory.description.isBlank() ? currentCategory.description : 'Explora todos nuestros productos disponibles.'}">Descripción</p>
         </div>
     </div>
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+
+        <!-- BARRA DE BÚSQUEDA Y ORDENAMIENTO PÚBLICA -->
+        <div th:unless="${#lists.isEmpty(products)}" class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 pb-4 border-b border-slate-100">
+            <div class="relative flex-1 max-w-md">
+                <svg class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+                <input type="text" id="catalog-search-input"
+                       th:value="${param.q != null ? param.q[0] : ''}"
+                       placeholder="Buscar producto en esta vista..."
+                       autocomplete="off"
+                       class="w-full pl-10 pr-9 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 focus:border-brand rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none transition-all">
+                <button type="button" id="catalog-search-clear" title="Limpiar búsqueda"
+                        class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <div class="flex items-center justify-between sm:justify-end gap-4">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                    <span id="catalog-visible-count" class="text-slate-800 font-black" th:text="${#lists.size(products)}">0</span> productos
+                </span>
+
+                <div class="flex items-center gap-2">
+                    <label for="catalog-sort-select" class="text-xs font-bold text-slate-400 uppercase hidden md:inline">Ordenar:</label>
+                    <select id="catalog-sort-select"
+                            class="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:border-brand focus:outline-none cursor-pointer">
+                        <option value="default">Más recientes</option>
+                        <option value="price_asc">Precio: menor a mayor</option>
+                        <option value="price_desc">Precio: mayor a menor</option>
+                        <option value="name_asc">Nombre: A - Z</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
         <div th:if="${#lists.isEmpty(products)}" class="text-center py-20">
             <svg class="w-16 h-16 mx-auto text-slate-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
             <h2 class="text-xl font-bold text-slate-700 mb-2">No se encontraron productos</h2>
-            <p class="text-slate-500">Intenta navegar por otra categoría.</p>
+            <p class="text-slate-500 mb-6">Intenta explorar otra categoría de nuestra tienda.</p>
+            <a th:if="${currentCategory != null}" th:href="@{/s/{slug}/catalog(slug=${slug})}" class="inline-block bg-brand text-white font-bold py-2.5 px-6 rounded-xl shadow-md hover-bg-brand transition text-sm">
+                Ver todo el catálogo
+            </a>
         </div>
 
-        <div th:unless="${#lists.isEmpty(products)}" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-            <div th:each="p : ${products}" class="group relative bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-100 flex flex-col h-full">
+        <!-- Estado vacío cuando el buscador en vivo no encuentra coincidencias -->
+        <div id="catalog-no-matches" class="hidden text-center py-16 bg-slate-50 rounded-2xl border border-slate-100">
+            <svg class="w-14 h-14 mx-auto text-slate-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            <h3 class="text-lg font-bold text-slate-700">No encontramos productos para tu búsqueda</h3>
+            <p class="text-sm text-slate-500 mt-1 mb-5">Intenta con otra palabra clave o limpia el filtro.</p>
+            <button type="button" id="catalog-reset-search" class="bg-brand text-white font-bold py-2.5 px-6 rounded-xl text-sm shadow-md hover-bg-brand transition">
+                Mostrar todos los productos
+            </button>
+        </div>
 
-                <div class="relative aspect-[4/5] overflow-hidden bg-slate-50 flex-shrink-0 group/gallery" th:with="hasMultiple=${p.images != null and p.images.size() > 1}">
+        <div th:unless="${#lists.isEmpty(products)}" id="catalog-products-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
 
+            <div th:each="p, pStat : ${products}"
+                 th:with="isOutOfStock=${!p.isMadeToOrder and !p.hasVariants and (p.stock == null or p.stock <= 0)},
+                          hasMultiple=${p.images != null and p.images.size() > 1},
+                          effectivePrice=${p.discountPrice != null and p.discountPrice > 0 ? p.discountPrice : p.price}"
+                 th:attr="data-name=${p.name != null ? p.name.toLowerCase() : ''},
+                          data-category=${p.category != null and p.category.name != null ? p.category.name.toLowerCase() : ''},
+                          data-price=${effectivePrice != null ? effectivePrice : 0},
+                          data-index=${pStat.index}"
+                 class="catalog-product-card group relative bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-100 flex flex-col h-full">
+
+                <div class="relative aspect-[4/5] overflow-hidden bg-slate-50 flex-shrink-0 group/gallery">
                     <a th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${p.id})}" class="block w-full h-full">
-                        <img th:id="'gallery-img-' + ${p.id}" th:src="${p.mainImageUrl != null ? p.mainImageUrl : '/img/placeholder.jpg'}" th:alt="${p.name}" class="w-full h-full object-cover group-hover/gallery:scale-105 transition-transform duration-500">
+                        <img th:id="'gallery-img-' + ${p.id}"
+                             th:src="${p.mainImageUrl != null ? p.mainImageUrl : '/img/placeholder.jpg'}"
+                             th:alt="${p.name}"
+                             loading="lazy"
+                             decoding="async"
+                             class="w-full h-full object-cover group-hover/gallery:scale-105 transition-transform duration-500">
                     </a>
 
-                    <div th:if="${hasMultiple}" class="absolute inset-0 flex items-center justify-between px-2 opacity-0 group-hover/gallery:opacity-100 transition-opacity duration-300 pointer-events-none z-20">
+                    <div th:if="${hasMultiple}" class="absolute inset-0 flex items-center justify-between px-2 opacity-100 lg:opacity-0 lg:group-hover/gallery:opacity-100 transition-opacity duration-300 pointer-events-none z-20">
                         <button type="button" th:data-target="'gallery-img-' + ${p.id}" th:data-images="${#strings.listJoin(p.images.![secureUrl], ',')}" onclick="Storevo.Gallery.prev(event, this)" class="w-8 h-8 rounded-full bg-white/90 hover:bg-white text-slate-800 flex items-center justify-center shadow-lg pointer-events-auto transition-transform hover:scale-110">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path></svg>
                         </button>
@@ -37,17 +100,26 @@
                         </button>
                     </div>
 
-                    <div th:if="${p.discountPrice != null and p.discountPrice > 0}" class="absolute top-3 left-3 bg-red-500 text-white text-[10px] sm:text-xs font-black uppercase px-2.5 py-1 rounded-full shadow-md z-30 pointer-events-none">
-                        Oferta
+                    <div class="absolute top-3 left-3 flex flex-col gap-1.5 z-30 pointer-events-none">
+                        <span th:if="${isOutOfStock}" class="bg-slate-900/90 text-white text-[10px] sm:text-xs font-black uppercase px-2.5 py-1 rounded-full shadow-md">
+                            Agotado
+                        </span>
+                        <span th:if="${!isOutOfStock and p.discountPrice != null and p.discountPrice > 0}" class="bg-red-500 text-white text-[10px] sm:text-xs font-black uppercase px-2.5 py-1 rounded-full shadow-md">
+                            Oferta
+                        </span>
                     </div>
 
                     <div class="absolute top-3 right-3 flex flex-col gap-2 z-30">
-                        <button type="button" th:data-slug="${slug}" th:data-id="${p.id}" onclick="toggleCartItem(this, this.getAttribute('data-slug'), this.getAttribute('data-id'))" class="p-2.5 bg-white/90 backdrop-blur text-slate-400 hover:text-brand rounded-full shadow-lg transition-all duration-300" title="Agregar al carrito">
+                        <button th:if="${!p.hasVariants and !isOutOfStock}"
+                                type="button" th:data-slug="${slug}" th:data-id="${p.id}"
+                                onclick="toggleCartItem(this, this.getAttribute('data-slug'), this.getAttribute('data-id'))"
+                                class="p-2.5 bg-white/90 backdrop-blur text-slate-400 hover:text-brand rounded-full shadow-lg transition-all duration-300" title="Agregar a la bolsa">
                             <svg class="w-5 h-5 icon-empty" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
                             <svg class="w-5 h-5 icon-filled hidden text-brand" fill="currentColor" viewBox="0 0 24 24"><path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path><path fill="white" d="M10.5 15.5l-3-3 1.4-1.4 1.6 1.6 4.6-4.6 1.4 1.4-6 6z"></path></svg>
                         </button>
 
-                        <button type="button" th:data-slug="${slug}" th:data-id="${p.id}" onclick="toggleWishlistItem(this, this.getAttribute('data-slug'), this.getAttribute('data-id'))"
+                        <button type="button" th:data-slug="${slug}" th:data-id="${p.id}"
+                                onclick="toggleWishlistItem(this, this.getAttribute('data-slug'), this.getAttribute('data-id'))"
                                 th:class="${wishlistProductIds != null and wishlistProductIds.contains(p.id)} ? 'p-2.5 backdrop-blur rounded-full shadow-lg transition-all duration-300 bg-white border border-red-500 text-red-500' : 'p-2.5 bg-white/90 backdrop-blur text-slate-400 hover:text-red-500 rounded-full shadow-lg transition-all duration-300'" title="Agregar a favoritos">
                             <svg class="w-5 h-5 icon-heart-empty" th:classappend="${wishlistProductIds != null and wishlistProductIds.contains(p.id)} ? 'hidden' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
                             <svg class="w-5 h-5 icon-heart-filled" th:classappend="${wishlistProductIds == null or !wishlistProductIds.contains(p.id)} ? 'hidden' : ''" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L12 8.343l3.172-3.171a4 4 0 115.656 5.656L12 21.414l-8.828-8.828a4 4 0 010-5.656z" clip-rule="evenodd"></path></svg>
@@ -64,9 +136,9 @@
                     </div>
 
                     <div class="mt-auto pt-3 border-t border-slate-50">
-                        <div class="flex items-center gap-1.5 mb-3">
+                        <div class="flex items-center gap-1.5 mb-3 flex-wrap">
                             <span th:if="${p.hasVariants}" class="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">Desde</span>
-                            <span class="text-lg font-black text-slate-900" th:text="${'$ ' + #numbers.formatDecimal((p.discountPrice != null and p.discountPrice > 0 ? p.discountPrice : p.price), 1, 'POINT', 0, 'COMMA')}">$0</span>
+                            <span class="text-lg font-black text-slate-900" th:text="${'$ ' + #numbers.formatDecimal(effectivePrice, 1, 'POINT', 0, 'COMMA')}">$0</span>
                             <span th:if="${p.discountPrice != null and p.discountPrice > 0}" class="text-xs text-slate-400 line-through font-medium" th:text="${'$ ' + #numbers.formatDecimal(p.price, 1, 'POINT', 0, 'COMMA')}">$0</span>
                         </div>
 
@@ -74,21 +146,101 @@
                             <a th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${p.id})}" class="flex items-center justify-center px-2 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors text-center">
                                 Ver detalles
                             </a>
-
-                            <button th:if="${!p.hasVariants}" type="button" th:data-slug="${slug}" th:data-id="${p.id}" onclick="buyNowFast(this.getAttribute('data-slug'), this.getAttribute('data-id'))" class="flex items-center justify-center px-2 py-2 text-xs font-bold text-white bg-brand hover:bg-brand/90 rounded-lg transition-colors shadow-md shadow-brand/20 text-center">
+                            <button th:if="${!p.hasVariants and !isOutOfStock}" type="button" th:data-slug="${slug}" th:data-id="${p.id}" onclick="buyNowFast(this.getAttribute('data-slug'), this.getAttribute('data-id'))" class="flex items-center justify-center px-2 py-2 text-xs font-bold text-white bg-brand hover:bg-brand/90 rounded-lg transition-colors shadow-md shadow-brand/20 text-center">
                                 Comprar
                             </button>
-
                             <a th:if="${p.hasVariants}" th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${p.id})}" class="flex items-center justify-center px-2 py-2 text-xs font-bold text-white bg-slate-800 hover:bg-slate-900 rounded-lg transition-colors shadow-md shadow-slate-900/20 text-center">
                                 Ver opciones
                             </a>
+                            <button th:if="${!p.hasVariants and isOutOfStock}" type="button" disabled class="flex items-center justify-center px-2 py-2 text-xs font-bold text-slate-400 bg-slate-100 rounded-lg cursor-not-allowed text-center">
+                                Agotado
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
 
+        </div>
     </div>
 </div>
+
+<th:block layout:fragment="scripts">
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const grid = document.getElementById('catalog-products-grid');
+            if (!grid) return;
+
+            const searchInput = document.getElementById('catalog-search-input');
+            const clearBtn = document.getElementById('catalog-search-clear');
+            const resetBtn = document.getElementById('catalog-reset-search');
+            const sortSelect = document.getElementById('catalog-sort-select');
+            const countEl = document.getElementById('catalog-visible-count');
+            const emptyState = document.getElementById('catalog-no-matches');
+            const cards = Array.from(grid.querySelectorAll('.catalog-product-card'));
+
+            function applyCatalogFilterAndSort() {
+                const query = (searchInput ? searchInput.value : '').trim().toLowerCase();
+                const sortBy = sortSelect ? sortSelect.value : 'default';
+
+                if (clearBtn) {
+                    clearBtn.classList.toggle('hidden', !query);
+                }
+
+                // 1. Filtrar por nombre o categoría
+                let visibleCount = 0;
+                cards.forEach(card => {
+                    const name = card.getAttribute('data-name') || '';
+                    const category = card.getAttribute('data-category') || '';
+                    const matches = !query || name.includes(query) || category.includes(query);
+                    card.classList.toggle('hidden', !matches);
+                    if (matches) visibleCount++;
+                });
+
+                // 2. Ordenar tarjetas
+                const sorted = [...cards].sort((a, b) => {
+                    if (sortBy === 'price_asc') {
+                        return (parseFloat(a.getAttribute('data-price')) || 0) - (parseFloat(b.getAttribute('data-price')) || 0);
+                    }
+                    if (sortBy === 'price_desc') {
+                        return (parseFloat(b.getAttribute('data-price')) || 0) - (parseFloat(a.getAttribute('data-price')) || 0);
+                    }
+                    if (sortBy === 'name_asc') {
+                        return (a.getAttribute('data-name') || '').localeCompare(b.getAttribute('data-name') || '');
+                    }
+                    return (parseInt(a.getAttribute('data-index')) || 0) - (parseInt(b.getAttribute('data-index')) || 0);
+                });
+
+                sorted.forEach(card => grid.appendChild(card));
+
+                if (countEl) countEl.textContent = visibleCount;
+                if (emptyState) emptyState.classList.toggle('hidden', visibleCount > 0);
+                grid.classList.toggle('hidden', visibleCount === 0);
+            }
+
+            if (searchInput) {
+                searchInput.addEventListener('input', applyCatalogFilterAndSort);
+            }
+            if (clearBtn) {
+                clearBtn.addEventListener('click', () => {
+                    searchInput.value = '';
+                    applyCatalogFilterAndSort();
+                    searchInput.focus();
+                });
+            }
+            if (resetBtn) {
+                resetBtn.addEventListener('click', () => {
+                    if (searchInput) searchInput.value = '';
+                    applyCatalogFilterAndSort();
+                });
+            }
+            if (sortSelect) {
+                sortSelect.addEventListener('change', applyCatalogFilterAndSort);
+            }
+
+            // Aplicar al iniciar (por si viene ?q=... desde el buscador del navbar)
+            applyCatalogFilterAndSort();
+        });
+    </script>
+</th:block>
 </body>
 </html>

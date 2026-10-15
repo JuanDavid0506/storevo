@@ -4,10 +4,8 @@ import com.storevo.backend.admin.model.Store;
 import com.storevo.backend.admin.service.StoreSettingsService;
 import com.storevo.backend.config.tenant.TenantContext;
 import com.storevo.backend.tenant.dto.WompiCheckoutData;
-import com.storevo.backend.tenant.exception.OrderNotFoundException;
 import com.storevo.backend.tenant.model.Order;
 import com.storevo.backend.tenant.model.OrderStatus;
-import com.storevo.backend.tenant.repository.OrderRepository;
 import com.storevo.backend.tenant.service.OrderService;
 import com.storevo.backend.tenant.service.WompiService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,15 +22,14 @@ import java.nio.charset.StandardCharsets;
 @RequiredArgsConstructor
 public class OrderController {
 
-    private final OrderRepository orderRepository;
     private final StoreSettingsService storeSettingsService;
     private final OrderService orderService;
     private final WompiService wompiService;
 
     @GetMapping("/{id}/success")
     public String orderSuccess(@PathVariable String slug, @PathVariable Long id, HttpServletRequest request, Model model) {
-        Order order = orderRepository.findById(id)
-                .orElseThrow(() -> new OrderNotFoundException(id));
+        // Usamos orderService.getOrderById(id) para traer items inicializados dentro de la transacción
+        Order order = orderService.getOrderById(id);
 
         Store store = (Store) request.getAttribute("currentStore");
 
@@ -75,8 +72,8 @@ public class OrderController {
 
     @GetMapping("/{id}/whatsapp")
     public String orderWhatsapp(@PathVariable String slug, @PathVariable Long id, HttpServletRequest request, Model model) {
-        Order order = orderRepository.findById(id)
-                .orElseThrow(() -> new OrderNotFoundException(id));
+        // Inicializa order.getItems() dentro de la transacción de OrderService
+        Order order = orderService.getOrderById(id);
 
         Store store = (Store) request.getAttribute("currentStore");
 
@@ -127,8 +124,7 @@ public class OrderController {
         Store store = (Store) request.getAttribute("currentStore");
         TenantContext.setCurrentTenant(store.getSchemaName());
 
-        Order order = orderRepository.findById(id)
-                .orElseThrow(() -> new OrderNotFoundException(id));
+        Order order = orderService.getOrderById(id);
 
         model.addAttribute("order", order);
         model.addAttribute("wompiTransactionId", wompiTransactionId);

@@ -44,26 +44,34 @@ public class CartController {
         java.util.List<CartItemDto> cart = cartManager.getCart(guestId);
 
         java.util.List<String> invalidItemKeys = new java.util.ArrayList<>();
+        Map<String, Integer> itemMaxStock = new HashMap<>();
+
         for (CartItemDto item : cart) {
+            String itemKey = item.getProductId() + "-" + item.getVariantId();
             try {
                 Product p = productService.getProductById(item.getProductId());
                 if (p.getIsDeleted() || !p.getIsActive()) {
-                    invalidItemKeys.add(item.getProductId() + "-" + item.getVariantId());
+                    invalidItemKeys.add(itemKey);
                     continue;
                 }
                 if (item.getVariantId() != null) {
                     ProductVariant v = variantRepository.findById(item.getVariantId()).orElse(null);
                     if (v == null || !v.getIsActive()) {
-                        invalidItemKeys.add(item.getProductId() + "-" + item.getVariantId());
+                        invalidItemKeys.add(itemKey);
+                    } else if (!Boolean.TRUE.equals(p.getIsMadeToOrder())) {
+                        itemMaxStock.put(itemKey, v.getStock() != null ? v.getStock() : 0);
                     }
+                } else if (!Boolean.TRUE.equals(p.getIsMadeToOrder())) {
+                    itemMaxStock.put(itemKey, p.getStock() != null ? p.getStock() : 0);
                 }
             } catch (Exception e) {
-                invalidItemKeys.add(item.getProductId() + "-" + item.getVariantId());
+                invalidItemKeys.add(itemKey);
             }
         }
 
         model.addAttribute("cartItems", cart);
         model.addAttribute("invalidItemKeys", invalidItemKeys);
+        model.addAttribute("itemMaxStock", itemMaxStock);
         model.addAttribute("cartTotal", cartManager.getTotal(guestId));
         model.addAttribute("pageTitle", "Mi Bolsa");
         return "storefront/cart";
@@ -85,6 +93,88 @@ public class CartController {
             redirectAttributes.addFlashAttribute("cartSuccess", response.getBody().get("message"));
         } else {
             redirectAttributes.addFlashAttribute("cartError", response.getBody().get("message"));
+        }
+
+        return "redirect:/s/" + slug + "/cart";
+    }
+
+    @PostMapping("/update")
+    @Transactional
+    public String updateCartItemQuantity(
+            @PathVariable String slug,
+            @RequestParam Long productId,
+            @RequestParam(required = false) Long variantId,
+            @RequestParam Integer quantity,
+            HttpServletRequest request,
+            RedirectAttributes redirectAttributes) {
+
+        String guestId = (String) request.getAttribute("guestId");
+
+        if (quantity == null || quantity <= 0) {
+            cartManager.removeItem(guestId, productId, variantId);
+            redirectAttributes.addFlashAttribute("cartSuccess", "Producto eliminado de tu bolsa.");
+            return "redirect:/s/" + slug + "/cart";
+        }
+
+        try {
+            Product product = productService.getProductById(productId);
+            if (product.getIsDeleted() || !product.getIsActive()) {
+                cartManager.removeItem(guestId, productId, variantId);
+                redirectAttributes.addFlashAttribute("cartError", "Este producto ya no está disponible.");
+                return "redirect:/s/" + slug + "/cart";
+            }
+
+            boolean isMadeToOrder = Boolean.TRUE.equals(product.getIsMadeToOrder());
+            int availableStock = product.getStock() != null ? product.getStock() : 0;
+            Double itemPrice = product.getDiscountPrice() != null && product.getDiscountPrice() > 0 ? product.getDiscountPrice() : product.getPrice();
+            String itemVariantText = null;
+            String imageUrl = product.getMainImageUrl();
+
+            if (variantId != null && product.getHasVariants()) {
+                ProductVariant variant = variantRepository.findById(variantId).orElse(null);
+                if (variant == null || !variant.getIsActive()) {
+                    cartManager.removeItem(guestId, productId, variantId);
+                    redirectAttributes.addFlashAttribute("cartError", "La variante seleccionada ya no está disponible.");
+                    return "redirect:/s/" + slug + "/cart";
+                }
+                availableStock = variant.getStock() != null ? variant.getStock() : 0;
+                itemPrice = variant.getPrice() != null && variant.getPrice() > 0 ? variant.getPrice() : itemPrice;
+                itemVariantText = variant.getOptionValues().stream()
+                        .map(ov -> ov.getValueName())
+                        .collect(Collectors.joining(" • "));
+                if (variant.getImages() != null && !variant.getImages().isEmpty()) {
+                    imageUrl = variant.getImages().get(0).getThumbnailUrl();
+                    if (imageUrl == null) imageUrl = variant.getImages().get(0).getSecureUrl();
+                }
+            }
+
+            int finalQty = quantity;
+            if (!isMadeToOrder) {
+                if (availableStock <= 0) {
+                    redirectAttributes.addFlashAttribute("cartError", "Producto sin stock disponible.");
+                    return "redirect:/s/" + slug + "/cart";
+                }
+                if (quantity > availableStock) {
+                    finalQty = availableStock;
+                    redirectAttributes.addFlashAttribute("cartError", "Solo disponemos de " + availableStock + " unidad(es) en inventario.");
+                }
+            }
+
+            cartManager.removeItem(guestId, productId, variantId);
+            CartItemDto updatedItem = CartItemDto.builder()
+                    .productId(product.getId())
+                    .variantId(variantId)
+                    .name(product.getName())
+                    .variantText(itemVariantText)
+                    .price(itemPrice)
+                    .quantity(finalQty)
+                    .imageUrl(imageUrl)
+                    .isMadeToOrder(isMadeToOrder)
+                    .build();
+            cartManager.addItem(guestId, updatedItem);
+
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("cartError", "No se pudo actualizar la cantidad.");
         }
 
         return "redirect:/s/" + slug + "/cart";
@@ -215,9 +305,14 @@ public class CartController {
 
     @PostMapping("/checkout/process")
     public String processCheckout(
-            @PathVariable String slug, @RequestParam String customerName, @RequestParam String customerPhone,
-            @RequestParam(required = false) String customerDocument, @RequestParam String address,
-            @RequestParam String city, @RequestParam(required = false) String notes,
+            @PathVariable String slug,
+            @RequestParam String customerName,
+            @RequestParam String customerPhone,
+            @RequestParam(required = false) String customerDocument,
+            @RequestParam(required = false) String verificationDigit,
+            @RequestParam String address,
+            @RequestParam String city,
+            @RequestParam(required = false) String notes,
             HttpServletRequest request,
             RedirectAttributes redirectAttributes) {
 
@@ -230,33 +325,51 @@ public class CartController {
             return "redirect:/s/" + slug + "/cart/checkout";
         }
 
+        String finalDoc = formatDocumentWithDv(customerDocument, verificationDigit);
+
         try {
-            Order order = orderService.createOrderFromCart(guestId, customerName, customerPhone, customerDocument, address, city, notes, OrderChannel.ONLINE);
+            Order order = orderService.createOrderFromCart(guestId, customerName, customerPhone, finalDoc, address, city, notes, OrderChannel.ONLINE);
             return "redirect:/s/" + slug + "/order/" + order.getId() + "/success";
         } catch (Exception e) {
             e.printStackTrace();
-            redirectAttributes.addFlashAttribute("checkoutError", e.getMessage() != null ? e.getMessage() : "Error interno de base de datos. Revisa la consola.");
+            redirectAttributes.addFlashAttribute("checkoutError", e.getMessage() != null ? e.getMessage() : "No se pudo procesar tu pedido. Verifica los datos e intenta nuevamente.");
             return "redirect:/s/" + slug + "/cart/checkout";
         }
     }
 
     @PostMapping("/checkout/whatsapp")
     public String processCheckoutWhatsapp(
-            @PathVariable String slug, @RequestParam String customerName, @RequestParam String customerPhone,
-            @RequestParam(required = false) String customerDocument, @RequestParam String address,
-            @RequestParam String city, @RequestParam(required = false) String notes,
+            @PathVariable String slug,
+            @RequestParam String customerName,
+            @RequestParam String customerPhone,
+            @RequestParam(required = false) String customerDocument,
+            @RequestParam(required = false) String verificationDigit,
+            @RequestParam String address,
+            @RequestParam String city,
+            @RequestParam(required = false) String notes,
             HttpServletRequest request,
             RedirectAttributes redirectAttributes) {
 
         String guestId = (String) request.getAttribute("guestId");
+        String finalDoc = formatDocumentWithDv(customerDocument, verificationDigit);
+
         try {
-            Order order = orderService.createOrderFromCart(guestId, customerName, customerPhone, customerDocument, address, city, notes, OrderChannel.WHATSAPP);
+            Order order = orderService.createOrderFromCart(guestId, customerName, customerPhone, finalDoc, address, city, notes, OrderChannel.WHATSAPP);
             return "redirect:/s/" + slug + "/order/" + order.getId() + "/whatsapp";
         } catch (Exception e) {
             e.printStackTrace();
-            redirectAttributes.addFlashAttribute("checkoutError", e.getMessage() != null ? e.getMessage() : "Error interno. Revisa la consola.");
+            redirectAttributes.addFlashAttribute("checkoutError", e.getMessage() != null ? e.getMessage() : "No se pudo registrar tu pedido. Verifica los datos e intenta nuevamente.");
             return "redirect:/s/" + slug + "/cart/checkout";
         }
+    }
+
+    private String formatDocumentWithDv(String doc, String dv) {
+        if (doc == null || doc.isBlank()) return doc;
+        String cleanDoc = doc.trim();
+        if (dv != null && !dv.isBlank() && !cleanDoc.contains("-")) {
+            return cleanDoc + "-" + dv.trim();
+        }
+        return cleanDoc;
     }
 
     @GetMapping("/checkout")
