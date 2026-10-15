@@ -4,6 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title layout:title-pattern="$CONTENT_TITLE | [[${settings.storeName}]]">Tienda</title>
+
+    <!-- Metadatos SEO y OpenGraph por defecto para compartir en WhatsApp y Redes -->
+    <meta name="description" th:content="'Explora el catálogo oficial de ' + ${settings.storeName} + ' y realiza tu pedido fácil y seguro.'">
+    <meta property="og:site_name" th:content="${settings.storeName}">
+    <meta property="og:type" content="website">
+    <th:block layout:fragment="head-meta">
+        <meta property="og:title" th:content="${(pageTitle != null ? pageTitle + ' | ' : '') + settings.storeName}">
+        <meta property="og:description" th:content="'Compra online en ' + ${settings.storeName} + '. Conoce nuestros productos disponibles.'">
+    </th:block>
+
     <link rel="stylesheet" th:href="@{/css/app.css}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
@@ -31,6 +41,7 @@
         .nav-parent:hover .nav-arrow { transform: rotate(-180deg) !important; }
         .nav-flyout-parent:hover .nav-flyout { opacity: 1 !important; visibility: visible !important; transform: translateX(0) !important; }
     </style>
+
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16 items-center gap-4">
             <a th:href="@{/s/{slug}(slug=${slug})}" class="text-2xl font-black text-brand tracking-tight truncate max-w-[180px] sm:max-w-xs" th:text="${settings.storeName}">Mi Tienda</a>
@@ -68,7 +79,6 @@
 
             <!-- Acciones Derecha: Buscador + Favoritos + Bolsa + Menú Móvil -->
             <div class="flex items-center gap-3 sm:gap-5">
-                <!-- Buscador Desktop -->
                 <form th:action="@{/s/{slug}/catalog(slug=${slug})}" method="GET" class="hidden lg:flex items-center relative">
                     <input type="search" name="q" th:value="${param.q != null ? param.q[0] : ''}"
                            placeholder="Buscar productos..."
@@ -76,12 +86,12 @@
                     <svg class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                 </form>
 
-                <a th:href="@{/s/{slug}/wishlist(slug=${slug})}" class="flex items-center gap-2 text-slate-600 hover:text-red-500 transition relative" title="Mis Favoritos">
+                <a th:href="@{/s/{slug}/wishlist(slug=${slug})}" class="flex items-center gap-2 text-slate-600 hover:text-red-500 transition relative" title="Mis Favoritos" aria-label="Mis Favoritos">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
                     <span id="navWishlistCounter" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full" th:text="${wishlistCount != null ? wishlistCount : 0}">0</span>
                 </a>
 
-                <a th:href="@{/s/{slug}/cart(slug=${slug})}" class="flex items-center gap-2 text-slate-600 hover:text-brand transition relative" title="Mi Bolsa">
+                <a th:href="@{/s/{slug}/cart(slug=${slug})}" class="flex items-center gap-2 text-slate-600 hover:text-brand transition relative" title="Mi Bolsa" aria-label="Mi Bolsa">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
                     <span id="navCartCounter" class="absolute -top-2 -right-2 bg-brand text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full" th:text="${cartCount != null ? cartCount : 0}">0</span>
                 </a>
@@ -93,8 +103,9 @@
         </div>
     </div>
 
-    <!-- Menú Lateral Móvil (Soporte completo de 3 niveles con acordeones + Buscador) -->
+    <!-- Menú Lateral Móvil -->
     <div id="mobile-menu-backdrop" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[60] hidden opacity-0 transition-opacity duration-300 md:hidden"></div>
+
     <div id="mobile-menu" class="fixed top-0 left-0 h-full w-4/5 max-w-sm bg-white shadow-2xl z-[70] transform -translate-x-full transition-transform duration-300 flex flex-col overflow-y-auto md:hidden">
         <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
             <span class="font-black text-brand text-lg truncate pr-2" th:text="${settings.storeName}">Mi Tienda</span>
@@ -114,18 +125,16 @@
         </div>
 
         <!-- Árbol de Categorías Móvil (Hasta 3 niveles) -->
-        <div class="p-4 flex flex-col gap-1">
+        <div class="p-4 flex flex-col gap-1 flex-1">
             <a th:href="@{/s/{slug}(slug=${slug})}" class="font-bold text-slate-700 hover:text-brand py-3 border-b border-slate-100">Inicio</a>
             <a th:href="@{/s/{slug}/catalog(slug=${slug})}" class="font-bold text-slate-700 hover:text-brand py-3 border-b border-slate-100">Todo el Catálogo</a>
 
             <div th:each="cat : ${navCategories}" class="border-b border-slate-100">
-                <!-- Si NO tiene subcategorías -->
                 <a th:if="${#lists.isEmpty(cat.subCategories)}"
                    th:href="@{/s/{slug}/catalog(slug=${slug}, category=${cat.id})}"
                    class="font-bold text-slate-700 hover:text-brand py-3 block"
                    th:text="${cat.name}">Categoría</a>
 
-                <!-- Si TIENE subcategorías (Nivel 1 -> Nivel 2 -> Nivel 3) -->
                 <details th:if="${not #lists.isEmpty(cat.subCategories)}" class="group/mobcat">
                     <summary class="flex items-center justify-between py-3 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
                         <a th:href="@{/s/{slug}/catalog(slug=${slug}, category=${cat.id})}"
@@ -139,13 +148,11 @@
 
                     <div class="pl-4 pb-3 flex flex-col gap-1 border-l-2 border-slate-100 ml-1">
                         <div th:each="sub : ${cat.subCategories}" th:if="${sub.isActive}">
-                            <!-- Nivel 2 sin hijos -->
                             <a th:if="${#lists.isEmpty(sub.subCategories)}"
                                th:href="@{/s/{slug}/catalog(slug=${slug}, category=${sub.id})}"
                                class="text-sm font-medium text-slate-600 hover:text-brand py-2 block"
                                th:text="${sub.name}">Subcategoría</a>
 
-                            <!-- Nivel 2 con hijos de Nivel 3 -->
                             <details th:if="${not #lists.isEmpty(sub.subCategories)}" class="group/mobsub">
                                 <summary class="flex items-center justify-between py-2 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
                                     <a th:href="@{/s/{slug}/catalog(slug=${slug}, category=${sub.id})}"
@@ -169,6 +176,20 @@
                 </details>
             </div>
         </div>
+
+        <!-- Accesos rápidos en la base del menú móvil -->
+        <div class="p-4 border-t border-slate-100 bg-slate-50 space-y-2">
+            <div class="grid grid-cols-2 gap-2">
+                <a th:href="@{/s/{slug}/wishlist(slug=${slug})}" class="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:text-red-500">
+                    <svg class="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L12 8.343l3.172-3.171a4 4 0 115.656 5.656L12 21.414l-8.828-8.828a4 4 0 010-5.656z" clip-rule="evenodd"></path></svg>
+                    <span>Favoritos</span>
+                </a>
+                <a th:href="@{/s/{slug}/cart(slug=${slug})}" class="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-brand text-white rounded-xl text-xs font-bold shadow-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+                    <span>Mi Bolsa</span>
+                </a>
+            </div>
+        </div>
     </div>
 </nav>
 
@@ -184,12 +205,10 @@
             <h3 class="text-xl font-bold mb-3" th:text="${settings.storeName}">Tienda</h3>
             <p class="text-sm opacity-90 leading-relaxed">Bienvenido a nuestra tienda online. Descubre nuestro catálogo con los mejores productos.</p>
 
-            <!-- Redes Sociales Configuradas en Dashboard -->
             <div class="flex items-center gap-3 mt-5"
                  th:if="${(settings.instagram != null and !settings.instagram.isBlank())
                        or (settings.facebook != null and !settings.facebook.isBlank())
                        or (settings.tiktok != null and !settings.tiktok.isBlank())}">
-
                 <!-- Instagram -->
                 <a th:if="${settings.instagram != null and !settings.instagram.isBlank()}"
                    th:with="igClean=${#strings.replace(#strings.trim(settings.instagram), '@', '')},
@@ -226,8 +245,9 @@
             <h4 class="font-bold mb-4 uppercase text-sm tracking-wider">Contacto</h4>
             <ul class="space-y-2.5 text-sm opacity-90">
                 <li th:if="${settings.whatsapp != null && !settings.whatsapp.isBlank()}"
-                    th:with="waClean=${#strings.replace(#strings.replace(#strings.replace(settings.whatsapp, ' ', ''), '+', ''), '-', '')}">
-                    <a th:href="'https://wa.me/' + ${waClean}" target="_blank" rel="noopener" class="inline-flex items-center gap-2 hover:underline">
+                    th:with="waDigits=${#strings.replace(#strings.replace(#strings.replace(settings.whatsapp, ' ', ''), '+', ''), '-', '')},
+                             waNormalized=${#strings.length(waDigits) == 10 ? '57' + waDigits : waDigits}">
+                    <a th:href="'https://wa.me/' + ${waNormalized}" target="_blank" rel="noopener" class="inline-flex items-center gap-2 hover:underline">
                         <span>WhatsApp:</span>
                         <span class="font-semibold" th:text="${settings.whatsapp}"></span>
                     </a>
@@ -252,33 +272,11 @@
 <script th:src="@{/js/ui/toast.js}"></script>
 <script th:src="@{/js/ui/navbar.js}"></script>
 <script th:src="@{/js/ui/form.js}"></script>
+<script th:src="@{/js/ui/gallery.js}"></script>
 <script th:src="@{/js/modules/cart.js}"></script>
 <script th:src="@{/js/modules/wishlist.js}"></script>
 <script th:src="@{/js/ui/modal.js}"></script>
-<script>
-    window.Storevo = window.Storevo || {};
-    Storevo.Gallery = {
-        next: function(e, btn) {
-            e.preventDefault(); e.stopPropagation();
-            let imgEl = document.getElementById(btn.getAttribute('data-target'));
-            let images = btn.getAttribute('data-images').split(',');
-            if (images.length <= 1) return;
-            let currentIndex = images.indexOf(imgEl.getAttribute('src'));
-            let nextIndex = (currentIndex + 1) % images.length;
-            imgEl.setAttribute('src', images[nextIndex]);
-        },
-        prev: function(e, btn) {
-            e.preventDefault(); e.stopPropagation();
-            let imgEl = document.getElementById(btn.getAttribute('data-target'));
-            let images = btn.getAttribute('data-images').split(',');
-            if (images.length <= 1) return;
-            let currentIndex = images.indexOf(imgEl.getAttribute('src'));
-            if (currentIndex === -1) currentIndex = 0;
-            let prevIndex = (currentIndex - 1 + images.length) % images.length;
-            imgEl.setAttribute('src', images[prevIndex]);
-        }
-    };
-</script>
+
 <th:block layout:fragment="scripts"></th:block>
 </body>
 </html>

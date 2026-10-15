@@ -20,25 +20,27 @@
 
         <div th:unless="${#lists.isEmpty(products)}" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
             <div th:each="p : ${products}"
-                 th:with="isOutOfStock=${!p.isMadeToOrder and !p.hasVariants and (p.stock == null or p.stock <= 0)},
-                          hasMultiple=${p.images != null and p.images.size() > 1}"
+                 th:with="isOutOfStock=${!p.isMadeToOrder and (p.stock == null or p.stock <= 0)},
+                          hasMultiple=${p.images != null and p.images.size() > 1},
+                          cardImg=${p.getMainImageThumbnailUrl() != null ? p.getMainImageThumbnailUrl() : (p.mainImageUrl != null ? p.mainImageUrl : '/img/placeholder.jpg')}"
                  class="group relative bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-100 flex flex-col h-full">
 
                 <div class="relative aspect-[4/5] overflow-hidden bg-slate-50 flex-shrink-0 group/gallery">
                     <a th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${p.id})}" class="block w-full h-full">
                         <img th:id="'home-gallery-img-' + ${p.id}"
-                             th:src="${p.mainImageUrl != null ? p.mainImageUrl : '/img/placeholder.jpg'}"
+                             th:src="${cardImg}"
                              th:alt="${p.name}"
+                             data-gallery-index="0"
                              loading="lazy"
                              decoding="async"
                              class="w-full h-full object-cover group-hover/gallery:scale-105 transition-transform duration-500">
                     </a>
 
                     <div th:if="${hasMultiple}" class="absolute inset-0 flex items-center justify-between px-2 opacity-100 lg:opacity-0 lg:group-hover/gallery:opacity-100 transition-opacity duration-300 pointer-events-none z-20">
-                        <button type="button" th:data-target="'home-gallery-img-' + ${p.id}" th:data-images="${#strings.listJoin(p.images.![secureUrl], ',')}" onclick="Storevo.Gallery.prev(event, this)" class="w-8 h-8 rounded-full bg-white/90 hover:bg-white text-slate-800 flex items-center justify-center shadow-lg pointer-events-auto transition-transform hover:scale-110">
+                        <button type="button" aria-label="Imagen anterior" th:data-target="'home-gallery-img-' + ${p.id}" th:data-images="${#strings.listJoin(p.images.![secureUrl], ',')}" onclick="Storevo.Gallery.prev(event, this)" class="w-8 h-8 rounded-full bg-white/90 hover:bg-white text-slate-800 flex items-center justify-center shadow-lg pointer-events-auto transition-transform hover:scale-110">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path></svg>
                         </button>
-                        <button type="button" th:data-target="'home-gallery-img-' + ${p.id}" th:data-images="${#strings.listJoin(p.images.![secureUrl], ',')}" onclick="Storevo.Gallery.next(event, this)" class="w-8 h-8 rounded-full bg-white/90 hover:bg-white text-slate-800 flex items-center justify-center shadow-lg pointer-events-auto transition-transform hover:scale-110">
+                        <button type="button" aria-label="Imagen siguiente" th:data-target="'home-gallery-img-' + ${p.id}" th:data-images="${#strings.listJoin(p.images.![secureUrl], ',')}" onclick="Storevo.Gallery.next(event, this)" class="w-8 h-8 rounded-full bg-white/90 hover:bg-white text-slate-800 flex items-center justify-center shadow-lg pointer-events-auto transition-transform hover:scale-110">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
                         </button>
                     </div>
@@ -50,17 +52,19 @@
                         <span th:if="${!isOutOfStock and p.discountPrice != null and p.discountPrice > 0}" class="bg-red-500 text-white text-[10px] sm:text-xs font-black uppercase px-2.5 py-1 rounded-full shadow-md">
                             Oferta
                         </span>
+                        <span th:if="${p.isMadeToOrder}" class="bg-amber-500/95 text-white text-[10px] sm:text-xs font-black uppercase px-2.5 py-1 rounded-full shadow-md">
+                            Bajo pedido
+                        </span>
                     </div>
 
                     <div class="absolute top-3 right-3 flex flex-col gap-2 z-30">
                         <button th:if="${!p.hasVariants and !isOutOfStock}"
                                 type="button" th:data-slug="${slug}" th:data-id="${p.id}"
-                                onclick="toggleCartItem(this, this.getAttribute('data-slug'), this.getAttribute('data-id'))"
+                                onclick="addItemToCart(this, this.getAttribute('data-slug'), this.getAttribute('data-id'))"
                                 class="p-2.5 bg-white/90 backdrop-blur text-slate-400 hover:text-brand rounded-full shadow-lg transition-all duration-300" title="Agregar a la bolsa">
                             <svg class="w-5 h-5 icon-empty" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
                             <svg class="w-5 h-5 icon-filled hidden text-brand" fill="currentColor" viewBox="0 0 24 24"><path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path><path fill="white" d="M10.5 15.5l-3-3 1.4-1.4 1.6 1.6 4.6-4.6 1.4 1.4-6 6z"></path></svg>
                         </button>
-
                         <button type="button" th:data-slug="${slug}" th:data-id="${p.id}"
                                 onclick="toggleWishlistItem(this, this.getAttribute('data-slug'), this.getAttribute('data-id'))"
                                 th:class="${wishlistProductIds != null and wishlistProductIds.contains(p.id)} ? 'p-2.5 backdrop-blur rounded-full shadow-lg transition-all duration-300 bg-white border border-red-500 text-red-500' : 'p-2.5 bg-white/90 backdrop-blur text-slate-400 hover:text-red-500 rounded-full shadow-lg transition-all duration-300'" title="Agregar a favoritos">
@@ -92,10 +96,10 @@
                             <button th:if="${!p.hasVariants and !isOutOfStock}" type="button" th:data-slug="${slug}" th:data-id="${p.id}" onclick="buyNowFast(this.getAttribute('data-slug'), this.getAttribute('data-id'))" class="flex items-center justify-center px-2 py-2 text-xs font-bold text-white bg-brand hover:bg-brand/90 rounded-lg transition-colors shadow-md shadow-brand/20 text-center">
                                 Comprar
                             </button>
-                            <a th:if="${p.hasVariants}" th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${p.id})}" class="flex items-center justify-center px-2 py-2 text-xs font-bold text-white bg-slate-800 hover:bg-slate-900 rounded-lg transition-colors shadow-md shadow-slate-900/20 text-center">
+                            <a th:if="${p.hasVariants and !isOutOfStock}" th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${p.id})}" class="flex items-center justify-center px-2 py-2 text-xs font-bold text-white bg-slate-800 hover:bg-slate-900 rounded-lg transition-colors shadow-md shadow-slate-900/20 text-center">
                                 Ver opciones
                             </a>
-                            <button th:if="${!p.hasVariants and isOutOfStock}" type="button" disabled class="flex items-center justify-center px-2 py-2 text-xs font-bold text-slate-400 bg-slate-100 rounded-lg cursor-not-allowed text-center">
+                            <button th:if="${isOutOfStock}" type="button" disabled class="flex items-center justify-center px-2 py-2 text-xs font-bold text-slate-400 bg-slate-100 rounded-lg cursor-not-allowed text-center">
                                 Agotado
                             </button>
                         </div>

@@ -12,10 +12,15 @@ Storevo.Checkout = {
         const invoiceToggle = document.getElementById('toggle-electronic-invoice');
         const invoicePanel = document.getElementById('electronic-invoice-fields');
         const docTypeSelect = document.getElementById('checkout-doc-type');
+        const docInput = document.getElementById('checkout-document');
         const nitDvInput = document.getElementById('checkout-nit-dv');
         const legalNameInput = document.getElementById('checkout-legal-name');
         const emailInput = document.getElementById('checkout-email');
+
         const emailReqBadge = document.getElementById('email-req-badge');
+        const emailOptBadge = document.getElementById('email-opt-badge');
+        const docReqBadge = document.getElementById('doc-req-badge');
+        const docOptBadge = document.getElementById('doc-opt-badge');
 
         // 1. Autocompletar datos previos del comprador en esta tienda
         try {
@@ -35,9 +40,9 @@ Storevo.Checkout = {
             console.warn('No se pudo recuperar el perfil local de checkout', e);
         }
 
-        // 2. Obligatoriedad dinámica según el flujo de compra y facturación electrónica (incluyendo DV para NIT)
+        // 2. Obligatoriedad dinámica según el flujo (WhatsApp vs Pago Online) y Facturación DIAN
         const syncRequiredFields = () => {
-            const needsInvoice = invoiceToggle && invoiceToggle.checked;
+            const needsInvoice = Boolean(invoiceToggle && invoiceToggle.checked);
             const isNit = needsInvoice && docTypeSelect && docTypeSelect.value === 'NIT';
 
             if (invoicePanel) {
@@ -46,18 +51,28 @@ Storevo.Checkout = {
             if (legalNameInput) {
                 legalNameInput.required = needsInvoice;
             }
+
+            // Mostrar y exigir Dígito de Verificación (DV) cuando elige NIT
             if (nitDvInput) {
                 nitDvInput.classList.toggle('hidden', !isNit);
                 nitDvInput.required = isNit;
                 if (!isNit) nitDvInput.value = '';
             }
+
+            // Correo y Documento son obligatorios si paga con Wompi (!requiresWhatsapp) o si pide Factura Electrónica
+            const mustRequireDocAndEmail = !requiresWhatsapp || needsInvoice;
+
             if (emailInput) {
-                const emailRequired = !requiresWhatsapp || needsInvoice;
-                emailInput.required = emailRequired;
-                if (emailReqBadge) {
-                    emailReqBadge.classList.toggle('hidden', !emailRequired);
-                }
+                emailInput.required = mustRequireDocAndEmail;
             }
+            if (emailReqBadge) emailReqBadge.classList.toggle('hidden', !mustRequireDocAndEmail);
+            if (emailOptBadge) emailOptBadge.classList.toggle('hidden', mustRequireDocAndEmail);
+
+            if (docInput) {
+                docInput.required = mustRequireDocAndEmail;
+            }
+            if (docReqBadge) docReqBadge.classList.toggle('hidden', !mustRequireDocAndEmail);
+            if (docOptBadge) docOptBadge.classList.toggle('hidden', mustRequireDocAndEmail);
         };
 
         if (invoiceToggle) {
@@ -68,14 +83,8 @@ Storevo.Checkout = {
         }
         syncRequiredFields();
 
-        // 3. Guardar datos en localStorage al enviar y prevenir doble envío
-        form.addEventListener('submit', (e) => {
-            if (form.dataset.submitting === 'true') {
-                e.preventDefault();
-                return;
-            }
-            form.dataset.submitting = 'true';
-
+        // 3. Guardar datos en localStorage y bloquear doble clic al enviar
+        form.addEventListener('submit', () => {
             try {
                 const profileToSave = {};
                 [
@@ -89,15 +98,16 @@ Storevo.Checkout = {
                     }
                 });
                 localStorage.setItem(storageKey, JSON.stringify(profileToSave));
-            } catch (err) {
-                console.warn('No se pudo guardar el perfil local de checkout', err);
+            } catch (e) {
+                console.warn('No se pudo guardar el perfil local de checkout', e);
             }
 
             const submitBtn = document.getElementById('btn-submit-checkout') || document.getElementById('btn-submit-whatsapp');
             if (submitBtn) {
-                submitBtn.classList.add('opacity-75', 'pointer-events-none');
-                const span = submitBtn.querySelector('span');
-                if (span) span.textContent = 'Procesando tu pedido...';
+                setTimeout(() => {
+                    submitBtn.disabled = true;
+                    submitBtn.classList.add('opacity-75', 'cursor-not-allowed');
+                }, 10);
             }
         });
     }

@@ -28,8 +28,12 @@ public class OrderController {
 
     @GetMapping("/{id}/success")
     public String orderSuccess(@PathVariable String slug, @PathVariable Long id, HttpServletRequest request, Model model) {
-        // Usamos orderService.getOrderById(id) para traer items inicializados dentro de la transacción
         Order order = orderService.getOrderById(id);
+
+        // Si el pedido ya fue pagado, redirigimos a la pantalla de resultado para evitar cobros duplicados
+        if (order.getStatus() == OrderStatus.PAID) {
+            return "redirect:/s/" + slug + "/order/" + id + "/wompi-result";
+        }
 
         Store store = (Store) request.getAttribute("currentStore");
 
@@ -59,7 +63,6 @@ public class OrderController {
             model.addAttribute("wompiSignature", checkoutData.getSignature());
             model.addAttribute("wompiRedirectUrl", redirectUrl);
         } catch (RuntimeException e) {
-            // Restauramos el contexto de forma segura si ocurre un error o si no hay llaves
             TenantContext.setCurrentTenant(store.getSchemaName());
             e.printStackTrace();
 
@@ -72,12 +75,10 @@ public class OrderController {
 
     @GetMapping("/{id}/whatsapp")
     public String orderWhatsapp(@PathVariable String slug, @PathVariable Long id, HttpServletRequest request, Model model) {
-        // Inicializa order.getItems() dentro de la transacción de OrderService
         Order order = orderService.getOrderById(id);
 
         Store store = (Store) request.getAttribute("currentStore");
 
-        // Apagamos el switch antes de consultar configuraciones globales
         TenantContext.clear();
         var settings = storeSettingsService.getSettingsByStore(store);
         TenantContext.setCurrentTenant(store.getSchemaName());
@@ -115,21 +116,28 @@ public class OrderController {
             HttpServletRequest request,
             Model model) {
 
-        if (wompiTransactionId != null) {
-            Store store = (Store) request.getAttribute("currentStore");
-            orderService.verifyTransactionWithWompi(store, id, wompiTransactionId);
+        Store store = (Store) request.getAttribute("currentStore");
+        String wompiTxStatus = null;
+
+        if (wompiTransactionId != null && !wompiTransactionId.isBlank()) {
+            wompiTxStatus = orderService.verifyTransactionWithWompi(store, id, wompiTransactionId.trim());
         }
 
-        // Blindamos el contexto al regresar de consultar en Wompi
-        Store store = (Store) request.getAttribute("currentStore");
         TenantContext.setCurrentTenant(store.getSchemaName());
 
         Order order = orderService.getOrderById(id);
 
         model.addAttribute("order", order);
         model.addAttribute("wompiTransactionId", wompiTransactionId);
+        model.addAttribute("wompiTxStatus", wompiTxStatus);
 
-        if (order.getStatus() == OrderStatus.CANCELLED) {
+        boolean paymentFailed = "DECLINED".equals(wompiTxStatus)
+                || "ERROR".equals(wompiTxStatus)
+                || "VOIDED".equals(wompiTxStatus)
+                || "INVALID".equals(wompiTxStatus)
+                || order.getStatus() == OrderStatus.CANCELLED;
+
+        if (paymentFailed) {
             model.addAttribute("pageTitle", "Pago Rechazado");
             return "storefront/order-failed";
         }

@@ -5,38 +5,76 @@
     <title>Resultado del Pago</title>
 </head>
 <body>
-<div layout:fragment="content" class="max-w-3xl mx-auto px-4 py-20 text-center">
+<div layout:fragment="content" class="max-w-3xl mx-auto px-4 py-12 sm:py-20 text-center"
+     th:with="isPaid=${order.status != null and order.status.name() == 'PAID'}">
+    <div class="bg-white p-6 sm:p-10 rounded-2xl shadow-sm border border-slate-200">
 
-    <div class="bg-white p-10 rounded-2xl shadow-sm border border-slate-200">
-        <div class="w-24 h-24 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
+        <!-- Ícono Verde si ya está PAGADO -->
+        <div th:if="${isPaid}" class="w-24 h-24 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
             <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
         </div>
 
-        <h1 class="text-4xl font-black text-slate-900 mb-4">¡Gracias por tu compra!</h1>
-        <p class="text-slate-600 mb-8 text-lg">Tu transacción ha finalizado. Hemos registrado tu pedido número <strong class="text-slate-900" th:text="'#' + ${order.id}"></strong>.</p>
+        <!-- Ícono Ámbar si el pago sigue en validación bancaria (PENDING) -->
+        <div th:unless="${isPaid}" class="w-24 h-24 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        </div>
+
+        <h1 class="text-3xl sm:text-4xl font-black text-slate-900 mb-3"
+            th:text="${isPaid ? '¡Gracias por tu compra!' : 'Pago en proceso de validación'}">
+            ¡Gracias por tu compra!
+        </h1>
+
+        <p th:if="${isPaid}" class="text-slate-600 mb-8 text-base sm:text-lg">
+            Tu pago fue aprobado exitosamente. Hemos registrado tu pedido número <strong class="text-slate-900" th:text="'#' + ${order.id}"></strong>.
+        </p>
+
+        <p th:unless="${isPaid}" class="text-slate-600 mb-8 text-base sm:text-lg max-w-xl mx-auto">
+            Tu pedido <strong class="text-slate-900" th:text="'#' + ${order.id}"></strong> está registrado y estamos esperando la confirmación final de tu entidad financiera.
+        </p>
 
         <div class="bg-slate-50 p-6 rounded-xl border border-slate-200 text-left max-w-md mx-auto mb-8">
             <ul class="space-y-3 text-sm">
+                <li class="flex justify-between items-center">
+                    <span class="text-slate-500">Estado del Pedido:</span>
+                    <span th:if="${isPaid}" class="px-2.5 py-0.5 rounded-full text-xs font-black uppercase bg-emerald-100 text-emerald-700">Pagado</span>
+                    <span th:unless="${isPaid}" class="px-2.5 py-0.5 rounded-full text-xs font-black uppercase bg-amber-100 text-amber-800">En validación</span>
+                </li>
                 <li class="flex justify-between">
                     <span class="text-slate-500">Comprobante Wompi:</span>
-                    <span class="font-mono text-slate-900 font-bold" th:text="${wompiTransactionId != null ? wompiTransactionId : 'Pendiente'}"></span>
+                    <span class="font-mono text-slate-900 font-bold" th:text="${wompiTransactionId != null and !wompiTransactionId.isBlank() ? wompiTransactionId : 'En proceso'}"></span>
                 </li>
                 <li class="flex justify-between">
                     <span class="text-slate-500">Cliente:</span>
                     <span class="text-slate-900 font-medium" th:text="${order.customerName}"></span>
                 </li>
                 <li class="flex justify-between border-t border-slate-200 pt-3 mt-3">
-                    <span class="text-slate-500">Total Pagado:</span>
-                    <span class="text-brand font-bold" th:text="${order.total != null ? '$ ' + #numbers.formatDecimal(order.total, 1, 'POINT', 0, 'COMMA') : '$ 0'}"></span>
+                    <span class="text-slate-500" th:text="${isPaid ? 'Total Pagado:' : 'Total del Pedido:'}">Total:</span>
+                    <span class="text-brand font-black text-base" th:text="${order.total != null ? '$ ' + #numbers.formatDecimal(order.total, 1, 'POINT', 0, 'COMMA') : '$ 0'}"></span>
                 </li>
             </ul>
         </div>
 
-        <a th:href="@{/s/{slug}(slug=${slug})}" class="inline-block bg-brand hover-bg-brand text-white font-bold py-3 px-8 rounded-xl shadow-md transition">
-            Volver a la tienda
-        </a>
-    </div>
+        <div class="flex flex-col sm:flex-row justify-center gap-3">
+            <!-- Si sigue pendiente con ID de transacción, permitir refrescar la consulta -->
+            <a th:if="${!isPaid and wompiTransactionId != null and !wompiTransactionId.isBlank()}"
+               th:href="@{/s/{slug}/order/{id}/wompi-result(slug=${slug}, id=${order.id}, id=${wompiTransactionId})}"
+               class="inline-block bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 px-6 rounded-xl shadow-md transition">
+                Actualizar estado del pago
+            </a>
 
+            <!-- Si entró sin haber pagado, permitir ir a la pasarela -->
+            <a th:if="${!isPaid and (wompiTransactionId == null or wompiTransactionId.isBlank())}"
+               th:href="@{/s/{slug}/order/{id}/success(slug=${slug}, id=${order.id})}"
+               class="inline-block bg-brand hover-bg-brand text-white font-bold py-3 px-8 rounded-xl shadow-md transition">
+                Ir a pagar ahora
+            </a>
+
+            <a th:href="@{/s/{slug}(slug=${slug})}"
+               th:class="${isPaid ? 'inline-block bg-brand hover-bg-brand text-white font-bold py-3 px-8 rounded-xl shadow-md transition' : 'inline-block bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-3 px-8 rounded-xl transition'}">
+                Volver a la tienda
+            </a>
+        </div>
+    </div>
 </div>
 </body>
 </html>

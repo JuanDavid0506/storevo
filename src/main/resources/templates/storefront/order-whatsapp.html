@@ -55,13 +55,9 @@
         </div>
     </div>
 </div>
-<script th:if="${whatsappConfigured}" layout:fragment="scripts">
-    (function() {
-        var link = document.getElementById('whatsappRedirectLink');
-        if (link) {
-            window.location.href = link.href;
-        }
-    })();
-</script>
+
+<th:block layout:fragment="scripts">
+    <script th:if="${whatsappConfigured}" th:src="@{/js/modules/orderWhatsapp.js}"></script>
+</th:block>
 </body>
 </html>

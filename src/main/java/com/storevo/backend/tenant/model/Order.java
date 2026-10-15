@@ -20,8 +20,27 @@ public class Order {
     @Column(nullable = false, length = 20)
     private String customerPhone;
 
-    @Column(name = "customer_document", length = 20)
+    @Column(name = "customer_email", length = 120)
+    private String customerEmail;
+
+    @Column(name = "document_type", length = 10)
+    private String documentType;
+
+    @Column(name = "customer_document", length = 30)
     private String customerDocument;
+
+    @Column(name = "verification_digit", length = 5)
+    private String verificationDigit;
+
+    @Column(name = "legal_name", length = 150)
+    private String legalName;
+
+    @Column(name = "tax_regime", length = 40)
+    private String taxRegime;
+
+    @Column(name = "requires_electronic_invoice")
+    @Builder.Default
+    private Boolean requiresElectronicInvoice = false;
 
     @Column(nullable = false, length = 200)
     private String address;
@@ -39,9 +58,6 @@ public class Order {
     @Column(nullable = false, length = 30)
     private OrderStatus status;
 
-    // Canal de venta del pedido. Por defecto ONLINE para no alterar el comportamiento
-    // de pedidos ya existentes ni de cualquier otro punto del código que construya
-    // una Order sin especificarlo explícitamente.
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default
@@ -71,7 +87,6 @@ public class Order {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
@@ -90,6 +105,4 @@ public class Order {
     public int getTotalItemsCount() {
         return items.stream().mapToInt(OrderItem::getQuantity).sum();
     }
-
-
 }

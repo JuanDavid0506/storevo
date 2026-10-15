@@ -42,7 +42,7 @@ public class OrderService {
 
     @Autowired
     @Lazy
-    private OrderService self; // Auto-referencia para aislar transacciones internas
+    private OrderService self;
 
     @Transactional(readOnly = true)
     public List<Order> getAllOrders() {
@@ -56,11 +56,6 @@ public class OrderService {
         return searchOrders(q, status, channel, null, null, null, sortStr, pageable);
     }
 
-    /**
-     * Listado paginado del dashboard. Búsqueda, estado, canal, fechas y orden se resuelven en base de datos.
-     * - "last_7_days": hoy + 6 días anteriores.
-     * - "last_30_days": hoy + 29 días anteriores.
-     */
     @Transactional(readOnly = true)
     public Page<Order> searchOrders(
             String q,
@@ -73,7 +68,7 @@ public class OrderService {
             Pageable pageable) {
 
         String term = (q == null) ? "" : q.trim();
-        if (term.startsWith("#")) term = term.substring(1).trim(); // "#123" -> "123"
+        if (term.startsWith("#")) term = term.substring(1).trim();
         Long orderId = null;
         if (term.matches("\\d{1,18}")) orderId = Long.valueOf(term);
         String normalizedQ = term.isEmpty() ? null : term;
@@ -155,8 +150,47 @@ public class OrderService {
         return order;
     }
 
+    /**
+     * Firma original conservada por retrocompatibilidad.
+     */
     @Transactional
-    public Order createOrderFromCart(String slug, String customerName, String customerPhone, String customerDocument, String address, String city, String notes, OrderChannel channel) {
+    public Order createOrderFromCart(
+            String slug,
+            String customerName,
+            String customerPhone,
+            String customerDocument,
+            String address,
+            String city,
+            String notes,
+            OrderChannel channel) {
+
+        return createOrderFromCart(
+                slug, customerName, customerPhone, null,
+                null, customerDocument, null, null, null, false,
+                address, city, notes, channel
+        );
+    }
+
+    /**
+     * Crea el pedido persistiendo también correo y datos fiscales DIAN sin imponer bloqueos por plan.
+     */
+    @Transactional
+    public Order createOrderFromCart(
+            String slug,
+            String customerName,
+            String customerPhone,
+            String customerEmail,
+            String documentType,
+            String customerDocument,
+            String verificationDigit,
+            String legalName,
+            String taxRegime,
+            Boolean requiresElectronicInvoice,
+            String address,
+            String city,
+            String notes,
+            OrderChannel channel) {
+
         List<CartItemDto> cartItems = cartManager.getCart(slug);
 
         if (cartItems.isEmpty()) {
@@ -166,12 +200,18 @@ public class OrderService {
         String initialPaymentMethod = channel == OrderChannel.WHATSAPP ? "Pendiente por WhatsApp" : "Wompi / Tarjeta";
 
         Order order = Order.builder()
-                .customerName(customerName)
-                .customerPhone(customerPhone)
-                .customerDocument(customerDocument)
-                .address(address)
-                .city(city)
-                .notes(notes)
+                .customerName(customerName != null ? customerName.trim() : "")
+                .customerPhone(customerPhone != null ? customerPhone.trim() : "")
+                .customerEmail(cleanNullable(customerEmail))
+                .documentType(cleanNullable(documentType))
+                .customerDocument(cleanNullable(customerDocument))
+                .verificationDigit(cleanNullable(verificationDigit))
+                .legalName(cleanNullable(legalName))
+                .taxRegime(cleanNullable(taxRegime))
+                .requiresElectronicInvoice(Boolean.TRUE.equals(requiresElectronicInvoice))
+                .address(address != null ? address.trim() : "")
+                .city(city != null ? city.trim() : "")
+                .notes(cleanNullable(notes))
                 .total(cartManager.getTotal(slug))
                 .status(OrderStatus.PENDING)
                 .channel(channel)
@@ -217,20 +257,47 @@ public class OrderService {
         return savedOrder;
     }
 
+    private String cleanNullable(String value) {
+        return (value != null && !value.isBlank()) ? value.trim() : null;
+    }
+
     public String buildWhatsappMessage(Order order) {
         StringBuilder sb = new StringBuilder();
-        sb.append("Hola, quiero realizar este pedido en Storevo:\n\n");
+        sb.append("Hola, quiero realizar el *Pedido #").append(order.getId()).append("*:").append("\n\n");
 
         for (OrderItem item : order.getItems()) {
-            sb.append("• ").append(item.getProductName())
-                    .append(" × ").append(item.getQuantity())
-                    .append("\n");
+            sb.append("• ").append(item.getQuantity()).append("x ").append(item.getProductName());
+            if (item.getSubtotal() != null) {
+                sb.append(" ($").append(formatCurrency(item.getSubtotal())).append(")");
+            }
+            sb.append("\n");
         }
 
-        sb.append("\nTotal: $").append(formatCurrency(order.getTotal()));
-        sb.append("\nNombre: ").append(order.getCustomerName());
-        sb.append("\n\n¿Me confirman disponibilidad?");
+        sb.append("\n*Total a pagar:* $").append(formatCurrency(order.getTotal())).append("\n");
+        sb.append("\n*Datos de entrega:*");
+        sb.append("\n• Cliente: ").append(order.getCustomerName());
+        if (order.getCustomerPhone() != null && !order.getCustomerPhone().isBlank()) {
+            sb.append("\n• Teléfono: ").append(order.getCustomerPhone());
+        }
+        if (order.getCustomerDocument() != null && !order.getCustomerDocument().isBlank()) {
+            String docPrefix = (order.getDocumentType() != null && !order.getDocumentType().isBlank())
+                    ? order.getDocumentType() + " " : "";
+            sb.append("\n• Documento: ").append(docPrefix).append(order.getCustomerDocument());
+        }
+        if (Boolean.TRUE.equals(order.getRequiresElectronicInvoice()) && order.getLegalName() != null) {
+            sb.append("\n• Factura Electrónica a: ").append(order.getLegalName());
+        }
+        if (order.getCity() != null && !order.getCity().isBlank()) {
+            sb.append("\n• Ciudad: ").append(order.getCity());
+        }
+        if (order.getAddress() != null && !order.getAddress().isBlank()) {
+            sb.append("\n• Dirección: ").append(order.getAddress());
+        }
+        if (order.getNotes() != null && !order.getNotes().isBlank()) {
+            sb.append("\n• Notas: ").append(order.getNotes());
+        }
 
+        sb.append("\n\n¿Me confirman disponibilidad y datos para finalizar?");
         return sb.toString();
     }
 
@@ -281,6 +348,31 @@ public class OrderService {
     }
 
     @Transactional
+    public void recordPaymentAttemptFailure(Long orderId, String wompiTransactionId, String wompiStatus) {
+        Order order = orderRepository.findById(orderId).orElse(null);
+        if (order == null || order.getStatus() != OrderStatus.PENDING) return;
+
+        String txDesc = "Intento de pago en Wompi no completado (" + wompiStatus + "). ID Transacción: " + wompiTransactionId;
+        boolean alreadyRecorded = order.getHistory().stream()
+                .anyMatch(h -> txDesc.equals(h.getDescription()));
+
+        if (!alreadyRecorded) {
+            OrderHistory historyObj = OrderHistory.builder()
+                    .order(order)
+                    .eventType(OrderHistoryType.SYSTEM_EVENT)
+                    .origin(EventOrigin.WEBHOOK)
+                    .oldStatus(order.getStatus())
+                    .newStatus(order.getStatus())
+                    .description(txDesc)
+                    .userId(null)
+                    .build();
+
+            order.getHistory().add(historyObj);
+            orderRepository.save(order);
+        }
+    }
+
+    @Transactional
     public OrderNote addInternalNote(Long orderId, String note, Long userId) {
         Order order = orderRepository.findById(orderId).orElseThrow(() -> new OrderNotFoundException(orderId));
 
@@ -308,14 +400,19 @@ public class OrderService {
         }
     }
 
-    public void verifyTransactionWithWompi(Store store, Long orderId, String wompiTransactionId) {
+    public String verifyTransactionWithWompi(Store store, Long orderId, String wompiTransactionId) {
         try {
             TenantContext.setCurrentTenant(store.getSchemaName());
 
             Order order = orderRepository.findById(orderId).orElse(null);
-
-            if (order == null || order.getStatus() != OrderStatus.PENDING) {
-                return;
+            if (order == null) {
+                return "INVALID";
+            }
+            if (order.getStatus() == OrderStatus.PAID) {
+                return "APPROVED";
+            }
+            if (order.getStatus() != OrderStatus.PENDING) {
+                return order.getStatus().name();
             }
 
             TenantContext.clear();
@@ -328,7 +425,7 @@ public class OrderService {
                     .orElse(null);
 
             if (wompiConfig == null) {
-                return;
+                return "PENDING";
             }
 
             TenantContext.setCurrentTenant(store.getSchemaName());
@@ -344,13 +441,30 @@ public class OrderService {
                     JsonNode.class
             );
 
-            if (response.getBody() != null
-                    && response.getStatusCode().is2xxSuccessful()) {
-
+            if (response.getBody() != null && response.getStatusCode().is2xxSuccessful()) {
                 JsonNode data = response.getBody().get("data");
-
                 if (data == null || !data.has("status")) {
-                    return;
+                    return "INVALID";
+                }
+
+                if (data.has("reference") && !data.get("reference").isNull()) {
+                    String ref = data.get("reference").asText("");
+                    String idStr = String.valueOf(orderId);
+                    boolean matchesOrder = ref.equals(idStr)
+                            || ref.matches(".*(?<!\\d)" + idStr + "(?!\\d).*");
+                    if (!matchesOrder) {
+                        System.out.println("Alerta de seguridad Wompi: La referencia " + ref + " no corresponde al pedido #" + orderId);
+                        return "INVALID";
+                    }
+                }
+
+                long expectedCents = Math.round((order.getTotal() != null ? order.getTotal() : 0.0) * 100);
+                if (data.has("amount_in_cents") && !data.get("amount_in_cents").isNull()) {
+                    long paidCents = data.get("amount_in_cents").asLong(-1L);
+                    if (paidCents != expectedCents) {
+                        System.out.println("Alerta de seguridad Wompi: Monto pagado (" + paidCents + ") difiere del pedido #" + orderId + " (" + expectedCents + ")");
+                        return "INVALID";
+                    }
                 }
 
                 String definitiveStatus = data.get("status").asText();
@@ -362,20 +476,22 @@ public class OrderService {
                             EventOrigin.WEBHOOK,
                             null
                     );
+                    return "APPROVED";
                 } else if ("DECLINED".equals(definitiveStatus)
                         || "ERROR".equals(definitiveStatus)
                         || "VOIDED".equals(definitiveStatus)) {
-                    self.updateOrderStatus(
-                            orderId,
-                            OrderStatus.CANCELLED,
-                            EventOrigin.WEBHOOK,
-                            null
-                    );
+                    self.recordPaymentAttemptFailure(orderId, wompiTransactionId, definitiveStatus);
+                    return definitiveStatus;
                 }
+
+                return definitiveStatus;
             }
+
+            return "PENDING";
 
         } catch (Exception e) {
             System.out.println("Error verificando transacción Wompi: " + e.getMessage());
+            return "ERROR";
         } finally {
             TenantContext.setCurrentTenant(store.getSchemaName());
         }

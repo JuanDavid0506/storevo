@@ -60,21 +60,30 @@
         </div>
 
         <!-- Estado vacío cuando el buscador en vivo no encuentra coincidencias -->
-        <div id="catalog-no-matches" class="hidden text-center py-16 bg-slate-50 rounded-2xl border border-slate-100">
+        <div id="catalog-no-matches" class="hidden text-center py-16 bg-slate-50 rounded-2xl border border-slate-100 px-4">
             <svg class="w-14 h-14 mx-auto text-slate-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
             <h3 class="text-lg font-bold text-slate-700">No encontramos productos para tu búsqueda</h3>
-            <p class="text-sm text-slate-500 mt-1 mb-5">Intenta con otra palabra clave o limpia el filtro.</p>
-            <button type="button" id="catalog-reset-search" class="bg-brand text-white font-bold py-2.5 px-6 rounded-xl text-sm shadow-md hover-bg-brand transition">
-                Mostrar todos los productos
-            </button>
+            <p class="text-sm text-slate-500 mt-1 mb-5">Intenta con otra palabra clave o limpia el filtro actual.</p>
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+                <button type="button" id="catalog-reset-search" class="bg-brand text-white font-bold py-2.5 px-6 rounded-xl text-sm shadow-md hover-bg-brand transition">
+                    Mostrar todos los productos
+                </button>
+                <a th:if="${currentCategory != null}"
+                   id="catalog-search-all-btn"
+                   th:attr="data-base-url=@{/s/{slug}/catalog(slug=${slug})}"
+                   th:href="@{/s/{slug}/catalog(slug=${slug})}"
+                   class="bg-white border border-slate-300 hover:border-brand text-slate-700 hover:text-brand font-bold py-2.5 px-6 rounded-xl text-sm transition">
+                    Buscar en todo el catálogo
+                </a>
+            </div>
         </div>
 
         <div th:unless="${#lists.isEmpty(products)}" id="catalog-products-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-
             <div th:each="p, pStat : ${products}"
-                 th:with="isOutOfStock=${!p.isMadeToOrder and !p.hasVariants and (p.stock == null or p.stock <= 0)},
+                 th:with="isOutOfStock=${!p.isMadeToOrder and (p.stock == null or p.stock <= 0)},
                           hasMultiple=${p.images != null and p.images.size() > 1},
-                          effectivePrice=${p.discountPrice != null and p.discountPrice > 0 ? p.discountPrice : p.price}"
+                          effectivePrice=${p.discountPrice != null and p.discountPrice > 0 ? p.discountPrice : p.price},
+                          cardImg=${p.getMainImageThumbnailUrl() != null ? p.getMainImageThumbnailUrl() : (p.mainImageUrl != null ? p.mainImageUrl : '/img/placeholder.jpg')}"
                  th:attr="data-name=${p.name != null ? p.name.toLowerCase() : ''},
                           data-category=${p.category != null and p.category.name != null ? p.category.name.toLowerCase() : ''},
                           data-price=${effectivePrice != null ? effectivePrice : 0},
@@ -84,18 +93,19 @@
                 <div class="relative aspect-[4/5] overflow-hidden bg-slate-50 flex-shrink-0 group/gallery">
                     <a th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${p.id})}" class="block w-full h-full">
                         <img th:id="'gallery-img-' + ${p.id}"
-                             th:src="${p.mainImageUrl != null ? p.mainImageUrl : '/img/placeholder.jpg'}"
+                             th:src="${cardImg}"
                              th:alt="${p.name}"
+                             data-gallery-index="0"
                              loading="lazy"
                              decoding="async"
                              class="w-full h-full object-cover group-hover/gallery:scale-105 transition-transform duration-500">
                     </a>
 
                     <div th:if="${hasMultiple}" class="absolute inset-0 flex items-center justify-between px-2 opacity-100 lg:opacity-0 lg:group-hover/gallery:opacity-100 transition-opacity duration-300 pointer-events-none z-20">
-                        <button type="button" th:data-target="'gallery-img-' + ${p.id}" th:data-images="${#strings.listJoin(p.images.![secureUrl], ',')}" onclick="Storevo.Gallery.prev(event, this)" class="w-8 h-8 rounded-full bg-white/90 hover:bg-white text-slate-800 flex items-center justify-center shadow-lg pointer-events-auto transition-transform hover:scale-110">
+                        <button type="button" aria-label="Imagen anterior" th:data-target="'gallery-img-' + ${p.id}" th:data-images="${#strings.listJoin(p.images.![secureUrl], ',')}" onclick="Storevo.Gallery.prev(event, this)" class="w-8 h-8 rounded-full bg-white/90 hover:bg-white text-slate-800 flex items-center justify-center shadow-lg pointer-events-auto transition-transform hover:scale-110">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path></svg>
                         </button>
-                        <button type="button" th:data-target="'gallery-img-' + ${p.id}" th:data-images="${#strings.listJoin(p.images.![secureUrl], ',')}" onclick="Storevo.Gallery.next(event, this)" class="w-8 h-8 rounded-full bg-white/90 hover:bg-white text-slate-800 flex items-center justify-center shadow-lg pointer-events-auto transition-transform hover:scale-110">
+                        <button type="button" aria-label="Imagen siguiente" th:data-target="'gallery-img-' + ${p.id}" th:data-images="${#strings.listJoin(p.images.![secureUrl], ',')}" onclick="Storevo.Gallery.next(event, this)" class="w-8 h-8 rounded-full bg-white/90 hover:bg-white text-slate-800 flex items-center justify-center shadow-lg pointer-events-auto transition-transform hover:scale-110">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
                         </button>
                     </div>
@@ -107,17 +117,19 @@
                         <span th:if="${!isOutOfStock and p.discountPrice != null and p.discountPrice > 0}" class="bg-red-500 text-white text-[10px] sm:text-xs font-black uppercase px-2.5 py-1 rounded-full shadow-md">
                             Oferta
                         </span>
+                        <span th:if="${p.isMadeToOrder}" class="bg-amber-500/95 text-white text-[10px] sm:text-xs font-black uppercase px-2.5 py-1 rounded-full shadow-md">
+                            Bajo pedido
+                        </span>
                     </div>
 
                     <div class="absolute top-3 right-3 flex flex-col gap-2 z-30">
                         <button th:if="${!p.hasVariants and !isOutOfStock}"
                                 type="button" th:data-slug="${slug}" th:data-id="${p.id}"
-                                onclick="toggleCartItem(this, this.getAttribute('data-slug'), this.getAttribute('data-id'))"
+                                onclick="addItemToCart(this, this.getAttribute('data-slug'), this.getAttribute('data-id'))"
                                 class="p-2.5 bg-white/90 backdrop-blur text-slate-400 hover:text-brand rounded-full shadow-lg transition-all duration-300" title="Agregar a la bolsa">
                             <svg class="w-5 h-5 icon-empty" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
                             <svg class="w-5 h-5 icon-filled hidden text-brand" fill="currentColor" viewBox="0 0 24 24"><path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path><path fill="white" d="M10.5 15.5l-3-3 1.4-1.4 1.6 1.6 4.6-4.6 1.4 1.4-6 6z"></path></svg>
                         </button>
-
                         <button type="button" th:data-slug="${slug}" th:data-id="${p.id}"
                                 onclick="toggleWishlistItem(this, this.getAttribute('data-slug'), this.getAttribute('data-id'))"
                                 th:class="${wishlistProductIds != null and wishlistProductIds.contains(p.id)} ? 'p-2.5 backdrop-blur rounded-full shadow-lg transition-all duration-300 bg-white border border-red-500 text-red-500' : 'p-2.5 bg-white/90 backdrop-blur text-slate-400 hover:text-red-500 rounded-full shadow-lg transition-all duration-300'" title="Agregar a favoritos">
@@ -149,98 +161,22 @@
                             <button th:if="${!p.hasVariants and !isOutOfStock}" type="button" th:data-slug="${slug}" th:data-id="${p.id}" onclick="buyNowFast(this.getAttribute('data-slug'), this.getAttribute('data-id'))" class="flex items-center justify-center px-2 py-2 text-xs font-bold text-white bg-brand hover:bg-brand/90 rounded-lg transition-colors shadow-md shadow-brand/20 text-center">
                                 Comprar
                             </button>
-                            <a th:if="${p.hasVariants}" th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${p.id})}" class="flex items-center justify-center px-2 py-2 text-xs font-bold text-white bg-slate-800 hover:bg-slate-900 rounded-lg transition-colors shadow-md shadow-slate-900/20 text-center">
+                            <a th:if="${p.hasVariants and !isOutOfStock}" th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${p.id})}" class="flex items-center justify-center px-2 py-2 text-xs font-bold text-white bg-slate-800 hover:bg-slate-900 rounded-lg transition-colors shadow-md shadow-slate-900/20 text-center">
                                 Ver opciones
                             </a>
-                            <button th:if="${!p.hasVariants and isOutOfStock}" type="button" disabled class="flex items-center justify-center px-2 py-2 text-xs font-bold text-slate-400 bg-slate-100 rounded-lg cursor-not-allowed text-center">
+                            <button th:if="${isOutOfStock}" type="button" disabled class="flex items-center justify-center px-2 py-2 text-xs font-bold text-slate-400 bg-slate-100 rounded-lg cursor-not-allowed text-center">
                                 Agotado
                             </button>
                         </div>
                     </div>
                 </div>
             </div>
-
         </div>
     </div>
 </div>
 
 <th:block layout:fragment="scripts">
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const grid = document.getElementById('catalog-products-grid');
-            if (!grid) return;
-
-            const searchInput = document.getElementById('catalog-search-input');
-            const clearBtn = document.getElementById('catalog-search-clear');
-            const resetBtn = document.getElementById('catalog-reset-search');
-            const sortSelect = document.getElementById('catalog-sort-select');
-            const countEl = document.getElementById('catalog-visible-count');
-            const emptyState = document.getElementById('catalog-no-matches');
-            const cards = Array.from(grid.querySelectorAll('.catalog-product-card'));
-
-            function applyCatalogFilterAndSort() {
-                const query = (searchInput ? searchInput.value : '').trim().toLowerCase();
-                const sortBy = sortSelect ? sortSelect.value : 'default';
-
-                if (clearBtn) {
-                    clearBtn.classList.toggle('hidden', !query);
-                }
-
-                // 1. Filtrar por nombre o categoría
-                let visibleCount = 0;
-                cards.forEach(card => {
-                    const name = card.getAttribute('data-name') || '';
-                    const category = card.getAttribute('data-category') || '';
-                    const matches = !query || name.includes(query) || category.includes(query);
-                    card.classList.toggle('hidden', !matches);
-                    if (matches) visibleCount++;
-                });
-
-                // 2. Ordenar tarjetas
-                const sorted = [...cards].sort((a, b) => {
-                    if (sortBy === 'price_asc') {
-                        return (parseFloat(a.getAttribute('data-price')) || 0) - (parseFloat(b.getAttribute('data-price')) || 0);
-                    }
-                    if (sortBy === 'price_desc') {
-                        return (parseFloat(b.getAttribute('data-price')) || 0) - (parseFloat(a.getAttribute('data-price')) || 0);
-                    }
-                    if (sortBy === 'name_asc') {
-                        return (a.getAttribute('data-name') || '').localeCompare(b.getAttribute('data-name') || '');
-                    }
-                    return (parseInt(a.getAttribute('data-index')) || 0) - (parseInt(b.getAttribute('data-index')) || 0);
-                });
-
-                sorted.forEach(card => grid.appendChild(card));
-
-                if (countEl) countEl.textContent = visibleCount;
-                if (emptyState) emptyState.classList.toggle('hidden', visibleCount > 0);
-                grid.classList.toggle('hidden', visibleCount === 0);
-            }
-
-            if (searchInput) {
-                searchInput.addEventListener('input', applyCatalogFilterAndSort);
-            }
-            if (clearBtn) {
-                clearBtn.addEventListener('click', () => {
-                    searchInput.value = '';
-                    applyCatalogFilterAndSort();
-                    searchInput.focus();
-                });
-            }
-            if (resetBtn) {
-                resetBtn.addEventListener('click', () => {
-                    if (searchInput) searchInput.value = '';
-                    applyCatalogFilterAndSort();
-                });
-            }
-            if (sortSelect) {
-                sortSelect.addEventListener('change', applyCatalogFilterAndSort);
-            }
-
-            // Aplicar al iniciar (por si viene ?q=... desde el buscador del navbar)
-            applyCatalogFilterAndSort();
-        });
-    </script>
+    <script th:src="@{/js/modules/storeCatalog.js}"></script>
 </th:block>
 </body>
 </html>

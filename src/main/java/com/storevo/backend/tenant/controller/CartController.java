@@ -197,10 +197,9 @@ public class CartController {
             return ResponseEntity.ok(Map.of("success", false, "message", "Producto no disponible."));
         }
 
-        Store store = (Store) request.getAttribute("currentStore");
         boolean isMadeToOrder = Boolean.TRUE.equals(product.getIsMadeToOrder());
 
-        int availableStock = product.getStock();
+        int availableStock = product.getStock() != null ? product.getStock() : 0;
         Double itemPrice = product.getDiscountPrice() != null && product.getDiscountPrice() > 0 ? product.getDiscountPrice() : product.getPrice();
         String itemVariantText = null;
         String imageUrl = product.getMainImageUrl();
@@ -213,7 +212,7 @@ public class CartController {
                 return ResponseEntity.ok(Map.of("success", false, "message", "Esta combinación no está disponible."));
             }
 
-            availableStock = variant.getStock();
+            availableStock = variant.getStock() != null ? variant.getStock() : 0;
             itemPrice = variant.getPrice() != null && variant.getPrice() > 0 ? variant.getPrice() : itemPrice;
 
             itemVariantText = variant.getOptionValues().stream()
@@ -308,8 +307,13 @@ public class CartController {
             @PathVariable String slug,
             @RequestParam String customerName,
             @RequestParam String customerPhone,
+            @RequestParam(required = false) String customerEmail,
+            @RequestParam(required = false) String documentType,
             @RequestParam(required = false) String customerDocument,
             @RequestParam(required = false) String verificationDigit,
+            @RequestParam(required = false) String legalName,
+            @RequestParam(required = false) String taxRegime,
+            @RequestParam(required = false, defaultValue = "false") Boolean requiresElectronicInvoice,
             @RequestParam String address,
             @RequestParam String city,
             @RequestParam(required = false) String notes,
@@ -328,7 +332,11 @@ public class CartController {
         String finalDoc = formatDocumentWithDv(customerDocument, verificationDigit);
 
         try {
-            Order order = orderService.createOrderFromCart(guestId, customerName, customerPhone, finalDoc, address, city, notes, OrderChannel.ONLINE);
+            Order order = orderService.createOrderFromCart(
+                    guestId, customerName, customerPhone, customerEmail,
+                    documentType, finalDoc, verificationDigit, legalName, taxRegime, requiresElectronicInvoice,
+                    address, city, notes, OrderChannel.ONLINE
+            );
             return "redirect:/s/" + slug + "/order/" + order.getId() + "/success";
         } catch (Exception e) {
             e.printStackTrace();
@@ -342,8 +350,13 @@ public class CartController {
             @PathVariable String slug,
             @RequestParam String customerName,
             @RequestParam String customerPhone,
+            @RequestParam(required = false) String customerEmail,
+            @RequestParam(required = false) String documentType,
             @RequestParam(required = false) String customerDocument,
             @RequestParam(required = false) String verificationDigit,
+            @RequestParam(required = false) String legalName,
+            @RequestParam(required = false) String taxRegime,
+            @RequestParam(required = false, defaultValue = "false") Boolean requiresElectronicInvoice,
             @RequestParam String address,
             @RequestParam String city,
             @RequestParam(required = false) String notes,
@@ -354,7 +367,11 @@ public class CartController {
         String finalDoc = formatDocumentWithDv(customerDocument, verificationDigit);
 
         try {
-            Order order = orderService.createOrderFromCart(guestId, customerName, customerPhone, finalDoc, address, city, notes, OrderChannel.WHATSAPP);
+            Order order = orderService.createOrderFromCart(
+                    guestId, customerName, customerPhone, customerEmail,
+                    documentType, finalDoc, verificationDigit, legalName, taxRegime, requiresElectronicInvoice,
+                    address, city, notes, OrderChannel.WHATSAPP
+            );
             return "redirect:/s/" + slug + "/order/" + order.getId() + "/whatsapp";
         } catch (Exception e) {
             e.printStackTrace();

@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -22,18 +23,12 @@ public class CustomerService {
 
     private final OrderRepository orderRepository;
 
-    /**
-     * Método original conservado por retrocompatibilidad.
-     */
     @Transactional(readOnly = true)
     public List<CustomerDto> getAllCustomers() {
         List<Order> orders = orderRepository.findAllByOrderByCreatedAtDesc();
         return aggregateCustomersFromOrders(orders);
     }
 
-    /**
-     * Búsqueda, filtrado y paginación para el directorio de clientes.
-     */
     @Transactional(readOnly = true)
     public Page<CustomerDto> searchCustomers(String q, String type, OrderChannel channel, String sortStr, Pageable pageable) {
         List<CustomerDto> allCustomers = getAllCustomers();
@@ -47,7 +42,8 @@ public class CustomerService {
                             || containsIgnoreCase(c.getPhone(), query)
                             || containsIgnoreCase(c.getCity(), query)
                             || containsIgnoreCase(c.getDocument(), query)
-                            || containsIgnoreCase(c.getEmail(), query);
+                            || containsIgnoreCase(c.getEmail(), query)
+                            || containsIgnoreCase(c.getLegalName(), query);
                 })
                 .filter(c -> {
                     if (type == null || type.isBlank()) return true;
@@ -135,9 +131,14 @@ public class CustomerService {
         for (Order order : customerOrders) {
             if (name != null && !name.isBlank()) order.setCustomerName(name.trim());
             if (phone != null && !phone.isBlank()) order.setCustomerPhone(phone.trim());
+            if (documentType != null) order.setDocumentType(documentType.trim());
             if (document != null) order.setCustomerDocument(document.trim());
+            if (verificationDigit != null) order.setVerificationDigit(verificationDigit.trim());
+            if (email != null) order.setCustomerEmail(email.trim());
             if (city != null && !city.isBlank()) order.setCity(city.trim());
             if (address != null && !address.isBlank()) order.setAddress(address.trim());
+            if (legalName != null) order.setLegalName(legalName.trim());
+            if (taxRegime != null) order.setTaxRegime(taxRegime.trim());
         }
 
         if (!customerOrders.isEmpty()) {
@@ -159,7 +160,6 @@ public class CustomerService {
         List<CustomerDto> result = new ArrayList<>();
 
         for (List<Order> customerOrders : groupedByCustomer.values()) {
-            // La lista viene ordenada de más reciente a más antigua
             Order latest = customerOrders.get(0);
 
             long totalOrders = customerOrders.size();
@@ -171,37 +171,34 @@ public class CustomerService {
             LocalDateTime lastOrderDate = latest.getCreatedAt();
             OrderChannel lastChannel = latest.getChannel();
 
-            // Punto 2: recolectar todos los canales que este cliente ha usado
             List<OrderChannel> channels = customerOrders.stream()
                     .map(Order::getChannel)
                     .filter(Objects::nonNull)
                     .distinct()
                     .collect(Collectors.toList());
 
-            String document = customerOrders.stream()
-                    .map(Order::getCustomerDocument)
-                    .filter(d -> d != null && !d.isBlank())
-                    .findFirst()
-                    .orElse(null);
-
-            String address = customerOrders.stream()
-                    .map(Order::getAddress)
-                    .filter(a -> a != null && !a.isBlank())
-                    .findFirst()
-                    .orElse(null);
-
-            String city = customerOrders.stream()
-                    .map(Order::getCity)
-                    .filter(c -> c != null && !c.isBlank())
-                    .findFirst()
-                    .orElse(latest.getCity());
+            String email = firstNonBlank(customerOrders, Order::getCustomerEmail);
+            String docType = firstNonBlank(customerOrders, Order::getDocumentType);
+            String document = firstNonBlank(customerOrders, Order::getCustomerDocument);
+            String dv = firstNonBlank(customerOrders, Order::getVerificationDigit);
+            String legalName = firstNonBlank(customerOrders, Order::getLegalName);
+            String taxRegime = firstNonBlank(customerOrders, Order::getTaxRegime);
+            String address = firstNonBlank(customerOrders, Order::getAddress);
+            String city = firstNonBlank(customerOrders, Order::getCity);
+            boolean reqInvoice = customerOrders.stream().anyMatch(o -> Boolean.TRUE.equals(o.getRequiresElectronicInvoice()));
 
             result.add(CustomerDto.builder()
                     .name(latest.getCustomerName())
                     .phone(latest.getCustomerPhone())
-                    .city(city)
+                    .email(email)
+                    .city(city != null ? city : latest.getCity())
                     .address(address)
+                    .documentType(docType)
                     .document(document)
+                    .verificationDigit(dv)
+                    .legalName(legalName)
+                    .taxRegime(taxRegime)
+                    .requiresElectronicInvoice(reqInvoice)
                     .totalOrders(totalOrders)
                     .totalSpent(totalSpent)
                     .lastOrderDate(lastOrderDate)
@@ -211,6 +208,14 @@ public class CustomerService {
         }
 
         return result;
+    }
+
+    private String firstNonBlank(List<Order> orders, Function<Order, String> getter) {
+        return orders.stream()
+                .map(getter)
+                .filter(v -> v != null && !v.isBlank())
+                .findFirst()
+                .orElse(null);
     }
 
     private String normalizePhoneKey(String rawPhone) {
