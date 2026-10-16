@@ -369,3 +369,424 @@
 @media (min-width: 1280px) {
     .sv-nav[data-nav-layout="classic"] .sv-nav__search input { width: 14rem; }
 }
+/* ==========================================================================
+   FASE 4: NAVBAR AVANZADO, EFECTOS DE INTERACCIÓN Y MEGA MENÚS
+   ========================================================================== */
+:root {
+    --sv-nav-duration: 250ms;
+}
+body[data-sv-nav-speed="fast"] {
+    --sv-nav-duration: 140ms;
+}
+body[data-sv-nav-speed="normal"] {
+    --sv-nav-duration: 250ms;
+}
+body[data-sv-nav-speed="slow"] {
+    --sv-nav-duration: 400ms;
+}
+
+/* Transiciones gobernadas por la velocidad elegida */
+#store-navbar,
+.sv-nav-root,
+#store-navbar a,
+.sv-nav-root a,
+.sv-dropdown-panel,
+.sv-nav-double-strip {
+    transition-duration: var(--sv-nav-duration) !important;
+}
+
+/* ---------- 1. COMPORTAMIENTO COMPACTO AL HACER SCROLL ---------- */
+body[data-sv-nav-compact="true"].sv-is-scrolled #store-navbar,
+body[data-sv-nav-compact="true"].sv-is-scrolled .sv-nav-root {
+    box-shadow: 0 10px 30px -10px rgba(15, 23, 42, 0.14);
+}
+body[data-sv-nav-compact="true"].sv-is-scrolled #store-navbar .h-16,
+body[data-sv-nav-compact="true"].sv-is-scrolled #store-navbar .h-20,
+body[data-sv-nav-compact="true"].sv-is-scrolled .sv-nav-root .h-16,
+body[data-sv-nav-compact="true"].sv-is-scrolled .sv-nav-root .h-20 {
+    height: 3.35rem !important;
+    transition: height var(--sv-nav-duration) ease;
+}
+body[data-sv-nav-compact="true"].sv-is-scrolled .sv-nav-double-strip {
+    max-height: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    opacity: 0 !important;
+    overflow: hidden !important;
+    border-bottom-width: 0 !important;
+}
+
+/* ---------- 2. NUEVOS LAYOUTS DE CABECERA ---------- */
+
+/* Layout: Compacto */
+body[data-sv-nav-layout="compact"] #store-navbar .h-16,
+body[data-sv-nav-layout="compact"] #store-navbar .h-20,
+body[data-sv-nav-layout="compact"] .sv-nav-root .h-16,
+body[data-sv-nav-layout="compact"] .sv-nav-root .h-20 {
+    height: 3.25rem !important;
+}
+body[data-sv-nav-layout="compact"] #store-navbar a,
+body[data-sv-nav-layout="compact"] .sv-nav-root a {
+    font-size: 0.8125rem;
+}
+
+/* Layout: Editorial / Premium */
+body[data-sv-nav-layout="editorial"] #store-navbar,
+body[data-sv-nav-layout="editorial"] .sv-nav-root {
+    border-top: 3px solid var(--brand-color, #6366f1);
+    border-bottom: 1px solid rgba(15, 23, 42, 0.12);
+}
+body[data-sv-nav-layout="editorial"] #store-navbar nav a,
+body[data-sv-nav-layout="editorial"] .sv-nav-root nav a,
+body[data-sv-nav-layout="editorial"] .sv-nav-link {
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-size: 0.76rem;
+    font-weight: 700;
+}
+
+/* Layout: Doble Barra Comercial */
+.sv-nav-double-strip {
+    display: none;
+    background-color: var(--brand-secondary, #0f172a);
+    color: #ffffff;
+    font-size: 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all var(--sv-nav-duration) ease;
+}
+body[data-sv-nav-layout="double_bar"] .sv-nav-double-strip {
+    display: block;
+}
+.sv-nav-double-strip__inner {
+    max-width: 80rem;
+    margin: 0 auto;
+    padding: 0.45rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+.sv-nav-double-strip__links {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-width: none;
+}
+.sv-nav-double-strip__links::-webkit-scrollbar {
+    display: none;
+}
+.sv-nav-double-strip__links a {
+    color: rgba(255, 255, 255, 0.86);
+    font-weight: 600;
+    text-decoration: none;
+    transition: color var(--sv-nav-duration) ease;
+}
+.sv-nav-double-strip__links a:hover {
+    color: #ffffff;
+}
+
+/* Layout: Transparente sobre Portada (Hero Overlay) con fallback inteligente */
+@media (min-width: 1024px) {
+    body[data-sv-nav-layout="hero_overlay"].sv-has-hero-first:not(.sv-is-scrolled) #store-navbar,
+    body[data-sv-nav-layout="hero_overlay"].sv-has-hero-first:not(.sv-is-scrolled) .sv-nav-root {
+        position: fixed !important;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 50;
+        background-color: rgba(15, 23, 42, 0.22) !important;
+        backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.18) !important;
+        box-shadow: none !important;
+    }
+    body[data-sv-nav-layout="hero_overlay"].sv-has-hero-first:not(.sv-is-scrolled) #store-navbar a:not(.bg-brand),
+    body[data-sv-nav-layout="hero_overlay"].sv-has-hero-first:not(.sv-is-scrolled) #store-navbar button:not(.bg-brand),
+    body[data-sv-nav-layout="hero_overlay"].sv-has-hero-first:not(.sv-is-scrolled) #store-navbar span:not(.bg-brand),
+    body[data-sv-nav-layout="hero_overlay"].sv-has-hero-first:not(.sv-is-scrolled) .sv-nav-root a:not(.bg-brand),
+    body[data-sv-nav-layout="hero_overlay"].sv-has-hero-first:not(.sv-is-scrolled) .sv-nav-root button:not(.bg-brand) {
+        color: #ffffff !important;
+    }
+}
+
+/* ---------- 3. NUEVOS EFECTOS DE HOVER EN ENLACES ---------- */
+.sv-interactive-link {
+    position: relative;
+    transition: all var(--sv-nav-duration) ease;
+}
+
+/* Subrayado animado desde el centro */
+body[data-sv-nav-hover="underline_center"] .sv-interactive-link::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    right: 50%;
+    bottom: -3px;
+    height: 2px;
+    background-color: var(--brand-color, #6366f1);
+    border-radius: 9999px;
+    transition: left var(--sv-nav-duration) ease, right var(--sv-nav-duration) ease;
+}
+body[data-sv-nav-hover="underline_center"] .sv-interactive-link:hover::after {
+    left: 0.25rem;
+    right: 0.25rem;
+}
+
+/* Subrayado deslizante de izquierda a derecha */
+body[data-sv-nav-hover="underline_slide"] .sv-interactive-link::after {
+    content: "";
+    position: absolute;
+    left: 0.25rem;
+    bottom: -3px;
+    width: 100%;
+    max-width: calc(100% - 0.5rem);
+    height: 2px;
+    background-color: var(--brand-color, #6366f1);
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform var(--sv-nav-duration) cubic-bezier(0.4, 0, 0.2, 1);
+}
+body[data-sv-nav-hover="underline_slide"] .sv-interactive-link:hover::after {
+    transform: scaleX(1);
+    transform-origin: left;
+}
+
+/* Fondo deslizante */
+body[data-sv-nav-hover="slide_bg"] .sv-interactive-link {
+    padding: 0.35rem 0.7rem !important;
+    border-radius: 0.6rem;
+    overflow: hidden;
+    z-index: 1;
+}
+body[data-sv-nav-hover="slide_bg"] .sv-interactive-link::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-color: var(--brand-color, #6366f1);
+    opacity: 0.12;
+    transform: translateY(102%);
+    transition: transform var(--sv-nav-duration) cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: -1;
+    border-radius: inherit;
+}
+body[data-sv-nav-hover="slide_bg"] .sv-interactive-link:hover::before {
+    transform: translateY(0%);
+}
+body[data-sv-nav-hover="slide_bg"] .sv-interactive-link:hover {
+    color: var(--brand-color, #6366f1) !important;
+}
+
+/* Cambio de opacidad editorial (atenúa los demás al enfocar uno) */
+body[data-sv-nav-hover="opacity"] .sv-nav-links-group:hover .sv-interactive-link {
+    opacity: 0.42;
+}
+body[data-sv-nav-hover="opacity"] .sv-nav-links-group:hover .sv-interactive-link:hover {
+    opacity: 1;
+    transform: translateY(-1px);
+}
+
+/* ---------- 4. MEGA MENÚ MULTICOLUMNA, CASCADA Y ANIMACIONES ---------- */
+.sv-catalog-menu-trigger-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+.sv-catalog-chevron {
+    width: 0.85rem;
+    height: 0.85rem;
+    margin-left: 0.25rem;
+    transition: transform var(--sv-nav-duration) ease;
+}
+.sv-catalog-menu-open .sv-catalog-chevron {
+    transform: rotate(180deg);
+}
+
+/* Contenedor base de desplegable (Mega Menú o Cascada) */
+.sv-dropdown-panel {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    left: 0;
+    z-index: 70;
+    background: #ffffff;
+    color: #0f172a;
+    border: 1px solid rgba(226, 232, 240, 0.95);
+    border-radius: var(--store-radius, 1rem);
+    box-shadow: 0 22px 50px -12px rgba(15, 23, 42, 0.22);
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--sv-nav-duration) ease,
+    transform var(--sv-nav-duration) cubic-bezier(0.16, 1, 0.3, 1),
+    visibility var(--sv-nav-duration) ease;
+}
+
+/* Variantes de animación del desplegable */
+body[data-sv-dropdown-anim="fade"] .sv-dropdown-panel {
+    transform: translateY(0);
+}
+body[data-sv-dropdown-anim="slide_up"] .sv-dropdown-panel {
+    transform: translateY(12px);
+}
+body[data-sv-dropdown-anim="scale"] .sv-dropdown-panel {
+    transform: scale(0.95);
+    transform-origin: top left;
+}
+.sv-catalog-menu-open .sv-dropdown-panel {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0) scale(1) !important;
+}
+
+/* Estilo 1: Mega Menú Multicolumna con Tarjeta Destacada */
+.sv-dropdown-panel.is-mega {
+    width: min(92vw, 860px);
+    padding: 1.5rem;
+    display: grid;
+    grid-template-columns: minmax(0, 2.2fr) minmax(220px, 1fr);
+    gap: 1.5rem;
+}
+.sv-mega-columns {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
+    gap: 1.25rem;
+    max-height: 65vh;
+    overflow-y: auto;
+}
+.sv-mega-cat-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+.sv-mega-cat-title {
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: #0f172a !important;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.25rem 0;
+    transition: color 0.15s ease;
+}
+.sv-mega-cat-title:hover {
+    color: var(--brand-color, #6366f1) !important;
+}
+.sv-mega-subcat-link {
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: #64748b !important;
+    text-decoration: none;
+    padding: 0.15rem 0 0.15rem 0.5rem;
+    border-left: 2px solid #f1f5f9;
+    transition: all 0.15s ease;
+}
+.sv-mega-subcat-link:hover {
+    color: var(--brand-color, #6366f1) !important;
+    border-left-color: var(--brand-color, #6366f1);
+    padding-left: 0.75rem;
+}
+.sv-mega-spotlight {
+    position: relative;
+    border-radius: calc(var(--store-radius, 1rem) * 0.85);
+    overflow: hidden;
+    background: var(--brand-secondary, #0f172a);
+    color: #ffffff !important;
+    min-height: 210px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 1.25rem;
+    text-decoration: none;
+}
+.sv-mega-spotlight img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.45s ease;
+}
+.sv-mega-spotlight:hover img {
+    transform: scale(1.06);
+}
+.sv-mega-spotlight__overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(15, 23, 42, 0.9) 10%, rgba(15, 23, 42, 0.25) 100%);
+}
+.sv-mega-spotlight__content {
+    position: relative;
+    z-index: 2;
+}
+
+/* Estilo 2: Menú en Cascada Clásico */
+.sv-dropdown-panel.is-cascade {
+    width: 260px;
+    padding: 0.6rem;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+.sv-cascade-item {
+    display: flex;
+    flex-direction: column;
+}
+.sv-cascade-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.55rem 0.75rem;
+    border-radius: 0.65rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #1e293b !important;
+    text-decoration: none;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+.sv-cascade-link:hover {
+    background: #f8fafc;
+    color: var(--brand-color, #6366f1) !important;
+}
+.sv-cascade-children {
+    padding-left: 0.85rem;
+    margin: 0.15rem 0 0.35rem 0.75rem;
+    border-left: 2px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+/* Estilo 3: Drawer Lateral de Categorías y Navegación (PC y Móvil) */
+.sv-nav-drawer-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(2px);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--sv-nav-duration) ease, visibility var(--sv-nav-duration) ease;
+}
+.sv-nav-drawer-backdrop.is-open {
+    opacity: 1;
+    visibility: visible;
+}
+.sv-nav-drawer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(88vw, 360px);
+    background: #ffffff;
+    color: #0f172a;
+    z-index: 91;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 20px 0 50px rgba(15, 23, 42, 0.25);
+    transform: translateX(-102%);
+    transition: transform var(--sv-nav-duration) cubic-bezier(0.16, 1, 0.3, 1);
+}
+.sv-nav-drawer-backdrop.is-open .sv-nav-drawer {
+    transform: translateX(0);
+}

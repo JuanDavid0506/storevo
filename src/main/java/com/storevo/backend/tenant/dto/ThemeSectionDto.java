@@ -25,6 +25,10 @@ public class ThemeSectionDto {
     @Builder.Default
     private Boolean enabled = true;
 
+    /** Indica si es una sección principal obligatoria de la página (no se puede eliminar ni duplicar) */
+    @Builder.Default
+    private Boolean locked = false;
+
     @Builder.Default
     private Map<String, Object> settings = new LinkedHashMap<>();
 

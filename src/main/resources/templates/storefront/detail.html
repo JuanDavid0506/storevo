@@ -1,306 +1,35 @@
 <!DOCTYPE html>
-<html lang="es" xmlns:th="http://www.thymeleaf.org" layout:decorate="~{layouts/store-layout}">
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/store-layout}">
 <head>
   <title th:text="${product.name} + ' - ' + ${settings.storeName}">Detalle</title>
 </head>
 <body>
 <div layout:fragment="content">
-
   <!-- Puente de datos limpio para productDetail.js -->
   <div id="product-detail-bridge" class="hidden"
        th:attr="data-has-variants=${product.hasVariants},
-                data-main-image=${product.mainImageUrl != null ? product.mainImageUrl : '/img/placeholder.jpg'},
-                data-made-to-order=${product.isMadeToOrder},
-                data-base-price=${product.discountPrice != null and product.discountPrice > 0 ? product.discountPrice : product.price},
-                data-original-price=${product.price != null ? product.price : 0},
-                data-has-discount=${product.discountPrice != null and product.discountPrice > 0}">
+                  data-main-image=${product.mainImageUrl != null ? product.mainImageUrl : '/img/placeholder.jpg'},
+                  data-made-to-order=${product.isMadeToOrder},
+                  data-base-price=${product.discountPrice != null and product.discountPrice > 0 ? product.discountPrice : product.price},
+                  data-original-price=${product.price != null ? product.price : 0},
+                  data-has-discount=${product.discountPrice != null and product.discountPrice > 0}">
     <div th:if="${variantsData != null}" th:each="v : ${variantsData}" class="variant-data-node"
          th:attr="data-id=${v['id']},
-                  data-signature=${v['signature']},
-                  data-price=${v['price']},
-                  data-stock=${v['stock']},
-                  data-sku=${v['sku']},
-                  data-image-ref=${v['imageRef']}"></div>
+                      data-signature=${v['signature']},
+                      data-price=${v['price']},
+                      data-stock=${v['stock']},
+                      data-sku=${v['sku']},
+                      data-image-ref=${v['imageRef']}"></div>
   </div>
 
-  <!-- Miga de pan respetando el color de texto del tema -->
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 border-b border-slate-200/30">
-    <nav class="flex text-sm store-muted font-medium overflow-x-auto whitespace-nowrap">
-      <a th:href="@{/s/{slug}(slug=${slug})}" class="hover:text-brand transition">Inicio</a>
-      <span class="mx-2 opacity-50">/</span>
-      <a th:href="@{/s/{slug}/catalog(slug=${slug})}" class="hover:text-brand transition">Catálogo</a>
-      <span class="mx-2 opacity-50">/</span>
-      <a th:if="${product.category != null}" th:href="@{/s/{slug}/catalog(category=${product.category.id}, slug=${slug})}" class="hover:text-brand transition truncate max-w-[140px]" th:text="${product.category.name}">Cat</a>
-      <span th:if="${product.category != null}" class="mx-2 opacity-50">/</span>
-      <span class="store-heading font-bold truncate max-w-[200px]" th:text="${product.name}">Prod</span>
-    </nav>
-  </div>
-
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 lg:py-14">
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16">
-
-      <!-- Galería de Imágenes -->
-      <div class="space-y-4">
-        <div class="aspect-[4/5] sm:aspect-square store-radius overflow-hidden bg-white border border-slate-200/80 relative shadow-sm">
-          <div class="absolute top-4 left-4 flex flex-col gap-1.5 z-10 pointer-events-none">
-            <span th:if="${product.discountPrice != null and product.discountPrice > 0}" class="bg-red-500 text-white text-xs font-black uppercase px-3 py-1.5 rounded-full shadow-lg">Oferta</span>
-            <span th:if="${product.isMadeToOrder}" class="bg-amber-500 text-white text-xs font-black uppercase px-3 py-1.5 rounded-full shadow-lg">Bajo pedido</span>
-          </div>
-          <img id="main-product-image" th:src="${product.mainImageUrl != null ? product.mainImageUrl : '/img/placeholder.jpg'}" th:alt="${product.name}" class="w-full h-full object-cover transition-opacity duration-300">
-        </div>
-
-        <div th:if="${product.images != null and product.images.size() > 1}" class="grid grid-cols-5 sm:grid-cols-6 gap-3">
-          <th:block th:with="seenUrls=${new java.util.HashSet()}">
-            <button th:each="img : ${product.images}"
-                    th:if="${seenUrls.add(img.secureUrl)}"
-                    type="button"
-                    th:data-src="${img.secureUrl}" onclick="Storevo.ProductDetail.changeImage(this)"
-                    class="product-thumbnail aspect-square rounded-xl overflow-hidden border-2 transition-all duration-200 bg-white"
-                    th:classappend="${img.isPrimary ? 'border-brand shadow-md ring-2 ring-brand/20' : 'border-transparent hover:border-slate-300 opacity-70 hover:opacity-100'}">
-              <img th:src="${img.getThumbnailUrl() != null ? img.getThumbnailUrl() : img.secureUrl}" th:alt="${product.name}" class="w-full h-full object-cover">
-            </button>
-          </th:block>
-        </div>
-      </div>
-
-      <!-- Información del Producto -->
-      <div class="flex flex-col">
-        <div class="flex items-center justify-between mb-2">
-          <p class="text-xs font-black tracking-widest uppercase text-brand" th:text="${product.brand != null ? product.brand : (product.category != null ? product.category.name : '')}">Marca</p>
-          <p id="dynamic-sku" class="text-xs font-mono text-slate-600 bg-white border border-slate-200 px-2.5 py-1 rounded-lg shadow-sm" th:classappend="${product.sku == null or product.hasVariants ? 'hidden' : ''}" th:text="${product.sku != null ? 'SKU: ' + product.sku : ''}">SKU</p>
-        </div>
-
-        <h1 class="text-3xl sm:text-4xl font-black store-heading tracking-tight leading-tight mb-5" th:text="${product.name}">Nombre</h1>
-
-        <!-- Precio con máxima legibilidad (.store-heading en vez de .text-brand) -->
-        <div class="flex items-end gap-3 mb-6 flex-wrap">
-          <span id="dynamic-price-prefix" th:if="${product.hasVariants}" class="text-sm font-bold store-muted uppercase tracking-widest mb-1.5">Desde</span>
-          <span id="dynamic-price" class="text-4xl font-black store-heading transition-colors duration-300"
-                th:text="${'$ ' + #numbers.formatDecimal((product.discountPrice != null and product.discountPrice > 0 ? product.discountPrice : product.price), 1, 'POINT', 0, 'COMMA')}">$0</span>
-          <span id="dynamic-old-price" th:if="${product.discountPrice != null and product.discountPrice > 0}"
-                class="text-xl store-muted line-through font-medium mb-1"
-                th:text="${'$ ' + #numbers.formatDecimal(product.price, 1, 'POINT', 0, 'COMMA')}">$0</span>
-        </div>
-
-        <div th:if="${product.description != null and !product.description.isBlank()}"
-             class="prose prose-slate prose-sm mb-6 store-muted leading-relaxed whitespace-pre-line"
-             th:text="${product.description}">Descripción</div>
-
-        <div th:if="${product.hasVariants}" class="mb-8 space-y-6 border-y border-slate-200/40 py-6">
-          <div th:each="opt : ${product.options}" class="variant-option-group" th:data-option-name="${opt.name}">
-            <div class="flex justify-between items-center mb-3">
-              <p class="text-xs font-bold uppercase tracking-wider store-heading" th:text="${opt.name}">Opción</p>
-              <span class="text-xs text-red-500 font-bold hidden option-error animate-pulse">¡Selecciona una opción!</span>
-            </div>
-            <div class="flex flex-wrap gap-2.5">
-              <button th:each="val : ${opt.values}" type="button"
-                      class="opt-btn px-5 py-2.5 border-2 border-slate-200 rounded-xl text-sm font-bold text-slate-700 hover:border-brand hover:text-brand transition-all bg-white shadow-sm"
-                      th:data-value="${val.valueName}"
-                      th:text="${val.valueName}">Valor</button>
-            </div>
-          </div>
-        </div>
-
-        <form id="add-to-cart-form" th:action="@{/s/{slug}/cart/add(slug=${slug})}" method="POST" class="mt-auto space-y-6">
-          <input type="hidden" name="productId" th:value="${product.id}">
-          <input type="hidden" name="variantId" id="selectedVariantId" value="">
-
-          <div class="flex flex-col sm:flex-row gap-4"
-               th:with="blockedByStock=${!product.isMadeToOrder and (product.stock == null or product.stock <= 0)}">
-            <div class="w-full sm:w-1/3">
-              <label for="detail-quantity-input" class="block text-xs font-bold uppercase tracking-wider store-muted mb-2">Cantidad</label>
-              <div class="flex items-center border border-slate-200 rounded-xl bg-white overflow-hidden h-14 shadow-sm">
-                <button type="button" data-qty-step="-1" aria-label="Disminuir cantidad" class="w-12 h-full text-slate-600 hover:text-brand hover:bg-slate-100 transition flex items-center justify-center font-bold text-lg">-</button>
-                <input type="number" id="detail-quantity-input" name="quantity" value="1" min="1"
-                       th:attr="max=${(product.isMadeToOrder or product.hasVariants) ? null : product.stock}"
-                       class="flex-1 w-full h-full text-center bg-transparent border-none focus:ring-0 font-bold text-slate-900 text-lg p-0">
-                <button type="button" data-qty-step="1" aria-label="Aumentar cantidad" class="w-12 h-full text-slate-600 hover:text-brand hover:bg-slate-100 transition flex items-center justify-center font-bold text-lg">+</button>
-              </div>
-              <p id="dynamic-stock" class="text-xs mt-2 font-medium transition-colors"
-                 th:classappend="${blockedByStock ? 'text-red-500 font-bold' : 'store-muted'}"
-                 th:text="${blockedByStock ? 'Agotado' : (product.hasVariants ? 'Selecciona tus opciones' : (product.isMadeToOrder ? 'Bajo pedido' : 'Stock disponible: ' + product.stock))}">Stock</p>
-            </div>
-
-            <div class="w-full sm:w-2/3 flex flex-col gap-3 justify-end">
-
-              <!-- BOTÓN 1: COMPRAR AHORA (Usa el Color Primario bg-brand hover-bg-brand) -->
-              <button th:if="${!product.isMadeToOrder}"
-                      type="button"
-                      id="btn-buy-now"
-                      th:disabled="${blockedByStock}"
-                      th:data-slug="${slug}"
-                      onclick="Storevo.ProductDetail.buyNow(this, this.getAttribute('data-slug'))"
-                      th:class="${blockedByStock ? 'h-14 w-full bg-slate-300 text-white font-bold rounded-xl cursor-not-allowed text-lg' : 'h-14 w-full bg-brand hover-bg-brand text-white font-bold rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 text-lg'}">
-                <span th:text="${blockedByStock ? 'Agotado' : 'Comprar ahora'}">Comprar ahora</span>
-              </button>
-
-              <!-- BOTÓN 1 ALTERNATIVO: FLUJO BAJO PEDIDO -->
-              <th:block th:if="${product.isMadeToOrder}">
-                <button th:if="${settings.whatsapp != null and !settings.whatsapp.isBlank()}"
-                        type="button"
-                        id="btn-buy-whatsapp"
-                        th:data-slug="${slug}"
-                        onclick="Storevo.ProductDetail.buyNow(this, this.getAttribute('data-slug'))"
-                        class="h-14 w-full bg-[#25D366] hover:bg-[#1ebd5c] text-white font-bold rounded-xl shadow-lg shadow-green-500/30 transition-all flex items-center justify-center gap-2 text-lg">
-                  <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.305-.88-.653-1.473-1.46-1.646-1.757-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
-                  <span>Pedir por WhatsApp</span>
-                </button>
-                <button type="button" th:if="${settings.whatsapp == null or settings.whatsapp.isBlank()}"
-                        onclick="Storevo.UI.Toast.show('WhatsApp no configurado por la tienda', 'warning')"
-                        class="h-14 w-full bg-slate-300 text-white font-bold rounded-xl cursor-not-allowed flex items-center justify-center gap-2 text-lg">
-                  <span>WhatsApp no disponible</span>
-                </button>
-              </th:block>
-
-              <!-- FILA SECUNDARIA: AGREGAR A LA BOLSA + FAVORITOS -->
-              <div class="flex items-center gap-3">
-                <button id="btn-add-cart" type="submit" th:disabled="${blockedByStock}"
-                        th:class="${blockedByStock ? 'h-14 flex-1 bg-slate-100 text-slate-400 font-bold rounded-xl cursor-not-allowed text-base sm:text-lg border-2 border-slate-200' : 'h-14 flex-1 bg-white text-slate-900 border-2 border-slate-200 hover:border-brand hover:text-brand font-bold rounded-xl transition-all flex items-center justify-center gap-2 text-base sm:text-lg px-4 shadow-sm'}">
-                  <svg class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
-                  <span th:text="${blockedByStock ? 'Agotado' : 'Agregar a la Bolsa'}">Agregar a la Bolsa</span>
-                </button>
-
-                <button type="button" th:data-slug="${slug}" th:data-id="${product.id}" onclick="toggleWishlistItem(this, this.getAttribute('data-slug'), this.getAttribute('data-id'))"
-                        title="Guardar en Favoritos" aria-label="Guardar en Favoritos"
-                        th:class="${wishlistProductIds != null and wishlistProductIds.contains(product.id)} ? 'h-14 w-14 flex-shrink-0 bg-white border-2 border-red-500 text-red-500 font-bold rounded-xl transition-all flex items-center justify-center shadow-sm' : 'h-14 w-14 flex-shrink-0 bg-white border-2 border-slate-200 hover:border-red-500 hover:text-red-500 text-slate-600 font-bold rounded-xl transition-all flex items-center justify-center shadow-sm'">
-                  <svg class="w-6 h-6 icon-heart-empty" th:classappend="${wishlistProductIds != null and wishlistProductIds.contains(product.id)} ? 'hidden' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
-                  <svg class="w-6 h-6 icon-heart-filled" th:classappend="${wishlistProductIds == null or !wishlistProductIds.contains(product.id)} ? 'hidden' : 'text-red-500'" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L12 8.343l3.172-3.171a4 4 0 115.656 5.656L12 21.414l-8.828-8.828a4 4 0 010-5.656z" clip-rule="evenodd"></path></svg>
-                </button>
-              </div>
-            </div>
-          </div>
-        </form>
-
-        <!-- ESPECIFICACIONES TÉCNICAS Y POLÍTICAS DE LA TIENDA -->
-        <div class="mt-8 border-t border-slate-200/40 divide-y divide-slate-200/40">
-          <!-- Especificaciones Técnicas -->
-          <div th:if="${(product.attributes != null and !product.attributes.isEmpty()) or product.hasVariants}">
-            <button type="button"
-                    data-accordion-target="specs-content" data-accordion-icon="specs-icon"
-                    class="w-full flex justify-between items-center py-4 group transition-colors">
-              <h3 class="text-base font-bold store-heading group-hover:text-brand transition-colors">Especificaciones Técnicas</h3>
-              <span class="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center group-hover:bg-brand/10 transition-colors">
-                <svg id="specs-icon" class="w-5 h-5 text-slate-500 group-hover:text-brand transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-              </span>
-            </button>
-            <div id="specs-content" class="pb-5 hidden transition-all duration-300">
-              <div class="bg-white text-slate-900 p-5 store-radius border border-slate-200/80 shadow-sm">
-                <div id="specs-list" class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2">
-                  <th:block th:if="${product.attributes != null}">
-                    <div th:each="attr : ${product.attributes}"
-                         th:if="${attr.value != null and !attr.value.trim().isEmpty()}"
-                         class="flex justify-between py-2 border-b border-slate-200/60">
-                      <span class="text-slate-500 font-medium text-sm" th:text="${attr.key}">Atributo</span>
-                      <span class="text-slate-900 font-bold text-sm text-right" th:text="${attr.value}">Valor</span>
-                    </div>
-                  </th:block>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Política de Envíos -->
-          <div th:if="${settings != null and settings.showShippingPolicy and settings.shippingPolicyText != null and !settings.shippingPolicyText.isBlank()}">
-            <button type="button"
-                    data-accordion-target="shipping-policy-content" data-accordion-icon="shipping-policy-icon"
-                    class="w-full flex justify-between items-center py-4 group transition-colors">
-              <span class="flex items-center gap-2.5 text-base font-bold store-heading group-hover:text-brand transition-colors">
-                <svg class="w-5 h-5 text-brand transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
-                Política de Envíos
-              </span>
-              <span class="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center group-hover:bg-brand/10 transition-colors">
-                <svg id="shipping-policy-icon" class="w-5 h-5 text-slate-500 group-hover:text-brand transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-              </span>
-            </button>
-            <div id="shipping-policy-content" class="pb-5 hidden">
-              <div class="bg-white text-slate-600 p-4 store-radius border border-slate-200/80 text-sm leading-relaxed whitespace-pre-line shadow-sm"
-                   th:text="${settings.shippingPolicyText}"></div>
-            </div>
-          </div>
-
-          <!-- Política de Devoluciones -->
-          <div th:if="${settings != null and settings.showReturnPolicy and settings.returnPolicyText != null and !settings.returnPolicyText.isBlank()}">
-            <button type="button"
-                    data-accordion-target="return-policy-content" data-accordion-icon="return-policy-icon"
-                    class="w-full flex justify-between items-center py-4 group transition-colors">
-              <span class="flex items-center gap-2.5 text-base font-bold store-heading group-hover:text-brand transition-colors">
-                <svg class="w-5 h-5 text-brand transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                Política de Devoluciones y Garantía
-              </span>
-              <span class="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center group-hover:bg-brand/10 transition-colors">
-                <svg id="return-policy-icon" class="w-5 h-5 text-slate-500 group-hover:text-brand transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-              </span>
-            </button>
-            <div id="return-policy-content" class="pb-5 hidden">
-              <div class="bg-white text-slate-600 p-4 store-radius border border-slate-200/80 text-sm leading-relaxed whitespace-pre-line shadow-sm"
-                   th:text="${settings.returnPolicyText}"></div>
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </div>
-
-    <!-- SECCIÓN DE PRODUCTOS RELACIONADOS (CONECTADA AL ESTILO DEL TEMA) -->
-    <div th:if="${relatedProducts != null and not #lists.isEmpty(relatedProducts)}"
-         class="mt-16 pt-12 border-t border-slate-200/40">
-      <div class="flex items-center justify-between mb-8">
-        <div>
-          <h2 class="text-2xl font-black store-heading tracking-tight">También te puede interesar</h2>
-          <p class="text-sm store-muted mt-1">Otros productos de nuestro catálogo</p>
-        </div>
-        <a th:href="@{/s/{slug}/catalog(slug=${slug})}" class="text-sm font-bold text-brand hover:underline">Ver catálogo →</a>
-      </div>
-
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
-        <div th:each="p : ${relatedProducts}"
-             th:with="isOutOfStock=${!p.isMadeToOrder and (p.stock == null or p.stock <= 0)},
-                      effectivePrice=${p.discountPrice != null and p.discountPrice > 0 ? p.discountPrice : p.price},
-                      cardImg=${p.getMainImageThumbnailUrl() != null ? p.getMainImageThumbnailUrl() : (p.mainImageUrl != null ? p.mainImageUrl : '/img/placeholder.jpg')}"
-             class="product-card group relative bg-white text-slate-900 store-radius overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-100 flex flex-col h-full">
-
-          <div class="relative aspect-[4/5] overflow-hidden bg-slate-50 flex-shrink-0">
-            <a th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${p.id})}" class="block w-full h-full">
-              <img th:src="${cardImg}" th:alt="${p.name}" loading="lazy" decoding="async"
-                   class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
-            </a>
-          </div>
-
-          <div class="p-4 flex flex-col flex-grow">
-            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider" th:text="${p.category != null ? p.category.name : 'General'}">Categoría</p>
-            <a th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${p.id})}">
-              <h3 class="text-sm font-bold text-slate-800 leading-tight mt-1 line-clamp-2 group-hover:text-brand transition-colors" th:text="${p.name}">Producto</h3>
-            </a>
-
-            <div class="mt-auto pt-3 border-t border-slate-50">
-              <div class="flex items-center gap-1.5 mb-3 flex-wrap">
-                <span th:if="${p.hasVariants}" class="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">Desde</span>
-                <span class="text-base font-black text-slate-900" th:text="${'$ ' + #numbers.formatDecimal(effectivePrice, 1, 'POINT', 0, 'COMMA')}">$0</span>
-              </div>
-
-              <div class="grid grid-cols-2 gap-2">
-                <a th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${p.id})}" class="flex items-center justify-center px-2 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors text-center">
-                  Ver detalles
-                </a>
-                <button th:if="${!p.hasVariants and !isOutOfStock}" type="button" th:data-slug="${slug}" th:data-id="${p.id}" onclick="buyNowFast(this.getAttribute('data-slug'), this.getAttribute('data-id'))" class="flex items-center justify-center px-2 py-2 text-xs font-bold text-white bg-brand hover-bg-brand rounded-lg transition-colors shadow-md text-center">
-                  Comprar
-                </button>
-                <a th:if="${p.hasVariants and !isOutOfStock}" th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${p.id})}" class="flex items-center justify-center px-2 py-2 text-xs font-bold text-white bg-brand hover-bg-brand rounded-lg transition-colors shadow-md text-center">
-                  Ver opciones
-                </a>
-                <button th:if="${isOutOfStock}" type="button" disabled class="flex items-center justify-center px-2 py-2 text-xs font-bold text-slate-400 bg-slate-100 rounded-lg cursor-not-allowed text-center">
-                  Agotado
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-  </div>
+  <th:block th:if="${theme != null}" th:with="productSections=${theme.getPageSections('product')}">
+    <th:block th:each="sec : ${productSections}" th:if="${sec.enabled}">
+      <div th:replace="~{storefront/sections/theme-sections :: render-section(${sec})}"></div>
+    </th:block>
+  </th:block>
 </div>
-
 <th:block layout:fragment="scripts">
   <script th:src="@{/js/modules/productDetail.js}"></script>
 </th:block>

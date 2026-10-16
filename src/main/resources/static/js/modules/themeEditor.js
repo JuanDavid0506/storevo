@@ -4,7 +4,8 @@ Storevo.ThemeEditor = {
     slug: '',
     storeName: 'Nuestra Tienda',
     previewUrl: '',
-    theme: { globalStyles: {}, sections: [] },
+    activePage: 'home',
+    theme: { globalStyles: {}, sections: [], pages: {} },
     categories: [],
     catalogProducts: [],
     activeSectionId: null,
@@ -197,6 +198,418 @@ Storevo.ThemeEditor = {
                 title: 'Sobre Nuestra Marca',
                 content: 'Somos una tienda comprometida con ofrecerte la mejor calidad y atención personalizada en cada pedido.'
             }
+        },
+        catalog_results: {
+            label: 'Catálogo de Productos',
+            description: 'Grilla principal del catálogo con buscador, ordenamiento y píldoras de categorías.',
+            anchorOnly: true,
+            defaultSettings: {
+                showHeader: true,
+                headerBadge: 'Colección',
+                headerTitle: 'Todo el Catálogo',
+                headerSubtitle: 'Explora todos nuestros productos disponibles.',
+                showCategoryPills: true,
+                showSearchAndSort: true,
+                columnsDesktop: '4',
+                showDiscountPercent: true
+            }
+        },
+        product_main: {
+            label: 'Ficha Principal del Producto',
+            description: 'Galería de fotos, selector de variantes, botones de compra y especificaciones.',
+            anchorOnly: true,
+            defaultSettings: {
+                galleryLayout: 'bottom',
+                showBreadcrumbs: true,
+                showSku: true,
+                showStockCounter: true,
+                showSpecs: true,
+                showPolicies: true,
+                showRelatedProducts: true,
+                relatedTitle: 'También te puede interesar',
+                relatedSubtitle: 'Otros productos de nuestro catálogo'
+            }
+        }
+    },
+
+    ensurePagesStructure: function() {
+        if (!this.theme.globalStyles) this.theme.globalStyles = {};
+        if (!Array.isArray(this.theme.sections)) this.theme.sections = [];
+        if (!this.theme.pages || typeof this.theme.pages !== 'object') {
+            this.theme.pages = {};
+        }
+        if (!Array.isArray(this.theme.customPages)) {
+            this.theme.customPages = [];
+        }
+        if (!Array.isArray(this.theme.pages.home)) {
+            this.theme.pages.home = this.theme.sections.slice();
+        }
+        if (!Array.isArray(this.theme.pages.catalog) || this.theme.pages.catalog.length === 0) {
+            this.theme.pages.catalog = [{
+                id: 'sec_catalog_results',
+                type: 'catalog_results',
+                enabled: true,
+                locked: true,
+                settings: JSON.parse(JSON.stringify(this.catalogDefinitions.catalog_results.defaultSettings))
+            }];
+        }
+        if (!Array.isArray(this.theme.pages.product) || this.theme.pages.product.length === 0) {
+            this.theme.pages.product = [{
+                id: 'sec_product_main',
+                type: 'product_main',
+                enabled: true,
+                locked: true,
+                settings: JSON.parse(JSON.stringify(this.catalogDefinitions.product_main.defaultSettings))
+            }];
+        }
+        this.theme.sections = this.theme.pages.home;
+    },
+
+    findCustomPageObj: function(slug) {
+        this.ensurePagesStructure();
+        const clean = String(slug || '').trim().toLowerCase();
+        return this.theme.customPages.find(cp => cp && String(cp.slug || '').trim().toLowerCase() === clean) || null;
+    },
+
+    getActivePageSections: function() {
+        this.ensurePagesStructure();
+        if (this.activePage && this.activePage.startsWith('page:')) {
+            const pageSlug = this.activePage.substring(5);
+            const cp = this.findCustomPageObj(pageSlug);
+            if (cp) {
+                if (!Array.isArray(cp.sections)) cp.sections = [];
+                return cp.sections;
+            }
+        }
+        if (!Array.isArray(this.theme.pages[this.activePage])) {
+            this.theme.pages[this.activePage] = [];
+        }
+        return this.theme.pages[this.activePage];
+    },
+
+    setActivePageSections: function(newList) {
+        this.ensurePagesStructure();
+        if (this.activePage && this.activePage.startsWith('page:')) {
+            const pageSlug = this.activePage.substring(5);
+            const cp = this.findCustomPageObj(pageSlug);
+            if (cp) {
+                cp.sections = newList;
+                return;
+            }
+        }
+        this.theme.pages[this.activePage] = newList;
+        if (this.activePage === 'home') {
+            this.theme.sections = newList;
+        }
+    },
+
+    getPreviewUrlForPage: function(pageKey) {
+        if (pageKey && pageKey.startsWith('page:')) {
+            const pageSlug = pageKey.substring(5);
+            return `/s/${this.slug}/page/${encodeURIComponent(pageSlug)}?preview=draft`;
+        }
+        if (pageKey === 'catalog') {
+            return `/s/${this.slug}/catalog?preview=draft`;
+        }
+        if (pageKey === 'product') {
+            return `/s/${this.slug}/product-preview?preview=draft`;
+        }
+        return `/s/${this.slug}?preview=draft`;
+    },
+
+    renderPageSelector: function() {
+        this.ensurePagesStructure();
+        const sel = document.getElementById('editor-page-select');
+        if (!sel) return;
+        sel.innerHTML = '';
+
+        const mainGroup = document.createElement('optgroup');
+        mainGroup.label = 'Páginas Principales';
+        [
+            { value: 'home', label: '🏠 Página de Inicio (Portada)' },
+            { value: 'catalog', label: '🛍️ Página de Catálogo' },
+            { value: 'product', label: '📦 Ficha de Producto (Detalle)' }
+        ].forEach(item => {
+            const o = document.createElement('option');
+            o.value = item.value;
+            o.textContent = item.label;
+            mainGroup.appendChild(o);
+        });
+        sel.appendChild(mainGroup);
+
+        if (this.theme.customPages && this.theme.customPages.length > 0) {
+            const customGroup = document.createElement('optgroup');
+            customGroup.label = 'Páginas Personalizadas';
+            this.theme.customPages.forEach(cp => {
+                if (!cp || !cp.slug) return;
+                const o = document.createElement('option');
+                o.value = 'page:' + cp.slug;
+                o.textContent = `📄 ${cp.title || cp.slug}${cp.showInNavbar !== false ? ' (En menú)' : ''}`;
+                customGroup.appendChild(o);
+            });
+            sel.appendChild(customGroup);
+        }
+
+        sel.value = this.activePage;
+    },
+
+    syncCustomPageSettingsBar: function() {
+        const bar = document.getElementById('custom-page-settings-bar');
+        if (!bar) return;
+
+        if (!this.activePage || !this.activePage.startsWith('page:')) {
+            bar.classList.add('hidden');
+            return;
+        }
+
+        const pageSlug = this.activePage.substring(5);
+        const cp = this.findCustomPageObj(pageSlug);
+        if (!cp) {
+            bar.classList.add('hidden');
+            return;
+        }
+
+        bar.classList.remove('hidden');
+        const titleInput = document.getElementById('custom-page-title-input');
+        const navChk = document.getElementById('custom-page-navbar-chk');
+        const slugPreview = document.getElementById('custom-page-slug-preview');
+
+        if (titleInput) {
+            titleInput.value = cp.title || '';
+            titleInput.oninput = () => {
+                cp.title = titleInput.value;
+                this.renderPageSelector();
+                this.scheduleAutoSave(true);
+            };
+        }
+        if (navChk) {
+            navChk.checked = cp.showInNavbar !== false;
+            navChk.onchange = () => {
+                cp.showInNavbar = navChk.checked;
+                this.renderPageSelector();
+                this.scheduleAutoSave(true);
+            };
+        }
+        if (slugPreview) {
+            slugPreview.textContent = `/page/${cp.slug}`;
+        }
+    },
+
+    slugifyPageTitle: function(raw) {
+        return String(raw || '')
+            .trim()
+            .toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '')
+            .substring(0, 45);
+    },
+
+    openCreatePageModal: function() {
+        const modal = document.getElementById('create-custom-page-modal');
+        const titleInput = document.getElementById('new-custom-page-title');
+        const slugInput = document.getElementById('new-custom-page-slug');
+        const navChk = document.getElementById('new-custom-page-navbar');
+        if (titleInput) titleInput.value = '';
+        if (slugInput) slugInput.value = '';
+        if (navChk) navChk.checked = true;
+        if (modal) modal.classList.remove('hidden');
+        if (titleInput) setTimeout(() => titleInput.focus(), 50);
+    },
+
+    closeCreatePageModal: function() {
+        const modal = document.getElementById('create-custom-page-modal');
+        if (modal) modal.classList.add('hidden');
+    },
+
+    updateNewPageSlugPreview: function(titleVal) {
+        const slugInput = document.getElementById('new-custom-page-slug');
+        if (slugInput) {
+            slugInput.value = this.slugifyPageTitle(titleVal);
+        }
+    },
+
+    buildStarterSectionsForCustomPage: function(templateType, pageTitle) {
+        const uid = () => 'sec_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 5);
+        if (templateType === 'promo') {
+            return [
+                {
+                    id: uid(), type: 'countdown_promo', enabled: true, locked: false,
+                    settings: JSON.parse(JSON.stringify(this.catalogDefinitions.countdown_promo.defaultSettings))
+                },
+                {
+                    id: uid(), type: 'product_grid', enabled: true, locked: false,
+                    settings: {
+                        title: pageTitle || 'Ofertas Especiales',
+                        subtitle: 'Filtra por talla, color, precio o disponibilidad',
+                        source: 'NEWEST',
+                        categoryId: '',
+                        limit: 12,
+                        showFilters: true,
+                        showViewAll: false
+                    }
+                }
+            ];
+        }
+        if (templateType === 'faq') {
+            return [
+                {
+                    id: uid(), type: 'faq_accordion', enabled: true, locked: false,
+                    settings: JSON.parse(JSON.stringify(this.catalogDefinitions.faq_accordion.defaultSettings))
+                },
+                {
+                    id: uid(), type: 'how_to_buy', enabled: true, locked: false,
+                    settings: JSON.parse(JSON.stringify(this.catalogDefinitions.how_to_buy.defaultSettings))
+                },
+                {
+                    id: uid(), type: 'whatsapp_cta', enabled: true, locked: false,
+                    settings: JSON.parse(JSON.stringify(this.catalogDefinitions.whatsapp_cta.defaultSettings))
+                }
+            ];
+        }
+        if (templateType === 'blank') {
+            return [
+                {
+                    id: uid(), type: 'rich_text', enabled: true, locked: false,
+                    settings: {
+                        title: pageTitle || 'Nueva Página',
+                        content: 'Personaliza este texto o agrega nuevas secciones desde el panel izquierdo.'
+                    }
+                }
+            ];
+        }
+        // Por defecto: 'about'
+        return [
+            {
+                id: uid(), type: 'rich_text', enabled: true, locked: false,
+                settings: {
+                    title: pageTitle || 'Sobre Nosotros',
+                    content: `En ${this.storeName} seleccionamos cada producto cuidando la calidad, el diseño y la atención personalizada para entregarte la mejor experiencia.`
+                }
+            },
+            {
+                id: uid(), type: 'trust_badges', enabled: true, locked: false,
+                settings: JSON.parse(JSON.stringify(this.catalogDefinitions.trust_badges.defaultSettings))
+            },
+            {
+                id: uid(), type: 'whatsapp_cta', enabled: true, locked: false,
+                settings: JSON.parse(JSON.stringify(this.catalogDefinitions.whatsapp_cta.defaultSettings))
+            }
+        ];
+    },
+
+    createCustomPage: function() {
+        this.ensurePagesStructure();
+        const titleInput = document.getElementById('new-custom-page-title');
+        const slugInput = document.getElementById('new-custom-page-slug');
+        const tplSelect = document.getElementById('new-custom-page-template');
+        const navChk = document.getElementById('new-custom-page-navbar');
+
+        const title = titleInput ? titleInput.value.trim() : '';
+        if (!title) {
+            if (Storevo.UI && Storevo.UI.Toast) {
+                Storevo.UI.Toast.show('Escribe un nombre para la página', 'warning');
+            }
+            return;
+        }
+
+        let baseSlug = this.slugifyPageTitle(slugInput && slugInput.value ? slugInput.value : title);
+        const reserved = ['home', 'catalog', 'product', 'product-preview', 'cart', 'checkout', 'wishlist', 'order', 'p', 'page'];
+        if (!baseSlug || reserved.includes(baseSlug)) {
+            baseSlug = 'pagina-' + (this.theme.customPages.length + 1);
+        }
+
+        let finalSlug = baseSlug;
+        let counter = 2;
+        while (this.findCustomPageObj(finalSlug)) {
+            finalSlug = `${baseSlug}-${counter++}`;
+        }
+
+        const tplType = tplSelect ? tplSelect.value : 'about';
+        const newPage = {
+            slug: finalSlug,
+            title: title,
+            showInNavbar: navChk ? Boolean(navChk.checked) : true,
+            sections: this.buildStarterSectionsForCustomPage(tplType, title)
+        };
+
+        this.theme.customPages.push(newPage);
+        this.closeCreatePageModal();
+        this.activePage = 'page:' + finalSlug;
+        this.previewUrl = this.getPreviewUrlForPage(this.activePage);
+        this.renderPageSelector();
+        this.syncCustomPageSettingsBar();
+        this.renderSectionsList();
+        this.markUnpublishedChanges(true);
+        this.saveDraft(false, true);
+
+        if (Storevo.UI && Storevo.UI.Toast) {
+            Storevo.UI.Toast.show(`Página "${title}" creada`, 'success');
+        }
+    },
+
+    deleteActiveCustomPage: function() {
+        if (!this.activePage || !this.activePage.startsWith('page:')) return;
+        const pageSlug = this.activePage.substring(5);
+        const cp = this.findCustomPageObj(pageSlug);
+        if (!cp) return;
+
+        const doDelete = () => {
+            this.theme.customPages = this.theme.customPages.filter(p => p && p.slug !== cp.slug);
+            this.switchPage('home', false);
+            this.renderPageSelector();
+            this.markUnpublishedChanges(true);
+            this.saveDraft(false, true);
+            if (Storevo.UI && Storevo.UI.Toast) {
+                Storevo.UI.Toast.show(`Página "${cp.title}" eliminada`, 'success');
+            }
+        };
+
+        if (confirm(`¿Eliminar la página personalizada "${cp.title}"?`)) {
+            doDelete();
+        }
+    },
+
+    switchPage: function(pageKey, reloadIframe = true) {
+        this.ensurePagesStructure();
+        let target = 'home';
+        if (pageKey === 'catalog' || pageKey === 'product' || pageKey === 'home') {
+            target = pageKey;
+        } else if (pageKey && pageKey.startsWith('page:')) {
+            const slug = pageKey.substring(5);
+            if (this.findCustomPageObj(slug)) {
+                target = 'page:' + slug;
+            }
+        }
+
+        this.activePage = target;
+        this.activeSectionId = null;
+        this.previewUrl = this.getPreviewUrlForPage(target);
+
+        this.renderPageSelector();
+        this.syncCustomPageSettingsBar();
+
+        const badge = document.getElementById('editor-active-page-badge');
+        if (badge) {
+            if (target.startsWith('page:')) {
+                const cp = this.findCustomPageObj(target.substring(5));
+                badge.textContent = cp ? cp.title : 'Página';
+            } else {
+                const labels = { home: 'Inicio', catalog: 'Catálogo', product: 'Producto' };
+                badge.textContent = labels[target] || 'Inicio';
+            }
+        }
+
+        const panelInspector = document.getElementById('panel-section-inspector');
+        const panelList = document.getElementById('panel-sections-list');
+        if (panelInspector && !panelInspector.classList.contains('hidden')) {
+            panelInspector.classList.add('hidden');
+            if (panelList) panelList.classList.remove('hidden');
+        }
+
+        this.renderSectionsList();
+        if (reloadIframe) {
+            this.reloadPreviewIframe();
         }
     },
 
@@ -211,7 +624,7 @@ Storevo.ThemeEditor = {
         try {
             this.theme = JSON.parse(bridge.getAttribute('data-theme') || '{}');
         } catch (e) {
-            this.theme = { globalStyles: {}, sections: [] };
+            this.theme = { globalStyles: {}, sections: [], pages: {}, customPages: [] };
         }
 
         try {
@@ -220,9 +633,9 @@ Storevo.ThemeEditor = {
             this.categories = [];
         }
 
-        if (!this.theme.globalStyles) this.theme.globalStyles = {};
-        if (!Array.isArray(this.theme.sections)) this.theme.sections = [];
-
+        this.ensurePagesStructure();
+        this.renderPageSelector();
+        this.syncCustomPageSettingsBar();
         this.renderSectionsList();
         this.initSortable();
         this.initGlobalStylesInputs();
@@ -257,6 +670,11 @@ Storevo.ThemeEditor = {
 
         window.addEventListener('message', (e) => {
             if (e.origin !== window.location.origin || !e.data) return;
+            if (e.data.type === 'storevo:page-loaded' && e.data.pageKey) {
+                if (e.data.pageKey !== this.activePage) {
+                    this.switchPage(e.data.pageKey, false);
+                }
+            }
             if (e.data.type === 'storevo:select-section' && e.data.sectionId) {
                 this.syncProductsFromIframe();
                 this.setMobilePane('editor');
@@ -356,46 +774,74 @@ Storevo.ThemeEditor = {
             animation: 180,
             ghostClass: 'sortable-ghost',
             onEnd: () => {
+                const currentList = this.getActivePageSections();
                 const orderedIds = Array.from(container.querySelectorAll('[data-sec-id]'))
                     .map(el => el.getAttribute('data-sec-id'));
 
                 const reordered = [];
                 orderedIds.forEach(id => {
-                    const found = this.theme.sections.find(s => s.id === id);
+                    const found = currentList.find(s => s.id === id);
                     if (found) reordered.push(found);
                 });
-                this.theme.sections = reordered;
+                this.setActivePageSections(reordered);
                 this.scheduleAutoSave();
             }
         });
+    },
+
+    isSectionLocked: function(sec) {
+        return Boolean(sec && (sec.locked === true || sec.type === 'catalog_results' || sec.type === 'product_main'));
     },
 
     renderSectionsList: function() {
         const container = document.getElementById('sortable-sections-container');
         if (!container) return;
         container.innerHTML = '';
+        const currentList = this.getActivePageSections();
 
-        if (this.theme.sections.length === 0) {
+        if (currentList.length === 0) {
             container.innerHTML = `
                 <div class="text-center py-10 px-4 border border-dashed border-slate-800 rounded-xl">
-                    <p class="text-xs text-slate-400">No hay secciones en la portada.</p>
+                    <p class="text-xs text-slate-400">No hay secciones en esta página.</p>
                 </div>
             `;
             return;
         }
 
-        this.theme.sections.forEach(sec => {
+        currentList.forEach(sec => {
             const def = this.catalogDefinitions[sec.type] || { label: sec.type };
-            const subtitle = (sec.settings && (sec.settings.title || sec.settings.customTitle || sec.settings.badgeText || sec.settings.text || sec.settings.card1Title)) || def.label;
-            const isEnabled = sec.enabled !== false;
+            const isLocked = this.isSectionLocked(sec);
+            const subtitle = isLocked
+                ? 'Sección principal de esta página (Clic para personalizar)'
+                : ((sec.settings && (sec.settings.title || sec.settings.customTitle || sec.settings.badgeText || sec.settings.text || sec.settings.card1Title || sec.settings.headerTitle)) || def.label);
+            const isEnabled = isLocked ? true : (sec.enabled !== false);
 
             const row = document.createElement('div');
             row.setAttribute('data-sec-id', sec.id);
             row.className = `group flex items-center justify-between gap-2 p-3 rounded-xl border transition-all ${
-                isEnabled
-                    ? 'bg-slate-950 border-slate-800 hover:border-storevo-500/50'
-                    : 'bg-slate-950/50 border-slate-800/50 opacity-50'
+                isLocked
+                    ? 'bg-slate-950 border-storevo-500/40 hover:border-storevo-500'
+                    : (isEnabled
+                        ? 'bg-slate-950 border-slate-800 hover:border-storevo-500/50'
+                        : 'bg-slate-950/50 border-slate-800/50 opacity-50')
             }`;
+
+            const actionsHtml = isLocked
+                ? `<span class="px-2 py-0.5 rounded-md bg-storevo-500/15 text-storevo-300 border border-storevo-500/30 text-[10px] font-bold flex-shrink-0" title="Esta sección es obligatoria en esta vista, pero puedes moverla y personalizar sus opciones">Fija</span>`
+                : `<div class="flex items-center gap-0.5 flex-shrink-0">
+                    <button type="button" class="sec-dup-btn p-1.5 text-slate-500 hover:text-storevo-400 rounded-lg hover:bg-slate-800 transition" title="Duplicar sección">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                    </button>
+                    <button type="button" class="sec-toggle-btn p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition" title="${isEnabled ? 'Ocultar sección' : 'Mostrar sección'}">
+                        ${isEnabled
+                    ? '<svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>'
+                    : '<svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path></svg>'
+                }
+                    </button>
+                    <button type="button" class="sec-delete-btn p-1.5 text-slate-500 hover:text-red-400 rounded-lg hover:bg-red-500/10 transition" title="Eliminar sección">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                </div>`;
 
             row.innerHTML = `
                 <div class="flex items-center gap-2.5 min-w-0 flex-1">
@@ -407,57 +853,51 @@ Storevo.ThemeEditor = {
                         <p class="text-[11px] text-slate-500 truncate mt-0.5">${this.escapeHtml(subtitle)}</p>
                     </button>
                 </div>
-                <div class="flex items-center gap-0.5 flex-shrink-0">
-                    <button type="button" class="sec-dup-btn p-1.5 text-slate-500 hover:text-storevo-400 rounded-lg hover:bg-slate-800 transition" title="Duplicar sección">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-                    </button>
-                    <button type="button" class="sec-toggle-btn p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition" title="${isEnabled ? 'Ocultar sección' : 'Mostrar sección'}">
-                        ${isEnabled
-                ? '<svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>'
-                : '<svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path></svg>'
-            }
-                    </button>
-                    <button type="button" class="sec-delete-btn p-1.5 text-slate-500 hover:text-red-400 rounded-lg hover:bg-red-500/10 transition" title="Eliminar sección">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                    </button>
-                </div>
+                ${actionsHtml}
             `;
 
             row.querySelector('.sec-edit-trigger').addEventListener('click', () => this.openInspector(sec.id));
-            row.querySelector('.sec-dup-btn').addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.duplicateSection(sec.id);
-            });
-            row.querySelector('.sec-toggle-btn').addEventListener('click', (e) => {
-                e.stopPropagation();
-                sec.enabled = !isEnabled;
-                this.renderSectionsList();
-                this.scheduleAutoSave();
-            });
-            row.querySelector('.sec-delete-btn').addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.theme.sections = this.theme.sections.filter(item => item.id !== sec.id);
-                this.renderSectionsList();
-                this.scheduleAutoSave();
-            });
+            if (!isLocked) {
+                row.querySelector('.sec-dup-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.duplicateSection(sec.id);
+                });
+                row.querySelector('.sec-toggle-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    sec.enabled = !isEnabled;
+                    this.renderSectionsList();
+                    this.scheduleAutoSave();
+                });
+                row.querySelector('.sec-delete-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const filtered = this.getActivePageSections().filter(item => item.id !== sec.id);
+                    this.setActivePageSections(filtered);
+                    this.renderSectionsList();
+                    this.scheduleAutoSave();
+                });
+            }
 
             container.appendChild(row);
         });
     },
 
     duplicateSection: function(sectionId) {
-        const index = this.theme.sections.findIndex(s => s.id === sectionId);
+        const list = this.getActivePageSections();
+        const index = list.findIndex(s => s.id === sectionId);
         if (index === -1) return;
 
-        const original = this.theme.sections[index];
+        const original = list[index];
+        if (this.isSectionLocked(original)) return;
+
         const cloned = {
             id: 'sec_' + Date.now().toString(36),
             type: original.type,
             enabled: true,
+            locked: false,
             settings: JSON.parse(JSON.stringify(original.settings || {}))
         };
 
-        this.theme.sections.splice(index + 1, 0, cloned);
+        list.splice(index + 1, 0, cloned);
         this.renderSectionsList();
         this.openInspector(cloned.id);
         this.scheduleAutoSave();
@@ -492,9 +932,26 @@ Storevo.ThemeEditor = {
 
     openInspector: function(sectionId) {
         this.syncProductsFromIframe();
-        const sec = this.theme.sections.find(s => s.id === sectionId);
+        let sec = this.getActivePageSections().find(s => s.id === sectionId);
+        if (!sec && this.theme.pages) {
+            for (const [pageKey, list] of Object.entries(this.theme.pages)) {
+                const found = (list || []).find(s => s.id === sectionId);
+                if (found) {
+                    this.activePage = pageKey;
+                    const sel = document.getElementById('editor-page-select');
+                    if (sel) sel.value = pageKey;
+                    sec = found;
+                    break;
+                }
+            }
+        }
         if (!sec) return;
         this.activeSectionId = sectionId;
+
+        const dupBtn = document.getElementById('inspector-duplicate-btn');
+        if (dupBtn) {
+            dupBtn.classList.toggle('hidden', this.isSectionLocked(sec));
+        }
 
         const def = this.catalogDefinitions[sec.type] || { label: sec.type };
         const titleEl = document.getElementById('inspector-section-title');
@@ -924,8 +1381,10 @@ Storevo.ThemeEditor = {
                     { key: 'limit', label: 'Cantidad máxima de productos', type: 'select', options: [
                             { value: '4', label: '4 productos (1 fila)' },
                             { value: '8', label: '8 productos (2 filas)' },
-                            { value: '12', label: '12 productos (3 filas)' }
+                            { value: '12', label: '12 productos (3 filas)' },
+                            { value: '24', label: '24 productos (Catálogo amplio)' }
                         ]},
+                    { key: 'showFilters', label: 'Filtros Dinámicos y Buscador', type: 'checkbox', placeholder: 'Habilitar barra de filtros, tallas, colores y buscador en esta vitrina', defaultVal: false },
                     { key: 'showViewAll', label: 'Enlace al catálogo', type: 'checkbox', placeholder: 'Mostrar botón "Ver todo →"', defaultVal: true }
                 ];
             case 'spotlight_product':
@@ -1052,6 +1511,46 @@ Storevo.ThemeEditor = {
                     { key: 'title', label: 'Título', type: 'text', placeholder: 'Sobre Nosotros' },
                     { key: 'content', label: 'Contenido', type: 'textarea', placeholder: 'Escribe aquí la historia o mensaje de tu tienda...' }
                 ];
+            case 'catalog_results':
+                return [
+                    { key: 'showHeader', label: 'Encabezado del Catálogo', type: 'checkbox', placeholder: 'Mostrar título y descripción del catálogo', defaultVal: true },
+                    { key: 'headerBadge', label: 'Etiqueta superior', type: 'text', defaultVal: 'Colección', placeholder: 'Ej: Colección' },
+                    { key: 'headerTitle', label: 'Título principal del catálogo', type: 'text', defaultVal: 'Todo el Catálogo' },
+                    { key: 'headerSubtitle', label: 'Subtítulo descriptivo', type: 'textarea', defaultVal: 'Explora todos nuestros productos disponibles.' },
+                    { key: 'showCategoryPills', label: 'Navegación rápida de categorías', type: 'checkbox', placeholder: 'Mostrar píldoras de categorías arriba del listado', defaultVal: true },
+                    { key: 'showSearchAndSort', label: 'Buscador y Ordenamiento', type: 'checkbox', placeholder: 'Mostrar barra de búsqueda en vivo y selector de orden', defaultVal: true },
+                    { key: 'filterLayout', label: 'Disposición de Filtros en PC', type: 'select', defaultVal: 'sidebar', options: [
+                            { value: 'sidebar', label: 'Barra Lateral Izquierda en PC + Drawer en Móvil' },
+                            { value: 'topbar', label: 'Barra Horizontal Desplegable Superior' },
+                            { value: 'none', label: 'Ocultar panel de filtros avanzados' }
+                        ]},
+                    { key: 'showFilterAvailability', label: 'Filtro de Disponibilidad y Ofertas', type: 'checkbox', placeholder: 'Permitir filtrar por En stock / En oferta', defaultVal: true },
+                    { key: 'showFilterPrice', label: 'Filtro de Rango de Precio', type: 'checkbox', placeholder: 'Permitir filtrar por precio mínimo y máximo', defaultVal: true },
+                    { key: 'showFilterCategory', label: 'Filtro de Categorías con conteo', type: 'checkbox', placeholder: 'Mostrar filtro de categorías laterales', defaultVal: true },
+                    { key: 'showFilterVariants', label: 'Filtros de Variantes (Tallas, Colores con swatches...)', type: 'checkbox', placeholder: 'Generar filtros automáticos de Tallas y Colores con stock', defaultVal: true },
+                    { key: 'showFilterAttributes', label: 'Filtros de Ficha Técnica (Marca, Material, Género...)', type: 'checkbox', placeholder: 'Generar filtros automáticos desde las especificaciones', defaultVal: true },
+                    { key: 'columnsDesktop', label: 'Columnas de productos en PC', type: 'select', defaultVal: '4', options: [
+                            { value: '4', label: '4 productos por fila (Estándar)' },
+                            { value: '3', label: '3 productos grandes por fila (Editorial)' }
+                        ]},
+                    { key: 'showDiscountPercent', label: 'Etiqueta de ahorro en ofertas', type: 'checkbox', placeholder: 'Mostrar porcentaje de descuento (Ej: -20% Oferta)', defaultVal: true }
+                ];
+            case 'product_main':
+                return [
+                    { key: 'galleryLayout', label: 'Diseño de la Galería en PC', type: 'select', defaultVal: 'bottom', options: [
+                            { value: 'bottom', label: 'Clásico (Imagen principal + Miniaturas abajo)' },
+                            { value: 'left', label: 'Editorial Lateral (Miniaturas verticales a la izquierda)' },
+                            { value: 'grid', label: 'Mosaico Lookbook (Miniaturas grandes en 2 columnas)' }
+                        ]},
+                    { key: 'showBreadcrumbs', label: 'Miga de pan (Ruta superior)', type: 'checkbox', placeholder: 'Mostrar ruta Inicio / Catálogo / Categoría', defaultVal: true },
+                    { key: 'showSku', label: 'Código SKU', type: 'checkbox', placeholder: 'Mostrar insignia con el SKU del producto', defaultVal: true },
+                    { key: 'showStockCounter', label: 'Indicador de unidades disponibles', type: 'checkbox', placeholder: 'Mostrar texto de Stock disponible bajo la cantidad', defaultVal: true },
+                    { key: 'showSpecs', label: 'Ficha Técnica (Especificaciones)', type: 'checkbox', placeholder: 'Mostrar acordeón de especificaciones técnicas', defaultVal: true },
+                    { key: 'showPolicies', label: 'Políticas de Envío y Devolución', type: 'checkbox', placeholder: 'Mostrar acordeones de políticas configuradas', defaultVal: true },
+                    { key: 'showRelatedProducts', label: 'Productos Relacionados', type: 'checkbox', placeholder: 'Mostrar sugerencias de productos al final de la ficha', defaultVal: true },
+                    { key: 'relatedTitle', label: 'Título de Productos Relacionados', type: 'text', defaultVal: 'También te puede interesar' },
+                    { key: 'relatedSubtitle', label: 'Subtítulo de Productos Relacionados', type: 'text', defaultVal: 'Otros productos de nuestro catálogo' }
+                ];
             default:
                 return [];
         }
@@ -1106,6 +1605,20 @@ Storevo.ThemeEditor = {
         bindSelect('style-navbar-link-format', 'navbarLinkFormat', 'normal');
         bindSelect('style-navbar-link-hover', 'navbarLinkHover', 'color');
         bindSelect('style-navbar-sticky', 'navbarSticky', 'true');
+        bindSelect('style-navbar-dropdown-style', 'navbarDropdownStyle', 'mega');
+        bindSelect('style-navbar-dropdown-anim', 'navbarDropdownAnim', 'slide_up');
+        bindSelect('style-navbar-trigger', 'navbarTrigger', 'hover');
+        bindSelect('style-navbar-speed', 'navbarSpeed', 'normal');
+
+        const compactScrollChk = document.getElementById('style-navbar-compact-scroll');
+        if (compactScrollChk) {
+            compactScrollChk.checked = Boolean(gs.navbarCompactOnScroll);
+            compactScrollChk.onchange = () => {
+                gs.navbarCompactOnScroll = compactScrollChk.checked;
+                this.pushLiveStylesToIframe();
+                this.scheduleAutoSave(false);
+            };
+        }
 
         bindSelect('style-heading-font', 'headingFont', 'Inter', true);
         bindSelect('style-body-font', 'bodyFont', 'Inter', true);
@@ -1173,6 +1686,11 @@ Storevo.ThemeEditor = {
                 gs.navbarLinkFormat = 'normal';
                 gs.navbarLinkHover = 'color';
                 gs.navbarSticky = true;
+                gs.navbarDropdownStyle = 'mega';
+                gs.navbarDropdownAnim = 'slide_up';
+                gs.navbarTrigger = 'hover';
+                gs.navbarSpeed = 'normal';
+                gs.navbarCompactOnScroll = false;
                 this.initGlobalStylesInputs();
                 this.pushLiveStylesToIframe();
                 this.scheduleAutoSave(true);
@@ -1216,174 +1734,586 @@ Storevo.ThemeEditor = {
         });
     },
 
+    previousThemeSnapshot: null,
+    activePresetCategory: 'all',
+    activePresetId: null,
+
     getPresetsDefinitions: function() {
         const name = this.storeName || 'Nuestra Tienda';
         return [
             {
-                id: 'editorial_minimal',
-                name: 'Moda Editorial Minimalista',
-                tag: 'Ideal para Ropa y Calzado',
-                colors: ['#18181b', '#f8fafc', '#ffffff'],
-                description: 'Tipografía editorial elegante (Playfair Display), tonos sobrios en negro carbón y estructura limpia enfocada en fotografía.',
+                id: 'editorial_couture',
+                category: 'fashion',
+                name: 'Editorial Haute Couture',
+                tag: 'Alta Costura & Moda',
+                layoutSummary: 'Navbar Editorial • Bordes Rectos 0px • Galería Lookbook',
+                colors: ['#18181b', '#27272a', '#f8fafc'],
+                description: 'Composición de revista con tipografía Cormorant Garamond en mayúsculas, tarjetas limpias sin bordes, catálogo de 3 columnas grandes y ficha en mosaico.',
                 config: {
                     globalStyles: {
                         primaryColor: '#18181b',
                         secondaryColor: '#27272a',
                         backgroundColor: '#f8fafc',
                         textColor: '#0f172a',
-                        headingFont: 'Playfair Display',
-                        bodyFont: 'Inter',
-                        borderRadius: '0.375rem'
+                        headingFont: 'Cormorant Garamond',
+                        bodyFont: 'Manrope',
+                        headingTransform: 'uppercase',
+                        fontScale: 'standard',
+                        borderRadius: '0px',
+                        buttonRadius: 'square',
+                        cardStyle: 'clean',
+                        navbarLayout: 'editorial',
+                        navbarStyle: 'light',
+                        navbarLinkFormat: 'uppercase',
+                        navbarLinkHover: 'underline_center',
+                        navbarSticky: true,
+                        navbarDropdownStyle: 'mega',
+                        navbarDropdownAnim: 'fade',
+                        navbarTrigger: 'hover',
+                        navbarSpeed: 'slow',
+                        navbarCompactOnScroll: true
                     },
                     sections: [
                         {
-                            id: 'sec_ann_ed', type: 'announcement_bar', enabled: true,
-                            settings: { text: '✨ Envíos a toda Colombia • Compra segura en línea o por WhatsApp', bgColor: '#18181b', textColor: '#ffffff', linkUrl: '/catalog' }
+                            id: 'sec_ann_ec', type: 'announcement_bar', enabled: true,
+                            settings: { text: 'ENVÍOS A TODA COLOMBIA • EDICIÓN LIMITADA DISPONIBLE', text2: 'ATENCIÓN PERSONALIZADA VÍA WHATSAPP', text3: '', bgColor: '#18181b', textColor: '#ffffff', linkUrl: '/catalog' }
                         },
                         {
-                            id: 'sec_hero_ed', type: 'hero_banner', enabled: true,
-                            settings: { heroLayout: 'classic', badgeText: 'Colección Exclusiva', title: name, subtitle: 'Prendas y diseños pensados para destacar en cada ocasión.', buttonText: 'Explorar Colección', buttonUrl: '/catalog', secondaryButtonText: '', secondaryButtonUrl: '/catalog', imageUrl: '', overlayOpacity: 45, bgColor: '#18181b', textColor: '#ffffff', alignment: 'center' }
+                            id: 'sec_hero_ec', type: 'hero_banner', enabled: true,
+                            settings: { heroLayout: 'classic', badgeText: 'COLECCIÓN DE TEMPORADA', title: name, subtitle: 'Siluetas atemporales y acabados de autor diseñados para destacar.', buttonText: 'EXPLORAR COLECCIÓN', buttonUrl: '/catalog', secondaryButtonText: '', secondaryButtonUrl: '/catalog', imageUrl: '', overlayOpacity: 45, bgColor: '#18181b', textColor: '#ffffff', alignment: 'center' }
                         },
                         {
-                            id: 'sec_cats_ed', type: 'featured_categories', enabled: true,
-                            settings: { title: 'Categorías', subtitle: 'Explora nuestras líneas principales', cardLayout: 'visual', columns: '4' }
+                            id: 'sec_cats_ec', type: 'featured_categories', enabled: true,
+                            settings: { title: 'Líneas de Colección', subtitle: 'Explora nuestras categorías principales', cardLayout: 'visual', columns: '3' }
                         },
                         {
-                            id: 'sec_grid_ed', type: 'product_grid', enabled: true,
-                            settings: { title: 'Nuevos Ingresos', subtitle: 'Recién llegados a nuestro catálogo', source: 'NEWEST', categoryId: '', limit: 8, showViewAll: true }
+                            id: 'sec_grid_ec', type: 'product_grid', enabled: true,
+                            settings: { title: 'Nuevos Ingresos', subtitle: 'Piezas seleccionadas de la temporada', source: 'NEWEST', categoryId: '', limit: 8, showFilters: false, showViewAll: true }
                         },
                         {
-                            id: 'sec_test_ed', type: 'testimonials', enabled: true,
-                            settings: { title: 'Clientes Felices', subtitle: 'Opiniones reales de nuestras compradoras', t1Name: 'Camila Mejía', t1City: 'Medellín', t1Text: 'La tela y la horma son espectaculares, llegó en 2 días a mi casa.', t2Name: 'Daniela Ríos', t2City: 'Bogotá D.C.', t2Text: 'Me encantó la atención y lo fácil que fue hacer el pedido.', t3Name: 'Sofía Vargas', t3City: 'Barranquilla', t3Text: 'Superó mis expectativas, 100% recomendados.' }
+                            id: 'sec_spot_ec', type: 'spotlight_product', enabled: true,
+                            settings: { productId: '', badgeText: 'PIEZA DE AUTOR', customTitle: '', customSubtitle: '', imageSide: 'right' }
                         },
                         {
-                            id: 'sec_faq_ed', type: 'faq_accordion', enabled: true,
-                            settings: { title: 'Preguntas Frecuentes', subtitle: 'Todo lo que necesitas saber sobre tus compras', q1: '¿Cómo elijo mi talla ideal?', a1: 'En cada producto encontrarás sus especificaciones, o puedes escribirnos por WhatsApp para asesorarte.', q2: '¿Cuánto tardan los envíos?', a2: 'Entregamos entre 2 y 5 días hábiles en cualquier ciudad de Colombia.', q3: '¿Qué medios de pago reciben?', a3: 'Recibimos pagos en línea seguros con Wompi (PSE, Nequi, Tarjetas) y pedidos por WhatsApp.' }
+                            id: 'sec_rich_ec', type: 'rich_text', enabled: true,
+                            settings: { title: 'Filosofía de Marca', content: 'En ' + name + ' creamos colecciones con atención meticulosa al detalle, priorizando materiales nobles y cortes impecables.' }
                         }
-                    ]
+                    ],
+                    pages: {
+                        catalog: [{
+                            id: 'sec_catalog_results', type: 'catalog_results', enabled: true, locked: true,
+                            settings: { showHeader: true, headerBadge: 'LOOKBOOK', headerTitle: 'Catálogo Completo', headerSubtitle: 'Explora todas las piezas disponibles en nuestra tienda.', showCategoryPills: true, showSearchAndSort: true, filterLayout: 'topbar', showFilterPrice: true, showFilterAvailability: true, showFilterCategory: true, showFilterVariants: true, showFilterAttributes: true, columnsDesktop: '3', showDiscountPercent: false }
+                        }],
+                        product: [
+                            {
+                                id: 'sec_product_main', type: 'product_main', enabled: true, locked: true,
+                                settings: { galleryLayout: 'grid', showBreadcrumbs: true, showSku: false, showStockCounter: true, showSpecs: true, showPolicies: true, showRelatedProducts: true, relatedTitle: 'Completa el Look', relatedSubtitle: 'Otras piezas de nuestra colección' }
+                            },
+                            {
+                                id: 'sec_prod_trust_ec', type: 'trust_badges', enabled: true, locked: false,
+                                settings: { badgeStyle: 'minimal', item1Icon: 'shield', item1Title: 'Compra Protegida', item1Text: 'Transacciones 100% seguras en línea.', item2Icon: 'truck', item2Title: 'Despacho Nacional', item2Text: 'Envíos cuidados a cualquier ciudad.', item3Icon: 'refresh', item3Title: 'Cambios de Talla', item3Text: 'Soporte directo por WhatsApp.' }
+                            }
+                        ]
+                    }
                 }
             },
             {
-                id: 'urban_tech',
-                name: 'Urbano / Tech Audaz',
-                tag: 'Ideal para Streetwear y Gadgets',
-                colors: ['#4f46e5', '#0f172a', '#f1f5f9'],
-                description: 'Fuente geométrica moderna (Montserrat), alto impacto visual con producto estrella, contador de oferta y mosaico doble.',
+                id: 'urban_streetwear',
+                category: 'fashion',
+                name: 'Urbano & Streetwear Drop',
+                tag: 'Streetwear & Sneakers',
+                layoutSummary: 'Navbar Transparente Hero • Tarjetas Contorno • Contador Drop',
+                colors: ['#4f46e5', '#09090b', '#f4f4f5'],
+                description: 'Diseño audaz con navbar transparente sobre portada, tarjetas con borde marcado, lanzamiento estrella, contador regresivo y galería lateral.',
                 config: {
                     globalStyles: {
                         primaryColor: '#4f46e5',
-                        secondaryColor: '#0f172a',
-                        backgroundColor: '#f8fafc',
-                        textColor: '#0f172a',
-                        headingFont: 'Montserrat',
-                        bodyFont: 'DM Sans',
-                        borderRadius: '1rem'
+                        secondaryColor: '#09090b',
+                        backgroundColor: '#f4f4f5',
+                        textColor: '#09090b',
+                        headingFont: 'Space Grotesk',
+                        bodyFont: 'Inter',
+                        headingTransform: 'uppercase',
+                        fontScale: 'standard',
+                        borderRadius: '0.75rem',
+                        buttonRadius: 'sync',
+                        cardStyle: 'outlined',
+                        navbarLayout: 'hero_overlay',
+                        navbarStyle: 'secondary',
+                        navbarLinkFormat: 'bold',
+                        navbarLinkHover: 'slide_bg',
+                        navbarSticky: true,
+                        navbarDropdownStyle: 'mega',
+                        navbarDropdownAnim: 'scale',
+                        navbarTrigger: 'hover',
+                        navbarSpeed: 'fast',
+                        navbarCompactOnScroll: true
                     },
                     sections: [
                         {
-                            id: 'sec_ann_ut', type: 'announcement_bar', enabled: true,
-                            settings: { text: '🔥 ¡Nuevos lanzamientos disponibles! Unidades limitadas', bgColor: '#4f46e5', textColor: '#ffffff', linkUrl: '/catalog' }
+                            id: 'sec_hero_us', type: 'hero_banner', enabled: true,
+                            settings: { heroLayout: 'classic', badgeText: 'NEW DROP 2026', title: 'ESTILO URBANO SIN LÍMITES EN ' + name, subtitle: 'Referencias exclusivas con unidades limitadas y envío inmediato a todo el país.', buttonText: 'VER EL DROP', buttonUrl: '/catalog', secondaryButtonText: 'WHATSAPP DIRECTO', secondaryButtonUrl: '__whatsapp__', imageUrl: '', overlayOpacity: 55, bgColor: '#09090b', textColor: '#ffffff', alignment: 'left' }
                         },
                         {
-                            id: 'sec_hero_ut', type: 'hero_banner', enabled: true,
-                            settings: { heroLayout: 'split', badgeText: 'Tendencia 2026', title: 'Lleva tu estilo al siguiente nivel con ' + name, subtitle: 'Referencias seleccionadas con disponibilidad inmediata y despacho rápido.', buttonText: 'Comprar Ahora', buttonUrl: '/catalog', secondaryButtonText: 'Hablar por WhatsApp', secondaryButtonUrl: '__whatsapp__', imageUrl: '', overlayOpacity: 55, bgColor: '#0f172a', textColor: '#ffffff', alignment: 'left' }
+                            id: 'sec_cd_us', type: 'countdown_promo', enabled: true,
+                            settings: { badgeText: '⚡ FLASH SALE ACTIVO', title: '¡Aprovecha precios de lanzamiento antes de que se agoten!', subtitle: 'Unidades numeradas en referencias seleccionadas.', endDate: '', buttonText: 'Comprar Ofertas', buttonUrl: '/catalog', bgColor: '#4f46e5', textColor: '#ffffff' }
                         },
                         {
-                            id: 'sec_spot_ut', type: 'spotlight_product', enabled: true,
-                            settings: { productId: '', badgeText: '🔥 Lanzamiento Destacado', customTitle: '', customSubtitle: '', imageSide: 'left' }
+                            id: 'sec_spot_us', type: 'spotlight_product', enabled: true,
+                            settings: { productId: '', badgeText: '🔥 GRAIL DE LA SEMANA', customTitle: '', customSubtitle: '', imageSide: 'left' }
                         },
                         {
-                            id: 'sec_multi_ut', type: 'multi_banners', enabled: true,
-                            settings: { card1Badge: 'Lo más top', card1Title: 'Lanzamientos', card1Subtitle: 'Lo último que llegó a la tienda', card1ButtonText: 'Ver nuevos', card1ButtonUrl: '/catalog', card1ImageUrl: '', card1BgColor: '#1e293b', card2Badge: 'Precios especiales', card2Title: 'Zona de Ofertas', card2Subtitle: 'Aprovecha antes de que se agoten', card2ButtonText: 'Ver descuentos', card2ButtonUrl: '/catalog', card2ImageUrl: '', card2BgColor: '#4f46e5' }
+                            id: 'sec_grid_us', type: 'product_grid', enabled: true,
+                            settings: { title: 'Últimos Lanzamientos', subtitle: 'Filtra tu talla disponible en tiempo real', source: 'NEWEST', categoryId: '', limit: 8, showFilters: true, showViewAll: true }
                         },
                         {
-                            id: 'sec_grid_ut', type: 'product_grid', enabled: true,
-                            settings: { title: 'Catálogo Destacado', subtitle: 'Los favoritos de nuestros clientes', source: 'NEWEST', categoryId: '', limit: 8, showViewAll: true }
-                        },
-                        {
-                            id: 'sec_trust_ut', type: 'trust_badges', enabled: true,
-                            settings: { badgeStyle: 'cards', item1Icon: 'shield', item1Title: 'Pagos 100% Seguros', item1Text: 'Transacciones protegidas en línea o vía WhatsApp.', item2Icon: 'truck', item2Title: 'Despacho Ágil', item2Text: 'Enviamos con guía de rastreo a toda Colombia.', item3Icon: 'star', item3Title: 'Garantía Real', item3Text: 'Respaldo directo en todas tus compras.' }
+                            id: 'sec_multi_us', type: 'multi_banners', enabled: true,
+                            settings: { card1Badge: 'Hype', card1Title: 'Nuevos Ingresos', card1Subtitle: 'Lo último que llegó a bodega', card1ButtonText: 'Explorar', card1ButtonUrl: '/catalog', card1ImageUrl: '', card1BgColor: '#09090b', card2Badge: 'Sale', card2Title: 'Últimas Tallas', card2Subtitle: 'Descuentos especiales hoy', card2ButtonText: 'Ver rebajas', card2ButtonUrl: '/catalog', card2ImageUrl: '', card2BgColor: '#4f46e5' }
                         }
-                    ]
+                    ],
+                    pages: {
+                        catalog: [{
+                            id: 'sec_catalog_results', type: 'catalog_results', enabled: true, locked: true,
+                            settings: { showHeader: true, headerBadge: 'DROP OFICIAL', headerTitle: 'Todo el Catálogo', headerSubtitle: 'Filtra por talla, color o disponibilidad inmediata.', showCategoryPills: true, showSearchAndSort: true, filterLayout: 'sidebar', showFilterPrice: true, showFilterAvailability: true, showFilterCategory: true, showFilterVariants: true, showFilterAttributes: true, columnsDesktop: '4', showDiscountPercent: true }
+                        }],
+                        product: [{
+                            id: 'sec_product_main', type: 'product_main', enabled: true, locked: true,
+                            settings: { galleryLayout: 'left', showBreadcrumbs: true, showSku: true, showStockCounter: true, showSpecs: true, showPolicies: true, showRelatedProducts: true, relatedTitle: 'Combínalo con', relatedSubtitle: 'Más referencias del drop actual' }
+                        }]
+                    }
+                }
+            },
+            {
+                id: 'tech_gadgets',
+                category: 'commercial',
+                name: 'Tecnología & Gadgets Pro',
+                tag: 'Electrónica, Audio & Accesorios',
+                layoutSummary: 'Navbar Buscador Grande • Filtros Laterales • Ficha Técnica',
+                colors: ['#2563eb', '#0f172a', '#f8fafc'],
+                description: 'Estructura tipo marketplace tecnológico con buscador prominente, categorías con ícono, vitrina con filtros dinámicos y especificaciones técnicas destacadas.',
+                config: {
+                    globalStyles: {
+                        primaryColor: '#2563eb',
+                        secondaryColor: '#0f172a',
+                        backgroundColor: '#f8fafc',
+                        textColor: '#0f172a',
+                        headingFont: 'Plus Jakarta Sans',
+                        bodyFont: 'Inter',
+                        headingTransform: 'none',
+                        fontScale: 'standard',
+                        borderRadius: '1rem',
+                        buttonRadius: 'classic',
+                        cardStyle: 'elevated',
+                        navbarLayout: 'marketplace',
+                        navbarStyle: 'secondary',
+                        navbarLinkFormat: 'normal',
+                        navbarLinkHover: 'pill',
+                        navbarSticky: true,
+                        navbarDropdownStyle: 'mega',
+                        navbarDropdownAnim: 'slide_up',
+                        navbarTrigger: 'hover',
+                        navbarSpeed: 'fast',
+                        navbarCompactOnScroll: true
+                    },
+                    sections: [
+                        {
+                            id: 'sec_ann_tg', type: 'announcement_bar', enabled: true,
+                            settings: { text: '⚡ Garantía real en todos nuestros productos • Despacho rápido a toda Colombia', text2: '💳 Paga seguro con PSE, Nequi, Tarjetas o coordina por WhatsApp', text3: '', bgColor: '#2563eb', textColor: '#ffffff', linkUrl: '/catalog' }
+                        },
+                        {
+                            id: 'sec_hero_tg', type: 'hero_banner', enabled: true,
+                            settings: { heroLayout: 'split', badgeText: 'TECNOLOGÍA GARANTIZADA', title: 'Innovación y rendimiento al mejor precio en ' + name, subtitle: 'Equipos y accesorios seleccionados con respaldo técnico y entrega ágil.', buttonText: 'Explorar Catálogo', buttonUrl: '/catalog', secondaryButtonText: 'Asesoría Técnica', secondaryButtonUrl: '__whatsapp__', imageUrl: '', overlayOpacity: 45, bgColor: '#0f172a', textColor: '#ffffff', alignment: 'left' }
+                        },
+                        {
+                            id: 'sec_cats_tg', type: 'featured_categories', enabled: true,
+                            settings: { title: 'Categorías Tecnológicas', subtitle: 'Encuentra rápido el equipo o accesorio que necesitas', cardLayout: 'icon', columns: '4' }
+                        },
+                        {
+                            id: 'sec_grid_tg', type: 'product_grid', enabled: true,
+                            settings: { title: 'Equipos Destacados', subtitle: 'Filtra por marca, capacidad o rango de precio', source: 'NEWEST', categoryId: '', limit: 12, showFilters: true, showViewAll: true }
+                        },
+                        {
+                            id: 'sec_trust_tg', type: 'trust_badges', enabled: true,
+                            settings: { badgeStyle: 'secondary', item1Icon: 'shield', item1Title: 'Garantía Directa', item1Text: 'Todos nuestros equipos cuentan con respaldo real.', item2Icon: 'truck', item2Title: 'Envío Asegurado', item2Text: 'Empaque protegido hasta la puerta de tu casa.', item3Icon: 'chat', item3Title: 'Soporte Especializado', item3Text: 'Te ayudamos a elegir antes y después de tu compra.' }
+                        },
+                        {
+                            id: 'sec_faq_tg', type: 'faq_accordion', enabled: true,
+                            settings: { title: 'Preguntas Frecuentes', subtitle: 'Resolvemos tus dudas sobre garantía y envíos', q1: '¿Los productos tienen garantía?', a1: 'Sí, todos nuestros productos incluyen garantía por defectos de fábrica y soporte directo.', q2: '¿Cuánto demora el envío a mi ciudad?', a2: 'Despachamos en menos de 24 horas hábiles. La entrega toma entre 1 y 4 días hábiles.', q3: '¿Qué medios de pago aceptan?', a3: 'Aceptamos PSE, Nequi, Daviplata, tarjetas débito/crédito y pedidos por WhatsApp.' }
+                        }
+                    ],
+                    pages: {
+                        catalog: [{
+                            id: 'sec_catalog_results', type: 'catalog_results', enabled: true, locked: true,
+                            settings: { showHeader: true, headerBadge: 'CATÁLOGO OFICIAL', headerTitle: 'Todos los Productos', headerSubtitle: 'Usa el panel lateral para filtrar por marca, especificaciones y disponibilidad.', showCategoryPills: true, showSearchAndSort: true, filterLayout: 'sidebar', showFilterPrice: true, showFilterAvailability: true, showFilterCategory: true, showFilterVariants: true, showFilterAttributes: true, columnsDesktop: '4', showDiscountPercent: true }
+                        }],
+                        product: [{
+                            id: 'sec_product_main', type: 'product_main', enabled: true, locked: true,
+                            settings: { galleryLayout: 'bottom', showBreadcrumbs: true, showSku: true, showStockCounter: true, showSpecs: true, showPolicies: true, showRelatedProducts: true, relatedTitle: 'Accesorios y Equipos Similares', relatedSubtitle: 'Compatibles con tu selección' }
+                        }]
+                    }
                 }
             },
             {
                 id: 'whatsapp_express',
+                category: 'commercial',
                 name: 'Catálogo Express WhatsApp',
-                tag: 'Máxima velocidad de venta',
+                tag: 'Venta Ágil por WhatsApp & Redes',
+                layoutSummary: 'Navbar Compacto • Vitrina Directa con Filtros • Botones Píldora',
                 colors: ['#059669', '#0f172a', '#f8fafc'],
-                description: 'Diseñada para ir directo al grano: muestra tus productos arriba, explica cómo comprar en 3 pasos y cierra ventas por WhatsApp.',
+                description: 'Va directo al grano para clientes que vienen de Instagram o WhatsApp: categorías en píldoras y productos con buscador desde el primer pantallazo.',
                 config: {
                     globalStyles: {
                         primaryColor: '#059669',
                         secondaryColor: '#0f172a',
                         backgroundColor: '#f8fafc',
                         textColor: '#0f172a',
-                        headingFont: 'Plus Jakarta Sans',
-                        bodyFont: 'Plus Jakarta Sans',
-                        borderRadius: '1rem'
+                        headingFont: 'Outfit',
+                        bodyFont: 'Inter',
+                        headingTransform: 'none',
+                        fontScale: 'standard',
+                        borderRadius: '1rem',
+                        buttonRadius: 'pill',
+                        cardStyle: 'elevated',
+                        navbarLayout: 'compact',
+                        navbarStyle: 'primary',
+                        navbarLinkFormat: 'bold',
+                        navbarLinkHover: 'underline_slide',
+                        navbarSticky: true,
+                        navbarDropdownStyle: 'cascade',
+                        navbarDropdownAnim: 'slide_up',
+                        navbarTrigger: 'hover',
+                        navbarSpeed: 'fast',
+                        navbarCompactOnScroll: false
                     },
                     sections: [
                         {
                             id: 'sec_ann_wa', type: 'announcement_bar', enabled: true,
-                            settings: { text: '📲 ¡Haz tu pedido fácil! Agrega a tu bolsa y envíalo por WhatsApp en segundos', bgColor: '#059669', textColor: '#ffffff', linkUrl: '/catalog' }
+                            settings: { text: '📲 ¡Haz tu pedido en segundos! Elige tus productos y envíalo directo a nuestro WhatsApp', text2: '🚚 Despachos rápidos a toda Colombia', text3: '', bgColor: '#0f172a', textColor: '#ffffff', linkUrl: '__whatsapp__' }
+                        },
+                        {
+                            id: 'sec_cats_wa', type: 'featured_categories', enabled: true,
+                            settings: { title: 'Explora por Categoría', subtitle: 'Toca una categoría para ver sus referencias', cardLayout: 'pills', columns: '4' }
                         },
                         {
                             id: 'sec_grid_wa', type: 'product_grid', enabled: true,
-                            settings: { title: 'Catálogo Disponible en ' + name, subtitle: 'Elige tus productos favoritos y agrégalos a la bolsa', source: 'NEWEST', categoryId: '', limit: 12, showViewAll: true }
+                            settings: { title: 'Catálogo Disponible en ' + name, subtitle: 'Busca por nombre, talla o color y agrega a tu bolsa', source: 'NEWEST', categoryId: '', limit: 12, showFilters: true, showViewAll: true }
                         },
                         {
                             id: 'sec_steps_wa', type: 'how_to_buy', enabled: true,
-                            settings: { title: '¿Cómo pedir en ' + name + '?', subtitle: 'Sin complicaciones y en menos de 2 minutos', step1Title: 'Agrega a tu bolsa', step1Text: 'Elige tus productos y opciones favoritas en el catálogo.', step2Title: 'Ingresa tus datos de entrega', step2Text: 'Escribe tu nombre, ciudad y dirección para el despacho.', step3Title: 'Confirma en línea o WhatsApp', step3Text: 'Paga seguro o envíanos el resumen automático por WhatsApp.', showPaymentBadges: true }
+                            settings: { title: '¿Cómo pedir en ' + name + '?', subtitle: 'Fácil, sin registros complicados y en menos de 2 minutos', step1Title: 'Agrega a tu bolsa', step1Text: 'Elige tus productos y opciones favoritas en el catálogo.', step2Title: 'Completa tus datos de envío', step2Text: 'Escribe tu nombre, ciudad y dirección de entrega.', step3Title: 'Paga en línea o envía por WhatsApp', step3Text: 'El sistema arma tu pedido listo para confirmar con nosotros.', showPaymentBadges: true }
                         },
                         {
                             id: 'sec_cta_wa', type: 'whatsapp_cta', enabled: true,
-                            settings: { title: '¿Prefieres atención personalizada?', subtitle: 'Escríbenos directamente a nuestro WhatsApp para confirmar disponibilidad, tallas y tiempos de entrega.', buttonText: 'Chatear por WhatsApp' }
+                            settings: { title: '¿Quieres atención inmediata por WhatsApp?', subtitle: 'Escríbenos ahora mismo y te ayudamos con precios al por mayor, tallas o tiempos de entrega.', buttonText: 'Abrir Chat de WhatsApp' }
                         }
-                    ]
+                    ],
+                    pages: {
+                        catalog: [{
+                            id: 'sec_catalog_results', type: 'catalog_results', enabled: true, locked: true,
+                            settings: { showHeader: true, headerBadge: 'PEDIDO RÁPIDO', headerTitle: 'Catálogo Disponible', headerSubtitle: 'Agrega tus productos a la bolsa para enviar tu pedido.', showCategoryPills: true, showSearchAndSort: true, filterLayout: 'topbar', showFilterPrice: true, showFilterAvailability: true, showFilterCategory: true, showFilterVariants: true, showFilterAttributes: true, columnsDesktop: '4', showDiscountPercent: true }
+                        }],
+                        product: [{
+                            id: 'sec_product_main', type: 'product_main', enabled: true, locked: true,
+                            settings: { galleryLayout: 'bottom', showBreadcrumbs: true, showSku: true, showStockCounter: true, showSpecs: true, showPolicies: true, showRelatedProducts: true, relatedTitle: 'Más productos disponibles', relatedSubtitle: 'Aprovecha el mismo envío agregando más referencias' }
+                        }]
+                    }
                 }
             },
             {
-                id: 'warm_boutique',
-                name: 'Boutique Cálida & Estilo',
-                tag: 'Ideal para Accesorios, Belleza y Hogar',
-                colors: ['#b45309', '#1c1917', '#fafaf9'],
-                description: 'Tipografía clásica (Lora) combinada con tonos cálidos dorados/terracota, historia de marca, testimonios y vitrina curada.',
+                id: 'jewelry_boutique',
+                category: 'boutique',
+                name: 'Joyería & Boutique Dorada',
+                tag: 'Joyería, Relojería & Perfumería',
+                layoutSummary: 'Navbar Boutique Centrado • Fuente Cinzel • Galería Lateral',
+                colors: ['#a16207', '#1c1917', '#fafaf9'],
+                description: 'Estética de lujo silencioso con tipografía Cinzel y Lora, tonos crema y dorado viejo, menú centrado con efecto de foco y vitrina delicada.',
                 config: {
                     globalStyles: {
-                        primaryColor: '#b45309',
+                        primaryColor: '#a16207',
                         secondaryColor: '#1c1917',
-                        backgroundColor: '#f8fafc',
-                        textColor: '#0f172a',
-                        headingFont: 'Lora',
-                        bodyFont: 'Inter',
-                        borderRadius: '1.5rem'
+                        backgroundColor: '#fafaf9',
+                        textColor: '#1c1917',
+                        headingFont: 'Cinzel',
+                        bodyFont: 'Lora',
+                        headingTransform: 'none',
+                        fontScale: 'standard',
+                        borderRadius: '0.375rem',
+                        buttonRadius: 'square',
+                        cardStyle: 'clean',
+                        navbarLayout: 'centered',
+                        navbarStyle: 'light',
+                        navbarLinkFormat: 'uppercase',
+                        navbarLinkHover: 'opacity',
+                        navbarSticky: true,
+                        navbarDropdownStyle: 'mega',
+                        navbarDropdownAnim: 'fade',
+                        navbarTrigger: 'hover',
+                        navbarSpeed: 'slow',
+                        navbarCompactOnScroll: true
                     },
                     sections: [
                         {
-                            id: 'sec_hero_wb', type: 'hero_banner', enabled: true,
-                            settings: { heroLayout: 'classic', badgeText: 'Bienvenidos', title: name, subtitle: 'Detalles únicos seleccionados con dedicación para ti.', buttonText: 'Ver Catálogo', buttonUrl: '/catalog', secondaryButtonText: '', secondaryButtonUrl: '/catalog', imageUrl: '', overlayOpacity: 45, bgColor: '#b45309', textColor: '#ffffff', alignment: 'center' }
+                            id: 'sec_ann_jb', type: 'announcement_bar', enabled: true,
+                            settings: { text: '✨ Empaque de regalo incluido en todos los pedidos • Envíos asegurados', text2: '', text3: '', bgColor: '#1c1917', textColor: '#ffffff', linkUrl: '/catalog' }
                         },
                         {
-                            id: 'sec_grid_wb', type: 'product_grid', enabled: true,
-                            settings: { title: 'Nuestros Favoritos', subtitle: 'Descubre las piezas más pedidas', source: 'NEWEST', categoryId: '', limit: 8, showViewAll: true }
+                            id: 'sec_hero_jb', type: 'hero_banner', enabled: true,
+                            settings: { heroLayout: 'classic', badgeText: 'COLECCIÓN EXCLUSIVA', title: name, subtitle: 'Detalles eternos elaborados para acompañar tus momentos más especiales.', buttonText: 'Descubrir Joyas', buttonUrl: '/catalog', secondaryButtonText: '', secondaryButtonUrl: '/catalog', imageUrl: '', overlayOpacity: 45, bgColor: '#1c1917', textColor: '#ffffff', alignment: 'center' }
                         },
                         {
-                            id: 'sec_test_wb', type: 'testimonials', enabled: true,
-                            settings: { title: 'Quienes ya compraron en ' + name, subtitle: 'Experiencias reales de nuestros clientes', t1Name: 'Mariana López', t1City: 'Bogotá D.C.', t1Text: 'Cada detalle es hermoso, se nota el amor que le ponen a cada pedido.', t2Name: 'Andrea Pineda', t2City: 'Bucaramanga', t2Text: 'Compré para un regalo y quedaron fascinados. El envío fue súper puntual.', t3Name: 'Natalia Restrepo', t3City: 'Pereira', t3Text: 'Atención 10/10 por WhatsApp y los productos son idénticos a las fotos.' }
+                            id: 'sec_spot_jb', type: 'spotlight_product', enabled: true,
+                            settings: { productId: '', badgeText: '✨ PIEZA INSIGNIA', customTitle: '', customSubtitle: '', imageSide: 'left' }
                         },
                         {
-                            id: 'sec_rich_wb', type: 'rich_text', enabled: true,
-                            settings: { title: 'Nuestra Esencia', content: 'En ' + name + ' cuidamos cada detalle para brindarte productos especiales con una experiencia de compra cercana, rápida y confiable.' }
+                            id: 'sec_grid_jb', type: 'product_grid', enabled: true,
+                            settings: { title: 'Piezas Seleccionadas', subtitle: 'Brillo, elegancia y garantía de autenticidad', source: 'NEWEST', categoryId: '', limit: 8, showFilters: false, showViewAll: true }
                         },
                         {
-                            id: 'sec_cta_wb', type: 'whatsapp_cta', enabled: true,
-                            settings: { title: '¿Buscas un regalo o asesoría especial?', subtitle: 'Conversa con nosotros por WhatsApp y te ayudamos a elegir.', buttonText: 'Recibir asesoría por WhatsApp' }
+                            id: 'sec_test_jb', type: 'testimonials', enabled: true,
+                            settings: { title: 'Experiencias Reales', subtitle: 'Lo que opinan quienes ya recibieron sus piezas' }
+                        },
+                        {
+                            id: 'sec_trust_jb', type: 'trust_badges', enabled: true,
+                            settings: { badgeStyle: 'minimal', item1Icon: 'gift', item1Title: 'Estuche de Regalo', item1Text: 'Cada pedido se entrega en empaque especial listo para obsequiar.', item2Icon: 'star', item2Title: 'Calidad Certificada', item2Text: 'Materiales seleccionados con garantía de acabado.', item3Icon: 'truck', item3Title: 'Entrega Segura', item3Text: 'Seguimiento completo hasta tus manos.' }
                         }
-                    ]
+                    ],
+                    pages: {
+                        catalog: [{
+                            id: 'sec_catalog_results', type: 'catalog_results', enabled: true, locked: true,
+                            settings: { showHeader: true, headerBadge: 'BOUTIQUE', headerTitle: 'Nuestras Colecciones', headerSubtitle: 'Explora cada pieza con acabados de lujo.', showCategoryPills: true, showSearchAndSort: true, filterLayout: 'topbar', showFilterPrice: true, showFilterAvailability: true, showFilterCategory: true, showFilterVariants: true, showFilterAttributes: true, columnsDesktop: '3', showDiscountPercent: false }
+                        }],
+                        product: [{
+                            id: 'sec_product_main', type: 'product_main', enabled: true, locked: true,
+                            settings: { galleryLayout: 'left', showBreadcrumbs: true, showSku: true, showStockCounter: false, showSpecs: true, showPolicies: true, showRelatedProducts: true, relatedTitle: 'Piezas Complementarias', relatedSubtitle: 'Combina tu elección con nuestra colección' }
+                        }]
+                    }
+                }
+            },
+            {
+                id: 'natural_artisan',
+                category: 'boutique',
+                name: 'Artesanal, Natural & Orgánico',
+                tag: 'Cosmética Natural, Hogar & Artesanía',
+                layoutSummary: 'Bordes Orgánicos 24px • Tonos Tierra/Oliva • Historia de Marca',
+                colors: ['#3f6212', '#292524', '#fafaf9'],
+                description: 'Tonos verde oliva y piedra cálida, esquinas suaves orgánicas (24px), portada dividida e historia artesanal que conecta emocionalmente.',
+                config: {
+                    globalStyles: {
+                        primaryColor: '#3f6212',
+                        secondaryColor: '#292524',
+                        backgroundColor: '#fafaf9',
+                        textColor: '#292524',
+                        headingFont: 'Lora',
+                        bodyFont: 'Nunito',
+                        headingTransform: 'none',
+                        fontScale: 'standard',
+                        borderRadius: '1.5rem',
+                        buttonRadius: 'pill',
+                        cardStyle: 'elevated',
+                        navbarLayout: 'centered',
+                        navbarStyle: 'page',
+                        navbarLinkFormat: 'normal',
+                        navbarLinkHover: 'underline_center',
+                        navbarSticky: true,
+                        navbarDropdownStyle: 'cascade',
+                        navbarDropdownAnim: 'slide_up',
+                        navbarTrigger: 'hover',
+                        navbarSpeed: 'normal',
+                        navbarCompactOnScroll: false
+                    },
+                    sections: [
+                        {
+                            id: 'sec_hero_na', type: 'hero_banner', enabled: true,
+                            settings: { heroLayout: 'split', badgeText: 'HECHO CON DEDICACIÓN', title: 'Bienestar y esencia natural en ' + name, subtitle: 'Productos creados de forma consciente para cuidar de ti y de tu espacio.', buttonText: 'Conocer Productos', buttonUrl: '/catalog', secondaryButtonText: 'Hablar con Nosotros', secondaryButtonUrl: '__whatsapp__', imageUrl: '', overlayOpacity: 40, bgColor: '#3f6212', textColor: '#ffffff', alignment: 'left' }
+                        },
+                        {
+                            id: 'sec_cats_na', type: 'featured_categories', enabled: true,
+                            settings: { title: 'Nuestras Líneas', subtitle: 'Ingredientes y materiales seleccionados con amor', cardLayout: 'pills', columns: '4' }
+                        },
+                        {
+                            id: 'sec_grid_na', type: 'product_grid', enabled: true,
+                            settings: { title: 'Favoritos de la Comunidad', subtitle: 'Los más pedidos de nuestra tienda', source: 'NEWEST', categoryId: '', limit: 8, showFilters: false, showViewAll: true }
+                        },
+                        {
+                            id: 'sec_rich_na', type: 'rich_text', enabled: true,
+                            settings: { title: 'Nuestro Propósito', content: 'En ' + name + ' creemos en el valor de lo auténtico. Cada pedido es preparado cuidadosamente para llevarte calidad y calidez.' }
+                        },
+                        {
+                            id: 'sec_test_na', type: 'testimonials', enabled: true,
+                            settings: { title: 'Palabras de Nuestros Clientes', subtitle: 'Reseñas verificadas de compradores reales' }
+                        },
+                        {
+                            id: 'sec_cta_na', type: 'whatsapp_cta', enabled: true,
+                            settings: { title: '¿Deseas una recomendación personalizada?', subtitle: 'Cuéntanos qué buscas por WhatsApp y te guiamos paso a paso.', buttonText: 'Recibir asesoría en WhatsApp' }
+                        }
+                    ],
+                    pages: {
+                        catalog: [{
+                            id: 'sec_catalog_results', type: 'catalog_results', enabled: true, locked: true,
+                            settings: { showHeader: true, headerBadge: 'CATÁLOGO ARTESANAL', headerTitle: 'Todos Nuestros Productos', headerSubtitle: 'Explora nuestras creaciones disponibles.', showCategoryPills: true, showSearchAndSort: true, filterLayout: 'sidebar', showFilterPrice: true, showFilterAvailability: true, showFilterCategory: true, showFilterVariants: true, showFilterAttributes: true, columnsDesktop: '3', showDiscountPercent: true }
+                        }],
+                        product: [{
+                            id: 'sec_product_main', type: 'product_main', enabled: true, locked: true,
+                            settings: { galleryLayout: 'bottom', showBreadcrumbs: true, showSku: false, showStockCounter: true, showSpecs: true, showPolicies: true, showRelatedProducts: true, relatedTitle: 'También te encantará', relatedSubtitle: 'Armoniza tu pedido con estas opciones' }
+                        }]
+                    }
+                }
+            },
+            {
+                id: 'sport_fitness',
+                category: 'fashion',
+                name: 'Deportivo & Alto Rendimiento',
+                tag: 'Fitness, Suplementos & Ropa Deportiva',
+                layoutSummary: 'Tipografía Oswald Impacto • Contorno Firme • Velocidad Rápida',
+                colors: ['#dc2626', '#0f172a', '#f8fafc'],
+                description: 'Máxima energía visual con tipografía condensada Oswald en mayúsculas, contraste rojo/negro, contador de oferta y navegación ultra rápida.',
+                config: {
+                    globalStyles: {
+                        primaryColor: '#dc2626',
+                        secondaryColor: '#0f172a',
+                        backgroundColor: '#f8fafc',
+                        textColor: '#0f172a',
+                        headingFont: 'Oswald',
+                        bodyFont: 'DM Sans',
+                        headingTransform: 'uppercase',
+                        fontScale: 'standard',
+                        borderRadius: '0.375rem',
+                        buttonRadius: 'square',
+                        cardStyle: 'outlined',
+                        navbarLayout: 'classic',
+                        navbarStyle: 'secondary',
+                        navbarLinkFormat: 'uppercase',
+                        navbarLinkHover: 'underline_slide',
+                        navbarSticky: true,
+                        navbarDropdownStyle: 'mega',
+                        navbarDropdownAnim: 'slide_up',
+                        navbarTrigger: 'hover',
+                        navbarSpeed: 'fast',
+                        navbarCompactOnScroll: true
+                    },
+                    sections: [
+                        {
+                            id: 'sec_ann_sf', type: 'announcement_bar', enabled: true,
+                            settings: { text: '🔥 ENTRENA AL MÁXIMO NIVEL • ENVÍOS RÁPIDOS A TODO EL PAÍS', text2: '', text3: '', bgColor: '#dc2626', textColor: '#ffffff', linkUrl: '/catalog' }
+                        },
+                        {
+                            id: 'sec_hero_sf', type: 'hero_banner', enabled: true,
+                            settings: { heroLayout: 'classic', badgeText: 'ALTO RENDIMIENTO', title: 'SUPERA TUS LÍMITES CON ' + name, subtitle: 'Equipamiento, prendas y suplementación diseñada para resultados reales.', buttonText: 'COMPRAR AHORA', buttonUrl: '/catalog', secondaryButtonText: 'VER OFERTAS', secondaryButtonUrl: '/catalog', imageUrl: '', overlayOpacity: 55, bgColor: '#0f172a', textColor: '#ffffff', alignment: 'left' }
+                        },
+                        {
+                            id: 'sec_cats_sf', type: 'featured_categories', enabled: true,
+                            settings: { title: 'Categorías de Entrenamiento', subtitle: 'Elige tu disciplina o línea de producto', cardLayout: 'visual', columns: '4' }
+                        },
+                        {
+                            id: 'sec_cd_sf', type: 'countdown_promo', enabled: true,
+                            settings: { badgeText: '⚡ PROMO DE TEMPORADA', title: 'DESCUENTOS ESPECIALES POR TIEMPO LIMITADO', subtitle: 'Equípate hoy antes de que finalice la oferta.', endDate: '', buttonText: 'Ver Descuentos', buttonUrl: '/catalog', bgColor: '#0f172a', textColor: '#ffffff' }
+                        },
+                        {
+                            id: 'sec_grid_sf', type: 'product_grid', enabled: true,
+                            settings: { title: 'Los Más Vendidos', subtitle: 'Rendimiento comprobado por nuestros clientes', source: 'NEWEST', categoryId: '', limit: 8, showFilters: false, showViewAll: true }
+                        },
+                        {
+                            id: 'sec_trust_sf', type: 'trust_badges', enabled: true,
+                            settings: { badgeStyle: 'cards', item1Icon: 'clock', item1Title: 'Despacho Express', item1Text: 'Procesamos tu pedido en tiempo récord.', item2Icon: 'shield', item2Title: '100% Original', item2Text: 'Calidad y autenticidad garantizada.', item3Icon: 'card', item3Title: 'Todos los Pagos', item3Text: 'PSE, Nequi, tarjetas o WhatsApp.' }
+                        }
+                    ],
+                    pages: {
+                        catalog: [{
+                            id: 'sec_catalog_results', type: 'catalog_results', enabled: true, locked: true,
+                            settings: { showHeader: true, headerBadge: 'CATÁLOGO PRO', headerTitle: 'Todo el Equipamiento', headerSubtitle: 'Filtra por talla, sabor, peso o categoría.', showCategoryPills: true, showSearchAndSort: true, filterLayout: 'sidebar', showFilterPrice: true, showFilterAvailability: true, showFilterCategory: true, showFilterVariants: true, showFilterAttributes: true, columnsDesktop: '4', showDiscountPercent: true }
+                        }],
+                        product: [{
+                            id: 'sec_product_main', type: 'product_main', enabled: true, locked: true,
+                            settings: { galleryLayout: 'left', showBreadcrumbs: true, showSku: true, showStockCounter: true, showSpecs: true, showPolicies: true, showRelatedProducts: true, relatedTitle: 'Potencia tu Compra', relatedSubtitle: 'Productos recomendados para tu rutina' }
+                        }]
+                    }
+                }
+            },
+            {
+                id: 'commercial_megastore',
+                category: 'commercial',
+                name: 'Comercial Multitienda & Hogar',
+                tag: 'Multicategoría, Variedades & Distribuidoras',
+                layoutSummary: 'Doble Barra Comercial • Mega Menú • Vitrina 12 Productos',
+                colors: ['#0284c7', '#0f172a', '#f8fafc'],
+                description: 'Pensada para tiendas con amplio surtido: navbar de doble barra con accesos rápidos, mosaico promocional, filtros laterales y pasos de compra claros.',
+                config: {
+                    globalStyles: {
+                        primaryColor: '#0284c7',
+                        secondaryColor: '#0f172a',
+                        backgroundColor: '#f8fafc',
+                        textColor: '#0f172a',
+                        headingFont: 'Poppins',
+                        bodyFont: 'Inter',
+                        headingTransform: 'none',
+                        fontScale: 'standard',
+                        borderRadius: '0.75rem',
+                        buttonRadius: 'classic',
+                        cardStyle: 'elevated',
+                        navbarLayout: 'double_bar',
+                        navbarStyle: 'light',
+                        navbarLinkFormat: 'bold',
+                        navbarLinkHover: 'pill',
+                        navbarSticky: true,
+                        navbarDropdownStyle: 'mega',
+                        navbarDropdownAnim: 'slide_up',
+                        navbarTrigger: 'hover',
+                        navbarSpeed: 'normal',
+                        navbarCompactOnScroll: true
+                    },
+                    sections: [
+                        {
+                            id: 'sec_hero_cm', type: 'hero_banner', enabled: true,
+                            settings: { heroLayout: 'compact', badgeText: 'BIENVENIDO A ' + name.toUpperCase(), title: 'Todo lo que buscas en un solo lugar con precios increíbles', subtitle: 'Compra fácil desde casa con envíos seguros a todo el país.', buttonText: 'Ver Todo el Catálogo', buttonUrl: '/catalog', secondaryButtonText: 'Ofertas del Día', secondaryButtonUrl: '/catalog?offers=1', imageUrl: '', overlayOpacity: 50, bgColor: '#0284c7', textColor: '#ffffff', alignment: 'center' }
+                        },
+                        {
+                            id: 'sec_cats_cm', type: 'featured_categories', enabled: true,
+                            settings: { title: 'Departamentos y Categorías', subtitle: 'Navega por nuestras secciones principales', cardLayout: 'visual', columns: '4' }
+                        },
+                        {
+                            id: 'sec_multi_cm', type: 'multi_banners', enabled: true,
+                            settings: { card1Badge: 'Recomendado', card1Title: 'Novedades de la Semana', card1Subtitle: 'Conoce los productos recién llegados', card1ButtonText: 'Ver novedades', card1ButtonUrl: '/catalog', card1ImageUrl: '', card1BgColor: '#0f172a', card2Badge: 'Ahorro', card2Title: 'Precios Especiales', card2Subtitle: 'Descuentos en referencias seleccionadas', card2ButtonText: 'Ver ofertas', card2ButtonUrl: '/catalog?offers=1', card2ImageUrl: '', card2BgColor: '#0284c7' }
+                        },
+                        {
+                            id: 'sec_grid_cm', type: 'product_grid', enabled: true,
+                            settings: { title: 'Catálogo Principal', subtitle: 'Busca y filtra entre nuestras referencias disponibles', source: 'NEWEST', categoryId: '', limit: 12, showFilters: true, showViewAll: true }
+                        },
+                        {
+                            id: 'sec_steps_cm', type: 'how_to_buy', enabled: true,
+                            settings: { title: 'Compra Fácil y Rápido', subtitle: 'Recibe tu pedido sin salir de casa', step1Title: 'Elige tus productos', step1Text: 'Usa el buscador o los filtros para agregar lo que necesitas a tu bolsa.', step2Title: 'Datos de entrega', step2Text: 'Indícanos tu ciudad y dirección exacta.', step3Title: 'Pago seguro o WhatsApp', step3Text: 'Paga con Wompi o coordina directamente con un asesor.', showPaymentBadges: true }
+                        },
+                        {
+                            id: 'sec_trust_cm', type: 'trust_badges', enabled: true,
+                            settings: { badgeStyle: 'cards', item1Icon: 'shield', item1Title: 'Compra Garantizada', item1Text: 'Respaldo total en cada pedido.', item2Icon: 'truck', item2Title: 'Cobertura Nacional', item2Text: 'Llegamos a todos los municipios del país.', item3Icon: 'chat', item3Title: 'Soporte por WhatsApp', item3Text: 'Atención humana y rápida.' }
+                        }
+                    ],
+                    pages: {
+                        catalog: [{
+                            id: 'sec_catalog_results', type: 'catalog_results', enabled: true, locked: true,
+                            settings: { showHeader: true, headerBadge: 'DEPARTAMENTOS', headerTitle: 'Catálogo General', headerSubtitle: 'Filtra por categoría, precio, marca o disponibilidad.', showCategoryPills: true, showSearchAndSort: true, filterLayout: 'sidebar', showFilterPrice: true, showFilterAvailability: true, showFilterCategory: true, showFilterVariants: true, showFilterAttributes: true, columnsDesktop: '4', showDiscountPercent: true }
+                        }],
+                        product: [{
+                            id: 'sec_product_main', type: 'product_main', enabled: true, locked: true,
+                            settings: { galleryLayout: 'bottom', showBreadcrumbs: true, showSku: true, showStockCounter: true, showSpecs: true, showPolicies: true, showRelatedProducts: true, relatedTitle: 'Productos Relacionados', relatedSubtitle: 'Clientes también vieron estas referencias' }
+                        }]
+                    }
                 }
             }
         ];
+    },
+
+    filterPresets: function(category) {
+        this.activePresetCategory = category || 'all';
+        const pillsWrap = document.getElementById('preset-category-pills');
+        if (pillsWrap) {
+            pillsWrap.querySelectorAll('.preset-cat-btn').forEach(btn => {
+                const isSelected = btn.getAttribute('data-cat') === this.activePresetCategory;
+                btn.className = isSelected
+                    ? 'preset-cat-btn px-2.5 py-1 rounded-lg text-[11px] font-bold bg-storevo-500 text-white whitespace-nowrap transition'
+                    : 'preset-cat-btn px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-950 text-slate-400 hover:text-white border border-slate-800 whitespace-nowrap transition';
+            });
+        }
+        this.renderPresetsCatalog();
     },
 
     renderPresetsCatalog: function() {
@@ -1391,12 +2321,20 @@ Storevo.ThemeEditor = {
         if (!container) return;
         container.innerHTML = '';
 
-        this.getPresetsDefinitions().forEach(preset => {
-            const card = document.createElement('div');
-            card.className = 'bg-slate-950 border border-slate-800 hover:border-storevo-500/50 rounded-2xl p-4 space-y-3 transition-all';
+        const allPresets = this.getPresetsDefinitions();
+        const filtered = this.activePresetCategory === 'all'
+            ? allPresets
+            : allPresets.filter(p => p.category === this.activePresetCategory);
 
-            const swatchesHtml = preset.colors.map(hex =>
-                `<span class="w-4 h-4 rounded-full border border-slate-700 inline-block" style="background-color: ${hex};"></span>`
+        filtered.forEach(preset => {
+            const isCurrent = this.activePresetId === preset.id;
+            const card = document.createElement('div');
+            card.className = `bg-slate-950 border rounded-2xl p-4 space-y-3 transition-all ${
+                isCurrent ? 'border-storevo-500 ring-1 ring-storevo-500/40' : 'border-slate-800 hover:border-storevo-500/50'
+            }`;
+
+            const swatchesHtml = (preset.colors || []).map(hex =>
+                `<span class="w-4 h-4 rounded-full border border-slate-700 inline-block shadow-sm" style="background-color: ${hex};"></span>`
             ).join('');
 
             card.innerHTML = `
@@ -1405,11 +2343,18 @@ Storevo.ThemeEditor = {
                         <span class="text-[10px] font-black uppercase tracking-wider text-storevo-400">${this.escapeHtml(preset.tag)}</span>
                         <h4 class="text-sm font-bold text-white mt-0.5">${this.escapeHtml(preset.name)}</h4>
                     </div>
-                    <div class="flex items-center gap-1">${swatchesHtml}</div>
+                    <div class="flex items-center gap-1 flex-shrink-0">${swatchesHtml}</div>
+                </div>
+                <div class="px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800/90 text-[10px] font-bold text-slate-300">
+                    ${this.escapeHtml(preset.layoutSummary || '')}
                 </div>
                 <p class="text-xs text-slate-400 leading-relaxed">${this.escapeHtml(preset.description)}</p>
-                <button type="button" class="apply-preset-btn w-full py-2 px-3 bg-slate-800 hover:bg-storevo-500 text-slate-200 hover:text-white border border-slate-700 rounded-xl text-xs font-bold transition">
-                    Probar esta plantilla en vista previa
+                <button type="button" class="apply-preset-btn w-full py-2.5 px-3 ${
+                isCurrent
+                    ? 'bg-storevo-500/20 text-storevo-300 border-storevo-500/40'
+                    : 'bg-slate-800 hover:bg-storevo-500 text-slate-200 hover:text-white border-slate-700'
+            } border rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5">
+                    <span>${isCurrent ? '✓ Plantilla activa en vista previa' : 'Probar plantilla en vista previa'}</span>
                 </button>
             `;
 
@@ -1421,15 +2366,111 @@ Storevo.ThemeEditor = {
         });
     },
 
+    mergeUserContentIntoPreset: function(oldHomeSections, newHomeSections) {
+        if (!Array.isArray(oldHomeSections) || !Array.isArray(newHomeSections)) return;
+        const usedOldIds = new Set();
+
+        const CONTENT_KEYS = [
+            'imageUrl', 'card1ImageUrl', 'card2ImageUrl',
+            'title', 'subtitle', 'badgeText', 'buttonText', 'buttonUrl',
+            'secondaryButtonText', 'secondaryButtonUrl',
+            'text', 'text2', 'text3', 'linkUrl',
+            'productId', 'customTitle', 'customSubtitle',
+            'card1Badge', 'card1Title', 'card1Subtitle', 'card1ButtonText', 'card1ButtonUrl',
+            'card2Badge', 'card2Title', 'card2Subtitle', 'card2ButtonText', 'card2ButtonUrl',
+            'content', 'q1', 'a1', 'q2', 'a2', 'q3', 'a3', 'q4', 'a4', 'q5', 'a5',
+            'endDate'
+        ];
+
+        newHomeSections.forEach(newSec => {
+            const match = oldHomeSections.find(oldSec =>
+                oldSec && oldSec.type === newSec.type && !usedOldIds.has(oldSec.id)
+            );
+            if (!match || !match.settings || !newSec.settings) return;
+            usedOldIds.add(match.id);
+
+            CONTENT_KEYS.forEach(k => {
+                const val = match.settings[k];
+                if (val !== undefined && val !== null && String(val).trim() !== '') {
+                    newSec.settings[k] = val;
+                }
+            });
+        });
+    },
+
     applyPreset: function(preset) {
-        this.theme = JSON.parse(JSON.stringify(preset.config));
+        this.ensurePagesStructure();
+
+        // Guardar punto de restauración antes de la primera prueba de plantilla
+        if (!this.previousThemeSnapshot) {
+            this.previousThemeSnapshot = JSON.parse(JSON.stringify(this.theme));
+        }
+
+        const keepChk = document.getElementById('preset-keep-content-chk');
+        const keepContent = keepChk ? Boolean(keepChk.checked) : true;
+
+        const oldHomeSections = JSON.parse(JSON.stringify(this.theme.pages.home || this.theme.sections || []));
+        const currentCustomPages = Array.isArray(this.theme.customPages)
+            ? JSON.parse(JSON.stringify(this.theme.customPages)) : [];
+
+        const nextTheme = JSON.parse(JSON.stringify(preset.config));
+        if (!nextTheme.pages) nextTheme.pages = {};
+        if (Array.isArray(nextTheme.sections)) {
+            nextTheme.pages.home = nextTheme.sections;
+        }
+
+        if (keepContent && Array.isArray(nextTheme.pages.home)) {
+            this.mergeUserContentIntoPreset(oldHomeSections, nextTheme.pages.home);
+        }
+
+        this.theme = nextTheme;
+        this.theme.customPages = currentCustomPages;
+        this.ensurePagesStructure();
+
+        this.activePresetId = preset.id;
         this.activeSectionId = null;
+
+        const undoBanner = document.getElementById('preset-undo-banner');
+        if (undoBanner) undoBanner.classList.remove('hidden');
+
         this.markUnpublishedChanges(true);
+        this.renderPageSelector();
+        this.syncCustomPageSettingsBar();
         this.renderSectionsList();
         this.initGlobalStylesInputs();
+        this.renderPresetsCatalog();
         this.saveDraft(false, true);
+
         if (Storevo.UI && Storevo.UI.Toast) {
-            Storevo.UI.Toast.show(`Plantilla "${preset.name}" aplicada en vista previa`, 'success');
+            Storevo.UI.Toast.show(
+                keepContent
+                    ? `Plantilla "${preset.name}" aplicada conservando tu contenido`
+                    : `Plantilla "${preset.name}" aplicada completa`,
+                'success'
+            );
+        }
+    },
+
+    undoPresetApplication: function() {
+        if (!this.previousThemeSnapshot) return;
+        this.theme = JSON.parse(JSON.stringify(this.previousThemeSnapshot));
+        this.previousThemeSnapshot = null;
+        this.activePresetId = null;
+        this.activeSectionId = null;
+
+        const undoBanner = document.getElementById('preset-undo-banner');
+        if (undoBanner) undoBanner.classList.add('hidden');
+
+        this.ensurePagesStructure();
+        this.renderPageSelector();
+        this.syncCustomPageSettingsBar();
+        this.renderSectionsList();
+        this.initGlobalStylesInputs();
+        this.renderPresetsCatalog();
+        this.saveDraft(false, true);
+
+        if (Storevo.UI && Storevo.UI.Toast) {
+            Storevo.UI.Toast.show('Se restauró tu diseño anterior', 'success');
         }
     },
 
@@ -1439,6 +2480,7 @@ Storevo.ThemeEditor = {
         grid.innerHTML = '';
 
         Object.entries(this.catalogDefinitions).forEach(([type, def]) => {
+            if (def.anchorOnly) return;
             const btn = document.createElement('button');
             btn.type = 'button';
             btn.className = 'text-left p-4 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-storevo-500 transition flex flex-col justify-between gap-2 group';
@@ -1468,16 +2510,17 @@ Storevo.ThemeEditor = {
 
     addSection: function(type) {
         const def = this.catalogDefinitions[type];
-        if (!def) return;
+        if (!def || def.anchorOnly) return;
 
         const newSection = {
             id: 'sec_' + Date.now().toString(36),
             type: type,
             enabled: true,
+            locked: false,
             settings: JSON.parse(JSON.stringify(def.defaultSettings || {}))
         };
 
-        this.theme.sections.push(newSection);
+        this.getActivePageSections().push(newSection);
         this.closeAddSectionModal();
         this.renderSectionsList();
         this.openInspector(newSection.id);
@@ -1566,6 +2609,7 @@ Storevo.ThemeEditor = {
                 .then(data => {
                     if (data.success && data.theme) {
                         this.theme = data.theme;
+                        this.ensurePagesStructure();
                         this.markUnpublishedChanges(false);
                         this.closeInspector();
                         this.renderSectionsList();
@@ -1592,6 +2636,7 @@ Storevo.ThemeEditor = {
                 .then(data => {
                     if (data.success && data.theme) {
                         this.theme = data.theme;
+                        this.ensurePagesStructure();
                         this.markUnpublishedChanges(true);
                         this.closeInspector();
                         this.renderSectionsList();

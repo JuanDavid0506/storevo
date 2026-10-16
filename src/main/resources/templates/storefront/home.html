@@ -7,14 +7,18 @@
 </head>
 <body>
 <div layout:fragment="content">
+    <script id="storevo-filter-data-json" type="application/json"
+            th:if="${catalogFilterDataJson != null}"
+            th:utext="${catalogFilterDataJson}"></script>
 
-    <!-- Si existe configuración de plantilla (siempre provista por StoreThemeService), renderiza las secciones activas en orden -->
-    <th:block th:if="${theme != null and theme.sections != null}">
-        <th:block th:each="sec : ${theme.sections}" th:if="${sec.enabled}">
+    <th:block th:if="${theme != null}" th:with="homeSections=${theme.getPageSections('home')}">
+        <th:block th:each="sec : ${homeSections}" th:if="${sec.enabled}">
             <div th:replace="~{storefront/sections/theme-sections :: render-section(${sec})}"></div>
         </th:block>
     </th:block>
-
 </div>
+<th:block layout:fragment="scripts">
+    <script th:src="@{/js/modules/storeCatalog.js}"></script>
+</th:block>
 </body>
 </html>

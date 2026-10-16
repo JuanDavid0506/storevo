@@ -5,9 +5,13 @@ import com.storevo.backend.admin.model.Store;
 import com.storevo.backend.admin.model.StoreSettings;
 import com.storevo.backend.config.tenant.TenantContext;
 import com.storevo.backend.tenant.dto.ThemeConfigDto;
+import com.storevo.backend.tenant.dto.ThemeCustomPageDto;
 import com.storevo.backend.tenant.dto.ThemeGlobalStylesDto;
 import com.storevo.backend.tenant.dto.ThemeSectionDto;
 import com.storevo.backend.tenant.model.Product;
+import com.storevo.backend.tenant.model.ProductOption;
+import com.storevo.backend.tenant.model.ProductOptionValue;
+import com.storevo.backend.tenant.model.ProductVariant;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.text.Normalizer;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -34,30 +39,37 @@ public class StoreThemeService {
     @Lazy
     private StoreThemeService self;
 
-
     private static final Set<String> ALLOWED_RADII = Set.of(
             "0px", "0.375rem", "0.75rem", "1rem", "1.5rem", "2rem"
     );
     private static final Set<String> ALLOWED_BUTTON_RADII = Set.of("classic", "sync", "square", "pill");
     private static final Set<String> ALLOWED_CARD_STYLES = Set.of("elevated", "clean", "outlined");
-    private static final Set<String> ALLOWED_NAV_LAYOUTS = Set.of("classic", "centered", "marketplace", "minimal");
+    private static final Set<String> ALLOWED_NAV_LAYOUTS = Set.of(
+            "classic", "centered", "marketplace", "minimal",
+            "editorial", "compact", "double_bar", "hero_overlay"
+    );
     private static final Set<String> ALLOWED_NAV_STYLES = Set.of("light", "glass", "secondary", "primary", "page");
     private static final Set<String> ALLOWED_NAV_LINK_FORMATS = Set.of("normal", "uppercase", "bold");
-    private static final Set<String> ALLOWED_NAV_LINK_HOVERS = Set.of("color", "underline", "pill");
+    private static final Set<String> ALLOWED_NAV_LINK_HOVERS = Set.of(
+            "color", "underline", "pill",
+            "underline_center", "underline_slide", "slide_bg", "opacity"
+    );
+    private static final Set<String> ALLOWED_NAV_DROPDOWN_STYLES = Set.of("mega", "cascade", "drawer", "none");
+    private static final Set<String> ALLOWED_NAV_DROPDOWN_ANIMS = Set.of("fade", "slide_up", "scale");
+    private static final Set<String> ALLOWED_NAV_TRIGGERS = Set.of("hover", "click");
+    private static final Set<String> ALLOWED_NAV_SPEEDS = Set.of("fast", "normal", "slow");
     private static final Set<String> ALLOWED_HEADING_TRANSFORMS = Set.of("none", "uppercase");
     private static final Set<String> ALLOWED_FONT_SCALES = Set.of("compact", "standard", "large");
-    /**
-     * Obtiene la configuración del tema (Publicado o Borrador) y resuelve los productos de cada sección.
-     */
+    private static final Set<String> RESERVED_PAGE_SLUGS = Set.of(
+            "home", "catalog", "product", "product-preview", "cart", "checkout", "wishlist", "order", "p", "page"
+    );
+
     public ThemeConfigDto getHydratedThemeForStorefront(Store store, boolean previewDraft) {
         ThemeConfigDto config = getRawThemeConfig(store, previewDraft);
         hydrateThemeSections(store, config);
         return config;
     }
 
-    /**
-     * Lee el JSON de la BD de administración sin contaminar el contexto del tenant.
-     */
     public ThemeConfigDto getRawThemeConfig(Store store, boolean useDraft) {
         if (store == null) {
             return buildDefaultTheme("Mi Tienda", "#6366f1", "#0f172a", null);
@@ -92,9 +104,6 @@ public class StoreThemeService {
                                 .secondaryColor(secondary)
                                 .build());
                     }
-                    if (parsed.getSections() == null) {
-                        parsed.setSections(new ArrayList<>());
-                    }
                     sanitizeThemeConfig(parsed);
                     return parsed;
                 } catch (Exception e) {
@@ -110,44 +119,207 @@ public class StoreThemeService {
         }
     }
 
-    /**
-     * Hidrata las secciones dinámicas (como vitrinas de productos) en el esquema del tenant.
-     */
     public void hydrateThemeSections(Store store, ThemeConfigDto theme) {
-        if (theme == null || theme.getSections() == null) return;
+        if (theme == null) return;
         if (store != null && store.getSchemaName() != null) {
             TenantContext.setCurrentTenant(store.getSchemaName());
         }
 
         List<Product> allProducts = productService.getPublicCatalog(null);
+        Set<ThemeSectionDto> visited = Collections.newSetFromMap(new IdentityHashMap<>());
 
-        for (ThemeSectionDto section : theme.getSections()) {
-            if (!Boolean.TRUE.equals(section.getEnabled())) continue;
-
-            if ("product_grid".equalsIgnoreCase(section.getType())) {
-                String source = section.settingStr("source", "NEWEST");
-                Long categoryId = section.settingLong("categoryId");
-                int limit = Math.max(1, Math.min(section.settingInt("limit", 8), 24));
-
-                List<Product> candidates;
-                if (("CATEGORY".equalsIgnoreCase(source) || categoryId != null) && categoryId != null && !"OFFERS".equalsIgnoreCase(source)) {
-                    candidates = productService.getPublicCatalog(categoryId);
-                } else if ("OFFERS".equalsIgnoreCase(source)) {
-                    candidates = allProducts.stream()
-                            .filter(p -> p.getDiscountPrice() != null && p.getDiscountPrice() > 0)
-                            .collect(Collectors.toList());
-                } else {
-                    candidates = allProducts;
+        if (theme.getPages() != null) {
+            for (List<ThemeSectionDto> pageSections : theme.getPages().values()) {
+                if (pageSections != null) {
+                    for (ThemeSectionDto sec : pageSections) {
+                        if (visited.add(sec)) {
+                            hydrateSingleSection(sec, allProducts);
+                        }
+                    }
                 }
-
-                section.setResolvedProducts(candidates.stream().limit(limit).collect(Collectors.toList()));
+            }
+        }
+        if (theme.getCustomPages() != null) {
+            for (ThemeCustomPageDto cp : theme.getCustomPages()) {
+                if (cp != null && cp.getSections() != null) {
+                    for (ThemeSectionDto sec : cp.getSections()) {
+                        if (visited.add(sec)) {
+                            hydrateSingleSection(sec, allProducts);
+                        }
+                    }
+                }
+            }
+        }
+        if (theme.getSections() != null) {
+            for (ThemeSectionDto sec : theme.getSections()) {
+                if (visited.add(sec)) {
+                    hydrateSingleSection(sec, allProducts);
+                }
             }
         }
     }
 
-    /**
-     * Guarda ÚNICAMENTE el borrador del tema sin alterar los colores publicados en StoreSettings.
-     */
+    private void hydrateSingleSection(ThemeSectionDto section, List<Product> allProducts) {
+        if (section == null || !Boolean.TRUE.equals(section.getEnabled())) return;
+        if ("product_grid".equalsIgnoreCase(section.getType())) {
+            String source = section.settingStr("source", "NEWEST");
+            Long categoryId = section.settingLong("categoryId");
+            int limit = Math.max(1, Math.min(section.settingInt("limit", 8), 24));
+
+            List<Product> candidates;
+            if (("CATEGORY".equalsIgnoreCase(source) || categoryId != null) && categoryId != null && !"OFFERS".equalsIgnoreCase(source)) {
+                candidates = productService.getPublicCatalog(categoryId);
+            } else if ("OFFERS".equalsIgnoreCase(source)) {
+                candidates = allProducts.stream()
+                        .filter(p -> p.getDiscountPrice() != null && p.getDiscountPrice() > 0)
+                        .collect(Collectors.toList());
+            } else {
+                candidates = allProducts;
+            }
+            section.setResolvedProducts(candidates.stream().limit(limit).collect(Collectors.toList()));
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public String buildCatalogFilterDataJson(Store store, ThemeConfigDto theme, List<Product> products) {
+        try {
+            if (store != null && store.getSchemaName() != null) {
+                TenantContext.setCurrentTenant(store.getSchemaName());
+            }
+
+            Map<String, Object> root = new LinkedHashMap<>();
+            Map<String, Map<String, Object>> productsMap = new LinkedHashMap<>();
+
+            if (products != null) {
+                for (Product p : products) {
+                    if (p == null || p.getId() == null) continue;
+                    Product managed = p;
+                    try {
+                        Product found = entityManager.find(Product.class, p.getId());
+                        if (found != null) managed = found;
+                    } catch (Exception ignored) {}
+
+                    Map<String, Object> pMeta = new LinkedHashMap<>();
+                    boolean isMadeToOrder = Boolean.TRUE.equals(managed.getIsMadeToOrder());
+                    boolean inStock = isMadeToOrder || (managed.getStock() != null && managed.getStock() > 0);
+                    boolean hasDiscount = managed.getDiscountPrice() != null
+                            && managed.getDiscountPrice() > 0
+                            && managed.getPrice() != null
+                            && managed.getPrice() > managed.getDiscountPrice();
+                    double effectivePrice = hasDiscount ? managed.getDiscountPrice() : (managed.getPrice() != null ? managed.getPrice() : 0.0);
+
+                    pMeta.put("id", managed.getId());
+                    pMeta.put("price", effectivePrice);
+                    pMeta.put("inStock", inStock);
+                    pMeta.put("hasDiscount", hasDiscount);
+                    pMeta.put("madeToOrder", isMadeToOrder);
+
+                    try {
+                        if (managed.getCategory() != null) {
+                            pMeta.put("categoryId", String.valueOf(managed.getCategory().getId()));
+                            pMeta.put("categoryName", managed.getCategory().getName());
+                        }
+                    } catch (Exception ignored) {}
+
+                    Map<String, List<String>> attrs = new LinkedHashMap<>();
+                    if (managed.getBrand() != null && !managed.getBrand().isBlank()) {
+                        attrs.put("Marca", List.of(managed.getBrand().trim()));
+                    }
+                    try {
+                        if (managed.getAttributes() != null) {
+                            for (Map.Entry<String, String> entry : managed.getAttributes().entrySet()) {
+                                String rawKey = entry.getKey();
+                                String rawVal = entry.getValue();
+                                if (rawKey == null || rawVal == null || rawKey.isBlank() || rawVal.isBlank()) continue;
+                                String normKey = normalizeLabel(rawKey);
+                                String cleanVal = rawVal.trim();
+                                attrs.computeIfAbsent(normKey, k -> new ArrayList<>());
+                                if (!attrs.get(normKey).contains(cleanVal)) {
+                                    attrs.get(normKey).add(cleanVal);
+                                }
+                            }
+                        }
+                    } catch (Exception ignored) {}
+                    pMeta.put("attributes", attrs);
+
+                    Map<String, List<String>> options = new LinkedHashMap<>();
+                    try {
+                        if (Boolean.TRUE.equals(managed.getHasVariants()) && managed.getVariantsList() != null && !managed.getVariantsList().isEmpty()) {
+                            for (ProductVariant v : managed.getVariantsList()) {
+                                if (v == null || !Boolean.TRUE.equals(v.getIsActive())) continue;
+                                boolean variantAvailable = isMadeToOrder || (v.getStock() != null && v.getStock() > 0);
+                                if (!variantAvailable || v.getOptionValues() == null) continue;
+
+                                for (ProductOptionValue ov : v.getOptionValues()) {
+                                    if (ov == null || ov.getValueName() == null || ov.getValueName().isBlank()) continue;
+                                    String optName = (ov.getOption() != null && ov.getOption().getName() != null)
+                                            ? normalizeLabel(ov.getOption().getName()) : "Opción";
+                                    String valName = ov.getValueName().trim();
+                                    options.computeIfAbsent(optName, k -> new ArrayList<>());
+                                    if (!options.get(optName).contains(valName)) {
+                                        options.get(optName).add(valName);
+                                    }
+                                }
+                            }
+                        } else if (Boolean.TRUE.equals(managed.getHasVariants()) && inStock && managed.getOptions() != null) {
+                            for (ProductOption opt : managed.getOptions()) {
+                                if (opt == null || opt.getName() == null || opt.getValues() == null) continue;
+                                String optName = normalizeLabel(opt.getName());
+                                for (ProductOptionValue ov : opt.getValues()) {
+                                    if (ov != null && ov.getValueName() != null && !ov.getValueName().isBlank()) {
+                                        String valName = ov.getValueName().trim();
+                                        options.computeIfAbsent(optName, k -> new ArrayList<>());
+                                        if (!options.get(optName).contains(valName)) {
+                                            options.get(optName).add(valName);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } catch (Exception ignored) {}
+                    pMeta.put("options", options);
+
+                    productsMap.put(String.valueOf(managed.getId()), pMeta);
+                }
+            }
+
+            Map<String, Map<String, Object>> sectionsMap = new LinkedHashMap<>();
+            if (theme != null && theme.getPages() != null) {
+                for (List<ThemeSectionDto> pageList : theme.getPages().values()) {
+                    if (pageList == null) continue;
+                    for (ThemeSectionDto sec : pageList) {
+                        if (sec != null && sec.getId() != null && sec.getSettings() != null) {
+                            sectionsMap.put(sec.getId(), sec.getSettings());
+                        }
+                    }
+                }
+            }
+            if (theme != null && theme.getCustomPages() != null) {
+                for (ThemeCustomPageDto cp : theme.getCustomPages()) {
+                    if (cp == null || cp.getSections() == null) continue;
+                    for (ThemeSectionDto sec : cp.getSections()) {
+                        if (sec != null && sec.getId() != null && sec.getSettings() != null) {
+                            sectionsMap.put(sec.getId(), sec.getSettings());
+                        }
+                    }
+                }
+            }
+
+            root.put("products", productsMap);
+            root.put("sections", sectionsMap);
+            return objectMapper.writeValueAsString(root);
+        } catch (Exception e) {
+            return "{\"products\":{},\"sections\":{}}";
+        }
+    }
+
+    private String normalizeLabel(String raw) {
+        if (raw == null) return "";
+        String clean = raw.trim();
+        if (clean.isEmpty()) return "";
+        return clean.substring(0, 1).toUpperCase() + clean.substring(1).toLowerCase();
+    }
+
     public void saveDraftTheme(Store store, ThemeConfigDto themeConfig) {
         String tenantSchema = store.getSchemaName();
         try {
@@ -162,9 +334,6 @@ public class StoreThemeService {
         }
     }
 
-    /**
-     * Publica el tema en la tienda pública y sincroniza los colores primarios/secundarios con StoreSettings.
-     */
     public void publishTheme(Store store, ThemeConfigDto themeConfig) {
         String tenantSchema = store.getSchemaName();
         try {
@@ -185,9 +354,6 @@ public class StoreThemeService {
         }
     }
 
-    /**
-     * Descarta los cambios no publicados en borrador y restaura la última versión publicada.
-     */
     public ThemeConfigDto discardDraft(Store store) {
         ThemeConfigDto published = getRawThemeConfig(store, false);
         saveDraftTheme(store, published);
@@ -238,17 +404,18 @@ public class StoreThemeService {
                 .borderRadius("1rem")
                 .build();
 
-        List<ThemeSectionDto> sections = new ArrayList<>();
+        List<ThemeSectionDto> homeSections = new ArrayList<>();
 
         Map<String, Object> announcementSettings = new LinkedHashMap<>();
-        announcementSettings.put("text", "🚚 ¡Envíos seguros a todo el país! Compra fácil en línea o por WhatsApp.");
+        announcementSettings.put("text", "¡Envíos seguros a todo el país! Compra fácil en línea o por WhatsApp.");
         announcementSettings.put("bgColor", safeSecondary);
         announcementSettings.put("textColor", "#ffffff");
         announcementSettings.put("linkUrl", "/catalog");
-        sections.add(ThemeSectionDto.builder()
+        homeSections.add(ThemeSectionDto.builder()
                 .id("sec_announcement_default")
                 .type("announcement_bar")
                 .enabled(false)
+                .locked(false)
                 .settings(announcementSettings)
                 .build());
 
@@ -265,10 +432,11 @@ public class StoreThemeService {
         heroSettings.put("bgColor", safePrimary);
         heroSettings.put("textColor", "#ffffff");
         heroSettings.put("alignment", "center");
-        sections.add(ThemeSectionDto.builder()
+        homeSections.add(ThemeSectionDto.builder()
                 .id("sec_hero_default")
                 .type("hero_banner")
                 .enabled(true)
+                .locked(false)
                 .settings(heroSettings)
                 .build());
 
@@ -279,10 +447,12 @@ public class StoreThemeService {
         gridSettings.put("categoryId", "");
         gridSettings.put("limit", 12);
         gridSettings.put("showViewAll", true);
-        sections.add(ThemeSectionDto.builder()
+        gridSettings.put("showFilters", false);
+        homeSections.add(ThemeSectionDto.builder()
                 .id("sec_products_default")
                 .type("product_grid")
                 .enabled(true)
+                .locked(false)
                 .settings(gridSettings)
                 .build());
 
@@ -293,23 +463,87 @@ public class StoreThemeService {
         trustSettings.put("item2Text", "Despachamos tu pedido rápido con transportadoras aliadas.");
         trustSettings.put("item3Title", "Atención Personalizada");
         trustSettings.put("item3Text", "Resolvemos tus dudas directamente por WhatsApp.");
-        sections.add(ThemeSectionDto.builder()
+        homeSections.add(ThemeSectionDto.builder()
                 .id("sec_trust_default")
                 .type("trust_badges")
                 .enabled(false)
+                .locked(false)
                 .settings(trustSettings)
                 .build());
 
+        Map<String, List<ThemeSectionDto>> pages = new LinkedHashMap<>();
+        pages.put("home", homeSections);
+        pages.put("catalog", buildDefaultCatalogSections());
+        pages.put("product", buildDefaultProductSections());
+
         return ThemeConfigDto.builder()
                 .globalStyles(globalStyles)
-                .sections(sections)
+                .sections(homeSections)
+                .pages(pages)
+                .customPages(new ArrayList<>())
+                .build();
+    }
+
+    public List<ThemeSectionDto> buildDefaultCatalogSections() {
+        List<ThemeSectionDto> list = new ArrayList<>();
+        list.add(buildCatalogAnchorSection());
+        return list;
+    }
+
+    public ThemeSectionDto buildCatalogAnchorSection() {
+        Map<String, Object> settings = new LinkedHashMap<>();
+        settings.put("showHeader", true);
+        settings.put("headerBadge", "Colección");
+        settings.put("headerTitle", "Todo el Catálogo");
+        settings.put("headerSubtitle", "Explora todos nuestros productos disponibles.");
+        settings.put("showCategoryPills", true);
+        settings.put("showSearchAndSort", true);
+        settings.put("filterLayout", "sidebar");
+        settings.put("showFilterPrice", true);
+        settings.put("showFilterAvailability", true);
+        settings.put("showFilterCategory", true);
+        settings.put("showFilterVariants", true);
+        settings.put("showFilterAttributes", true);
+        settings.put("columnsDesktop", "4");
+        settings.put("showDiscountPercent", true);
+        return ThemeSectionDto.builder()
+                .id("sec_catalog_results")
+                .type("catalog_results")
+                .enabled(true)
+                .locked(true)
+                .settings(settings)
+                .build();
+    }
+
+    public List<ThemeSectionDto> buildDefaultProductSections() {
+        List<ThemeSectionDto> list = new ArrayList<>();
+        list.add(buildProductAnchorSection());
+        return list;
+    }
+
+    public ThemeSectionDto buildProductAnchorSection() {
+        Map<String, Object> settings = new LinkedHashMap<>();
+        settings.put("galleryLayout", "bottom");
+        settings.put("showBreadcrumbs", true);
+        settings.put("showSku", true);
+        settings.put("showStockCounter", true);
+        settings.put("showSpecs", true);
+        settings.put("showPolicies", true);
+        settings.put("showRelatedProducts", true);
+        settings.put("relatedTitle", "También te puede interesar");
+        settings.put("relatedSubtitle", "Otros productos de nuestro catálogo");
+        return ThemeSectionDto.builder()
+                .id("sec_product_main")
+                .type("product_main")
+                .enabled(true)
+                .locked(true)
+                .settings(settings)
                 .build();
     }
 
     private void sanitizeThemeConfig(ThemeConfigDto config) {
         if (config == null) return;
 
-        // 1. Sanitizar GlobalStyles contra inyección CSS
         ThemeGlobalStylesDto gs = config.getGlobalStyles();
         if (gs == null) {
             gs = new ThemeGlobalStylesDto();
@@ -319,6 +553,7 @@ public class StoreThemeService {
         if (!isValidHex(gs.getSecondaryColor())) gs.setSecondaryColor("#0f172a");
         if (!isValidHex(gs.getBackgroundColor())) gs.setBackgroundColor("#f8fafc");
         if (!isValidHex(gs.getTextColor())) gs.setTextColor("#0f172a");
+
         if (!ThemeFonts.isHeadingFont(gs.getHeadingFont())) {
             gs.setHeadingFont(ThemeFonts.DEFAULT_FONT);
         }
@@ -352,28 +587,139 @@ public class StoreThemeService {
         if (gs.getNavbarLinkHover() == null || !ALLOWED_NAV_LINK_HOVERS.contains(gs.getNavbarLinkHover())) {
             gs.setNavbarLinkHover("color");
         }
+        if (gs.getNavbarDropdownStyle() == null || !ALLOWED_NAV_DROPDOWN_STYLES.contains(gs.getNavbarDropdownStyle())) {
+            gs.setNavbarDropdownStyle("mega");
+        }
+        if (gs.getNavbarDropdownAnim() == null || !ALLOWED_NAV_DROPDOWN_ANIMS.contains(gs.getNavbarDropdownAnim())) {
+            gs.setNavbarDropdownAnim("slide_up");
+        }
+        if (gs.getNavbarTrigger() == null || !ALLOWED_NAV_TRIGGERS.contains(gs.getNavbarTrigger())) {
+            gs.setNavbarTrigger("hover");
+        }
+        if (gs.getNavbarSpeed() == null || !ALLOWED_NAV_SPEEDS.contains(gs.getNavbarSpeed())) {
+            gs.setNavbarSpeed("normal");
+        }
+        if (gs.getNavbarSticky() == null) {
+            gs.setNavbarSticky(true);
+        }
+        if (gs.getNavbarCompactOnScroll() == null) {
+            gs.setNavbarCompactOnScroll(false);
+        }
 
-        // 2. Sanitizar Secciones
-        if (config.getSections() == null) return;
-        for (ThemeSectionDto sec : config.getSections()) {
-            if (sec.getId() == null || sec.getId().isBlank()) {
-                sec.setId("sec_" + UUID.randomUUID().toString().substring(0, 8));
+        if (config.getPages() == null) {
+            config.setPages(new LinkedHashMap<>());
+        }
+        Map<String, List<ThemeSectionDto>> pages = config.getPages();
+
+        if ((!pages.containsKey("home") || pages.get("home") == null || pages.get("home").isEmpty())
+                && config.getSections() != null && !config.getSections().isEmpty()) {
+            pages.put("home", new ArrayList<>(config.getSections()));
+        } else if (!pages.containsKey("home") || pages.get("home") == null) {
+            pages.put("home", new ArrayList<>());
+        }
+
+        List<ThemeSectionDto> catalogSections = pages.computeIfAbsent("catalog", k -> buildDefaultCatalogSections());
+        boolean hasCatalogAnchor = catalogSections.stream().anyMatch(s -> "catalog_results".equalsIgnoreCase(s.getType()));
+        if (!hasCatalogAnchor) {
+            catalogSections.add(0, buildCatalogAnchorSection());
+        }
+
+        List<ThemeSectionDto> productSections = pages.computeIfAbsent("product", k -> buildDefaultProductSections());
+        boolean hasProductAnchor = productSections.stream().anyMatch(s -> "product_main".equalsIgnoreCase(s.getType()));
+        if (!hasProductAnchor) {
+            productSections.add(0, buildProductAnchorSection());
+        }
+
+        config.setSections(pages.get("home"));
+
+        for (List<ThemeSectionDto> sectionList : pages.values()) {
+            if (sectionList == null) continue;
+            for (ThemeSectionDto sec : sectionList) {
+                sanitizeSingleSection(sec);
             }
-            if (sec.getSettings() != null) {
-                sec.getSettings().replaceAll((k, v) -> {
-                    if (v instanceof String str) {
-                        String trimmed = str.trim();
-                        if (k.toLowerCase().endsWith("url") && trimmed.toLowerCase().startsWith("javascript:")) {
-                            return "";
-                        }
-                        if (k.toLowerCase().endsWith("color") && !trimmed.isEmpty() && !isValidHex(trimmed)) {
-                            return "#0f172a";
-                        }
-                        return trimmed;
+        }
+
+        // Sanitizar páginas personalizadas
+        if (config.getCustomPages() == null) {
+            config.setCustomPages(new ArrayList<>());
+        } else {
+            List<ThemeCustomPageDto> cleanCustomPages = new ArrayList<>();
+            Set<String> usedSlugs = new HashSet<>();
+
+            for (ThemeCustomPageDto cp : config.getCustomPages()) {
+                if (cp == null) continue;
+                String title = cp.getTitle() != null ? cp.getTitle().trim() : "";
+                if (title.isEmpty()) continue;
+
+                String rawSlug = (cp.getSlug() != null && !cp.getSlug().isBlank()) ? cp.getSlug() : title;
+                String slug = sanitizeSlug(rawSlug);
+                if (slug.isEmpty() || RESERVED_PAGE_SLUGS.contains(slug)) {
+                    slug = "pagina-" + (cleanCustomPages.size() + 1);
+                }
+                String uniqueSlug = slug;
+                int counter = 2;
+                while (usedSlugs.contains(uniqueSlug)) {
+                    uniqueSlug = slug + "-" + counter++;
+                }
+                usedSlugs.add(uniqueSlug);
+
+                cp.setTitle(title);
+                cp.setSlug(uniqueSlug);
+                if (cp.getShowInNavbar() == null) {
+                    cp.setShowInNavbar(true);
+                }
+                if (cp.getSections() == null) {
+                    cp.setSections(new ArrayList<>());
+                }
+                // En páginas personalizadas no se permiten las secciones ancla exclusivas de catálogo o producto
+                cp.getSections().removeIf(s -> s == null
+                        || "catalog_results".equalsIgnoreCase(s.getType())
+                        || "product_main".equalsIgnoreCase(s.getType()));
+
+                for (ThemeSectionDto sec : cp.getSections()) {
+                    sanitizeSingleSection(sec);
+                }
+                cleanCustomPages.add(cp);
+            }
+            config.setCustomPages(cleanCustomPages);
+        }
+    }
+
+    private String sanitizeSlug(String input) {
+        if (input == null) return "";
+        String normalized = Normalizer.normalize(input.trim().toLowerCase(), Normalizer.Form.NFD)
+                .replaceAll("[\\p{InCombiningDiacriticalMarks}]", "");
+        String slug = normalized.replaceAll("[^a-z0-9]+", "-")
+                .replaceAll("^-+|-+$", "");
+        return slug.length() > 50 ? slug.substring(0, 50).replaceAll("-+$", "") : slug;
+    }
+
+    private void sanitizeSingleSection(ThemeSectionDto sec) {
+        if (sec == null) return;
+        if (sec.getId() == null || sec.getId().isBlank()) {
+            sec.setId("sec_" + UUID.randomUUID().toString().substring(0, 8));
+        }
+        if ("catalog_results".equalsIgnoreCase(sec.getType()) || "product_main".equalsIgnoreCase(sec.getType())) {
+            sec.setLocked(true);
+            sec.setEnabled(true);
+        } else if (sec.getLocked() == null) {
+            sec.setLocked(false);
+        }
+
+        if (sec.getSettings() != null) {
+            sec.getSettings().replaceAll((k, v) -> {
+                if (v instanceof String str) {
+                    String trimmed = str.trim();
+                    if (k.toLowerCase().endsWith("url") && trimmed.toLowerCase().startsWith("javascript:")) {
+                        return "";
                     }
-                    return v;
-                });
-            }
+                    if (k.toLowerCase().endsWith("color") && !trimmed.isEmpty() && !isValidHex(trimmed)) {
+                        return "#0f172a";
+                    }
+                    return trimmed;
+                }
+                return v;
+            });
         }
     }
 
