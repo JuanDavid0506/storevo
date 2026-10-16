@@ -745,35 +745,252 @@ Storevo.ThemeEditor = {
         bindColor('style-bg-color', 'style-bg-color-hex', 'backgroundColor', '#f8fafc');
         bindColor('style-text-color', 'style-text-color-hex', 'textColor', '#0f172a');
 
-        const headingSelect = document.getElementById('style-heading-font');
-        if (headingSelect) {
-            headingSelect.value = gs.headingFont || 'Inter';
-            headingSelect.onchange = () => {
-                gs.headingFont = headingSelect.value;
-                this.pushLiveStylesToIframe();
-                this.scheduleAutoSave(false);
-            };
-        }
+        this.initTypographyInputs();
+        this.initNavbarStyleInputs();
+        this.initShapeInputs();
+        this.initStyleAccordions();
+    },
+    SHAPE_DEFAULTS: {
+        borderRadius: '1rem',
+        buttonRadius: 'classic',
+        cardStyle: 'elevated'
+    },
 
-        const bodySelect = document.getElementById('style-body-font');
-        if (bodySelect) {
-            bodySelect.value = gs.bodyFont || 'Inter';
-            bodySelect.onchange = () => {
-                gs.bodyFont = bodySelect.value;
-                this.pushLiveStylesToIframe();
-                this.scheduleAutoSave(false);
-            };
-        }
+    initShapeInputs: function() {
+        const gs = this.theme.globalStyles;
+        const defaults = this.SHAPE_DEFAULTS;
 
         const radiusSelect = document.getElementById('style-border-radius');
+        const buttonSelect = document.getElementById('style-button-radius');
+        const cardButtons = document.querySelectorAll('#style-card-style [data-value]');
+        const resetBtn = document.getElementById('style-shape-reset');
+
+        const commit = () => {
+            this.pushLiveStylesToIframe();
+            this.scheduleAutoSave(false);
+        };
+
+        const syncUi = () => {
+            if (radiusSelect) radiusSelect.value = gs.borderRadius || defaults.borderRadius;
+            if (buttonSelect) buttonSelect.value = gs.buttonRadius || defaults.buttonRadius;
+
+            const currentCard = gs.cardStyle || defaults.cardStyle;
+            cardButtons.forEach(btn => {
+                const active = btn.dataset.value === currentCard;
+                btn.classList.toggle('is-selected', active);
+                btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+            });
+        };
+
         if (radiusSelect) {
-            radiusSelect.value = gs.borderRadius || '1rem';
             radiusSelect.onchange = () => {
                 gs.borderRadius = radiusSelect.value;
-                this.pushLiveStylesToIframe();
-                this.scheduleAutoSave(false);
+                commit();
             };
         }
+
+        if (buttonSelect) {
+            buttonSelect.onchange = () => {
+                gs.buttonRadius = buttonSelect.value;
+                commit();
+            };
+        }
+
+        cardButtons.forEach(btn => {
+            btn.onclick = () => {
+                gs.cardStyle = btn.dataset.value;
+                syncUi();
+                commit();
+            };
+        });
+
+        if (resetBtn) {
+            resetBtn.onclick = () => {
+                Object.assign(gs, defaults);
+                syncUi();
+                commit();
+            };
+        }
+
+        syncUi();
+    },
+
+    /**
+     * Secciones recogibles del panel de Estilos (acordeón):
+     * al abrir una, las demás se cierran.
+     */
+    initStyleAccordions: function() {
+        const items = document.querySelectorAll('#panel-global-styles details.style-acc');
+        items.forEach(item => {
+            item.ontoggle = () => {
+                if (!item.open) return;
+                items.forEach(other => {
+                    if (other !== item) other.open = false;
+                });
+            };
+        });
+    },
+    TYPOGRAPHY_DEFAULTS: {
+        headingFont: 'Inter',
+        bodyFont: 'Inter',
+        headingTransform: 'none',
+        fontScale: 'standard'
+    },
+
+    initTypographyInputs: function() {
+        const gs = this.theme.globalStyles;
+        const defaults = this.TYPOGRAPHY_DEFAULTS;
+
+        const headingSelect = document.getElementById('style-heading-font');
+        const bodySelect = document.getElementById('style-body-font');
+        const transformSelect = document.getElementById('style-heading-transform');
+        const scaleSelect = document.getElementById('style-font-scale');
+        const pairs = document.querySelectorAll('#style-font-pairs [data-heading]');
+        const resetBtn = document.getElementById('style-typography-reset');
+
+        const commit = () => {
+            this.pushLiveStylesToIframe();
+            this.scheduleAutoSave(false);
+        };
+
+        const syncUi = () => {
+            const heading = gs.headingFont || defaults.headingFont;
+            const body = gs.bodyFont || defaults.bodyFont;
+
+            if (headingSelect) headingSelect.value = heading;
+            if (bodySelect) bodySelect.value = body;
+            if (transformSelect) transformSelect.value = gs.headingTransform || defaults.headingTransform;
+            if (scaleSelect) scaleSelect.value = gs.fontScale || defaults.fontScale;
+
+            pairs.forEach(pair => {
+                const active = pair.dataset.heading === heading && pair.dataset.body === body;
+                pair.classList.toggle('is-selected', active);
+                pair.setAttribute('aria-pressed', active ? 'true' : 'false');
+            });
+        };
+
+        pairs.forEach(pair => {
+            pair.onclick = () => {
+                gs.headingFont = pair.dataset.heading;
+                gs.bodyFont = pair.dataset.body;
+                syncUi();
+                commit();
+            };
+        });
+
+        if (headingSelect) {
+            headingSelect.onchange = () => {
+                gs.headingFont = headingSelect.value;
+                syncUi();
+                commit();
+            };
+        }
+
+        if (bodySelect) {
+            bodySelect.onchange = () => {
+                gs.bodyFont = bodySelect.value;
+                syncUi();
+                commit();
+            };
+        }
+
+        if (transformSelect) {
+            transformSelect.onchange = () => {
+                gs.headingTransform = transformSelect.value;
+                commit();
+            };
+        }
+
+        if (scaleSelect) {
+            scaleSelect.onchange = () => {
+                gs.fontScale = scaleSelect.value;
+                commit();
+            };
+        }
+
+        if (resetBtn) {
+            resetBtn.onclick = () => {
+                Object.assign(gs, defaults);
+                syncUi();
+                commit();
+            };
+        }
+
+        syncUi();
+    },
+    NAVBAR_DEFAULTS: {
+        navbarLayout: 'classic',
+        navbarStyle: 'light',
+        navbarLinkFormat: 'normal',
+        navbarLinkHover: 'color',
+        navbarSticky: true
+    },
+
+    initNavbarStyleInputs: function() {
+        const gs = this.theme.globalStyles;
+        const defaults = this.NAVBAR_DEFAULTS;
+
+        const cards = document.querySelectorAll('#style-navbar-layout [data-value]');
+        const selects = [
+            { el: document.getElementById('style-navbar-style'), prop: 'navbarStyle' },
+            { el: document.getElementById('style-navbar-link-format'), prop: 'navbarLinkFormat' },
+            { el: document.getElementById('style-navbar-link-hover'), prop: 'navbarLinkHover' }
+        ];
+        const stickySelect = document.getElementById('style-navbar-sticky');
+        const resetBtn = document.getElementById('style-nav-reset');
+
+        const commit = () => {
+            this.pushLiveStylesToIframe();
+            this.scheduleAutoSave(false);
+        };
+
+        const syncUi = () => {
+            const layout = gs.navbarLayout || defaults.navbarLayout;
+            cards.forEach(card => {
+                const active = card.dataset.value === layout;
+                card.classList.toggle('is-selected', active);
+                card.setAttribute('aria-pressed', active ? 'true' : 'false');
+            });
+            selects.forEach(({ el, prop }) => {
+                if (el) el.value = gs[prop] || defaults[prop];
+            });
+            if (stickySelect) {
+                stickySelect.value = gs.navbarSticky === false ? 'false' : 'true';
+            }
+        };
+
+        cards.forEach(card => {
+            card.onclick = () => {
+                gs.navbarLayout = card.dataset.value;
+                syncUi();
+                commit();
+            };
+        });
+
+        selects.forEach(({ el, prop }) => {
+            if (!el) return;
+            el.onchange = () => {
+                gs[prop] = el.value;
+                commit();
+            };
+        });
+
+        if (stickySelect) {
+            stickySelect.onchange = () => {
+                gs.navbarSticky = stickySelect.value === 'true';
+                commit();
+            };
+        }
+
+        if (resetBtn) {
+            resetBtn.onclick = () => {
+                Object.assign(gs, defaults);
+                syncUi();
+                commit();
+            };
+        }
+
+        syncUi();
     },
 
     pushLiveStylesToIframe: function() {

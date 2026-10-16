@@ -34,13 +34,18 @@ public class StoreThemeService {
     @Lazy
     private StoreThemeService self;
 
-    private static final Set<String> ALLOWED_FONTS = Set.of(
-            "Inter", "Plus Jakarta Sans", "Montserrat", "Playfair Display", "Lora", "DM Sans"
-    );
-    private static final Set<String> ALLOWED_RADII = Set.of(
-            "0px", "0.375rem", "0.75rem", "1rem", "1.5rem"
-    );
 
+    private static final Set<String> ALLOWED_RADII = Set.of(
+            "0px", "0.375rem", "0.75rem", "1rem", "1.5rem", "2rem"
+    );
+    private static final Set<String> ALLOWED_BUTTON_RADII = Set.of("classic", "sync", "square", "pill");
+    private static final Set<String> ALLOWED_CARD_STYLES = Set.of("elevated", "clean", "outlined");
+    private static final Set<String> ALLOWED_NAV_LAYOUTS = Set.of("classic", "centered", "marketplace", "minimal");
+    private static final Set<String> ALLOWED_NAV_STYLES = Set.of("light", "glass", "secondary", "primary", "page");
+    private static final Set<String> ALLOWED_NAV_LINK_FORMATS = Set.of("normal", "uppercase", "bold");
+    private static final Set<String> ALLOWED_NAV_LINK_HOVERS = Set.of("color", "underline", "pill");
+    private static final Set<String> ALLOWED_HEADING_TRANSFORMS = Set.of("none", "uppercase");
+    private static final Set<String> ALLOWED_FONT_SCALES = Set.of("compact", "standard", "large");
     /**
      * Obtiene la configuración del tema (Publicado o Borrador) y resuelve los productos de cada sección.
      */
@@ -314,14 +319,38 @@ public class StoreThemeService {
         if (!isValidHex(gs.getSecondaryColor())) gs.setSecondaryColor("#0f172a");
         if (!isValidHex(gs.getBackgroundColor())) gs.setBackgroundColor("#f8fafc");
         if (!isValidHex(gs.getTextColor())) gs.setTextColor("#0f172a");
-        if (gs.getHeadingFont() == null || !ALLOWED_FONTS.contains(gs.getHeadingFont())) {
-            gs.setHeadingFont("Inter");
+        if (!ThemeFonts.isHeadingFont(gs.getHeadingFont())) {
+            gs.setHeadingFont(ThemeFonts.DEFAULT_FONT);
         }
-        if (gs.getBodyFont() == null || !ALLOWED_FONTS.contains(gs.getBodyFont())) {
-            gs.setBodyFont("Inter");
+        if (!ThemeFonts.isBodyFont(gs.getBodyFont())) {
+            gs.setBodyFont(ThemeFonts.DEFAULT_FONT);
+        }
+        if (gs.getHeadingTransform() == null || !ALLOWED_HEADING_TRANSFORMS.contains(gs.getHeadingTransform())) {
+            gs.setHeadingTransform("none");
+        }
+        if (gs.getFontScale() == null || !ALLOWED_FONT_SCALES.contains(gs.getFontScale())) {
+            gs.setFontScale("standard");
+        }
+        if (gs.getButtonRadius() == null || !ALLOWED_BUTTON_RADII.contains(gs.getButtonRadius())) {
+            gs.setButtonRadius("classic");
+        }
+        if (gs.getCardStyle() == null || !ALLOWED_CARD_STYLES.contains(gs.getCardStyle())) {
+            gs.setCardStyle("elevated");
         }
         if (gs.getBorderRadius() == null || !ALLOWED_RADII.contains(gs.getBorderRadius())) {
             gs.setBorderRadius("1rem");
+        }
+        if (gs.getNavbarLayout() == null || !ALLOWED_NAV_LAYOUTS.contains(gs.getNavbarLayout())) {
+            gs.setNavbarLayout("classic");
+        }
+        if (gs.getNavbarStyle() == null || !ALLOWED_NAV_STYLES.contains(gs.getNavbarStyle())) {
+            gs.setNavbarStyle("light");
+        }
+        if (gs.getNavbarLinkFormat() == null || !ALLOWED_NAV_LINK_FORMATS.contains(gs.getNavbarLinkFormat())) {
+            gs.setNavbarLinkFormat("normal");
+        }
+        if (gs.getNavbarLinkHover() == null || !ALLOWED_NAV_LINK_HOVERS.contains(gs.getNavbarLinkHover())) {
+            gs.setNavbarLinkHover("color");
         }
 
         // 2. Sanitizar Secciones

@@ -178,7 +178,7 @@
                       hasMultiple=${p.images != null and p.images.size() > 1},
                       cardImg=${p.getMainImageThumbnailUrl() != null ? p.getMainImageThumbnailUrl() : (p.mainImageUrl != null ? p.mainImageUrl : '/img/placeholder.jpg')},
                       uniqueImgId=${sec.id + '-img-' + p.id}"
-             class="group relative bg-white text-slate-900 store-radius overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-100 flex flex-col h-full">
+             class="product-card group relative bg-white text-slate-900 store-radius overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-100 flex flex-col h-full">
 
             <div class="relative aspect-[4/5] overflow-hidden bg-slate-50 flex-shrink-0 group/gallery">
                 <a th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${p.id})}" class="block w-full h-full">

@@ -1,0 +1,41 @@
+/* ============================================================
+   Componentes configurables de la tienda (Storevo)
+   Se controlan con data-attributes en <body>:
+   data-button-radius | data-card-style
+   Independiente de la compilación de Tailwind.
+   ============================================================ */
+
+/* ---------- Forma de los botones ----------
+   Detecta botones y enlaces-botón por sus clases (font-bold + rounded-xl/lg).
+   "classic" no aplica ninguna regla: se ve como siempre. */
+body[data-button-radius="square"] :is(a, button)[class*="font-bold"]:is([class*="rounded-xl"], [class*="rounded-lg"]) {
+    border-radius: 0 !important;
+}
+body[data-button-radius="pill"] :is(a, button)[class*="font-bold"]:is([class*="rounded-xl"], [class*="rounded-lg"]) {
+    border-radius: 9999px !important;
+}
+body[data-button-radius="sync"] :is(a, button)[class*="font-bold"]:is([class*="rounded-xl"], [class*="rounded-lg"]) {
+    border-radius: min(var(--store-radius, 1rem), 1rem) !important;
+}
+
+/* ---------- Estilo de las tarjetas de producto ----------
+   "elevated" es el diseño actual (borde sutil + sombra al pasar el mouse). */
+
+/* Editorial limpia: sin marco ni sombra (el fondo se mantiene para asegurar contraste) */
+body[data-card-style="clean"] .product-card {
+    border-color: transparent !important;
+    box-shadow: none !important;
+}
+body[data-card-style="clean"] .product-card:hover {
+    box-shadow: none !important;
+}
+
+/* Contorno definido: borde marcado con el color de texto de la tienda */
+body[data-card-style="outlined"] .product-card {
+    border: 2px solid var(--store-text) !important;
+    box-shadow: none !important;
+}
+body[data-card-style="outlined"] .product-card:hover {
+    box-shadow: 4px 4px 0 var(--store-text) !important;
+    transform: translate(-2px, -2px);
+}

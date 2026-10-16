@@ -16,6 +16,8 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.servlet.HandlerMapping;
+import com.storevo.backend.tenant.dto.ThemeGlobalStylesDto;
+import com.storevo.backend.tenant.service.ThemeFonts;
 
 import java.util.Map;
 import java.util.UUID;
@@ -80,6 +82,15 @@ public class StorefrontGlobalAdvice {
         model.addAttribute("slug", slug);
         model.addAttribute("theme", theme);
         model.addAttribute("isDraftPreview", isDraftPreview);
+
+        // Google Fonts: en la vista previa del editor todas; en la tienda pública solo las 2 activas
+        ThemeGlobalStylesDto themeStyles = theme != null ? theme.getGlobalStyles() : null;
+        String fontsUrl = isDraftPreview
+                ? ThemeFonts.buildAllFontsUrl()
+                : ThemeFonts.buildActiveFontsUrl(
+                themeStyles != null ? themeStyles.getHeadingFont() : null,
+                themeStyles != null ? themeStyles.getBodyFont() : null);
+        model.addAttribute("fontsUrl", fontsUrl);
 
         // 2. Bajar el switch: Cambiar al esquema del Tenant
         TenantContext.setCurrentTenant(store.getSchemaName());

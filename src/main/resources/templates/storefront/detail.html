@@ -257,7 +257,7 @@
              th:with="isOutOfStock=${!p.isMadeToOrder and (p.stock == null or p.stock <= 0)},
                       effectivePrice=${p.discountPrice != null and p.discountPrice > 0 ? p.discountPrice : p.price},
                       cardImg=${p.getMainImageThumbnailUrl() != null ? p.getMainImageThumbnailUrl() : (p.mainImageUrl != null ? p.mainImageUrl : '/img/placeholder.jpg')}"
-             class="group relative bg-white text-slate-900 store-radius overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-100 flex flex-col h-full">
+             class="product-card group relative bg-white text-slate-900 store-radius overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-100 flex flex-col h-full">
 
           <div class="relative aspect-[4/5] overflow-hidden bg-slate-50 flex-shrink-0">
             <a th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${p.id})}" class="block w-full h-full">

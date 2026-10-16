@@ -14,10 +14,13 @@
     </th:block>
 
     <link rel="stylesheet" th:href="@{/css/app.css}">
+    <link rel="stylesheet" th:href="@{/css/store-navbar.css}">
+    <link rel="stylesheet" th:href="@{/css/store-components.css}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <!-- Fuentes de Google Fonts para el Editor de Plantillas -->
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Inter:wght@300;400;500;600;700;900&family=Lora:wght@500;600;700&family=Montserrat:wght@400;600;700;800&family=Playfair+Display:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <!-- Google Fonts: solo las fuentes activas de la tienda (todas en la vista previa del editor) -->
+    <link rel="stylesheet"
+          th:href="${fontsUrl != null ? fontsUrl : 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap'}">
 
     <style th:inline="text"
            th:with="pColor=${theme != null and theme.globalStyles != null and theme.globalStyles.primaryColor != null ? theme.globalStyles.primaryColor : (settings != null and settings.primaryColor != null ? settings.primaryColor : '#6366f1')},
@@ -26,15 +29,22 @@
                     txtColor=${theme != null and theme.globalStyles != null and theme.globalStyles.textColor != null ? theme.globalStyles.textColor : '#0f172a'},
                     hFont=${theme != null and theme.globalStyles != null and theme.globalStyles.headingFont != null ? theme.globalStyles.headingFont : 'Inter'},
                     bFont=${theme != null and theme.globalStyles != null and theme.globalStyles.bodyFont != null ? theme.globalStyles.bodyFont : 'Inter'},
-                    bRadius=${theme != null and theme.globalStyles != null and theme.globalStyles.borderRadius != null ? theme.globalStyles.borderRadius : '1rem'}">
+                    hSerif=${hFont == 'Playfair Display' or hFont == 'Lora' or hFont == 'Cormorant Garamond' or hFont == 'Cinzel'},
+                    bSerif=${bFont == 'Lora'},
+                    bRadius=${theme != null and theme.globalStyles != null and theme.globalStyles.borderRadius != null ? theme.globalStyles.borderRadius : '1rem'},
+                    fScale=${theme != null and theme.globalStyles != null and theme.globalStyles.fontScale == 'compact' ? '95%' : (theme != null and theme.globalStyles != null and theme.globalStyles.fontScale == 'large' ? '106%' : '100%')}">
         :root {
             --brand-color: [[${pColor}]];
             --brand-secondary: [[${sColor}]];
             --store-bg: [[${bgColor}]];
             --store-text: [[${txtColor}]];
-            --font-heading: '[[${hFont}]]', sans-serif;
-            --font-body: '[[${bFont}]]', sans-serif;
+            --font-heading: '[[${hFont}]]', [[${hSerif ? 'serif' : 'sans-serif'}]];
+            --font-body: '[[${bFont}]]', [[${bSerif ? 'serif' : 'sans-serif'}]];
             --store-radius: [[${bRadius}]];
+            --store-font-scale: [[${fScale}]];
+        }
+        html {
+            font-size: var(--store-font-scale, 100%);
         }
         body {
             background-color: var(--store-bg) !important;
@@ -43,6 +53,14 @@
         }
         h1, h2, h3, h4 {
             font-family: var(--font-heading) !important;
+        }
+        body[data-heading-case="uppercase"] h1,
+        body[data-heading-case="uppercase"] h2,
+        body[data-heading-case="uppercase"] h3,
+        body[data-heading-case="uppercase"] h4,
+        body[data-heading-case="uppercase"] .store-heading {
+            text-transform: uppercase !important;
+            letter-spacing: 0.04em !important;
         }
         .store-heading {
             color: var(--store-text) !important;
@@ -105,167 +123,13 @@
         }
     </style>
 </head>
-<body class="antialiased min-h-screen flex flex-col">
+<body class="antialiased min-h-screen flex flex-col"
+      th:attr="data-heading-case=${theme != null and theme.globalStyles != null and theme.globalStyles.headingTransform != null ? theme.globalStyles.headingTransform : 'none'},
+               data-button-radius=${theme != null and theme.globalStyles != null and theme.globalStyles.buttonRadius != null ? theme.globalStyles.buttonRadius : 'classic'},
+               data-card-style=${theme != null and theme.globalStyles != null and theme.globalStyles.cardStyle != null ? theme.globalStyles.cardStyle : 'elevated'}">
 
-<nav class="bg-white text-slate-900 shadow-sm sticky top-0 z-50 border-b border-slate-100">
-    <style>
-        .nav-parent:hover .nav-dropdown { opacity: 1 !important; visibility: visible !important; transform: translateY(0) !important; }
-        .nav-parent:hover .nav-arrow { transform: rotate(-180deg) !important; }
-        .nav-flyout-parent:hover .nav-flyout { opacity: 1 !important; visibility: visible !important; transform: translateX(0) !important; }
-    </style>
-
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between h-16 items-center gap-4">
-            <a th:href="@{/s/{slug}(slug=${slug})}" class="text-2xl font-black text-brand tracking-tight truncate max-w-[180px] sm:max-w-xs" th:text="${settings.storeName}">Mi Tienda</a>
-
-            <!-- Navegación Desktop (3 niveles) -->
-            <div class="hidden md:flex space-x-6 items-center z-50">
-                <a th:href="@{/s/{slug}(slug=${slug})}" class="text-slate-600 hover:text-brand font-medium transition py-4 cursor-pointer whitespace-nowrap">Inicio</a>
-                <a th:href="@{/s/{slug}/catalog(slug=${slug})}" class="text-slate-600 hover:text-brand font-medium transition py-4 cursor-pointer whitespace-nowrap">Todo el Catálogo</a>
-
-                <div th:each="cat : ${navCategories}" class="relative nav-parent">
-                    <a th:href="@{/s/{slug}/catalog(slug=${slug}, category=${cat.id})}"
-                       class="flex items-center gap-1 text-slate-600 hover:text-brand font-medium transition py-5 cursor-pointer whitespace-nowrap">
-                        <span th:text="${cat.name}"></span>
-                        <svg th:if="${not #lists.isEmpty(cat.subCategories)}" class="nav-arrow w-4 h-4 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                    </a>
-
-                    <div th:if="${not #lists.isEmpty(cat.subCategories)}" class="nav-dropdown absolute top-[100%] left-0 w-56 bg-white border border-slate-100 shadow-xl rounded-xl opacity-0 invisible transform -translate-y-3 transition-all duration-300 z-50">
-                        <div class="py-2 flex flex-col">
-                            <div th:each="sub : ${cat.subCategories}" th:if="${sub.isActive}" class="relative nav-flyout-parent group/item">
-                                <a th:href="@{/s/{slug}/catalog(slug=${slug}, category=${sub.id})}" class="px-5 py-2.5 text-sm font-medium text-slate-600 hover:text-brand hover:bg-slate-50 transition flex justify-between items-center w-full">
-                                    <span th:text="${sub.name}">Subcategoría</span>
-                                    <svg th:if="${not #lists.isEmpty(sub.subCategories)}" class="w-4 h-4 text-slate-400 group-hover/item:text-brand transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                                </a>
-
-                                <div th:if="${not #lists.isEmpty(sub.subCategories)}" class="nav-flyout absolute top-0 left-full w-56 bg-white border border-slate-100 shadow-xl rounded-xl opacity-0 invisible transform -translate-x-2 transition-all duration-300 z-50">
-                                    <div class="py-2 flex flex-col">
-                                        <a th:each="subsub : ${sub.subCategories}" th:if="${subsub.isActive}" th:href="@{/s/{slug}/catalog(slug=${slug}, category=${subsub.id})}" class="px-5 py-2.5 text-sm font-medium text-slate-600 hover:text-brand hover:bg-slate-50 transition" th:text="${subsub.name}">Sub-sub</a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Acciones Derecha: Buscador + Favoritos + Bolsa + Menú Móvil -->
-            <div class="flex items-center gap-3 sm:gap-5">
-                <form th:action="@{/s/{slug}/catalog(slug=${slug})}" method="GET" class="hidden lg:flex items-center relative">
-                    <input th:if="${isDraftPreview}" type="hidden" name="preview" value="draft">
-                    <input type="search" name="q" th:value="${param.q != null ? param.q[0] : ''}"
-                           placeholder="Buscar productos..."
-                           class="w-44 xl:w-56 pl-9 pr-3 py-1.5 bg-slate-100 focus:bg-white border border-transparent focus:border-slate-300 rounded-full text-sm text-slate-800 placeholder-slate-400 focus:outline-none transition-all">
-                    <svg class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                </form>
-
-                <a th:href="@{/s/{slug}/wishlist(slug=${slug})}" class="flex items-center gap-2 text-slate-600 hover:text-red-500 transition relative" title="Mis Favoritos" aria-label="Mis Favoritos">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
-                    <span id="navWishlistCounter" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full" th:text="${wishlistCount != null ? wishlistCount : 0}">0</span>
-                </a>
-
-                <a th:href="@{/s/{slug}/cart(slug=${slug})}" class="flex items-center gap-2 text-slate-600 hover:text-brand transition relative" title="Mi Bolsa" aria-label="Mi Bolsa">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
-                    <span id="navCartCounter" class="absolute -top-2 -right-2 bg-brand text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full" th:text="${cartCount != null ? cartCount : 0}">0</span>
-                </a>
-
-                <button type="button" id="mobile-menu-btn" class="md:hidden text-slate-600 hover:text-brand transition p-1" aria-label="Abrir menú">
-                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Menú Lateral Móvil -->
-    <div id="mobile-menu-backdrop" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[60] hidden opacity-0 transition-opacity duration-300 md:hidden"></div>
-
-    <div id="mobile-menu" class="fixed top-0 left-0 h-full w-4/5 max-w-sm bg-white text-slate-900 shadow-2xl z-[70] transform -translate-x-full transition-transform duration-300 flex flex-col overflow-y-auto md:hidden">
-        <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-            <span class="font-black text-brand text-lg truncate pr-2" th:text="${settings.storeName}">Mi Tienda</span>
-            <button type="button" id="mobile-menu-close" class="text-slate-400 hover:text-red-500 p-2" aria-label="Cerrar menú">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-            </button>
-        </div>
-
-        <!-- Buscador Móvil -->
-        <div class="p-4 border-b border-slate-100">
-            <form th:action="@{/s/{slug}/catalog(slug=${slug})}" method="GET" class="relative">
-                <input th:if="${isDraftPreview}" type="hidden" name="preview" value="draft">
-                <input type="search" name="q" th:value="${param.q != null ? param.q[0] : ''}"
-                       placeholder="Buscar producto..."
-                       class="w-full pl-9 pr-4 py-2.5 bg-slate-100 focus:bg-white border border-slate-200 focus:border-brand rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none">
-                <svg class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-            </form>
-        </div>
-
-        <!-- Árbol de Categorías Móvil (Hasta 3 niveles) -->
-        <div class="p-4 flex flex-col gap-1 flex-1">
-            <a th:href="@{/s/{slug}(slug=${slug})}" class="font-bold text-slate-700 hover:text-brand py-3 border-b border-slate-100">Inicio</a>
-            <a th:href="@{/s/{slug}/catalog(slug=${slug})}" class="font-bold text-slate-700 hover:text-brand py-3 border-b border-slate-100">Todo el Catálogo</a>
-
-            <div th:each="cat : ${navCategories}" class="border-b border-slate-100">
-                <a th:if="${#lists.isEmpty(cat.subCategories)}"
-                   th:href="@{/s/{slug}/catalog(slug=${slug}, category=${cat.id})}"
-                   class="font-bold text-slate-700 hover:text-brand py-3 block"
-                   th:text="${cat.name}">Categoría</a>
-
-                <details th:if="${not #lists.isEmpty(cat.subCategories)}" class="group/mobcat">
-                    <summary class="flex items-center justify-between py-3 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
-                        <a th:href="@{/s/{slug}/catalog(slug=${slug}, category=${cat.id})}"
-                           onclick="event.stopPropagation();"
-                           class="font-bold text-slate-700 hover:text-brand"
-                           th:text="${cat.name}">Categoría</a>
-                        <span class="p-1.5 text-slate-400 group-open/mobcat:rotate-180 transition-transform">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                        </span>
-                    </summary>
-
-                    <div class="pl-4 pb-3 flex flex-col gap-1 border-l-2 border-slate-100 ml-1">
-                        <div th:each="sub : ${cat.subCategories}" th:if="${sub.isActive}">
-                            <a th:if="${#lists.isEmpty(sub.subCategories)}"
-                               th:href="@{/s/{slug}/catalog(slug=${slug}, category=${sub.id})}"
-                               class="text-sm font-medium text-slate-600 hover:text-brand py-2 block"
-                               th:text="${sub.name}">Subcategoría</a>
-
-                            <details th:if="${not #lists.isEmpty(sub.subCategories)}" class="group/mobsub">
-                                <summary class="flex items-center justify-between py-2 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
-                                    <a th:href="@{/s/{slug}/catalog(slug=${slug}, category=${sub.id})}"
-                                       onclick="event.stopPropagation();"
-                                       class="text-sm font-medium text-slate-600 hover:text-brand"
-                                       th:text="${sub.name}">Subcategoría</a>
-                                    <span class="p-1 text-slate-400 group-open/mobsub:rotate-180 transition-transform">
-                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                                    </span>
-                                </summary>
-                                <div class="pl-3 pb-1 flex flex-col gap-1 border-l border-slate-200 ml-1">
-                                    <a th:each="subsub : ${sub.subCategories}"
-                                       th:if="${subsub.isActive}"
-                                       th:href="@{/s/{slug}/catalog(slug=${slug}, category=${subsub.id})}"
-                                       class="text-xs font-medium text-slate-500 hover:text-brand py-1.5 block"
-                                       th:text="${subsub.name}">Sub-subcategoría</a>
-                                </div>
-                            </details>
-                        </div>
-                    </div>
-                </details>
-            </div>
-        </div>
-
-        <!-- Accesos rápidos en la base del menú móvil -->
-        <div class="p-4 border-t border-slate-100 bg-slate-50 space-y-2">
-            <div class="grid grid-cols-2 gap-2">
-                <a th:href="@{/s/{slug}/wishlist(slug=${slug})}" class="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:text-red-500">
-                    <svg class="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L12 8.343l3.172-3.171a4 4 0 115.656 5.656L12 21.414l-8.828-8.828a4 4 0 010-5.656z" clip-rule="evenodd"></path></svg>
-                    <span>Favoritos</span>
-                </a>
-                <a th:href="@{/s/{slug}/cart(slug=${slug})}" class="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-brand text-white rounded-xl text-xs font-bold shadow-sm">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
-                    <span>Mi Bolsa</span>
-                </a>
-            </div>
-        </div>
-    </div>
-</nav>
+<nav th:replace="~{components/store-navbar :: storeNavbar}"></nav>
+<script th:src="@{/js/ui/navbarStyle.js}"></script>
 
 <main class="flex-1 flex flex-col">
     <div class="flex-1 w-full">
@@ -392,9 +256,20 @@
                 if (s.secondaryColor) root.style.setProperty('--brand-secondary', s.secondaryColor);
                 if (s.backgroundColor) root.style.setProperty('--store-bg', s.backgroundColor);
                 if (s.textColor) root.style.setProperty('--store-text', s.textColor);
-                if (s.headingFont) root.style.setProperty('--font-heading', `'${s.headingFont}', sans-serif`);
-                if (s.bodyFont) root.style.setProperty('--font-body', `'${s.bodyFont}', sans-serif`);
+                const SERIF_FONTS = ['Playfair Display', 'Lora', 'Cormorant Garamond', 'Cinzel'];
+                if (s.headingFont) root.style.setProperty('--font-heading', `'${s.headingFont}', ${SERIF_FONTS.includes(s.headingFont) ? 'serif' : 'sans-serif'}`);
+                if (s.bodyFont) root.style.setProperty('--font-body', `'${s.bodyFont}', ${SERIF_FONTS.includes(s.bodyFont) ? 'serif' : 'sans-serif'}`);
+                if (s.headingTransform) document.body.dataset.headingCase = s.headingTransform;
+                if (s.fontScale) {
+                    const scales = { compact: '95%', standard: '100%', large: '106%' };
+                    root.style.setProperty('--store-font-scale', scales[s.fontScale] || '100%');
+                }
+                if (s.buttonRadius) document.body.dataset.buttonRadius = s.buttonRadius;
+                if (s.cardStyle) document.body.dataset.cardStyle = s.cardStyle;
                 if (s.borderRadius) root.style.setProperty('--store-radius', s.borderRadius);
+                if (window.Storevo && Storevo.UI && Storevo.UI.NavbarStyle) {
+                    Storevo.UI.NavbarStyle.apply(s);
+                }
             }
 
             if (e.data.type === 'storevo:highlight-section') {
