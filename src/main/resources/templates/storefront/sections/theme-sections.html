@@ -10,14 +10,24 @@
               'announcement_bar': 'Barra de Anuncio',
               'hero_banner': 'Banner Principal',
               'product_grid': 'Vitrina de Productos',
+              'spotlight_product': 'Producto Estrella',
               'featured_categories': 'Categorías Destacadas',
+              'countdown_promo': 'Oferta con Contador',
               'promo_banner': 'Banner Promocional',
               'multi_banners': 'Mosaico Doble',
+              'testimonials': 'Testimonios de Clientes',
+              'how_to_buy': 'Cómo Comprar en 3 Pasos',
               'trust_badges': 'Franja de Confianza',
               'rich_text': 'Sobre Nosotros',
               'faq_accordion': 'Preguntas Frecuentes',
               'whatsapp_cta': 'Asesoría WhatsApp'
           } }">
+
+    <!-- Puente ligero de productos para que el Editor Visual liste los productos reales en el selector de Producto Estrella -->
+    <div th:if="${isDraftPreview and products != null}" id="storevo-catalog-products-bridge" class="hidden">
+        <span th:each="prodItem : ${products}" th:attr="data-id=${prodItem.id}, data-name=${prodItem.name}"></span>
+    </div>
+
     <div th:attr="data-section-id=${sec.id},
                   data-section-type=${sec.type},
                   data-section-label=${sectionLabels[sec.type] != null ? sectionLabels[sec.type] : sec.type}"
@@ -32,14 +42,26 @@
             <th:block th:case="'product_grid'">
                 <div th:replace="~{storefront/sections/theme-sections :: product-grid(${sec})}"></div>
             </th:block>
+            <th:block th:case="'spotlight_product'">
+                <div th:replace="~{storefront/sections/theme-sections :: spotlight-product(${sec})}"></div>
+            </th:block>
             <th:block th:case="'featured_categories'">
                 <div th:replace="~{storefront/sections/theme-sections :: featured-categories(${sec})}"></div>
+            </th:block>
+            <th:block th:case="'countdown_promo'">
+                <div th:replace="~{storefront/sections/theme-sections :: countdown-promo(${sec})}"></div>
             </th:block>
             <th:block th:case="'promo_banner'">
                 <div th:replace="~{storefront/sections/theme-sections :: promo-banner(${sec})}"></div>
             </th:block>
             <th:block th:case="'multi_banners'">
                 <div th:replace="~{storefront/sections/theme-sections :: multi-banners(${sec})}"></div>
+            </th:block>
+            <th:block th:case="'testimonials'">
+                <div th:replace="~{storefront/sections/theme-sections :: testimonials(${sec})}"></div>
+            </th:block>
+            <th:block th:case="'how_to_buy'">
+                <div th:replace="~{storefront/sections/theme-sections :: how-to-buy(${sec})}"></div>
             </th:block>
             <th:block th:case="'trust_badges'">
                 <div th:replace="~{storefront/sections/theme-sections :: trust-badges(${sec})}"></div>
@@ -58,74 +80,109 @@
 </th:block>
 
 <!-- ======================================================================= -->
-<!-- 1. BARRA DE ANUNCIOS (ANNOUNCEMENT BAR)                                 -->
+<!-- 1. BARRA DE ANUNCIOS (ANNOUNCEMENT BAR CON SOPORTE DE ROTACIÓN)         -->
 <!-- ======================================================================= -->
 <div th:fragment="announcement-bar(sec)"
      th:with="defaultAnnBg=${theme != null and theme.globalStyles != null and theme.globalStyles.secondaryColor != null ? theme.globalStyles.secondaryColor : '#0f172a'},
               bgColor=${sec.settingStr('bgColor', defaultAnnBg)},
               textColor=${sec.settingStr('textColor', '#ffffff')},
               text=${sec.settingStr('text', '')},
+              text2=${sec.settingStr('text2', '')},
+              text3=${sec.settingStr('text3', '')},
+              waRaw=${settings.whatsapp != null ? #strings.replace(#strings.replace(#strings.replace(settings.whatsapp, ' ', ''), '+', ''), '-', '') : ''},
+              waPhone=${#strings.length(waRaw) == 10 ? '57' + waRaw : waRaw},
+              waUrl=${!#strings.isEmpty(waPhone) ? 'https://wa.me/' + waPhone : '/s/' + slug + '/catalog'},
               rawUrl=${#strings.trim(sec.settingStr('linkUrl', ''))},
               isExtNoProto=${rawUrl.startsWith('www.') or rawUrl.startsWith('wa.me/')},
-              resolvedUrl=${isExtNoProto ? 'https://' + rawUrl : (rawUrl.startsWith('http') or rawUrl.startsWith('#') or rawUrl.startsWith('mailto:') or rawUrl.startsWith('tel:') ? rawUrl : (rawUrl.startsWith('/s/' + slug) ? rawUrl : '/s/' + slug + (rawUrl.startsWith('/') ? rawUrl : '/' + rawUrl)))}"
+              resolvedUrl=${rawUrl == '__whatsapp__' ? waUrl : (isExtNoProto ? 'https://' + rawUrl : (rawUrl.startsWith('http') or rawUrl.startsWith('#') or rawUrl.startsWith('mailto:') or rawUrl.startsWith('tel:') ? rawUrl : (rawUrl.startsWith('/s/' + slug) ? rawUrl : '/s/' + slug + (rawUrl.startsWith('/') ? rawUrl : '/' + rawUrl))))}"
      th:if="${!#strings.isEmpty(text) or isDraftPreview}"
      th:style="|background-color: ${bgColor}; color: ${textColor};|"
      class="w-full py-2.5 px-4 text-center text-xs sm:text-sm font-bold tracking-wide transition-colors">
     <div class="max-w-7xl mx-auto flex items-center justify-center gap-2 flex-wrap">
-        <span th:text="${!#strings.isEmpty(text) ? text : 'Escribe aquí el texto de tu barra de anuncio...'}">Anuncio</span>
+        <span th:id="'ann-rotator-' + ${sec.id}"
+              th:attr="data-msg1=${!#strings.isEmpty(text) ? text : 'Escribe aquí el texto de tu barra de anuncio...'},
+                       data-msg2=${text2},
+                       data-msg3=${text3}"
+              class="transition-opacity duration-300"
+              th:text="${!#strings.isEmpty(text) ? text : 'Escribe aquí el texto de tu barra de anuncio...'}">Anuncio</span>
         <a th:if="${!#strings.isEmpty(rawUrl)}"
            th:href="${resolvedUrl}"
            class="underline font-black hover:opacity-80 transition ml-1">
             Ver más →
         </a>
     </div>
+    <script th:if="${!#strings.isEmpty(text2) or !#strings.isEmpty(text3)}" th:inline="javascript">
+        (function() {
+            const el = document.getElementById(/*[[${'ann-rotator-' + sec.id}]]*/ '');
+            if (!el) return;
+            const msgs = [el.getAttribute('data-msg1'), el.getAttribute('data-msg2'), el.getAttribute('data-msg3')]
+                .filter(m => m && m.trim().length > 0);
+            if (msgs.length <= 1) return;
+            let idx = 0;
+            setInterval(() => {
+                el.style.opacity = '0';
+                setTimeout(() => {
+                    idx = (idx + 1) % msgs.length;
+                    el.textContent = msgs[idx];
+                    el.style.opacity = '1';
+                }, 250);
+            }, 4000);
+        })();
+    </script>
 </div>
 
 <!-- ======================================================================= -->
-<!-- 2. HERO BANNER PRINCIPAL                                                -->
+<!-- 2. HERO BANNER PRINCIPAL (SOPORTA CLASSIC, SPLIT Y COMPACT)             -->
 <!-- ======================================================================= -->
 <section th:fragment="hero-banner(sec)"
-         th:with="title=${sec.settingStr('title', 'Bienvenido a ' + settings.storeName)},
+         th:with="heroLayout=${sec.settingStr('heroLayout', 'classic')},
+                  title=${sec.settingStr('title', 'Bienvenido a ' + settings.storeName)},
                   subtitle=${sec.settingStr('subtitle', 'Explora nuestro catálogo y descubre los mejores productos diseñados para ti.')},
                   badgeText=${sec.settingStr('badgeText', '')},
+                  waRaw=${settings.whatsapp != null ? #strings.replace(#strings.replace(#strings.replace(settings.whatsapp, ' ', ''), '+', ''), '-', '') : ''},
+                  waPhone=${#strings.length(waRaw) == 10 ? '57' + waRaw : waRaw},
+                  waUrl=${!#strings.isEmpty(waPhone) ? 'https://wa.me/' + waPhone : '/s/' + slug + '/catalog'},
                   btnText=${sec.settingStr('buttonText', 'Ver Catálogo')},
                   btnUrl=${#strings.trim(sec.settingStr('buttonUrl', '/catalog'))},
                   isBtnExt=${btnUrl.startsWith('www.') or btnUrl.startsWith('wa.me/')},
-                  resolvedBtnUrl=${isBtnExt ? 'https://' + btnUrl : (btnUrl.startsWith('http') or btnUrl.startsWith('#') or btnUrl.startsWith('mailto:') or btnUrl.startsWith('tel:') ? btnUrl : (btnUrl.startsWith('/s/' + slug) ? btnUrl : '/s/' + slug + (btnUrl.startsWith('/') ? btnUrl : '/' + btnUrl)))},
+                  resolvedBtnUrl=${btnUrl == '__whatsapp__' ? waUrl : (isBtnExt ? 'https://' + btnUrl : (btnUrl.startsWith('http') or btnUrl.startsWith('#') or btnUrl.startsWith('mailto:') or btnUrl.startsWith('tel:') ? btnUrl : (btnUrl.startsWith('/s/' + slug) ? btnUrl : '/s/' + slug + (btnUrl.startsWith('/') ? btnUrl : '/' + btnUrl))))},
                   secBtnText=${sec.settingStr('secondaryButtonText', '')},
                   secBtnUrl=${#strings.trim(sec.settingStr('secondaryButtonUrl', '/catalog'))},
                   isSecExt=${secBtnUrl.startsWith('www.') or secBtnUrl.startsWith('wa.me/')},
-                  resolvedSecBtnUrl=${isSecExt ? 'https://' + secBtnUrl : (secBtnUrl.startsWith('http') or secBtnUrl.startsWith('#') or secBtnUrl.startsWith('mailto:') or secBtnUrl.startsWith('tel:') ? secBtnUrl : (secBtnUrl.startsWith('/s/' + slug) ? secBtnUrl : '/s/' + slug + (secBtnUrl.startsWith('/') ? secBtnUrl : '/' + secBtnUrl)))},
+                  resolvedSecBtnUrl=${secBtnUrl == '__whatsapp__' ? waUrl : (isSecExt ? 'https://' + secBtnUrl : (secBtnUrl.startsWith('http') or secBtnUrl.startsWith('#') or secBtnUrl.startsWith('mailto:') or secBtnUrl.startsWith('tel:') ? secBtnUrl : (secBtnUrl.startsWith('/s/' + slug) ? secBtnUrl : '/s/' + slug + (secBtnUrl.startsWith('/') ? secBtnUrl : '/' + secBtnUrl))))},
                   imageUrl=${sec.settingStr('imageUrl', '')},
                   defaultHeroBg=${theme != null and theme.globalStyles != null and theme.globalStyles.primaryColor != null ? theme.globalStyles.primaryColor : (settings.primaryColor != null ? settings.primaryColor : '#6366f1')},
                   bgColor=${sec.settingStr('bgColor', defaultHeroBg)},
                   textColor=${sec.settingStr('textColor', '#ffffff')},
-                  primaryBtnTextColor=${!#strings.isEmpty(imageUrl) and textColor.equalsIgnoreCase('#ffffff') ? '#0f172a' : bgColor},
+                  primaryBtnTextColor=${!#strings.isEmpty(imageUrl) and heroLayout != 'split' and textColor.equalsIgnoreCase('#ffffff') ? '#0f172a' : bgColor},
                   alignment=${sec.settingStr('alignment', 'center')},
-                  overlayOpacity=${sec.settingInt('overlayOpacity', 50)}"
+                  overlayOpacity=${sec.settingInt('overlayOpacity', 50)},
+                  isSplit=${heroLayout == 'split' and !#strings.isEmpty(imageUrl)},
+                  isCompact=${heroLayout == 'compact'}"
          th:style="|background-color: ${bgColor}; color: ${textColor};|"
-         th:classappend="${!#strings.isEmpty(imageUrl) ? 'min-h-[340px] sm:min-h-[440px] flex items-center' : ''}"
-         class="relative overflow-hidden py-16 sm:py-20 px-4">
+         th:classappend="${isCompact ? 'py-10 sm:py-12' : (!#strings.isEmpty(imageUrl) and !isSplit ? 'min-h-[340px] sm:min-h-[440px] flex items-center py-16 sm:py-20' : 'py-14 sm:py-20')}"
+         class="relative overflow-hidden px-4">
 
-    <div th:if="${!#strings.isEmpty(imageUrl)}" class="absolute inset-0 z-0">
+    <div th:if="${!#strings.isEmpty(imageUrl) and !isSplit}" class="absolute inset-0 z-0">
         <img th:src="${imageUrl}" alt="Banner principal" class="w-full h-full object-cover">
         <div class="absolute inset-0 bg-slate-950" th:style="|opacity: ${overlayOpacity / 100.0};|"></div>
     </div>
 
-    <div class="relative z-10 max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 w-full"
+    <!-- MODO 1 Y 3: PORTADA CLÁSICA O COMPACTA -->
+    <div th:if="${!isSplit}" class="relative z-10 max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 w-full"
          th:classappend="${alignment == 'left' ? 'text-left' : 'text-center'}">
         <span th:if="${!#strings.isEmpty(badgeText)}"
               style="background-color: rgba(255,255,255,0.18);"
               class="inline-block px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider backdrop-blur-sm mb-4"
               th:text="${badgeText}"></span>
 
-        <h1 class="text-4xl md:text-6xl font-black tracking-tight mb-4 leading-tight"
-            th:classappend="${alignment == 'left' ? 'max-w-3xl' : 'max-w-4xl mx-auto'}"
+        <h1 class="font-black tracking-tight mb-4 leading-tight"
+            th:classappend="${(isCompact ? 'text-3xl md:text-5xl ' : 'text-4xl md:text-6xl ') + (alignment == 'left' ? 'max-w-3xl' : 'max-w-4xl mx-auto')}"
             th:text="${title}">Título</h1>
 
         <p th:if="${!#strings.isEmpty(subtitle)}"
-           class="text-lg md:text-xl opacity-90 mb-8 leading-relaxed"
-           th:classappend="${alignment == 'left' ? 'max-w-2xl' : 'max-w-2xl mx-auto'}"
+           class="opacity-90 mb-8 leading-relaxed"
+           th:classappend="${(isCompact ? 'text-base md:text-lg ' : 'text-lg md:text-xl ') + (alignment == 'left' ? 'max-w-2xl' : 'max-w-2xl mx-auto')}"
            th:text="${subtitle}">Subtítulo</p>
 
         <div class="flex flex-wrap gap-3 mt-6"
@@ -142,6 +199,43 @@
                class="inline-block hover:opacity-90 font-bold py-3.5 px-8 rounded-xl backdrop-blur-sm transition">
                 <span th:text="${secBtnText}">Conocer más</span>
             </a>
+        </div>
+    </div>
+
+    <!-- MODO 2: DIVIDIDO EDITORIAL -->
+    <div th:if="${isSplit}" class="relative z-10 max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+        <div class="lg:col-span-7 text-left space-y-4">
+            <span th:if="${!#strings.isEmpty(badgeText)}"
+                  style="background-color: rgba(255,255,255,0.18);"
+                  class="inline-block px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider backdrop-blur-sm"
+                  th:text="${badgeText}"></span>
+
+            <h1 class="text-3xl sm:text-5xl font-black tracking-tight leading-tight" th:text="${title}">Título</h1>
+
+            <p th:if="${!#strings.isEmpty(subtitle)}"
+               class="text-base sm:text-lg opacity-90 leading-relaxed max-w-xl"
+               th:text="${subtitle}">Subtítulo</p>
+
+            <div class="flex flex-wrap gap-3 pt-2">
+                <a th:if="${!#strings.isEmpty(btnText)}"
+                   th:href="${resolvedBtnUrl}"
+                   th:style="|background-color: ${textColor}; color: ${bgColor};|"
+                   class="inline-block font-bold py-3.5 px-8 rounded-xl shadow-lg hover:opacity-90 transition">
+                    <span th:text="${btnText}">Ver Catálogo</span>
+                </a>
+                <a th:if="${!#strings.isEmpty(secBtnText)}"
+                   th:href="${resolvedSecBtnUrl}"
+                   th:style="|background-color: rgba(255,255,255,0.15); border: 1px solid ${textColor}; color: ${textColor};|"
+                   class="inline-block hover:opacity-90 font-bold py-3.5 px-8 rounded-xl backdrop-blur-sm transition">
+                    <span th:text="${secBtnText}">Conocer más</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="lg:col-span-5">
+            <div class="aspect-[4/3] store-radius overflow-hidden shadow-2xl border border-white/15 bg-slate-900">
+                <img th:src="${imageUrl}" th:alt="${title}" class="w-full h-full object-cover">
+            </div>
         </div>
     </div>
 </section>
@@ -244,7 +338,6 @@
                         <span th:if="${p.discountPrice != null and p.discountPrice > 0}" class="text-xs text-slate-400 line-through font-medium" th:text="${'$ ' + #numbers.formatDecimal(p.price, 1, 'POINT', 0, 'COMMA')}">$0</span>
                     </div>
 
-                    <!-- Botones unificados: Tanto "Comprar" como "Ver opciones" usan el Color Primario (bg-brand) -->
                     <div class="grid grid-cols-2 gap-2">
                         <a th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${p.id})}" class="flex items-center justify-center px-2 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors text-center">
                             Ver detalles
@@ -270,21 +363,160 @@
 </section>
 
 <!-- ======================================================================= -->
-<!-- 4. CATEGORÍAS DESTACADAS (FEATURED CATEGORIES)                          -->
+<!-- 3.B NUEVO: PRODUCTO ESTRELLA / LANZAMIENTO DESTACADO (SPOTLIGHT)        -->
+<!-- ======================================================================= -->
+<section th:fragment="spotlight-product(sec)"
+         th:with="rawProdId=${sec.settingStr('productId', '')},
+                  targetId=${sec.settingLong('productId')},
+                  badgeText=${sec.settingStr('badgeText', '🔥 Producto Estrella')},
+                  customTitle=${sec.settingStr('customTitle', '')},
+                  customSubtitle=${sec.settingStr('customSubtitle', '')},
+                  imageSide=${sec.settingStr('imageSide', 'left')},
+                  matchedList=${new java.util.ArrayList()}"
+         class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+
+    <th:block th:if="${products != null and not #lists.isEmpty(products)}">
+        <th:block th:each="cand : ${products}">
+            <th:block th:if="${targetId != null and cand.id == targetId and matchedList.isEmpty()}"
+                      th:with="ign=${matchedList.add(cand)}"></th:block>
+            <th:block th:if="${rawProdId == '__offer__' and cand.discountPrice != null and cand.discountPrice > 0 and matchedList.isEmpty()}"
+                      th:with="ign2=${matchedList.add(cand)}"></th:block>
+        </th:block>
+        <th:block th:if="${matchedList.isEmpty()}"
+                  th:with="ign3=${matchedList.add(products[0])}"></th:block>
+    </th:block>
+
+    <div th:if="${not #lists.isEmpty(matchedList)}"
+         th:with="sp=${matchedList[0]},
+                  isOutOfStock=${!sp.isMadeToOrder and (sp.stock == null or sp.stock <= 0)},
+                  effectivePrice=${sp.discountPrice != null and sp.discountPrice > 0 ? sp.discountPrice : sp.price},
+                  spImg=${sp.mainImageUrl != null ? sp.mainImageUrl : '/img/placeholder.jpg'}"
+         class="bg-white text-slate-900 store-radius shadow-lg border border-slate-100 overflow-hidden grid grid-cols-1 lg:grid-cols-12 items-center">
+
+        <!-- Columna de Imagen -->
+        <div class="lg:col-span-6 relative aspect-[4/3] lg:aspect-square bg-slate-50 overflow-hidden"
+             th:classappend="${imageSide == 'right' ? 'lg:order-2' : ''}">
+            <a th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${sp.id})}" class="block w-full h-full">
+                <img th:src="${spImg}" th:alt="${sp.name}" class="w-full h-full object-cover hover:scale-105 transition-transform duration-500">
+            </a>
+            <div class="absolute top-4 left-4 flex flex-col gap-2 z-10 pointer-events-none">
+                <span th:if="${!#strings.isEmpty(badgeText)}" class="bg-brand text-white text-xs font-black uppercase tracking-wider px-3.5 py-1.5 rounded-full shadow-md" th:text="${badgeText}"></span>
+                <span th:if="${sp.discountPrice != null and sp.discountPrice > 0}" class="bg-red-500 text-white text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full shadow-md w-fit">En Oferta</span>
+            </div>
+        </div>
+
+        <!-- Columna de Detalles Comerciales -->
+        <div class="lg:col-span-6 p-6 sm:p-10 lg:p-12 flex flex-col justify-center space-y-5"
+             th:classappend="${imageSide == 'right' ? 'lg:order-1' : ''}">
+            <div>
+                <p class="text-xs font-black uppercase tracking-widest text-brand mb-1"
+                   th:text="${sp.category != null ? sp.category.name : 'Destacado'}">Categoría</p>
+                <a th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${sp.id})}">
+                    <h2 class="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight leading-tight hover:text-brand transition-colors"
+                        th:text="${!#strings.isEmpty(customTitle) ? customTitle : sp.name}">Producto Estrella</h2>
+                </a>
+            </div>
+
+            <div class="flex items-end gap-3 flex-wrap">
+                <span th:if="${sp.hasVariants}" class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1.5">Desde</span>
+                <span class="text-3xl sm:text-4xl font-black text-slate-900"
+                      th:text="${'$ ' + #numbers.formatDecimal(effectivePrice, 1, 'POINT', 0, 'COMMA')}">$0</span>
+                <span th:if="${sp.discountPrice != null and sp.discountPrice > 0}"
+                      class="text-lg text-slate-400 line-through font-medium mb-1"
+                      th:text="${'$ ' + #numbers.formatDecimal(sp.price, 1, 'POINT', 0, 'COMMA')}">$0</span>
+            </div>
+
+            <p class="text-sm sm:text-base text-slate-600 leading-relaxed line-clamp-4 whitespace-pre-line"
+               th:text="${!#strings.isEmpty(customSubtitle) ? customSubtitle : (sp.description != null and !sp.description.isBlank() ? sp.description : 'Calidad garantizada con disponibilidad inmediata en nuestra tienda.')}"></p>
+
+            <div class="pt-2 flex flex-col sm:flex-row gap-3">
+                <button th:if="${!sp.hasVariants and !isOutOfStock}"
+                        type="button" th:data-slug="${slug}" th:data-id="${sp.id}"
+                        onclick="buyNowFast(this.getAttribute('data-slug'), this.getAttribute('data-id'))"
+                        class="flex-1 bg-brand hover-bg-brand text-white font-bold py-3.5 px-8 rounded-xl shadow-lg transition text-center text-sm sm:text-base">
+                    Comprar ahora
+                </button>
+                <a th:if="${sp.hasVariants and !isOutOfStock}"
+                   th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${sp.id})}"
+                   class="flex-1 bg-brand hover-bg-brand text-white font-bold py-3.5 px-8 rounded-xl shadow-lg transition text-center text-sm sm:text-base">
+                    Elegir opciones
+                </a>
+                <a th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${sp.id})}"
+                   class="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-3.5 px-6 rounded-xl transition text-center text-sm sm:text-base">
+                    Ver ficha completa
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div th:if="${#lists.isEmpty(matchedList) and isDraftPreview}" class="text-center py-12 px-4 bg-white text-slate-600 store-radius border border-dashed border-slate-300">
+        <p class="font-bold text-slate-800 text-sm">Sección Producto Estrella</p>
+        <p class="text-xs text-slate-500 mt-1">Agrega al menos un producto activo en tu inventario para destacarlo aquí en gran formato.</p>
+    </div>
+</section>
+
+<!-- ======================================================================= -->
+<!-- 4. CATEGORÍAS DESTACADAS (SOPORTA FOTO AUTOMÁTICA, ÍCONO Y PÍLDORAS)    -->
 <!-- ======================================================================= -->
 <section th:fragment="featured-categories(sec)"
          th:with="title=${sec.settingStr('title', 'Explora por Categoría')},
                   subtitle=${sec.settingStr('subtitle', 'Encuentra rápidamente lo que estás buscando')},
-                  displayCats=${not #lists.isEmpty(navCategories) ? navCategories : categories}"
+                  cardLayout=${sec.settingStr('cardLayout', 'visual')},
+                  cols=${sec.settingStr('columns', '4')},
+                  gridColsClass=${cols == '3' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4'},
+                  displayCats=${not #lists.isEmpty(navCategories) ? navCategories : categories},
+                  catImgMap=${new java.util.HashMap()}"
          th:if="${not #lists.isEmpty(displayCats) or isDraftPreview}"
          class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+
+    <th:block th:if="${products != null}" th:each="prod : ${products}">
+        <th:block th:if="${prod.category != null and (prod.mainImageUrl != null or prod.getMainImageThumbnailUrl() != null)}"
+                  th:with="pImg=${prod.getMainImageThumbnailUrl() != null ? prod.getMainImageThumbnailUrl() : prod.mainImageUrl}">
+            <th:block th:if="${!catImgMap.containsKey(prod.category.id)}"
+                      th:with="ign=${catImgMap.put(prod.category.id, pImg)}"></th:block>
+            <th:block th:if="${prod.category.parentCategory != null and !catImgMap.containsKey(prod.category.parentCategory.id)}"
+                      th:with="ign2=${catImgMap.put(prod.category.parentCategory.id, pImg)}"></th:block>
+        </th:block>
+    </th:block>
 
     <div class="text-center mb-8">
         <h2 class="text-2xl sm:text-3xl font-black store-heading tracking-tight" th:text="${title}">Categorías</h2>
         <p th:if="${!#strings.isEmpty(subtitle)}" class="store-muted mt-1 text-sm sm:text-base" th:text="${subtitle}"></p>
     </div>
 
-    <div th:if="${not #lists.isEmpty(displayCats)}" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+    <div th:if="${not #lists.isEmpty(displayCats) and cardLayout == 'visual'}"
+         th:class="'grid gap-4 sm:gap-6 ' + ${gridColsClass}">
+        <a th:each="cat : ${displayCats}"
+           th:if="${cat.isActive and cat.parentCategory == null}"
+           th:with="catImg=${catImgMap.get(cat.id)}"
+           th:href="@{/s/{slug}/catalog(slug=${slug}, category=${cat.id})}"
+           class="group relative aspect-[4/3] bg-slate-900 text-white store-radius overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 flex flex-col justify-end p-5 sm:p-6">
+
+            <img th:if="${catImg != null}"
+                 th:src="${catImg}"
+                 th:alt="${cat.name}"
+                 loading="lazy"
+                 decoding="async"
+                 class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+
+            <div th:if="${catImg != null}" class="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/35 to-transparent"></div>
+            <div th:if="${catImg == null}" class="absolute inset-0 bg-secondary opacity-95 group-hover:opacity-100 transition-opacity"></div>
+
+            <div class="relative z-10 flex items-end justify-between gap-3">
+                <div class="min-w-0">
+                    <h3 class="text-lg sm:text-xl font-black text-white tracking-tight truncate" th:text="${cat.name}">Categoría</h3>
+                    <p class="text-xs text-white/80 mt-0.5 line-clamp-1"
+                       th:text="${cat.description != null and !cat.description.isBlank() ? cat.description : 'Ver productos'}"></p>
+                </div>
+                <span class="w-9 h-9 rounded-full bg-white/20 backdrop-blur-sm text-white group-hover:bg-brand flex items-center justify-center flex-shrink-0 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
+                </span>
+            </div>
+        </a>
+    </div>
+
+    <div th:if="${not #lists.isEmpty(displayCats) and cardLayout == 'icon'}"
+         th:class="'grid gap-4 ' + ${gridColsClass}">
         <a th:each="cat : ${displayCats}"
            th:if="${cat.isActive and cat.parentCategory == null}"
            th:href="@{/s/{slug}/catalog(slug=${slug}, category=${cat.id})}"
@@ -300,10 +532,126 @@
         </a>
     </div>
 
+    <div th:if="${not #lists.isEmpty(displayCats) and cardLayout == 'pills'}"
+         class="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
+        <a th:each="cat : ${displayCats}"
+           th:if="${cat.isActive and cat.parentCategory == null}"
+           th:with="catImg=${catImgMap.get(cat.id)}"
+           th:href="@{/s/{slug}/catalog(slug=${slug}, category=${cat.id})}"
+           class="group bg-white text-slate-900 hover:bg-brand hover:text-white border border-slate-200 hover:border-brand rounded-full p-2 pr-5 shadow-sm hover:shadow-lg transition-all duration-300 inline-flex items-center gap-3">
+            <img th:if="${catImg != null}" th:src="${catImg}" th:alt="${cat.name}" class="w-10 h-10 rounded-full object-cover flex-shrink-0 border border-slate-100">
+            <span th:if="${catImg == null}" class="w-10 h-10 rounded-full bg-slate-100 text-brand group-hover:bg-white/20 group-hover:text-white flex items-center justify-center flex-shrink-0 font-black text-sm"
+                  th:text="${#strings.substring(cat.name, 0, 1)}">C</span>
+            <span class="font-bold text-sm sm:text-base tracking-tight" th:text="${cat.name}">Categoría</span>
+            <svg class="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+        </a>
+    </div>
+
     <div th:if="${#lists.isEmpty(displayCats) and isDraftPreview}" class="text-center py-10 px-4 bg-white text-slate-600 store-radius border border-dashed border-slate-300">
         <p class="font-bold text-slate-800 text-sm">Aún no tienes categorías activas en tu tienda</p>
         <p class="text-xs text-slate-500 mt-1">Crea tus categorías en el menú "Categorías" del panel administrativo y aparecerán automáticamente aquí.</p>
     </div>
+</section>
+
+<!-- ======================================================================= -->
+<!-- 4.B NUEVO: BANNER CON CONTADOR REGRESIVO DE OFERTA (COUNTDOWN PROMO)    -->
+<!-- ======================================================================= -->
+<section th:fragment="countdown-promo(sec)"
+         th:with="badgeText=${sec.settingStr('badgeText', '⚡ Oferta por Tiempo Limitado')},
+                  title=${sec.settingStr('title', '¡Aprovecha nuestros descuentos especiales!')},
+                  subtitle=${sec.settingStr('subtitle', 'Unidades limitadas disponibles antes de que termine la promoción.')},
+                  endDate=${sec.settingStr('endDate', '')},
+                  waRaw=${settings.whatsapp != null ? #strings.replace(#strings.replace(#strings.replace(settings.whatsapp, ' ', ''), '+', ''), '-', '') : ''},
+                  waPhone=${#strings.length(waRaw) == 10 ? '57' + waRaw : waRaw},
+                  waUrl=${!#strings.isEmpty(waPhone) ? 'https://wa.me/' + waPhone : '/s/' + slug + '/catalog'},
+                  btnText=${sec.settingStr('buttonText', 'Ver Ofertas Ahora')},
+                  btnUrl=${#strings.trim(sec.settingStr('buttonUrl', '/catalog'))},
+                  isBtnExt=${btnUrl.startsWith('www.') or btnUrl.startsWith('wa.me/')},
+                  resolvedBtnUrl=${btnUrl == '__whatsapp__' ? waUrl : (isBtnExt ? 'https://' + btnUrl : (btnUrl.startsWith('http') or btnUrl.startsWith('#') or btnUrl.startsWith('mailto:') or btnUrl.startsWith('tel:') ? btnUrl : (btnUrl.startsWith('/s/' + slug) ? btnUrl : '/s/' + slug + (btnUrl.startsWith('/') ? btnUrl : '/' + btnUrl))))},
+                  bgColor=${sec.settingStr('bgColor', '#0f172a')},
+                  textColor=${sec.settingStr('textColor', '#ffffff')}"
+         class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+
+    <div th:style="|background-color: ${bgColor}; color: ${textColor};|"
+         class="store-radius p-8 sm:p-12 shadow-xl flex flex-col lg:flex-row items-center justify-between gap-8">
+
+        <div class="space-y-3 text-center lg:text-left max-w-xl">
+            <span th:if="${!#strings.isEmpty(badgeText)}"
+                  style="background-color: rgba(255,255,255,0.16);"
+                  class="inline-block px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider"
+                  th:text="${badgeText}"></span>
+            <h2 class="text-2xl sm:text-4xl font-black tracking-tight leading-tight" th:text="${title}">Título Oferta</h2>
+            <p th:if="${!#strings.isEmpty(subtitle)}" class="text-sm sm:text-base opacity-90 leading-relaxed" th:text="${subtitle}"></p>
+        </div>
+
+        <div class="flex flex-col sm:flex-row items-center gap-6 flex-shrink-0">
+            <!-- Reloj en vivo -->
+            <div th:id="'cd-box-' + ${sec.id}" th:attr="data-end=${endDate}" class="flex items-center gap-2 sm:gap-3 text-center">
+                <div style="background-color: rgba(255,255,255,0.12);" class="w-16 sm:w-20 py-3 rounded-xl backdrop-blur-sm border border-white/15">
+                    <span class="cd-days block text-xl sm:text-2xl font-black leading-none">00</span>
+                    <span class="block text-[10px] uppercase font-bold opacity-75 mt-1">Días</span>
+                </div>
+                <div style="background-color: rgba(255,255,255,0.12);" class="w-16 sm:w-20 py-3 rounded-xl backdrop-blur-sm border border-white/15">
+                    <span class="cd-hours block text-xl sm:text-2xl font-black leading-none">12</span>
+                    <span class="block text-[10px] uppercase font-bold opacity-75 mt-1">Horas</span>
+                </div>
+                <div style="background-color: rgba(255,255,255,0.12);" class="w-16 sm:w-20 py-3 rounded-xl backdrop-blur-sm border border-white/15">
+                    <span class="cd-mins block text-xl sm:text-2xl font-black leading-none">45</span>
+                    <span class="block text-[10px] uppercase font-bold opacity-75 mt-1">Min</span>
+                </div>
+                <div style="background-color: rgba(255,255,255,0.12);" class="w-16 sm:w-20 py-3 rounded-xl backdrop-blur-sm border border-white/15">
+                    <span class="cd-secs block text-xl sm:text-2xl font-black leading-none">00</span>
+                    <span class="block text-[10px] uppercase font-bold opacity-75 mt-1">Seg</span>
+                </div>
+            </div>
+
+            <a th:if="${!#strings.isEmpty(btnText)}"
+               th:href="${resolvedBtnUrl}"
+               th:style="|background-color: ${textColor}; color: ${bgColor};|"
+               class="w-full sm:w-auto text-center font-bold py-3.5 px-7 rounded-xl shadow-lg hover:opacity-90 transition text-sm whitespace-nowrap">
+                <span th:text="${btnText}">Ver Ofertas</span>
+            </a>
+        </div>
+    </div>
+
+    <script th:inline="javascript">
+        (function() {
+            const box = document.getElementById(/*[[${'cd-box-' + sec.id}]]*/ '');
+            if (!box) return;
+            const rawEnd = box.getAttribute('data-end');
+            let targetTime = rawEnd ? new Date(rawEnd).getTime() : NaN;
+
+            // Si no se definió fecha o ya pasó, mantiene un ciclo activo de 24h para no mostrar 00:00:00
+            if (isNaN(targetTime) || targetTime <= Date.now()) {
+                const now = new Date();
+                now.setHours(23, 59, 59, 999);
+                targetTime = now.getTime();
+            }
+
+            const dEl = box.querySelector('.cd-days');
+            const hEl = box.querySelector('.cd-hours');
+            const mEl = box.querySelector('.cd-mins');
+            const sEl = box.querySelector('.cd-secs');
+
+            function tick() {
+                let diff = Math.max(0, targetTime - Date.now());
+                const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+                diff -= d * (1000 * 60 * 60 * 24);
+                const h = Math.floor(diff / (1000 * 60 * 60));
+                diff -= h * (1000 * 60 * 60);
+                const m = Math.floor(diff / (1000 * 60));
+                diff -= m * (1000 * 60);
+                const s = Math.floor(diff / 1000);
+
+                if (dEl) dEl.textContent = String(d).padStart(2, '0');
+                if (hEl) hEl.textContent = String(h).padStart(2, '0');
+                if (mEl) mEl.textContent = String(m).padStart(2, '0');
+                if (sEl) sEl.textContent = String(s).padStart(2, '0');
+            }
+            tick();
+            setInterval(tick, 1000);
+        })();
+    </script>
 </section>
 
 <!-- ======================================================================= -->
@@ -313,10 +661,13 @@
          th:with="title=${sec.settingStr('title', 'Promoción Especial')},
                   subtitle=${sec.settingStr('subtitle', 'Aprovecha nuestros precios especiales por tiempo limitado.')},
                   badgeText=${sec.settingStr('badgeText', 'Destacado')},
+                  waRaw=${settings.whatsapp != null ? #strings.replace(#strings.replace(#strings.replace(settings.whatsapp, ' ', ''), '+', ''), '-', '') : ''},
+                  waPhone=${#strings.length(waRaw) == 10 ? '57' + waRaw : waRaw},
+                  waUrl=${!#strings.isEmpty(waPhone) ? 'https://wa.me/' + waPhone : '/s/' + slug + '/catalog'},
                   btnText=${sec.settingStr('buttonText', 'Comprar ahora')},
                   btnUrl=${#strings.trim(sec.settingStr('buttonUrl', '/catalog'))},
                   isBtnExt=${btnUrl.startsWith('www.') or btnUrl.startsWith('wa.me/')},
-                  resolvedBtnUrl=${isBtnExt ? 'https://' + btnUrl : (btnUrl.startsWith('http') or btnUrl.startsWith('#') or btnUrl.startsWith('mailto:') or btnUrl.startsWith('tel:') ? btnUrl : (btnUrl.startsWith('/s/' + slug) ? btnUrl : '/s/' + slug + (btnUrl.startsWith('/') ? btnUrl : '/' + btnUrl)))},
+                  resolvedBtnUrl=${btnUrl == '__whatsapp__' ? waUrl : (isBtnExt ? 'https://' + btnUrl : (btnUrl.startsWith('http') or btnUrl.startsWith('#') or btnUrl.startsWith('mailto:') or btnUrl.startsWith('tel:') ? btnUrl : (btnUrl.startsWith('/s/' + slug) ? btnUrl : '/s/' + slug + (btnUrl.startsWith('/') ? btnUrl : '/' + btnUrl))))},
                   imageUrl=${sec.settingStr('imageUrl', '')},
                   defaultPromoBg=${theme != null and theme.globalStyles != null and theme.globalStyles.secondaryColor != null ? theme.globalStyles.secondaryColor : '#0f172a'},
                   bgColor=${sec.settingStr('bgColor', defaultPromoBg)},
@@ -350,13 +701,16 @@
 <!-- 6. MOSAICO DOBLE DE BANNERS / COLECCIONES (MULTI BANNERS)               -->
 <!-- ======================================================================= -->
 <section th:fragment="multi-banners(sec)"
-         th:with="b1Badge=${sec.settingStr('card1Badge', 'Destacado')},
+         th:with="waRaw=${settings.whatsapp != null ? #strings.replace(#strings.replace(#strings.replace(settings.whatsapp, ' ', ''), '+', ''), '-', '') : ''},
+                  waPhone=${#strings.length(waRaw) == 10 ? '57' + waRaw : waRaw},
+                  waUrl=${!#strings.isEmpty(waPhone) ? 'https://wa.me/' + waPhone : '/s/' + slug + '/catalog'},
+                  b1Badge=${sec.settingStr('card1Badge', 'Destacado')},
                   b1Title=${sec.settingStr('card1Title', 'Nueva Temporada')},
                   b1Sub=${sec.settingStr('card1Subtitle', 'Conoce los últimos ingresos')},
                   b1Btn=${sec.settingStr('card1ButtonText', 'Explorar')},
                   b1Url=${#strings.trim(sec.settingStr('card1ButtonUrl', '/catalog'))},
                   isB1Ext=${b1Url.startsWith('www.') or b1Url.startsWith('wa.me/')},
-                  resolvedB1Url=${isB1Ext ? 'https://' + b1Url : (b1Url.startsWith('http') or b1Url.startsWith('#') or b1Url.startsWith('mailto:') or b1Url.startsWith('tel:') ? b1Url : (b1Url.startsWith('/s/' + slug) ? b1Url : '/s/' + slug + (b1Url.startsWith('/') ? b1Url : '/' + b1Url)))},
+                  resolvedB1Url=${b1Url == '__whatsapp__' ? waUrl : (isB1Ext ? 'https://' + b1Url : (b1Url.startsWith('http') or b1Url.startsWith('#') or b1Url.startsWith('mailto:') or b1Url.startsWith('tel:') ? b1Url : (b1Url.startsWith('/s/' + slug) ? b1Url : '/s/' + slug + (b1Url.startsWith('/') ? b1Url : '/' + b1Url))))},
                   b1Img=${sec.settingStr('card1ImageUrl', '')},
                   b1Bg=${sec.settingStr('card1BgColor', '#1e293b')},
                   b2Badge=${sec.settingStr('card2Badge', 'Ofertas')},
@@ -365,7 +719,7 @@
                   b2Btn=${sec.settingStr('card2ButtonText', 'Ver ofertas')},
                   b2Url=${#strings.trim(sec.settingStr('card2ButtonUrl', '/catalog'))},
                   isB2Ext=${b2Url.startsWith('www.') or b2Url.startsWith('wa.me/')},
-                  resolvedB2Url=${isB2Ext ? 'https://' + b2Url : (b2Url.startsWith('http') or b2Url.startsWith('#') or b2Url.startsWith('mailto:') or b2Url.startsWith('tel:') ? b2Url : (b2Url.startsWith('/s/' + slug) ? b2Url : '/s/' + slug + (b2Url.startsWith('/') ? b2Url : '/' + b2Url)))},
+                  resolvedB2Url=${b2Url == '__whatsapp__' ? waUrl : (isB2Ext ? 'https://' + b2Url : (b2Url.startsWith('http') or b2Url.startsWith('#') or b2Url.startsWith('mailto:') or b2Url.startsWith('tel:') ? b2Url : (b2Url.startsWith('/s/' + slug) ? b2Url : '/s/' + slug + (b2Url.startsWith('/') ? b2Url : '/' + b2Url))))},
                   b2Img=${sec.settingStr('card2ImageUrl', '')},
                   b2Bg=${sec.settingStr('card2BgColor', '#4f46e5')}"
          class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -412,47 +766,199 @@
 </section>
 
 <!-- ======================================================================= -->
-<!-- 7. CINTILLO DE CONFIANZA (TRUST BADGES)                                 -->
+<!-- 6.B NUEVO: TESTIMONIOS Y RESEÑAS DE CLIENTES (TESTIMONIALS)             -->
 <!-- ======================================================================= -->
+<section th:fragment="testimonials(sec)"
+         th:with="title=${sec.settingStr('title', 'Lo que dicen nuestros clientes')},
+                  subtitle=${sec.settingStr('subtitle', 'Compradores reales que ya recibieron su pedido')},
+                  t1Name=${sec.settingStr('t1Name', 'Laura Gómez')},
+                  t1City=${sec.settingStr('t1City', 'Medellín')},
+                  t1Text=${sec.settingStr('t1Text', 'Excelente calidad y atención. Mi pedido llegó súper rápido y tal cual como se ve en las fotos.')},
+                  t2Name=${sec.settingStr('t2Name', 'Carlos Ramírez')},
+                  t2City=${sec.settingStr('t2City', 'Bogotá D.C.')},
+                  t2Text=${sec.settingStr('t2Text', 'Muy fácil comprar en la página, me asesoraron por WhatsApp con mi talla y todo llegó perfecto.')},
+                  t3Name=${sec.settingStr('t3Name', 'Valentina Torres')},
+                  t3City=${sec.settingStr('t3City', 'Cali')},
+                  t3Text=${sec.settingStr('t3Text', 'Me encantó el empaque y la rapidez del envío. Sin duda volveré a comprar pronto.')}"
+         class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+
+    <div class="text-center mb-10">
+        <h2 class="text-2xl sm:text-3xl font-black store-heading tracking-tight" th:text="${title}">Testimonios</h2>
+        <p th:if="${!#strings.isEmpty(subtitle)}" class="store-muted mt-1 text-sm sm:text-base" th:text="${subtitle}"></p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Testimonio 1 -->
+        <div th:if="${!#strings.isEmpty(t1Text)}" class="bg-white text-slate-900 p-6 sm:p-7 store-radius border border-slate-100 shadow-sm flex flex-col justify-between gap-4">
+            <div class="space-y-3">
+                <div class="flex items-center gap-1 text-amber-400">
+                    <span class="text-base leading-none">★★★★★</span>
+                    <span class="ml-1.5 text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Compra verificada</span>
+                </div>
+                <p class="text-sm text-slate-600 leading-relaxed italic" th:text="'“' + ${t1Text} + '”'"></p>
+            </div>
+            <div class="flex items-center gap-3 pt-3 border-t border-slate-100">
+                <div class="w-9 h-9 rounded-full bg-brand text-white font-black text-sm flex items-center justify-center flex-shrink-0"
+                     th:text="${!#strings.isEmpty(t1Name) ? #strings.substring(t1Name, 0, 1) : 'C'}">L</div>
+                <div>
+                    <p class="text-sm font-bold text-slate-900 leading-tight" th:text="${t1Name}">Cliente</p>
+                    <p th:if="${!#strings.isEmpty(t1City)}" class="text-xs text-slate-400" th:text="${t1City}">Ciudad</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Testimonio 2 -->
+        <div th:if="${!#strings.isEmpty(t2Text)}" class="bg-white text-slate-900 p-6 sm:p-7 store-radius border border-slate-100 shadow-sm flex flex-col justify-between gap-4">
+            <div class="space-y-3">
+                <div class="flex items-center gap-1 text-amber-400">
+                    <span class="text-base leading-none">★★★★★</span>
+                    <span class="ml-1.5 text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Compra verificada</span>
+                </div>
+                <p class="text-sm text-slate-600 leading-relaxed italic" th:text="'“' + ${t2Text} + '”'"></p>
+            </div>
+            <div class="flex items-center gap-3 pt-3 border-t border-slate-100">
+                <div class="w-9 h-9 rounded-full bg-brand text-white font-black text-sm flex items-center justify-center flex-shrink-0"
+                     th:text="${!#strings.isEmpty(t2Name) ? #strings.substring(t2Name, 0, 1) : 'C'}">C</div>
+                <div>
+                    <p class="text-sm font-bold text-slate-900 leading-tight" th:text="${t2Name}">Cliente</p>
+                    <p th:if="${!#strings.isEmpty(t2City)}" class="text-xs text-slate-400" th:text="${t2City}">Ciudad</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Testimonio 3 -->
+        <div th:if="${!#strings.isEmpty(t3Text)}" class="bg-white text-slate-900 p-6 sm:p-7 store-radius border border-slate-100 shadow-sm flex flex-col justify-between gap-4">
+            <div class="space-y-3">
+                <div class="flex items-center gap-1 text-amber-400">
+                    <span class="text-base leading-none">★★★★★</span>
+                    <span class="ml-1.5 text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Compra verificada</span>
+                </div>
+                <p class="text-sm text-slate-600 leading-relaxed italic" th:text="'“' + ${t3Text} + '”'"></p>
+            </div>
+            <div class="flex items-center gap-3 pt-3 border-t border-slate-100">
+                <div class="w-9 h-9 rounded-full bg-brand text-white font-black text-sm flex items-center justify-center flex-shrink-0"
+                     th:text="${!#strings.isEmpty(t3Name) ? #strings.substring(t3Name, 0, 1) : 'C'}">V</div>
+                <div>
+                    <p class="text-sm font-bold text-slate-900 leading-tight" th:text="${t3Name}">Cliente</p>
+                    <p th:if="${!#strings.isEmpty(t3City)}" class="text-xs text-slate-400" th:text="${t3City}">Ciudad</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ======================================================================= -->
+<!-- 6.C NUEVO: CÓMO COMPRAR EN 3 PASOS + MEDIOS DE PAGO (HOW TO BUY)        -->
+<!-- ======================================================================= -->
+<section th:fragment="how-to-buy(sec)"
+         th:with="title=${sec.settingStr('title', '¿Cómo comprar en nuestra tienda?')},
+                  subtitle=${sec.settingStr('subtitle', 'Realiza tu pedido fácil, rápido y 100% seguro')},
+                  s1Title=${sec.settingStr('step1Title', 'Elige tus productos')},
+                  s1Text=${sec.settingStr('step1Text', 'Explora el catálogo, selecciona tus opciones favoritas y agrégalas a tu bolsa.')},
+                  s2Title=${sec.settingStr('step2Title', 'Completa tus datos')},
+                  s2Text=${sec.settingStr('step2Text', 'Ingresa tu nombre, teléfono y dirección de entrega en tu ciudad.')},
+                  s3Title=${sec.settingStr('step3Title', 'Paga o confirma por WhatsApp')},
+                  s3Text=${sec.settingStr('step3Text', 'Realiza tu pago en línea seguro o coordina tu pedido directamente con nosotros.')},
+                  showPay=${sec.settingBool('showPaymentBadges', true)}"
+         class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+
+    <div class="text-center mb-10">
+        <h2 class="text-2xl sm:text-3xl font-black store-heading tracking-tight" th:text="${title}">Cómo Comprar</h2>
+        <p th:if="${!#strings.isEmpty(subtitle)}" class="store-muted mt-1 text-sm sm:text-base" th:text="${subtitle}"></p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white text-slate-900 p-6 sm:p-7 store-radius border border-slate-100 shadow-sm relative">
+            <span class="w-10 h-10 rounded-xl bg-brand text-white font-black text-base flex items-center justify-center mb-4 shadow-sm">1</span>
+            <h3 class="font-bold text-slate-900 text-lg mb-1.5" th:text="${s1Title}">Paso 1</h3>
+            <p class="text-sm text-slate-500 leading-relaxed" th:text="${s1Text}"></p>
+        </div>
+
+        <div class="bg-white text-slate-900 p-6 sm:p-7 store-radius border border-slate-100 shadow-sm relative">
+            <span class="w-10 h-10 rounded-xl bg-brand text-white font-black text-base flex items-center justify-center mb-4 shadow-sm">2</span>
+            <h3 class="font-bold text-slate-900 text-lg mb-1.5" th:text="${s2Title}">Paso 2</h3>
+            <p class="text-sm text-slate-500 leading-relaxed" th:text="${s2Text}"></p>
+        </div>
+
+        <div class="bg-white text-slate-900 p-6 sm:p-7 store-radius border border-slate-100 shadow-sm relative">
+            <span class="w-10 h-10 rounded-xl bg-brand text-white font-black text-base flex items-center justify-center mb-4 shadow-sm">3</span>
+            <h3 class="font-bold text-slate-900 text-lg mb-1.5" th:text="${s3Title}">Paso 3</h3>
+            <p class="text-sm text-slate-500 leading-relaxed" th:text="${s3Text}"></p>
+        </div>
+    </div>
+
+    <!-- Cintillo de medios de pago y envíos en Colombia -->
+    <div th:if="${showPay}" class="mt-6 bg-white text-slate-700 px-6 py-4 store-radius border border-slate-100 shadow-sm flex flex-wrap items-center justify-center gap-3 sm:gap-5 text-xs font-bold">
+        <span class="text-slate-400 uppercase tracking-wider">Medios aceptados:</span>
+        <span class="px-3 py-1 rounded-full bg-slate-100 text-slate-800">🏦 PSE</span>
+        <span class="px-3 py-1 rounded-full bg-slate-100 text-slate-800">📱 Nequi / Daviplata</span>
+        <span class="px-3 py-1 rounded-full bg-slate-100 text-slate-800">💳 Tarjetas Débito y Crédito</span>
+        <span class="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">💬 Pedidos por WhatsApp</span>
+        <span class="px-3 py-1 rounded-full bg-slate-100 text-slate-800">🚚 Envíos a toda Colombia</span>
+    </div>
+</section>
+
+<!-- ======================================================================= -->
+<!-- 7. CINTILLO DE CONFIANZA (CON SELECTOR DE 8 ÍCONOS Y 3 ESTILOS)         -->
+<!-- ======================================================================= -->
+<th:block th:fragment="trust-icon(iconName)">
+    <th:block th:switch="${iconName}">
+        <svg th:case="'truck'" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
+        <svg th:case="'chat'" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+        <svg th:case="'star'" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg>
+        <svg th:case="'clock'" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <svg th:case="'gift'" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"></path></svg>
+        <svg th:case="'refresh'" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+        <svg th:case="'card'" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
+        <svg th:case="*" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+    </th:block>
+</th:block>
+
 <section th:fragment="trust-badges(sec)"
-         th:with="t1=${sec.settingStr('item1Title', 'Compra 100% Segura')},
+         th:with="badgeStyle=${sec.settingStr('badgeStyle', 'cards')},
+                  ic1=${sec.settingStr('item1Icon', 'shield')},
+                  t1=${sec.settingStr('item1Title', 'Compra 100% Segura')},
                   d1=${sec.settingStr('item1Text', 'Tus datos y pedidos están protegidos en todo momento.')},
+                  ic2=${sec.settingStr('item2Icon', 'truck')},
                   t2=${sec.settingStr('item2Title', 'Envíos a Todo el País')},
                   d2=${sec.settingStr('item2Text', 'Despachamos tu pedido rápido con transportadoras aliadas.')},
+                  ic3=${sec.settingStr('item3Icon', 'chat')},
                   t3=${sec.settingStr('item3Title', 'Atención Personalizada')},
                   d3=${sec.settingStr('item3Text', 'Resolvemos tus dudas directamente por WhatsApp.')}"
          class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div class="bg-white text-slate-900 p-6 store-radius border border-slate-100 shadow-sm flex items-start gap-4">
-            <div class="w-12 h-12 rounded-xl bg-slate-100 text-brand flex items-center justify-center flex-shrink-0">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+    <div th:class="${badgeStyle == 'secondary'} ? 'bg-secondary text-white store-radius p-6 sm:p-8 shadow-xl grid grid-cols-1 md:grid-cols-3 gap-6' : 'grid grid-cols-1 md:grid-cols-3 gap-6'">
+
+        <div th:class="${badgeStyle == 'cards'} ? 'bg-white text-slate-900 p-6 store-radius border border-slate-100 shadow-sm flex items-start gap-4' : (${badgeStyle == 'secondary'} ? 'flex items-start gap-4' : 'p-4 flex items-start gap-4')">
+            <div th:class="${badgeStyle == 'secondary'} ? 'w-12 h-12 rounded-xl bg-white/15 text-white flex items-center justify-center flex-shrink-0' : 'w-12 h-12 rounded-xl bg-brand/10 text-brand flex items-center justify-center flex-shrink-0'">
+                <th:block th:replace="~{storefront/sections/theme-sections :: trust-icon(${ic1})}"></th:block>
             </div>
             <div>
-                <h3 class="font-bold text-slate-900 text-base" th:text="${t1}">Compra Segura</h3>
-                <p class="text-sm text-slate-500 mt-1" th:text="${d1}">Descripción</p>
+                <h3 th:class="${badgeStyle == 'cards'} ? 'font-bold text-slate-900 text-base' : (${badgeStyle == 'secondary'} ? 'font-bold text-white text-base' : 'font-bold store-heading text-base')" th:text="${t1}">Compra Segura</h3>
+                <p th:class="${badgeStyle == 'cards'} ? 'text-sm text-slate-500 mt-1' : (${badgeStyle == 'secondary'} ? 'text-sm text-white/80 mt-1' : 'text-sm store-muted mt-1')" th:text="${d1}">Descripción</p>
             </div>
         </div>
 
-        <div class="bg-white text-slate-900 p-6 store-radius border border-slate-100 shadow-sm flex items-start gap-4">
-            <div class="w-12 h-12 rounded-xl bg-slate-100 text-brand flex items-center justify-center flex-shrink-0">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
+        <div th:class="${badgeStyle == 'cards'} ? 'bg-white text-slate-900 p-6 store-radius border border-slate-100 shadow-sm flex items-start gap-4' : (${badgeStyle == 'secondary'} ? 'flex items-start gap-4' : 'p-4 flex items-start gap-4')">
+            <div th:class="${badgeStyle == 'secondary'} ? 'w-12 h-12 rounded-xl bg-white/15 text-white flex items-center justify-center flex-shrink-0' : 'w-12 h-12 rounded-xl bg-brand/10 text-brand flex items-center justify-center flex-shrink-0'">
+                <th:block th:replace="~{storefront/sections/theme-sections :: trust-icon(${ic2})}"></th:block>
             </div>
             <div>
-                <h3 class="font-bold text-slate-900 text-base" th:text="${t2}">Envíos Seguros</h3>
-                <p class="text-sm text-slate-500 mt-1" th:text="${d2}">Descripción</p>
+                <h3 th:class="${badgeStyle == 'cards'} ? 'font-bold text-slate-900 text-base' : (${badgeStyle == 'secondary'} ? 'font-bold text-white text-base' : 'font-bold store-heading text-base')" th:text="${t2}">Envíos Seguros</h3>
+                <p th:class="${badgeStyle == 'cards'} ? 'text-sm text-slate-500 mt-1' : (${badgeStyle == 'secondary'} ? 'text-sm text-white/80 mt-1' : 'text-sm store-muted mt-1')" th:text="${d2}">Descripción</p>
             </div>
         </div>
 
-        <div class="bg-white text-slate-900 p-6 store-radius border border-slate-100 shadow-sm flex items-start gap-4">
-            <div class="w-12 h-12 rounded-xl bg-slate-100 text-brand flex items-center justify-center flex-shrink-0">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+        <div th:class="${badgeStyle == 'cards'} ? 'bg-white text-slate-900 p-6 store-radius border border-slate-100 shadow-sm flex items-start gap-4' : (${badgeStyle == 'secondary'} ? 'flex items-start gap-4' : 'p-4 flex items-start gap-4')">
+            <div th:class="${badgeStyle == 'secondary'} ? 'w-12 h-12 rounded-xl bg-white/15 text-white flex items-center justify-center flex-shrink-0' : 'w-12 h-12 rounded-xl bg-brand/10 text-brand flex items-center justify-center flex-shrink-0'">
+                <th:block th:replace="~{storefront/sections/theme-sections :: trust-icon(${ic3})}"></th:block>
             </div>
             <div>
-                <h3 class="font-bold text-slate-900 text-base" th:text="${t3}">Soporte Directo</h3>
-                <p class="text-sm text-slate-500 mt-1" th:text="${d3}">Descripción</p>
+                <h3 th:class="${badgeStyle == 'cards'} ? 'font-bold text-slate-900 text-base' : (${badgeStyle == 'secondary'} ? 'font-bold text-white text-base' : 'font-bold store-heading text-base')" th:text="${t3}">Soporte Directo</h3>
+                <p th:class="${badgeStyle == 'cards'} ? 'text-sm text-slate-500 mt-1' : (${badgeStyle == 'secondary'} ? 'text-sm text-white/80 mt-1' : 'text-sm store-muted mt-1')" th:text="${d3}">Descripción</p>
             </div>
         </div>
+
     </div>
 </section>
 
@@ -470,7 +976,7 @@
 </section>
 
 <!-- ======================================================================= -->
-<!-- 9. PREGUNTAS FRECUENTES EN ACORDEÓN (FAQ ACCORDION)                     -->
+<!-- 9. PREGUNTAS FRECUENTES EN ACORDEÓN (SOPORTA HASTA 5 PREGUNTAS)         -->
 <!-- ======================================================================= -->
 <section th:fragment="faq-accordion(sec)"
          th:with="title=${sec.settingStr('title', 'Preguntas Frecuentes')},
@@ -480,7 +986,11 @@
                   q2=${sec.settingStr('q2', '¿Cuánto tarda en llegar mi pedido?')},
                   a2=${sec.settingStr('a2', 'Despachamos a todo el país. El tiempo estimado de entrega es de 2 a 5 días hábiles según tu ciudad.')},
                   q3=${sec.settingStr('q3', '¿Tienen cambios o garantías?')},
-                  a3=${sec.settingStr('a3', 'Sí, todos nuestros productos cuentan con garantía y soporte directo.')}"
+                  a3=${sec.settingStr('a3', 'Sí, todos nuestros productos cuentan con garantía y soporte directo.')},
+                  q4=${sec.settingStr('q4', '')},
+                  a4=${sec.settingStr('a4', '')},
+                  q5=${sec.settingStr('q5', '')},
+                  a5=${sec.settingStr('a5', '')}"
          class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
 
     <div class="text-center mb-8">
@@ -512,6 +1022,22 @@
             </summary>
             <p class="text-sm text-slate-600 mt-3 pt-3 border-t border-slate-100 leading-relaxed whitespace-pre-line" th:text="${a3}"></p>
         </details>
+
+        <details th:if="${!#strings.isEmpty(q4)}" class="group bg-white text-slate-900 border border-slate-200 store-radius p-5 shadow-sm">
+            <summary class="flex items-center justify-between cursor-pointer list-none [&::-webkit-details-marker]:hidden font-bold text-slate-900 text-base">
+                <span th:text="${q4}">Pregunta 4</span>
+                <svg class="w-5 h-5 text-slate-400 group-open:rotate-180 transition-transform flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            </summary>
+            <p class="text-sm text-slate-600 mt-3 pt-3 border-t border-slate-100 leading-relaxed whitespace-pre-line" th:text="${a4}"></p>
+        </details>
+
+        <details th:if="${!#strings.isEmpty(q5)}" class="group bg-white text-slate-900 border border-slate-200 store-radius p-5 shadow-sm">
+            <summary class="flex items-center justify-between cursor-pointer list-none [&::-webkit-details-marker]:hidden font-bold text-slate-900 text-base">
+                <span th:text="${q5}">Pregunta 5</span>
+                <svg class="w-5 h-5 text-slate-400 group-open:rotate-180 transition-transform flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            </summary>
+            <p class="text-sm text-slate-600 mt-3 pt-3 border-t border-slate-100 leading-relaxed whitespace-pre-line" th:text="${a5}"></p>
+        </details>
     </div>
 </section>
 
@@ -526,7 +1052,6 @@
                   waPhone=${#strings.length(waRaw) == 10 ? '57' + waRaw : waRaw}"
          class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
 
-    <!-- Usa bg-secondary para reflejar el Color Secundario de la tienda -->
     <div class="bg-secondary text-white store-radius p-8 sm:p-10 shadow-xl flex flex-col md:flex-row items-center justify-between gap-6">
         <div class="space-y-2 text-center md:text-left max-w-xl">
             <h2 class="text-2xl sm:text-3xl font-black tracking-tight" th:text="${title}">¿Tienes dudas?</h2>

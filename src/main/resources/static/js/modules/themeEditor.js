@@ -6,15 +6,19 @@ Storevo.ThemeEditor = {
     previewUrl: '',
     theme: { globalStyles: {}, sections: [] },
     categories: [],
+    catalogProducts: [],
     activeSectionId: null,
     autoSaveTimer: null,
+    hasUnpublishedChanges: false,
 
     catalogDefinitions: {
         announcement_bar: {
             label: 'Barra de Anuncio Superior',
-            description: 'Cintillo superior para promociones, envíos gratis o avisos clave.',
+            description: 'Cintillo superior con hasta 3 mensajes rotativos para promociones o envíos gratis.',
             defaultSettings: {
                 text: '🚚 ¡Envío gratis en compras superiores a $150.000!',
+                text2: '',
+                text3: '',
                 bgColor: '#0f172a',
                 textColor: '#ffffff',
                 linkUrl: '/catalog'
@@ -22,15 +26,16 @@ Storevo.ThemeEditor = {
         },
         hero_banner: {
             label: 'Banner Principal (Hero)',
-            description: 'Portada de gran impacto con imagen subida, título y hasta 2 botones.',
+            description: 'Portada de gran impacto con 3 estilos de diseño, imagen y hasta 2 botones.',
             defaultSettings: {
+                heroLayout: 'classic',
                 badgeText: 'Nueva Colección',
                 title: 'Descubre lo mejor de nuestra tienda',
                 subtitle: 'Calidad garantizada con envíos a toda Colombia.',
                 buttonText: 'Ver Catálogo',
                 buttonUrl: '/catalog',
                 secondaryButtonText: '',
-                secondaryButtonUrl: '',
+                secondaryButtonUrl: '/catalog',
                 imageUrl: '',
                 overlayOpacity: 50,
                 bgColor: '#6366f1',
@@ -50,12 +55,39 @@ Storevo.ThemeEditor = {
                 showViewAll: true
             }
         },
+        spotlight_product: {
+            label: 'Producto Estrella / Destacado',
+            description: 'Destaca un producto específico en gran formato con foto grande, precio y compra rápida.',
+            defaultSettings: {
+                productId: '',
+                badgeText: '🔥 Producto Estrella',
+                customTitle: '',
+                customSubtitle: '',
+                imageSide: 'left'
+            }
+        },
         featured_categories: {
             label: 'Categorías Destacadas',
-            description: 'Tarjetas interactivas hacia las categorías principales de tu tienda.',
+            description: 'Tarjetas interactivas con foto automática, ícono o píldoras hacia tus categorías.',
             defaultSettings: {
                 title: 'Explora por Categoría',
-                subtitle: 'Encuentra rápidamente lo que estás buscando'
+                subtitle: 'Encuentra rápidamente lo que estás buscando',
+                cardLayout: 'visual',
+                columns: '4'
+            }
+        },
+        countdown_promo: {
+            label: 'Oferta con Contador Regresivo',
+            description: 'Banner de urgencia con reloj en vivo (Días, Horas, Minutos y Segundos) para ofertas.',
+            defaultSettings: {
+                badgeText: '⚡ Oferta por Tiempo Limitado',
+                title: '¡Aprovecha nuestros descuentos especiales!',
+                subtitle: 'Unidades limitadas disponibles antes de que termine la promoción.',
+                endDate: '',
+                buttonText: 'Ver Ofertas Ahora',
+                buttonUrl: '/catalog',
+                bgColor: '#0f172a',
+                textColor: '#ffffff'
             }
         },
         multi_banners: {
@@ -80,7 +112,7 @@ Storevo.ThemeEditor = {
         },
         promo_banner: {
             label: 'Banner Dividido (Imagen + Texto)',
-            description: 'Bloque mitad texto y mitad foto para destacar una promoción o producto estrella.',
+            description: 'Bloque mitad texto y mitad foto para destacar una promoción o colección.',
             defaultSettings: {
                 badgeText: 'Oferta Especial',
                 title: 'Temporada de Descuentos',
@@ -92,21 +124,57 @@ Storevo.ThemeEditor = {
                 textColor: '#ffffff'
             }
         },
+        testimonials: {
+            label: 'Testimonios y Reseñas de Clientes',
+            description: '3 tarjetas con calificación de 5 estrellas y opiniones reales para dar máxima confianza.',
+            defaultSettings: {
+                title: 'Lo que dicen nuestros clientes',
+                subtitle: 'Compradores reales que ya recibieron su pedido',
+                t1Name: 'Laura Gómez',
+                t1City: 'Medellín',
+                t1Text: 'Excelente calidad y atención. Mi pedido llegó súper rápido y tal cual como se ve en las fotos.',
+                t2Name: 'Carlos Ramírez',
+                t2City: 'Bogotá D.C.',
+                t2Text: 'Muy fácil comprar en la página, me asesoraron por WhatsApp con mi talla y todo llegó perfecto.',
+                t3Name: 'Valentina Torres',
+                t3City: 'Cali',
+                t3Text: 'Me encantó el empaque y la rapidez del envío. Sin duda volveré a comprar pronto.'
+            }
+        },
+        how_to_buy: {
+            label: 'Cómo Comprar en 3 Pasos + Pagos',
+            description: 'Explica en 3 pasos sencillos cómo pedir en tu tienda y muestra los medios de pago.',
+            defaultSettings: {
+                title: '¿Cómo comprar en nuestra tienda?',
+                subtitle: 'Realiza tu pedido fácil, rápido y 100% seguro',
+                step1Title: 'Elige tus productos',
+                step1Text: 'Explora el catálogo, selecciona tus opciones favoritas y agrégalas a tu bolsa.',
+                step2Title: 'Completa tus datos',
+                step2Text: 'Ingresa tu nombre, teléfono y dirección de entrega en tu ciudad.',
+                step3Title: 'Paga o confirma por WhatsApp',
+                step3Text: 'Realiza tu pago en línea seguro o coordina tu pedido directamente con nosotros.',
+                showPaymentBadges: true
+            }
+        },
         trust_badges: {
             label: 'Franja de Confianza y Beneficios',
-            description: '3 bloques con íconos para transmitir seguridad, envíos y atención.',
+            description: '3 bloques con íconos personalizables para transmitir seguridad, envíos y atención.',
             defaultSettings: {
+                badgeStyle: 'cards',
+                item1Icon: 'shield',
                 item1Title: 'Compra 100% Segura',
                 item1Text: 'Tus datos y pedidos están protegidos en todo momento.',
+                item2Icon: 'truck',
                 item2Title: 'Envíos a Todo el País',
                 item2Text: 'Despachamos tu pedido rápido con transportadoras aliadas.',
+                item3Icon: 'chat',
                 item3Title: 'Atención Personalizada',
                 item3Text: 'Resolvemos tus dudas directamente por WhatsApp.'
             }
         },
         faq_accordion: {
             label: 'Preguntas Frecuentes (Acordeón)',
-            description: 'Desplegable interactivo para responder dudas de envíos, pagos y garantías.',
+            description: 'Desplegable interactivo con hasta 5 preguntas sobre envíos, pagos y garantías.',
             defaultSettings: {
                 title: 'Preguntas Frecuentes',
                 subtitle: 'Resolvemos tus dudas antes de comprar',
@@ -115,7 +183,11 @@ Storevo.ThemeEditor = {
                 q2: '¿Cuánto tarda en llegar mi pedido?',
                 a2: 'Despachamos a todo el país. El tiempo estimado de entrega es de 2 a 5 días hábiles según tu ciudad.',
                 q3: '¿Tienen cambios o garantías?',
-                a3: 'Sí, todos nuestros productos cuentan con garantía y soporte directo.'
+                a3: 'Sí, todos nuestros productos cuentan con garantía y soporte directo.',
+                q4: '',
+                a4: '',
+                q5: '',
+                a5: ''
             }
         },
         whatsapp_cta: {
@@ -168,20 +240,56 @@ Storevo.ThemeEditor = {
         this.initIframeBridgeListener();
     },
 
+    syncProductsFromIframe: function() {
+        const iframe = document.getElementById('storefront-preview-iframe');
+        if (!iframe || !iframe.contentDocument) return;
+        try {
+            const nodes = iframe.contentDocument.querySelectorAll('#storevo-catalog-products-bridge span[data-id]');
+            if (nodes && nodes.length > 0) {
+                const list = [];
+                nodes.forEach(n => {
+                    list.push({
+                        id: n.getAttribute('data-id'),
+                        name: n.getAttribute('data-name') || 'Producto'
+                    });
+                });
+                this.catalogProducts = list;
+            }
+        } catch (e) {}
+    },
+
     initIframeBridgeListener: function() {
+        const iframe = document.getElementById('storefront-preview-iframe');
+        if (iframe) {
+            iframe.addEventListener('load', () => this.syncProductsFromIframe());
+        }
+
         window.addEventListener('message', (e) => {
             if (e.origin !== window.location.origin || !e.data) return;
             if (e.data.type === 'storevo:select-section' && e.data.sectionId) {
-                this.openInspector(e.data.sectionId);
+                this.syncProductsFromIframe();
                 this.setMobilePane('editor');
+                this.openInspector(e.data.sectionId);
             }
         });
+    },
+
+    pushLiveStylesToIframe: function() {
+        const iframe = document.getElementById('storefront-preview-iframe');
+        if (!iframe || !iframe.contentWindow) return;
+        try {
+            iframe.contentWindow.postMessage({
+                type: 'storevo:live-styles',
+                styles: this.theme.globalStyles
+            }, window.location.origin);
+        } catch (e) {}
     },
 
     setMobilePane: function(pane) {
         const workspace = document.getElementById('theme-editor-workspace');
         const btnEditor = document.getElementById('btn-pane-editor');
         const btnPreview = document.getElementById('btn-pane-preview');
+
         if (workspace) workspace.setAttribute('data-mobile-pane', pane);
 
         if (btnEditor && btnPreview) {
@@ -189,6 +297,14 @@ Storevo.ThemeEditor = {
             const inactiveClass = 'px-2.5 py-1 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-white';
             btnEditor.className = pane === 'editor' ? activeClass : inactiveClass;
             btnPreview.className = pane === 'preview' ? activeClass : inactiveClass;
+        }
+    },
+
+    markUnpublishedChanges: function(hasChanges) {
+        this.hasUnpublishedChanges = hasChanges;
+        const badge = document.getElementById('unpublished-badge');
+        if (badge) {
+            badge.classList.toggle('hidden', !hasChanges);
         }
     },
 
@@ -258,7 +374,7 @@ Storevo.ThemeEditor = {
                     if (found) reordered.push(found);
                 });
                 this.theme.sections = reordered;
-                this.scheduleAutoSave(true);
+                this.scheduleAutoSave();
             }
         });
     },
@@ -279,7 +395,7 @@ Storevo.ThemeEditor = {
 
         this.theme.sections.forEach(sec => {
             const def = this.catalogDefinitions[sec.type] || { label: sec.type };
-            const subtitle = (sec.settings && (sec.settings.title || sec.settings.text || sec.settings.card1Title)) || def.label;
+            const subtitle = (sec.settings && (sec.settings.title || sec.settings.customTitle || sec.settings.badgeText || sec.settings.text || sec.settings.card1Title)) || def.label;
             const isEnabled = sec.enabled !== false;
 
             const row = document.createElement('div');
@@ -300,7 +416,10 @@ Storevo.ThemeEditor = {
                         <p class="text-[11px] text-slate-500 truncate mt-0.5">${this.escapeHtml(subtitle)}</p>
                     </button>
                 </div>
-                <div class="flex items-center gap-1 flex-shrink-0">
+                <div class="flex items-center gap-0.5 flex-shrink-0">
+                    <button type="button" class="sec-dup-btn p-1.5 text-slate-500 hover:text-storevo-400 rounded-lg hover:bg-slate-800 transition" title="Duplicar sección">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                    </button>
                     <button type="button" class="sec-toggle-btn p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition" title="${isEnabled ? 'Ocultar sección' : 'Mostrar sección'}">
                         ${isEnabled
                 ? '<svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>'
@@ -314,24 +433,74 @@ Storevo.ThemeEditor = {
             `;
 
             row.querySelector('.sec-edit-trigger').addEventListener('click', () => this.openInspector(sec.id));
+            row.querySelector('.sec-dup-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.duplicateSection(sec.id);
+            });
             row.querySelector('.sec-toggle-btn').addEventListener('click', (e) => {
                 e.stopPropagation();
                 sec.enabled = !isEnabled;
                 this.renderSectionsList();
-                this.scheduleAutoSave(true);
+                this.scheduleAutoSave();
             });
             row.querySelector('.sec-delete-btn').addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.theme.sections = this.theme.sections.filter(item => item.id !== sec.id);
                 this.renderSectionsList();
-                this.scheduleAutoSave(true);
+                this.scheduleAutoSave();
             });
 
             container.appendChild(row);
         });
     },
 
+    duplicateSection: function(sectionId) {
+        const index = this.theme.sections.findIndex(s => s.id === sectionId);
+        if (index === -1) return;
+
+        const original = this.theme.sections[index];
+        const cloned = {
+            id: 'sec_' + Date.now().toString(36),
+            type: original.type,
+            enabled: true,
+            settings: JSON.parse(JSON.stringify(original.settings || {}))
+        };
+
+        this.theme.sections.splice(index + 1, 0, cloned);
+        this.renderSectionsList();
+        this.openInspector(cloned.id);
+        this.scheduleAutoSave();
+
+        if (Storevo.UI && Storevo.UI.Toast) {
+            Storevo.UI.Toast.show('Sección duplicada', 'success');
+        }
+    },
+
+    duplicateActiveSection: function() {
+        if (this.activeSectionId) {
+            this.duplicateSection(this.activeSectionId);
+        }
+    },
+
+    normalizeInternalUrlForSelect: function(rawUrl) {
+        if (rawUrl === undefined || rawUrl === null) return '';
+        let clean = String(rawUrl).trim();
+        if (!clean) return '';
+        const prefix1 = `/s/${this.slug}`;
+        const prefix2 = `s/${this.slug}`;
+        if (clean.startsWith(prefix1)) {
+            clean = clean.substring(prefix1.length) || '/';
+        } else if (clean.startsWith(prefix2)) {
+            clean = clean.substring(prefix2.length) || '/';
+        }
+        if (clean === 'catalog') return '/catalog';
+        if (clean === 'wishlist') return '/wishlist';
+        if (clean === 'cart') return '/cart';
+        return clean;
+    },
+
     openInspector: function(sectionId) {
+        this.syncProductsFromIframe();
         const sec = this.theme.sections.find(s => s.id === sectionId);
         if (!sec) return;
         this.activeSectionId = sectionId;
@@ -373,7 +542,7 @@ Storevo.ThemeEditor = {
                 const removeBtn = document.createElement('button');
                 removeBtn.type = 'button';
                 removeBtn.className = 'absolute top-1.5 right-1.5 bg-red-500 hover:bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded shadow';
-                removeBtn.textContent = 'Quitar';
+                removeBtn.textContent = 'Quitar imagen';
                 previewWrap.appendChild(imgEl);
                 previewWrap.appendChild(removeBtn);
 
@@ -419,7 +588,7 @@ Storevo.ThemeEditor = {
                                 urlInput.value = data.url;
                                 imgEl.src = data.url;
                                 previewWrap.classList.remove('hidden');
-                                this.scheduleAutoSave(true);
+                                this.scheduleAutoSave();
                                 if (Storevo.UI && Storevo.UI.Toast) {
                                     Storevo.UI.Toast.show('Imagen subida y aplicada', 'success');
                                 }
@@ -444,7 +613,7 @@ Storevo.ThemeEditor = {
                     urlInput.value = '';
                     imgEl.src = '';
                     previewWrap.classList.add('hidden');
-                    this.scheduleAutoSave(true);
+                    this.scheduleAutoSave();
                 });
 
                 urlInput.addEventListener('input', () => {
@@ -456,7 +625,7 @@ Storevo.ThemeEditor = {
                     } else {
                         previewWrap.classList.add('hidden');
                     }
-                    this.scheduleAutoSave(true);
+                    this.scheduleAutoSave();
                 });
 
                 actionsRow.appendChild(fileInput);
@@ -466,6 +635,95 @@ Storevo.ThemeEditor = {
                 imgBox.appendChild(urlInput);
                 wrapper.appendChild(imgBox);
 
+            } else if (field.type === 'url') {
+                const urlBox = document.createElement('div');
+                urlBox.className = 'space-y-2';
+
+                const presetSelect = document.createElement('select');
+                presetSelect.className = 'w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:border-storevo-500 focus:outline-none cursor-pointer';
+
+                const normalizedCurrent = this.normalizeInternalUrlForSelect(currentVal);
+
+                const navGroup = document.createElement('optgroup');
+                navGroup.label = 'Menú Principal de tu Tienda';
+                const basePages = [];
+                if (field.allowEmpty) {
+                    basePages.push({ value: '', label: '— Sin enlace —' });
+                }
+                basePages.push(
+                    { value: '/catalog', label: 'Todo el Catálogo' },
+                    { value: '/', label: 'Inicio de la Tienda' },
+                    { value: '__whatsapp__', label: 'Chat de WhatsApp de la Tienda' },
+                    { value: '/wishlist', label: 'Mis Favoritos (Lista de Deseos)' },
+                    { value: '/cart', label: 'Bolsa de Compras' }
+                );
+
+                let matchedPreset = false;
+                basePages.forEach(opt => {
+                    const o = document.createElement('option');
+                    o.value = opt.value;
+                    o.textContent = opt.label;
+                    if (String(opt.value) === String(normalizedCurrent)) {
+                        o.selected = true;
+                        matchedPreset = true;
+                    }
+                    navGroup.appendChild(o);
+                });
+                presetSelect.appendChild(navGroup);
+
+                if (this.categories && this.categories.length > 0) {
+                    const catGroup = document.createElement('optgroup');
+                    catGroup.label = 'Categorías de tu Tienda';
+                    this.categories.forEach(c => {
+                        const o = document.createElement('option');
+                        o.value = `/catalog?category=${c.id}`;
+                        o.textContent = `Categoría: ${c.name}`;
+                        if (o.value === normalizedCurrent) {
+                            o.selected = true;
+                            matchedPreset = true;
+                        }
+                        catGroup.appendChild(o);
+                    });
+                    presetSelect.appendChild(catGroup);
+                }
+
+                const extGroup = document.createElement('optgroup');
+                extGroup.label = 'Externo';
+                const customOpt = document.createElement('option');
+                customOpt.value = '__custom__';
+                customOpt.textContent = 'Otro enlace externo (Instagram, TikTok, Web...)';
+                if (!matchedPreset) {
+                    customOpt.selected = true;
+                }
+                extGroup.appendChild(customOpt);
+                presetSelect.appendChild(extGroup);
+
+                const customUrlInput = document.createElement('input');
+                customUrlInput.type = 'text';
+                customUrlInput.value = matchedPreset ? '' : currentVal;
+                customUrlInput.placeholder = 'Pega aquí el enlace (Ej: https://instagram.com/mitienda)';
+                customUrlInput.className = (matchedPreset ? 'hidden ' : '') + 'w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:border-storevo-500 focus:outline-none';
+
+                presetSelect.addEventListener('change', () => {
+                    if (presetSelect.value === '__custom__') {
+                        customUrlInput.classList.remove('hidden');
+                        customUrlInput.focus();
+                    } else {
+                        customUrlInput.classList.add('hidden');
+                        sec.settings[field.key] = presetSelect.value;
+                        this.scheduleAutoSave();
+                    }
+                });
+
+                customUrlInput.addEventListener('input', () => {
+                    sec.settings[field.key] = customUrlInput.value.trim();
+                    this.scheduleAutoSave();
+                });
+
+                urlBox.appendChild(presetSelect);
+                urlBox.appendChild(customUrlInput);
+                wrapper.appendChild(urlBox);
+
             } else if (field.type === 'textarea') {
                 const input = document.createElement('textarea');
                 input.rows = 3;
@@ -474,12 +732,13 @@ Storevo.ThemeEditor = {
                 input.className = 'w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:border-storevo-500 focus:outline-none';
                 input.addEventListener('input', () => {
                     sec.settings[field.key] = input.value;
-                    this.scheduleAutoSave(true);
+                    this.scheduleAutoSave();
                 });
                 wrapper.appendChild(input);
+
             } else if (field.type === 'select') {
                 const select = document.createElement('select');
-                select.className = 'w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:border-storevo-500 focus:outline-none';
+                select.className = 'w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:border-storevo-500 focus:outline-none cursor-pointer';
                 (field.options || []).forEach(opt => {
                     const o = document.createElement('option');
                     o.value = opt.value;
@@ -489,15 +748,31 @@ Storevo.ThemeEditor = {
                 });
                 select.addEventListener('change', () => {
                     sec.settings[field.key] = select.value;
-                    // Si elige una categoría en product_grid, cambiar source automáticamente a CATEGORY
-                    if (sec.type === 'product_grid' && field.key === 'categoryId' && select.value) {
-                        sec.settings['source'] = 'CATEGORY';
-                        const sourceSelect = container.querySelector('[data-field-key="source"] select');
-                        if (sourceSelect) sourceSelect.value = 'CATEGORY';
+
+                    if (sec.type === 'product_grid') {
+                        if (field.key === 'source') {
+                            const catWrapper = container.querySelector('[data-field-key="categoryId"]');
+                            if (catWrapper) {
+                                catWrapper.classList.toggle('hidden', select.value !== 'CATEGORY');
+                            }
+                        } else if (field.key === 'categoryId' && select.value) {
+                            sec.settings.source = 'CATEGORY';
+                            const sourceSelect = container.querySelector('[data-field-key="source"] select');
+                            if (sourceSelect) sourceSelect.value = 'CATEGORY';
+                        }
                     }
-                    this.scheduleAutoSave(true);
+
+                    this.scheduleAutoSave();
                 });
                 wrapper.appendChild(select);
+
+                if (sec.type === 'product_grid' && field.key === 'categoryId') {
+                    const currentSource = sec.settings.source || 'NEWEST';
+                    if (currentSource !== 'CATEGORY') {
+                        wrapper.classList.add('hidden');
+                    }
+                }
+
             } else if (field.type === 'color') {
                 const colorRow = document.createElement('div');
                 colorRow.className = 'flex items-center gap-2';
@@ -515,19 +790,20 @@ Storevo.ThemeEditor = {
                 colorInput.addEventListener('input', () => {
                     hexInput.value = colorInput.value;
                     sec.settings[field.key] = colorInput.value;
-                    this.scheduleAutoSave(true);
+                    this.scheduleAutoSave();
                 });
                 hexInput.addEventListener('input', () => {
                     if (/^#[0-9a-fA-F]{6}$/.test(hexInput.value.trim())) {
                         colorInput.value = hexInput.value.trim();
                         sec.settings[field.key] = hexInput.value.trim();
-                        this.scheduleAutoSave(true);
+                        this.scheduleAutoSave();
                     }
                 });
 
                 colorRow.appendChild(colorInput);
                 colorRow.appendChild(hexInput);
                 wrapper.appendChild(colorRow);
+
             } else if (field.type === 'checkbox') {
                 const checkLabel = document.createElement('label');
                 checkLabel.className = 'flex items-center gap-2.5 cursor-pointer bg-slate-950 p-3 rounded-xl border border-slate-800';
@@ -537,7 +813,7 @@ Storevo.ThemeEditor = {
                 chk.className = 'w-4 h-4 rounded border-slate-700 text-storevo-500';
                 chk.addEventListener('change', () => {
                     sec.settings[field.key] = chk.checked;
-                    this.scheduleAutoSave(true);
+                    this.scheduleAutoSave();
                 });
                 const span = document.createElement('span');
                 span.className = 'text-xs font-medium text-slate-300';
@@ -546,17 +822,31 @@ Storevo.ThemeEditor = {
                 checkLabel.appendChild(span);
                 wrapper.innerHTML = '';
                 wrapper.appendChild(checkLabel);
+
             } else {
                 const input = document.createElement('input');
                 input.type = field.type || 'text';
                 input.value = currentVal;
                 input.placeholder = field.placeholder || '';
-                input.className = 'w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:border-storevo-500 focus:outline-none';
+                input.className = 'w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:border-storevo-500 focus:outline-none [color-scheme:dark]';
                 input.addEventListener('input', () => {
                     sec.settings[field.key] = input.value;
-                    this.scheduleAutoSave(true);
+                    if (sec.type === 'hero_banner' && field.key === 'secondaryButtonText') {
+                        const secUrlWrap = container.querySelector('[data-field-key="secondaryButtonUrl"]');
+                        if (secUrlWrap) {
+                            secUrlWrap.classList.toggle('hidden', !input.value.trim());
+                        }
+                    }
+                    this.scheduleAutoSave();
                 });
                 wrapper.appendChild(input);
+            }
+
+            if (sec.type === 'hero_banner' && field.key === 'secondaryButtonUrl') {
+                const secBtnText = sec.settings.secondaryButtonText || '';
+                if (!String(secBtnText).trim()) {
+                    wrapper.classList.add('hidden');
+                }
             }
 
             container.appendChild(wrapper);
@@ -574,43 +864,47 @@ Storevo.ThemeEditor = {
         this.highlightSectionInIframe(null);
     },
 
-    duplicateActiveSection: function() {
-        if (!this.activeSectionId) return;
-        const idx = this.theme.sections.findIndex(s => s.id === this.activeSectionId);
-        if (idx === -1) return;
-
-        const original = this.theme.sections[idx];
-        const copy = {
-            id: 'sec_' + Date.now().toString(36),
-            type: original.type,
-            enabled: true,
-            settings: JSON.parse(JSON.stringify(original.settings || {}))
-        };
-
-        this.theme.sections.splice(idx + 1, 0, copy);
-        this.renderSectionsList();
-        this.openInspector(copy.id);
-        this.scheduleAutoSave(true);
-        if (Storevo.UI && Storevo.UI.Toast) {
-            Storevo.UI.Toast.show('Sección duplicada', 'success');
-        }
-    },
-
     getFieldsForType: function(type) {
-        const catOptions = [{ value: '', label: 'Todas las categorías' }]
+        const catOptions = [{ value: '', label: 'Selecciona una categoría...' }]
             .concat(this.categories.map(c => ({ value: String(c.id), label: c.name })));
+
+        const spotlightProductOptions = [
+            { value: '', label: '✨ Automático: Último producto agregado' },
+            { value: '__offer__', label: '🏷️ Automático: Primer producto en oferta' }
+        ].concat((this.catalogProducts || []).map(p => ({
+            value: String(p.id),
+            label: `📦 ${p.name}`
+        })));
+
+        const trustIconOptions = [
+            { value: 'shield', label: '🛡️ Escudo de Compra Segura' },
+            { value: 'truck', label: '🚚 Camión de Envíos Nacionales' },
+            { value: 'chat', label: '💬 Atención / WhatsApp Directo' },
+            { value: 'star', label: '⭐ Calidad Garantizada / Premium' },
+            { value: 'clock', label: '⏱️ Despacho Rápido / Entrega Ágil' },
+            { value: 'gift', label: '🎁 Empaque Especial / Regalos' },
+            { value: 'refresh', label: '🔄 Cambios y Garantía Fácil' },
+            { value: 'card', label: '💳 Múltiples Medios de Pago' }
+        ];
 
         switch (type) {
             case 'announcement_bar':
                 return [
-                    { key: 'text', label: 'Texto del anuncio', type: 'text', placeholder: 'Ej: Envío gratis en compras mayores a $150.000' },
-                    { key: 'linkUrl', label: 'Enlace al hacer clic (Opcional)', type: 'text', placeholder: '/catalog' },
+                    { key: 'text', label: 'Mensaje principal del anuncio', type: 'text', placeholder: 'Ej: 🚚 Envío gratis en compras mayores a $150.000' },
+                    { key: 'text2', label: '2do mensaje rotativo (Opcional)', type: 'text', placeholder: 'Ej: 💳 Paga en línea o pide fácil por WhatsApp' },
+                    { key: 'text3', label: '3er mensaje rotativo (Opcional)', type: 'text', placeholder: 'Ej: ✨ Nuevos lanzamientos disponibles hoy' },
+                    { key: 'linkUrl', label: '¿A dónde lleva al hacer clic?', type: 'url', allowEmpty: true, defaultVal: '/catalog' },
                     { key: 'bgColor', label: 'Color de fondo', type: 'color', defaultVal: '#0f172a' },
                     { key: 'textColor', label: 'Color del texto', type: 'color', defaultVal: '#ffffff' }
                 ];
             case 'hero_banner':
                 return [
-                    { key: 'imageUrl', label: 'Imagen de Fondo del Banner', type: 'image' },
+                    { key: 'heroLayout', label: 'Diseño del Banner Principal', type: 'select', defaultVal: 'classic', options: [
+                            { value: 'classic', label: 'Portada Clásica (Imagen de fondo completa)' },
+                            { value: 'split', label: 'Dividido Editorial (Texto a un lado + Imagen al otro)' },
+                            { value: 'compact', label: 'Banner Compacto (Altura reducida)' }
+                        ]},
+                    { key: 'imageUrl', label: 'Imagen del Banner', type: 'image' },
                     { key: 'overlayOpacity', label: 'Oscuridad sobre la imagen (0 a 90)', type: 'number', defaultVal: 50 },
                     { key: 'badgeText', label: 'Etiqueta superior (Opcional)', type: 'text', placeholder: 'Ej: Nueva Colección' },
                     { key: 'title', label: 'Título Principal', type: 'text', placeholder: 'Bienvenido a nuestra tienda' },
@@ -620,10 +914,10 @@ Storevo.ThemeEditor = {
                             { value: 'left', label: 'Izquierda' }
                         ]},
                     { key: 'buttonText', label: 'Texto del botón principal', type: 'text', placeholder: 'Ver Catálogo' },
-                    { key: 'buttonUrl', label: 'Enlace del botón principal', type: 'text', placeholder: '/catalog' },
-                    { key: 'secondaryButtonText', label: 'Texto 2do botón (Opcional)', type: 'text', placeholder: 'Ofertas' },
-                    { key: 'secondaryButtonUrl', label: 'Enlace 2do botón', type: 'text', placeholder: '/catalog' },
-                    { key: 'bgColor', label: 'Color de fondo (si no hay imagen)', type: 'color', defaultVal: '#6366f1' },
+                    { key: 'buttonUrl', label: '¿A dónde lleva el botón principal?', type: 'url', defaultVal: '/catalog' },
+                    { key: 'secondaryButtonText', label: 'Texto 2do botón (Dejar vacío para ocultar)', type: 'text', placeholder: 'Ej: Ver Ofertas o Hablar por WhatsApp' },
+                    { key: 'secondaryButtonUrl', label: '¿A dónde lleva el 2do botón?', type: 'url', defaultVal: '/catalog' },
+                    { key: 'bgColor', label: 'Color de fondo', type: 'color', defaultVal: '#6366f1' },
                     { key: 'textColor', label: 'Color del texto', type: 'color', defaultVal: '#ffffff' }
                 ];
             case 'product_grid':
@@ -635,7 +929,7 @@ Storevo.ThemeEditor = {
                             { value: 'OFFERS', label: 'Solo productos en oferta / descuento' },
                             { value: 'CATEGORY', label: 'Productos de una categoría específica' }
                         ]},
-                    { key: 'categoryId', label: 'Categoría específica', type: 'select', options: catOptions },
+                    { key: 'categoryId', label: 'Categoría a mostrar', type: 'select', options: catOptions },
                     { key: 'limit', label: 'Cantidad máxima de productos', type: 'select', options: [
                             { value: '4', label: '4 productos (1 fila)' },
                             { value: '8', label: '8 productos (2 filas)' },
@@ -643,10 +937,41 @@ Storevo.ThemeEditor = {
                         ]},
                     { key: 'showViewAll', label: 'Enlace al catálogo', type: 'checkbox', placeholder: 'Mostrar botón "Ver todo →"', defaultVal: true }
                 ];
+            case 'spotlight_product':
+                return [
+                    { key: 'productId', label: 'Producto a destacar', type: 'select', defaultVal: '', options: spotlightProductOptions },
+                    { key: 'badgeText', label: 'Etiqueta destacada', type: 'text', defaultVal: '🔥 Producto Estrella', placeholder: 'Ej: Lanzamiento de la Semana' },
+                    { key: 'customTitle', label: 'Título personalizado (Opcional)', type: 'text', placeholder: 'Dejar vacío para usar el nombre del producto' },
+                    { key: 'customSubtitle', label: 'Descripción destacada (Opcional)', type: 'textarea', placeholder: 'Dejar vacío para usar la descripción del producto' },
+                    { key: 'imageSide', label: 'Posición de la foto en PC', type: 'select', defaultVal: 'left', options: [
+                            { value: 'left', label: 'Foto a la izquierda / Texto a la derecha' },
+                            { value: 'right', label: 'Texto a la izquierda / Foto a la derecha' }
+                        ]}
+                ];
             case 'featured_categories':
                 return [
                     { key: 'title', label: 'Título de la sección', type: 'text', placeholder: 'Explora por Categoría' },
-                    { key: 'subtitle', label: 'Subtítulo', type: 'text', placeholder: 'Encuentra rápidamente lo que buscas' }
+                    { key: 'subtitle', label: 'Subtítulo', type: 'text', placeholder: 'Encuentra rápidamente lo que buscas' },
+                    { key: 'cardLayout', label: 'Estilo visual de las categorías', type: 'select', defaultVal: 'visual', options: [
+                            { value: 'visual', label: 'Tarjetas Visuales con Foto Automática del Producto' },
+                            { value: 'icon', label: 'Tarjetas Clásicas Limpias con Ícono' },
+                            { value: 'pills', label: 'Botones Modernos Tipo Píldora' }
+                        ]},
+                    { key: 'columns', label: 'Columnas en PC', type: 'select', defaultVal: '4', options: [
+                            { value: '4', label: '4 categorías por fila' },
+                            { value: '3', label: '3 categorías grandes por fila' }
+                        ]}
+                ];
+            case 'countdown_promo':
+                return [
+                    { key: 'badgeText', label: 'Etiqueta superior', type: 'text', defaultVal: '⚡ Oferta por Tiempo Limitado' },
+                    { key: 'title', label: 'Título de la oferta', type: 'text', defaultVal: '¡Aprovecha nuestros descuentos especiales!' },
+                    { key: 'subtitle', label: 'Descripción de la promoción', type: 'textarea' },
+                    { key: 'endDate', label: 'Fecha y hora límite (Opcional: si se deja vacío dura 24h)', type: 'datetime-local' },
+                    { key: 'buttonText', label: 'Texto del botón', type: 'text', defaultVal: 'Ver Ofertas Ahora' },
+                    { key: 'buttonUrl', label: '¿A dónde lleva el botón?', type: 'url', defaultVal: '/catalog' },
+                    { key: 'bgColor', label: 'Color de fondo', type: 'color', defaultVal: '#0f172a' },
+                    { key: 'textColor', label: 'Color del texto', type: 'color', defaultVal: '#ffffff' }
                 ];
             case 'multi_banners':
                 return [
@@ -654,15 +979,15 @@ Storevo.ThemeEditor = {
                     { key: 'card1Badge', label: 'Tarjeta 1: Etiqueta', type: 'text' },
                     { key: 'card1Title', label: 'Tarjeta 1: Título', type: 'text' },
                     { key: 'card1Subtitle', label: 'Tarjeta 1: Subtítulo', type: 'text' },
-                    { key: 'card1ButtonText', label: 'Tarjeta 1: Texto botón', type: 'text' },
-                    { key: 'card1ButtonUrl', label: 'Tarjeta 1: Enlace botón', type: 'text' },
+                    { key: 'card1ButtonText', label: 'Tarjeta 1: Texto del botón', type: 'text' },
+                    { key: 'card1ButtonUrl', label: 'Tarjeta 1: ¿A dónde lleva el botón?', type: 'url', defaultVal: '/catalog' },
                     { key: 'card1BgColor', label: 'Tarjeta 1: Color de fondo', type: 'color', defaultVal: '#1e293b' },
                     { key: 'card2ImageUrl', label: 'Tarjeta 2: Imagen de Fondo', type: 'image' },
                     { key: 'card2Badge', label: 'Tarjeta 2: Etiqueta', type: 'text' },
                     { key: 'card2Title', label: 'Tarjeta 2: Título', type: 'text' },
                     { key: 'card2Subtitle', label: 'Tarjeta 2: Subtítulo', type: 'text' },
-                    { key: 'card2ButtonText', label: 'Tarjeta 2: Texto botón', type: 'text' },
-                    { key: 'card2ButtonUrl', label: 'Tarjeta 2: Enlace botón', type: 'text' },
+                    { key: 'card2ButtonText', label: 'Tarjeta 2: Texto del botón', type: 'text' },
+                    { key: 'card2ButtonUrl', label: 'Tarjeta 2: ¿A dónde lleva el botón?', type: 'url', defaultVal: '/catalog' },
                     { key: 'card2BgColor', label: 'Tarjeta 2: Color de fondo', type: 'color', defaultVal: '#4f46e5' }
                 ];
             case 'promo_banner':
@@ -672,16 +997,50 @@ Storevo.ThemeEditor = {
                     { key: 'title', label: 'Título de la promoción', type: 'text', placeholder: 'Promoción Especial' },
                     { key: 'subtitle', label: 'Descripción', type: 'textarea', placeholder: 'Detalles de tu promoción...' },
                     { key: 'buttonText', label: 'Texto del botón', type: 'text', placeholder: 'Comprar ahora' },
-                    { key: 'buttonUrl', label: 'Enlace del botón', type: 'text', placeholder: '/catalog' },
+                    { key: 'buttonUrl', label: '¿A dónde lleva el botón?', type: 'url', defaultVal: '/catalog' },
                     { key: 'bgColor', label: 'Color de fondo del bloque', type: 'color', defaultVal: '#0f172a' },
                     { key: 'textColor', label: 'Color del texto', type: 'color', defaultVal: '#ffffff' }
                 ];
+            case 'testimonials':
+                return [
+                    { key: 'title', label: 'Título de la sección', type: 'text', defaultVal: 'Lo que dicen nuestros clientes' },
+                    { key: 'subtitle', label: 'Subtítulo', type: 'text', defaultVal: 'Compradores reales que ya recibieron su pedido' },
+                    { key: 't1Name', label: 'Cliente 1: Nombre', type: 'text' },
+                    { key: 't1City', label: 'Cliente 1: Ciudad', type: 'text' },
+                    { key: 't1Text', label: 'Cliente 1: Comentario', type: 'textarea' },
+                    { key: 't2Name', label: 'Cliente 2: Nombre', type: 'text' },
+                    { key: 't2City', label: 'Cliente 2: Ciudad', type: 'text' },
+                    { key: 't2Text', label: 'Cliente 2: Comentario', type: 'textarea' },
+                    { key: 't3Name', label: 'Cliente 3: Nombre', type: 'text' },
+                    { key: 't3City', label: 'Cliente 3: Ciudad', type: 'text' },
+                    { key: 't3Text', label: 'Cliente 3: Comentario', type: 'textarea' }
+                ];
+            case 'how_to_buy':
+                return [
+                    { key: 'title', label: 'Título de la sección', type: 'text', defaultVal: '¿Cómo comprar en nuestra tienda?' },
+                    { key: 'subtitle', label: 'Subtítulo', type: 'text', defaultVal: 'Realiza tu pedido fácil, rápido y 100% seguro' },
+                    { key: 'step1Title', label: 'Paso 1: Título', type: 'text' },
+                    { key: 'step1Text', label: 'Paso 1: Descripción', type: 'textarea' },
+                    { key: 'step2Title', label: 'Paso 2: Título', type: 'text' },
+                    { key: 'step2Text', label: 'Paso 2: Descripción', type: 'textarea' },
+                    { key: 'step3Title', label: 'Paso 3: Título', type: 'text' },
+                    { key: 'step3Text', label: 'Paso 3: Descripción', type: 'textarea' },
+                    { key: 'showPaymentBadges', label: 'Sello de Pagos y Envíos', type: 'checkbox', placeholder: 'Mostrar íconos de pago seguro (PSE, Nequi, Tarjetas, WhatsApp)', defaultVal: true }
+                ];
             case 'trust_badges':
                 return [
+                    { key: 'badgeStyle', label: 'Diseño de la Franja', type: 'select', defaultVal: 'cards', options: [
+                            { value: 'cards', label: 'Tarjetas Blancas con Sombra' },
+                            { value: 'minimal', label: 'Minimalista Integrado al Fondo' },
+                            { value: 'secondary', label: 'Franja Destacada en Color Secundario' }
+                        ]},
+                    { key: 'item1Icon', label: 'Beneficio 1: Ícono', type: 'select', defaultVal: 'shield', options: trustIconOptions },
                     { key: 'item1Title', label: 'Beneficio 1: Título', type: 'text' },
                     { key: 'item1Text', label: 'Beneficio 1: Descripción', type: 'text' },
+                    { key: 'item2Icon', label: 'Beneficio 2: Ícono', type: 'select', defaultVal: 'truck', options: trustIconOptions },
                     { key: 'item2Title', label: 'Beneficio 2: Título', type: 'text' },
                     { key: 'item2Text', label: 'Beneficio 2: Descripción', type: 'text' },
+                    { key: 'item3Icon', label: 'Beneficio 3: Ícono', type: 'select', defaultVal: 'chat', options: trustIconOptions },
                     { key: 'item3Title', label: 'Beneficio 3: Título', type: 'text' },
                     { key: 'item3Text', label: 'Beneficio 3: Descripción', type: 'text' }
                 ];
@@ -694,7 +1053,11 @@ Storevo.ThemeEditor = {
                     { key: 'q2', label: 'Pregunta 2', type: 'text' },
                     { key: 'a2', label: 'Respuesta 2', type: 'textarea' },
                     { key: 'q3', label: 'Pregunta 3', type: 'text' },
-                    { key: 'a3', label: 'Respuesta 3', type: 'textarea' }
+                    { key: 'a3', label: 'Respuesta 3', type: 'textarea' },
+                    { key: 'q4', label: 'Pregunta 4 (Opcional)', type: 'text', placeholder: 'Dejar vacío si no se usa' },
+                    { key: 'a4', label: 'Respuesta 4 (Opcional)', type: 'textarea' },
+                    { key: 'q5', label: 'Pregunta 5 (Opcional)', type: 'text', placeholder: 'Dejar vacío si no se usa' },
+                    { key: 'a5', label: 'Respuesta 5 (Opcional)', type: 'textarea' }
                 ];
             case 'whatsapp_cta':
                 return [
@@ -745,274 +1108,130 @@ Storevo.ThemeEditor = {
         bindColor('style-bg-color', 'style-bg-color-hex', 'backgroundColor', '#f8fafc');
         bindColor('style-text-color', 'style-text-color-hex', 'textColor', '#0f172a');
 
-        this.initTypographyInputs();
-        this.initNavbarStyleInputs();
-        this.initShapeInputs();
-        this.initStyleAccordions();
-    },
-    SHAPE_DEFAULTS: {
-        borderRadius: '1rem',
-        buttonRadius: 'classic',
-        cardStyle: 'elevated'
-    },
-
-    initShapeInputs: function() {
-        const gs = this.theme.globalStyles;
-        const defaults = this.SHAPE_DEFAULTS;
-
-        const radiusSelect = document.getElementById('style-border-radius');
-        const buttonSelect = document.getElementById('style-button-radius');
-        const cardButtons = document.querySelectorAll('#style-card-style [data-value]');
-        const resetBtn = document.getElementById('style-shape-reset');
-
-        const commit = () => {
-            this.pushLiveStylesToIframe();
-            this.scheduleAutoSave(false);
-        };
-
-        const syncUi = () => {
-            if (radiusSelect) radiusSelect.value = gs.borderRadius || defaults.borderRadius;
-            if (buttonSelect) buttonSelect.value = gs.buttonRadius || defaults.buttonRadius;
-
-            const currentCard = gs.cardStyle || defaults.cardStyle;
-            cardButtons.forEach(btn => {
-                const active = btn.dataset.value === currentCard;
-                btn.classList.toggle('is-selected', active);
-                btn.setAttribute('aria-pressed', active ? 'true' : 'false');
-            });
-        };
-
-        if (radiusSelect) {
-            radiusSelect.onchange = () => {
-                gs.borderRadius = radiusSelect.value;
-                commit();
-            };
-        }
-
-        if (buttonSelect) {
-            buttonSelect.onchange = () => {
-                gs.buttonRadius = buttonSelect.value;
-                commit();
-            };
-        }
-
-        cardButtons.forEach(btn => {
-            btn.onclick = () => {
-                gs.cardStyle = btn.dataset.value;
-                syncUi();
-                commit();
-            };
-        });
-
-        if (resetBtn) {
-            resetBtn.onclick = () => {
-                Object.assign(gs, defaults);
-                syncUi();
-                commit();
-            };
-        }
-
-        syncUi();
-    },
-
-    /**
-     * Secciones recogibles del panel de Estilos (acordeón):
-     * al abrir una, las demás se cierran.
-     */
-    initStyleAccordions: function() {
-        const items = document.querySelectorAll('#panel-global-styles details.style-acc');
-        items.forEach(item => {
-            item.ontoggle = () => {
-                if (!item.open) return;
-                items.forEach(other => {
-                    if (other !== item) other.open = false;
-                });
-            };
-        });
-    },
-    TYPOGRAPHY_DEFAULTS: {
-        headingFont: 'Inter',
-        bodyFont: 'Inter',
-        headingTransform: 'none',
-        fontScale: 'standard'
-    },
-
-    initTypographyInputs: function() {
-        const gs = this.theme.globalStyles;
-        const defaults = this.TYPOGRAPHY_DEFAULTS;
-
-        const headingSelect = document.getElementById('style-heading-font');
-        const bodySelect = document.getElementById('style-body-font');
-        const transformSelect = document.getElementById('style-heading-transform');
-        const scaleSelect = document.getElementById('style-font-scale');
-        const pairs = document.querySelectorAll('#style-font-pairs [data-heading]');
-        const resetBtn = document.getElementById('style-typography-reset');
-
-        const commit = () => {
-            this.pushLiveStylesToIframe();
-            this.scheduleAutoSave(false);
-        };
-
-        const syncUi = () => {
-            const heading = gs.headingFont || defaults.headingFont;
-            const body = gs.bodyFont || defaults.bodyFont;
-
-            if (headingSelect) headingSelect.value = heading;
-            if (bodySelect) bodySelect.value = body;
-            if (transformSelect) transformSelect.value = gs.headingTransform || defaults.headingTransform;
-            if (scaleSelect) scaleSelect.value = gs.fontScale || defaults.fontScale;
-
-            pairs.forEach(pair => {
-                const active = pair.dataset.heading === heading && pair.dataset.body === body;
-                pair.classList.toggle('is-selected', active);
-                pair.setAttribute('aria-pressed', active ? 'true' : 'false');
-            });
-        };
-
-        pairs.forEach(pair => {
-            pair.onclick = () => {
-                gs.headingFont = pair.dataset.heading;
-                gs.bodyFont = pair.dataset.body;
-                syncUi();
-                commit();
-            };
-        });
-
-        if (headingSelect) {
-            headingSelect.onchange = () => {
-                gs.headingFont = headingSelect.value;
-                syncUi();
-                commit();
-            };
-        }
-
-        if (bodySelect) {
-            bodySelect.onchange = () => {
-                gs.bodyFont = bodySelect.value;
-                syncUi();
-                commit();
-            };
-        }
-
-        if (transformSelect) {
-            transformSelect.onchange = () => {
-                gs.headingTransform = transformSelect.value;
-                commit();
-            };
-        }
-
-        if (scaleSelect) {
-            scaleSelect.onchange = () => {
-                gs.fontScale = scaleSelect.value;
-                commit();
-            };
-        }
-
-        if (resetBtn) {
-            resetBtn.onclick = () => {
-                Object.assign(gs, defaults);
-                syncUi();
-                commit();
-            };
-        }
-
-        syncUi();
-    },
-    NAVBAR_DEFAULTS: {
-        navbarLayout: 'classic',
-        navbarStyle: 'light',
-        navbarLinkFormat: 'normal',
-        navbarLinkHover: 'color',
-        navbarSticky: true
-    },
-
-    initNavbarStyleInputs: function() {
-        const gs = this.theme.globalStyles;
-        const defaults = this.NAVBAR_DEFAULTS;
-
-        const cards = document.querySelectorAll('#style-navbar-layout [data-value]');
-        const selects = [
-            { el: document.getElementById('style-navbar-style'), prop: 'navbarStyle' },
-            { el: document.getElementById('style-navbar-link-format'), prop: 'navbarLinkFormat' },
-            { el: document.getElementById('style-navbar-link-hover'), prop: 'navbarLinkHover' }
-        ];
-        const stickySelect = document.getElementById('style-navbar-sticky');
-        const resetBtn = document.getElementById('style-nav-reset');
-
-        const commit = () => {
-            this.pushLiveStylesToIframe();
-            this.scheduleAutoSave(false);
-        };
-
-        const syncUi = () => {
-            const layout = gs.navbarLayout || defaults.navbarLayout;
-            cards.forEach(card => {
-                const active = card.dataset.value === layout;
-                card.classList.toggle('is-selected', active);
-                card.setAttribute('aria-pressed', active ? 'true' : 'false');
-            });
-            selects.forEach(({ el, prop }) => {
-                if (el) el.value = gs[prop] || defaults[prop];
-            });
-            if (stickySelect) {
-                stickySelect.value = gs.navbarSticky === false ? 'false' : 'true';
-            }
-        };
-
-        cards.forEach(card => {
-            card.onclick = () => {
-                gs.navbarLayout = card.dataset.value;
-                syncUi();
-                commit();
-            };
-        });
-
-        selects.forEach(({ el, prop }) => {
+        const bindSelect = (id, prop, fallback, reloadNeeded = false) => {
+            const el = document.getElementById(id);
             if (!el) return;
+            el.value = gs[prop] !== undefined && gs[prop] !== null ? String(gs[prop]) : fallback;
             el.onchange = () => {
-                gs[prop] = el.value;
-                commit();
+                gs[prop] = el.value === 'true' ? true : (el.value === 'false' ? false : el.value);
+                this.syncFontPairHighlight();
+                this.pushLiveStylesToIframe();
+                this.scheduleAutoSave(reloadNeeded);
             };
+        };
+
+        bindSelect('style-navbar-style', 'navbarStyle', 'light');
+        bindSelect('style-navbar-link-format', 'navbarLinkFormat', 'normal');
+        bindSelect('style-navbar-link-hover', 'navbarLinkHover', 'color');
+        bindSelect('style-navbar-sticky', 'navbarSticky', 'true');
+
+        bindSelect('style-heading-font', 'headingFont', 'Inter', true);
+        bindSelect('style-body-font', 'bodyFont', 'Inter', true);
+        bindSelect('style-heading-transform', 'headingTransform', 'none');
+        bindSelect('style-font-scale', 'fontScale', 'standard');
+
+        bindSelect('style-border-radius', 'borderRadius', '1rem');
+        bindSelect('style-button-radius', 'buttonRadius', 'classic');
+
+        const navLayoutContainer = document.getElementById('style-navbar-layout');
+        if (navLayoutContainer) {
+            const currentNavLayout = gs.navbarLayout || 'classic';
+            navLayoutContainer.querySelectorAll('.nav-layout-opt').forEach(btn => {
+                const val = btn.getAttribute('data-value');
+                btn.classList.toggle('is-selected', val === currentNavLayout);
+                btn.onclick = () => {
+                    gs.navbarLayout = val;
+                    navLayoutContainer.querySelectorAll('.nav-layout-opt').forEach(b => b.classList.toggle('is-selected', b === btn));
+                    this.pushLiveStylesToIframe();
+                    this.scheduleAutoSave(true);
+                };
+            });
+        }
+
+        const cardStyleContainer = document.getElementById('style-card-style');
+        if (cardStyleContainer) {
+            const currentCardStyle = gs.cardStyle || 'elevated';
+            cardStyleContainer.querySelectorAll('.card-style-opt').forEach(btn => {
+                const val = btn.getAttribute('data-value');
+                btn.classList.toggle('is-selected', val === currentCardStyle);
+                btn.onclick = () => {
+                    gs.cardStyle = val;
+                    cardStyleContainer.querySelectorAll('.card-style-opt').forEach(b => b.classList.toggle('is-selected', b === btn));
+                    this.pushLiveStylesToIframe();
+                    this.scheduleAutoSave(false);
+                };
+            });
+        }
+
+        const fontPairsContainer = document.getElementById('style-font-pairs');
+        if (fontPairsContainer) {
+            fontPairsContainer.querySelectorAll('.font-pair-opt').forEach(btn => {
+                btn.onclick = () => {
+                    const h = btn.getAttribute('data-heading');
+                    const b = btn.getAttribute('data-body');
+                    gs.headingFont = h;
+                    gs.bodyFont = b;
+                    const hSel = document.getElementById('style-heading-font');
+                    const bSel = document.getElementById('style-body-font');
+                    if (hSel) hSel.value = h;
+                    if (bSel) bSel.value = b;
+                    this.syncFontPairHighlight();
+                    this.pushLiveStylesToIframe();
+                    this.scheduleAutoSave(true);
+                };
+            });
+            this.syncFontPairHighlight();
+        }
+
+        const navReset = document.getElementById('style-nav-reset');
+        if (navReset) {
+            navReset.onclick = () => {
+                gs.navbarLayout = 'classic';
+                gs.navbarStyle = 'light';
+                gs.navbarLinkFormat = 'normal';
+                gs.navbarLinkHover = 'color';
+                gs.navbarSticky = true;
+                this.initGlobalStylesInputs();
+                this.pushLiveStylesToIframe();
+                this.scheduleAutoSave(true);
+            };
+        }
+
+        const typoReset = document.getElementById('style-typography-reset');
+        if (typoReset) {
+            typoReset.onclick = () => {
+                gs.headingFont = 'Inter';
+                gs.bodyFont = 'Inter';
+                gs.headingTransform = 'none';
+                gs.fontScale = 'standard';
+                this.initGlobalStylesInputs();
+                this.pushLiveStylesToIframe();
+                this.scheduleAutoSave(true);
+            };
+        }
+
+        const shapeReset = document.getElementById('style-shape-reset');
+        if (shapeReset) {
+            shapeReset.onclick = () => {
+                gs.borderRadius = '1rem';
+                gs.buttonRadius = 'classic';
+                gs.cardStyle = 'elevated';
+                this.initGlobalStylesInputs();
+                this.pushLiveStylesToIframe();
+                this.scheduleAutoSave(false);
+            };
+        }
+    },
+
+    syncFontPairHighlight: function() {
+        const gs = this.theme.globalStyles || {};
+        const fontPairsContainer = document.getElementById('style-font-pairs');
+        if (!fontPairsContainer) return;
+        fontPairsContainer.querySelectorAll('.font-pair-opt').forEach(btn => {
+            const match = btn.getAttribute('data-heading') === (gs.headingFont || 'Inter')
+                && btn.getAttribute('data-body') === (gs.bodyFont || 'Inter');
+            btn.classList.toggle('is-selected', match);
         });
-
-        if (stickySelect) {
-            stickySelect.onchange = () => {
-                gs.navbarSticky = stickySelect.value === 'true';
-                commit();
-            };
-        }
-
-        if (resetBtn) {
-            resetBtn.onclick = () => {
-                Object.assign(gs, defaults);
-                syncUi();
-                commit();
-            };
-        }
-
-        syncUi();
-    },
-
-    pushLiveStylesToIframe: function() {
-        const iframe = document.getElementById('storefront-preview-iframe');
-        if (!iframe || !iframe.contentWindow) return;
-        try {
-            iframe.contentWindow.postMessage({
-                type: 'storevo:live-styles',
-                styles: this.theme.globalStyles
-            }, window.location.origin);
-        } catch (e) {}
-    },
-
-    highlightSectionInIframe: function(sectionId) {
-        const iframe = document.getElementById('storefront-preview-iframe');
-        if (!iframe || !iframe.contentWindow) return;
-        try {
-            iframe.contentWindow.postMessage({
-                type: 'storevo:highlight-section',
-                sectionId: sectionId
-            }, window.location.origin);
-        } catch (e) {}
     },
 
     getPresetsDefinitions: function() {
@@ -1022,7 +1241,7 @@ Storevo.ThemeEditor = {
                 id: 'editorial_minimal',
                 name: 'Moda Editorial Minimalista',
                 tag: 'Ideal para Ropa y Calzado',
-                colors: ['#18181b', '#27272a', '#f8fafc'],
+                colors: ['#18181b', '#f8fafc', '#ffffff'],
                 description: 'Tipografía editorial elegante (Playfair Display), tonos sobrios en negro carbón y estructura limpia enfocada en fotografía.',
                 config: {
                     globalStyles: {
@@ -1041,15 +1260,19 @@ Storevo.ThemeEditor = {
                         },
                         {
                             id: 'sec_hero_ed', type: 'hero_banner', enabled: true,
-                            settings: { badgeText: 'Colección Exclusiva', title: name, subtitle: 'Prendas y diseños pensados para destacar en cada ocasión.', buttonText: 'Explorar Colección', buttonUrl: '/catalog', secondaryButtonText: '', secondaryButtonUrl: '', imageUrl: '', overlayOpacity: 45, bgColor: '#18181b', textColor: '#ffffff', alignment: 'center' }
+                            settings: { heroLayout: 'classic', badgeText: 'Colección Exclusiva', title: name, subtitle: 'Prendas y diseños pensados para destacar en cada ocasión.', buttonText: 'Explorar Colección', buttonUrl: '/catalog', secondaryButtonText: '', secondaryButtonUrl: '/catalog', imageUrl: '', overlayOpacity: 45, bgColor: '#18181b', textColor: '#ffffff', alignment: 'center' }
                         },
                         {
                             id: 'sec_cats_ed', type: 'featured_categories', enabled: true,
-                            settings: { title: 'Categorías', subtitle: 'Explora nuestras líneas principales' }
+                            settings: { title: 'Categorías', subtitle: 'Explora nuestras líneas principales', cardLayout: 'visual', columns: '4' }
                         },
                         {
                             id: 'sec_grid_ed', type: 'product_grid', enabled: true,
                             settings: { title: 'Nuevos Ingresos', subtitle: 'Recién llegados a nuestro catálogo', source: 'NEWEST', categoryId: '', limit: 8, showViewAll: true }
+                        },
+                        {
+                            id: 'sec_test_ed', type: 'testimonials', enabled: true,
+                            settings: { title: 'Clientes Felices', subtitle: 'Opiniones reales de nuestras compradoras', t1Name: 'Camila Mejía', t1City: 'Medellín', t1Text: 'La tela y la horma son espectaculares, llegó en 2 días a mi casa.', t2Name: 'Daniela Ríos', t2City: 'Bogotá D.C.', t2Text: 'Me encantó la atención y lo fácil que fue hacer el pedido.', t3Name: 'Sofía Vargas', t3City: 'Barranquilla', t3Text: 'Superó mis expectativas, 100% recomendados.' }
                         },
                         {
                             id: 'sec_faq_ed', type: 'faq_accordion', enabled: true,
@@ -1063,7 +1286,7 @@ Storevo.ThemeEditor = {
                 name: 'Urbano / Tech Audaz',
                 tag: 'Ideal para Streetwear y Gadgets',
                 colors: ['#4f46e5', '#0f172a', '#f1f5f9'],
-                description: 'Fuente geométrica moderna (Montserrat), alto impacto visual con mosaico doble de colecciones y sección de ofertas.',
+                description: 'Fuente geométrica moderna (Montserrat), alto impacto visual con producto estrella, contador de oferta y mosaico doble.',
                 config: {
                     globalStyles: {
                         primaryColor: '#4f46e5',
@@ -1081,7 +1304,11 @@ Storevo.ThemeEditor = {
                         },
                         {
                             id: 'sec_hero_ut', type: 'hero_banner', enabled: true,
-                            settings: { badgeText: 'Tendencia 2026', title: 'Lleva tu estilo al siguiente nivel con ' + name, subtitle: 'Referencias seleccionadas con disponibilidad inmediata y despacho rápido.', buttonText: 'Comprar Ahora', buttonUrl: '/catalog', secondaryButtonText: 'Ver Todo', secondaryButtonUrl: '/catalog', imageUrl: '', overlayOpacity: 55, bgColor: '#0f172a', textColor: '#ffffff', alignment: 'left' }
+                            settings: { heroLayout: 'split', badgeText: 'Tendencia 2026', title: 'Lleva tu estilo al siguiente nivel con ' + name, subtitle: 'Referencias seleccionadas con disponibilidad inmediata y despacho rápido.', buttonText: 'Comprar Ahora', buttonUrl: '/catalog', secondaryButtonText: 'Hablar por WhatsApp', secondaryButtonUrl: '__whatsapp__', imageUrl: '', overlayOpacity: 55, bgColor: '#0f172a', textColor: '#ffffff', alignment: 'left' }
+                        },
+                        {
+                            id: 'sec_spot_ut', type: 'spotlight_product', enabled: true,
+                            settings: { productId: '', badgeText: '🔥 Lanzamiento Destacado', customTitle: '', customSubtitle: '', imageSide: 'left' }
                         },
                         {
                             id: 'sec_multi_ut', type: 'multi_banners', enabled: true,
@@ -1093,7 +1320,7 @@ Storevo.ThemeEditor = {
                         },
                         {
                             id: 'sec_trust_ut', type: 'trust_badges', enabled: true,
-                            settings: { item1Title: 'Pagos 100% Seguros', item1Text: 'Transacciones protegidas en línea o vía WhatsApp.', item2Title: 'Despacho Ágil', item2Text: 'Enviamos con guía de rastreo a toda Colombia.', item3Title: 'Garantía Real', item3Text: 'Respaldo directo en todas tus compras.' }
+                            settings: { badgeStyle: 'cards', item1Icon: 'shield', item1Title: 'Pagos 100% Seguros', item1Text: 'Transacciones protegidas en línea o vía WhatsApp.', item2Icon: 'truck', item2Title: 'Despacho Ágil', item2Text: 'Enviamos con guía de rastreo a toda Colombia.', item3Icon: 'star', item3Title: 'Garantía Real', item3Text: 'Respaldo directo en todas tus compras.' }
                         }
                     ]
                 }
@@ -1103,7 +1330,7 @@ Storevo.ThemeEditor = {
                 name: 'Catálogo Express WhatsApp',
                 tag: 'Máxima velocidad de venta',
                 colors: ['#059669', '#0f172a', '#f8fafc'],
-                description: 'Diseñada para ir directo al grano: muestra tus productos arriba inmediatamente y cierra ventas con el bloque de WhatsApp.',
+                description: 'Diseñada para ir directo al grano: muestra tus productos arriba, explica cómo comprar en 3 pasos y cierra ventas por WhatsApp.',
                 config: {
                     globalStyles: {
                         primaryColor: '#059669',
@@ -1124,12 +1351,12 @@ Storevo.ThemeEditor = {
                             settings: { title: 'Catálogo Disponible en ' + name, subtitle: 'Elige tus productos favoritos y agrégalos a la bolsa', source: 'NEWEST', categoryId: '', limit: 12, showViewAll: true }
                         },
                         {
-                            id: 'sec_cta_wa', type: 'whatsapp_cta', enabled: true,
-                            settings: { title: '¿Prefieres atención personalizada?', subtitle: 'Escríbenos directamente a nuestro WhatsApp para confirmar disponibilidad, tallas y tiempos de entrega.', buttonText: 'Chatear por WhatsApp' }
+                            id: 'sec_steps_wa', type: 'how_to_buy', enabled: true,
+                            settings: { title: '¿Cómo pedir en ' + name + '?', subtitle: 'Sin complicaciones y en menos de 2 minutos', step1Title: 'Agrega a tu bolsa', step1Text: 'Elige tus productos y opciones favoritas en el catálogo.', step2Title: 'Ingresa tus datos de entrega', step2Text: 'Escribe tu nombre, ciudad y dirección para el despacho.', step3Title: 'Confirma en línea o WhatsApp', step3Text: 'Paga seguro o envíanos el resumen automático por WhatsApp.', showPaymentBadges: true }
                         },
                         {
-                            id: 'sec_trust_wa', type: 'trust_badges', enabled: true,
-                            settings: { item1Title: 'Atención Inmediata', item1Text: 'Confirmamos tu pedido directamente contigo.', item2Title: 'Envíos Seguros', item2Text: 'Despachos confiables a tu ciudad o municipio.', item3Title: 'Calidad Garantizada', item3Text: 'Productos revisados antes de cada despacho.' }
+                            id: 'sec_cta_wa', type: 'whatsapp_cta', enabled: true,
+                            settings: { title: '¿Prefieres atención personalizada?', subtitle: 'Escríbenos directamente a nuestro WhatsApp para confirmar disponibilidad, tallas y tiempos de entrega.', buttonText: 'Chatear por WhatsApp' }
                         }
                     ]
                 }
@@ -1139,13 +1366,13 @@ Storevo.ThemeEditor = {
                 name: 'Boutique Cálida & Estilo',
                 tag: 'Ideal para Accesorios, Belleza y Hogar',
                 colors: ['#b45309', '#1c1917', '#fafaf9'],
-                description: 'Tipografía clásica (Lora) combinada con tonos cálidos dorados/terracota, historia de marca y vitrina curada.',
+                description: 'Tipografía clásica (Lora) combinada con tonos cálidos dorados/terracota, historia de marca, testimonios y vitrina curada.',
                 config: {
                     globalStyles: {
                         primaryColor: '#b45309',
                         secondaryColor: '#1c1917',
-                        backgroundColor: '#fafaf9',
-                        textColor: '#1c1917',
+                        backgroundColor: '#f8fafc',
+                        textColor: '#0f172a',
                         headingFont: 'Lora',
                         bodyFont: 'Inter',
                         borderRadius: '1.5rem'
@@ -1153,11 +1380,15 @@ Storevo.ThemeEditor = {
                     sections: [
                         {
                             id: 'sec_hero_wb', type: 'hero_banner', enabled: true,
-                            settings: { badgeText: 'Bienvenidos', title: name, subtitle: 'Detalles únicos seleccionados con dedicación para ti.', buttonText: 'Ver Catálogo', buttonUrl: '/catalog', secondaryButtonText: '', secondaryButtonUrl: '', imageUrl: '', overlayOpacity: 45, bgColor: '#b45309', textColor: '#ffffff', alignment: 'center' }
+                            settings: { heroLayout: 'classic', badgeText: 'Bienvenidos', title: name, subtitle: 'Detalles únicos seleccionados con dedicación para ti.', buttonText: 'Ver Catálogo', buttonUrl: '/catalog', secondaryButtonText: '', secondaryButtonUrl: '/catalog', imageUrl: '', overlayOpacity: 45, bgColor: '#b45309', textColor: '#ffffff', alignment: 'center' }
                         },
                         {
                             id: 'sec_grid_wb', type: 'product_grid', enabled: true,
                             settings: { title: 'Nuestros Favoritos', subtitle: 'Descubre las piezas más pedidas', source: 'NEWEST', categoryId: '', limit: 8, showViewAll: true }
+                        },
+                        {
+                            id: 'sec_test_wb', type: 'testimonials', enabled: true,
+                            settings: { title: 'Quienes ya compraron en ' + name, subtitle: 'Experiencias reales de nuestros clientes', t1Name: 'Mariana López', t1City: 'Bogotá D.C.', t1Text: 'Cada detalle es hermoso, se nota el amor que le ponen a cada pedido.', t2Name: 'Andrea Pineda', t2City: 'Bucaramanga', t2Text: 'Compré para un regalo y quedaron fascinados. El envío fue súper puntual.', t3Name: 'Natalia Restrepo', t3City: 'Pereira', t3Text: 'Atención 10/10 por WhatsApp y los productos son idénticos a las fotos.' }
                         },
                         {
                             id: 'sec_rich_wb', type: 'rich_text', enabled: true,
@@ -1211,9 +1442,9 @@ Storevo.ThemeEditor = {
     applyPreset: function(preset) {
         this.theme = JSON.parse(JSON.stringify(preset.config));
         this.activeSectionId = null;
+        this.markUnpublishedChanges(true);
         this.renderSectionsList();
         this.initGlobalStylesInputs();
-        this.markUnpublished(true);
         this.saveDraft(false, true);
         if (Storevo.UI && Storevo.UI.Toast) {
             Storevo.UI.Toast.show(`Plantilla "${preset.name}" aplicada en vista previa`, 'success');
@@ -1271,18 +1502,13 @@ Storevo.ThemeEditor = {
         this.scheduleAutoSave(true);
     },
 
-    markUnpublished: function(hasChanges) {
-        const badge = document.getElementById('unpublished-badge');
-        if (badge) badge.classList.toggle('hidden', !hasChanges);
-    },
-
     scheduleAutoSave: function(reloadIframe = true) {
-        this.markUnpublished(true);
+        this.markUnpublishedChanges(true);
         this.setSyncStatus('pending', 'Guardando borrador...');
         clearTimeout(this.autoSaveTimer);
         this.autoSaveTimer = setTimeout(() => {
             this.saveDraft(false, reloadIframe);
-        }, 600);
+        }, 650);
     },
 
     saveDraft: function(showToast = false, reloadIframe = true) {
@@ -1300,10 +1526,8 @@ Storevo.ThemeEditor = {
                 if (data.success) {
                     if (reloadIframe) {
                         this.reloadPreviewIframe();
-                    } else if (overlay) {
-                        overlay.classList.add('hidden');
                     }
-                    this.setSyncStatus('synced', 'Borrador sincronizado');
+                    this.setSyncStatus('synced', 'Borrador guardado');
                     if (showToast && Storevo.UI && Storevo.UI.Toast) {
                         Storevo.UI.Toast.show(data.message, 'success');
                     }
@@ -1333,7 +1557,7 @@ Storevo.ThemeEditor = {
             .then(r => r.json())
             .then(data => {
                 if (data.success) {
-                    this.markUnpublished(false);
+                    this.markUnpublishedChanges(false);
                     this.reloadPreviewIframe();
                     this.setSyncStatus('synced', '¡Publicado en tienda!');
                     if (Storevo.UI && Storevo.UI.Toast) {
@@ -1354,31 +1578,13 @@ Storevo.ThemeEditor = {
     },
 
     discardDraft: function() {
-        fetch(`/dashboard/${this.slug}/template/discard-draft`, { method: 'POST' })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success && data.theme) {
-                    this.theme = data.theme;
-                    this.markUnpublished(false);
-                    this.closeInspector();
-                    this.renderSectionsList();
-                    this.initGlobalStylesInputs();
-                    this.reloadPreviewIframe();
-                    if (Storevo.UI && Storevo.UI.Toast) {
-                        Storevo.UI.Toast.show(data.message, 'success');
-                    }
-                }
-            });
-    },
-
-    resetTheme: function() {
-        const executeReset = () => {
-            fetch(`/dashboard/${this.slug}/template/reset`, { method: 'POST' })
+        const executeDiscard = () => {
+            fetch(`/dashboard/${this.slug}/template/discard-draft`, { method: 'POST' })
                 .then(r => r.json())
                 .then(data => {
                     if (data.success && data.theme) {
                         this.theme = data.theme;
-                        this.markUnpublished(true);
+                        this.markUnpublishedChanges(false);
                         this.closeInspector();
                         this.renderSectionsList();
                         this.initGlobalStylesInputs();
@@ -1391,8 +1597,34 @@ Storevo.ThemeEditor = {
         };
 
         if (Storevo.UI && Storevo.UI.Modal && typeof Storevo.UI.Modal.showConfirm === 'function') {
-            Storevo.UI.Modal.showConfirm('¿Restablecer el borrador a la estructura inicial de fábrica?', executeReset);
-        } else if (confirm('¿Restablecer el borrador a la estructura inicial de fábrica?')) {
+            Storevo.UI.Modal.showConfirm('¿Descartar los cambios actuales del borrador y volver a tu diseño publicado?', executeDiscard);
+        } else if (confirm('¿Descartar los cambios actuales del borrador y volver a tu diseño publicado?')) {
+            executeDiscard();
+        }
+    },
+
+    resetTheme: function() {
+        const executeReset = () => {
+            fetch(`/dashboard/${this.slug}/template/reset`, { method: 'POST' })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success && data.theme) {
+                        this.theme = data.theme;
+                        this.markUnpublishedChanges(true);
+                        this.closeInspector();
+                        this.renderSectionsList();
+                        this.initGlobalStylesInputs();
+                        this.reloadPreviewIframe();
+                        if (Storevo.UI && Storevo.UI.Toast) {
+                            Storevo.UI.Toast.show(data.message, 'success');
+                        }
+                    }
+                });
+        };
+
+        if (Storevo.UI && Storevo.UI.Modal && typeof Storevo.UI.Modal.showConfirm === 'function') {
+            Storevo.UI.Modal.showConfirm('¿Restablecer el borrador a las secciones iniciales de fábrica?', executeReset);
+        } else if (confirm('¿Restablecer el borrador a las secciones iniciales de fábrica?')) {
             executeReset();
         }
     },
@@ -1411,6 +1643,7 @@ Storevo.ThemeEditor = {
 
         const onLoadHandler = () => {
             if (overlay) overlay.classList.add('hidden');
+            this.syncProductsFromIframe();
             try {
                 if (this.activeSectionId) {
                     this.highlightSectionInIframe(this.activeSectionId);
@@ -1423,6 +1656,21 @@ Storevo.ThemeEditor = {
 
         iframe.addEventListener('load', onLoadHandler);
         iframe.src = `${this.previewUrl}&t=${Date.now()}`;
+    },
+
+    highlightSectionInIframe: function(sectionId) {
+        const iframe = document.getElementById('storefront-preview-iframe');
+        if (!iframe || !iframe.contentWindow) return;
+        try {
+            iframe.contentWindow.postMessage({
+                type: 'storevo:highlight-section',
+                sectionId: sectionId
+            }, window.location.origin);
+        } catch (e) {}
+    },
+
+    scrollToSectionInIframe: function(sectionId) {
+        this.highlightSectionInIframe(sectionId);
     },
 
     setSyncStatus: function(state, text) {
