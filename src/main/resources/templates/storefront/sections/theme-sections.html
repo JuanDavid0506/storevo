@@ -15,16 +15,14 @@
               'countdown_promo': 'Oferta con Contador',
               'promo_banner': 'Banner Promocional',
               'multi_banners': 'Mosaico Doble',
-              'testimonials': 'Testimonios de Clientes',
+              'testimonials': 'Reseñas Verificadas',
               'how_to_buy': 'Cómo Comprar en 3 Pasos',
               'trust_badges': 'Franja de Confianza',
               'rich_text': 'Sobre Nosotros',
               'faq_accordion': 'Preguntas Frecuentes',
               'whatsapp_cta': 'Asesoría WhatsApp'
           } }">
-
-    <!-- Puente ligero de productos para que el Editor Visual liste los productos reales en el selector de Producto Estrella -->
-    <div th:if="${isDraftPreview and products != null}" id="storevo-catalog-products-bridge" class="hidden">
+    <div th:if="${(isDraftPreview == true) and products != null}" id="storevo-catalog-products-bridge" class="hidden">
         <span th:each="prodItem : ${products}" th:attr="data-id=${prodItem.id}, data-name=${prodItem.name}"></span>
     </div>
 
@@ -80,59 +78,60 @@
 </th:block>
 
 <!-- ======================================================================= -->
-<!-- 1. BARRA DE ANUNCIOS (ANNOUNCEMENT BAR CON SOPORTE DE ROTACIÓN)         -->
+<!-- 1. BARRA DE ANUNCIOS                                                    -->
 <!-- ======================================================================= -->
-<div th:fragment="announcement-bar(sec)"
-     th:with="defaultAnnBg=${theme != null and theme.globalStyles != null and theme.globalStyles.secondaryColor != null ? theme.globalStyles.secondaryColor : '#0f172a'},
-              bgColor=${sec.settingStr('bgColor', defaultAnnBg)},
-              textColor=${sec.settingStr('textColor', '#ffffff')},
-              text=${sec.settingStr('text', '')},
-              text2=${sec.settingStr('text2', '')},
-              text3=${sec.settingStr('text3', '')},
-              waRaw=${settings.whatsapp != null ? #strings.replace(#strings.replace(#strings.replace(settings.whatsapp, ' ', ''), '+', ''), '-', '') : ''},
-              waPhone=${#strings.length(waRaw) == 10 ? '57' + waRaw : waRaw},
-              waUrl=${!#strings.isEmpty(waPhone) ? 'https://wa.me/' + waPhone : '/s/' + slug + '/catalog'},
-              rawUrl=${#strings.trim(sec.settingStr('linkUrl', ''))},
-              isExtNoProto=${rawUrl.startsWith('www.') or rawUrl.startsWith('wa.me/')},
-              resolvedUrl=${rawUrl == '__whatsapp__' ? waUrl : (isExtNoProto ? 'https://' + rawUrl : (rawUrl.startsWith('http') or rawUrl.startsWith('#') or rawUrl.startsWith('mailto:') or rawUrl.startsWith('tel:') ? rawUrl : (rawUrl.startsWith('/s/' + slug) ? rawUrl : '/s/' + slug + (rawUrl.startsWith('/') ? rawUrl : '/' + rawUrl))))}"
-     th:if="${!#strings.isEmpty(text) or isDraftPreview}"
-     th:style="|background-color: ${bgColor}; color: ${textColor};|"
-     class="w-full py-2.5 px-4 text-center text-xs sm:text-sm font-bold tracking-wide transition-colors">
-    <div class="max-w-7xl mx-auto flex items-center justify-center gap-2 flex-wrap">
-        <span th:id="'ann-rotator-' + ${sec.id}"
-              th:attr="data-msg1=${!#strings.isEmpty(text) ? text : 'Escribe aquí el texto de tu barra de anuncio...'},
-                       data-msg2=${text2},
-                       data-msg3=${text3}"
-              class="transition-opacity duration-300"
-              th:text="${!#strings.isEmpty(text) ? text : 'Escribe aquí el texto de tu barra de anuncio...'}">Anuncio</span>
-        <a th:if="${!#strings.isEmpty(rawUrl)}"
-           th:href="${resolvedUrl}"
-           class="underline font-black hover:opacity-80 transition ml-1">
-            Ver más →
-        </a>
+<th:block th:fragment="announcement-bar(sec)"
+          th:with="defaultAnnBg=${theme != null and theme.globalStyles != null and theme.globalStyles.secondaryColor != null ? theme.globalStyles.secondaryColor : '#0f172a'},
+                   bgColor=${sec.settingStr('bgColor', defaultAnnBg)},
+                   textColor=${sec.settingStr('textColor', '#ffffff')},
+                   text=${sec.settingStr('text', '')},
+                   text2=${sec.settingStr('text2', '')},
+                   text3=${sec.settingStr('text3', '')},
+                   waRaw=${settings.whatsapp != null ? #strings.replace(#strings.replace(#strings.replace(settings.whatsapp, ' ', ''), '+', ''), '-', '') : ''},
+                   waPhone=${#strings.length(waRaw) == 10 ? '57' + waRaw : waRaw},
+                   waUrl=${!#strings.isEmpty(waPhone) ? 'https://wa.me/' + waPhone : '/s/' + slug + '/catalog'},
+                   rawUrl=${#strings.trim(sec.settingStr('linkUrl', ''))},
+                   isExtNoProto=${rawUrl.startsWith('www.') or rawUrl.startsWith('wa.me/')},
+                   resolvedUrl=${rawUrl == '__whatsapp__' ? waUrl : (isExtNoProto ? 'https://' + rawUrl : (rawUrl.startsWith('http') or rawUrl.startsWith('#') or rawUrl.startsWith('mailto:') or rawUrl.startsWith('tel:') ? rawUrl : (rawUrl.startsWith('/s/' + slug) ? rawUrl : '/s/' + slug + (rawUrl.startsWith('/') ? rawUrl : '/' + rawUrl))))}">
+    <div th:if="${!#strings.isEmpty(text) or (isDraftPreview == true)}"
+         th:style="|background-color: ${bgColor}; color: ${textColor};|"
+         class="w-full py-2.5 px-4 text-center text-xs sm:text-sm font-bold tracking-wide transition-colors">
+        <div class="max-w-7xl mx-auto flex items-center justify-center gap-2 flex-wrap">
+            <span th:id="'ann-rotator-' + ${sec.id}"
+                  th:attr="data-msg1=${!#strings.isEmpty(text) ? text : 'Escribe aquí el texto de tu barra de anuncio...'},
+                           data-msg2=${text2},
+                           data-msg3=${text3}"
+                  class="transition-opacity duration-300"
+                  th:text="${!#strings.isEmpty(text) ? text : 'Escribe aquí el texto de tu barra de anuncio...'}">Anuncio</span>
+            <a th:if="${!#strings.isEmpty(rawUrl)}"
+               th:href="${resolvedUrl}"
+               class="underline font-black hover:opacity-80 transition ml-1">
+                Ver más →
+            </a>
+        </div>
+        <script th:if="${!#strings.isEmpty(text2) or !#strings.isEmpty(text3)}" th:inline="javascript">
+            (function() {
+                const el = document.getElementById(/*[[${'ann-rotator-' + sec.id}]]*/ '');
+                if (!el) return;
+                const msgs = [el.getAttribute('data-msg1'), el.getAttribute('data-msg2'), el.getAttribute('data-msg3')]
+                    .filter(m => m && m.trim().length > 0);
+                if (msgs.length <= 1) return;
+                let idx = 0;
+                setInterval(() => {
+                    el.style.opacity = '0';
+                    setTimeout(() => {
+                        idx = (idx + 1) % msgs.length;
+                        el.textContent = msgs[idx];
+                        el.style.opacity = '1';
+                    }, 250);
+                }, 4000);
+            })();
+        </script>
     </div>
-    <script th:if="${!#strings.isEmpty(text2) or !#strings.isEmpty(text3)}" th:inline="javascript">
-        (function() {
-            const el = document.getElementById(/*[[${'ann-rotator-' + sec.id}]]*/ '');
-            if (!el) return;
-            const msgs = [el.getAttribute('data-msg1'), el.getAttribute('data-msg2'), el.getAttribute('data-msg3')]
-                .filter(m => m && m.trim().length > 0);
-            if (msgs.length <= 1) return;
-            let idx = 0;
-            setInterval(() => {
-                el.style.opacity = '0';
-                setTimeout(() => {
-                    idx = (idx + 1) % msgs.length;
-                    el.textContent = msgs[idx];
-                    el.style.opacity = '1';
-                }, 250);
-            }, 4000);
-        })();
-    </script>
-</div>
+</th:block>
 
 <!-- ======================================================================= -->
-<!-- 2. HERO BANNER PRINCIPAL (SOPORTA CLASSIC, SPLIT Y COMPACT)             -->
+<!-- 2. HERO BANNER PRINCIPAL (CON MODO DIVIDIDO BLINDADO EN PC)             -->
 <!-- ======================================================================= -->
 <section th:fragment="hero-banner(sec)"
          th:with="heroLayout=${sec.settingStr('heroLayout', 'classic')},
@@ -203,8 +202,8 @@
     </div>
 
     <!-- MODO 2: DIVIDIDO EDITORIAL -->
-    <div th:if="${isSplit}" class="relative z-10 max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
-        <div class="lg:col-span-7 text-left space-y-4">
+    <div th:if="${isSplit}" class="relative z-10 max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 w-full sv-hero-split">
+        <div class="sv-hero-split__content text-left space-y-4">
             <span th:if="${!#strings.isEmpty(badgeText)}"
                   style="background-color: rgba(255,255,255,0.18);"
                   class="inline-block px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider backdrop-blur-sm"
@@ -232,7 +231,7 @@
             </div>
         </div>
 
-        <div class="lg:col-span-5">
+        <div class="sv-hero-split__media">
             <div class="aspect-[4/3] store-radius overflow-hidden shadow-2xl border border-white/15 bg-slate-900">
                 <img th:src="${imageUrl}" th:alt="${title}" class="w-full h-full object-cover">
             </div>
@@ -363,12 +362,12 @@
 </section>
 
 <!-- ======================================================================= -->
-<!-- 3.B NUEVO: PRODUCTO ESTRELLA / LANZAMIENTO DESTACADO (SPOTLIGHT)        -->
+<!-- 3.B PRODUCTO ESTRELLA / LANZAMIENTO DESTACADO                           -->
 <!-- ======================================================================= -->
 <section th:fragment="spotlight-product(sec)"
          th:with="rawProdId=${sec.settingStr('productId', '')},
                   targetId=${sec.settingLong('productId')},
-                  badgeText=${sec.settingStr('badgeText', '🔥 Producto Estrella')},
+                  badgeText=${sec.settingStr('badgeText', '⭐ Producto Estrella')},
                   customTitle=${sec.settingStr('customTitle', '')},
                   customSubtitle=${sec.settingStr('customSubtitle', '')},
                   imageSide=${sec.settingStr('imageSide', 'left')},
@@ -386,178 +385,175 @@
                   th:with="ign3=${matchedList.add(products[0])}"></th:block>
     </th:block>
 
-    <div th:if="${not #lists.isEmpty(matchedList)}"
-         th:with="sp=${matchedList[0]},
-                  isOutOfStock=${!sp.isMadeToOrder and (sp.stock == null or sp.stock <= 0)},
-                  effectivePrice=${sp.discountPrice != null and sp.discountPrice > 0 ? sp.discountPrice : sp.price},
-                  spImg=${sp.mainImageUrl != null ? sp.mainImageUrl : '/img/placeholder.jpg'}"
-         class="bg-white text-slate-900 store-radius shadow-lg border border-slate-100 overflow-hidden grid grid-cols-1 lg:grid-cols-12 items-center">
+    <div th:if="${not #lists.isEmpty(matchedList)}" class="sv-spotlight-wrapper">
+        <div th:with="sp=${matchedList[0]},
+                      isOutOfStock=${!sp.isMadeToOrder and (sp.stock == null or sp.stock <= 0)},
+                      effectivePrice=${sp.discountPrice != null and sp.discountPrice > 0 ? sp.discountPrice : sp.price},
+                      spImg=${sp.mainImageUrl != null ? sp.mainImageUrl : '/img/placeholder.jpg'}"
+             th:attr="data-image-side=${imageSide}"
+             class="product-card sv-spotlight-card bg-white text-slate-900 store-radius shadow-xl border border-slate-100">
 
-        <!-- Columna de Imagen -->
-        <div class="lg:col-span-6 relative aspect-[4/3] lg:aspect-square bg-slate-50 overflow-hidden"
-             th:classappend="${imageSide == 'right' ? 'lg:order-2' : ''}">
-            <a th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${sp.id})}" class="block w-full h-full">
-                <img th:src="${spImg}" th:alt="${sp.name}" class="w-full h-full object-cover hover:scale-105 transition-transform duration-500">
-            </a>
-            <div class="absolute top-4 left-4 flex flex-col gap-2 z-10 pointer-events-none">
-                <span th:if="${!#strings.isEmpty(badgeText)}" class="bg-brand text-white text-xs font-black uppercase tracking-wider px-3.5 py-1.5 rounded-full shadow-md" th:text="${badgeText}"></span>
-                <span th:if="${sp.discountPrice != null and sp.discountPrice > 0}" class="bg-red-500 text-white text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full shadow-md w-fit">En Oferta</span>
-            </div>
-        </div>
-
-        <!-- Columna de Detalles Comerciales -->
-        <div class="lg:col-span-6 p-6 sm:p-10 lg:p-12 flex flex-col justify-center space-y-5"
-             th:classappend="${imageSide == 'right' ? 'lg:order-1' : ''}">
-            <div>
-                <p class="text-xs font-black uppercase tracking-widest text-brand mb-1"
-                   th:text="${sp.category != null ? sp.category.name : 'Destacado'}">Categoría</p>
-                <a th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${sp.id})}">
-                    <h2 class="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight leading-tight hover:text-brand transition-colors"
-                        th:text="${!#strings.isEmpty(customTitle) ? customTitle : sp.name}">Producto Estrella</h2>
+            <div class="sv-spotlight-media">
+                <a th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${sp.id})}" class="block w-full h-full">
+                    <img th:src="${spImg}" th:alt="${sp.name}" class="w-full h-full object-cover hover:scale-105 transition-transform duration-500">
                 </a>
+                <div class="absolute top-4 left-4 flex flex-col gap-2 z-10 pointer-events-none">
+                    <span th:if="${!#strings.isEmpty(badgeText)}" class="bg-brand text-white text-xs font-black uppercase tracking-wider px-3.5 py-1.5 rounded-full shadow-md" th:text="${badgeText}"></span>
+                    <span th:if="${sp.discountPrice != null and sp.discountPrice > 0}" class="bg-red-500 text-white text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full shadow-md w-fit">En Oferta</span>
+                </div>
             </div>
 
-            <div class="flex items-end gap-3 flex-wrap">
-                <span th:if="${sp.hasVariants}" class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1.5">Desde</span>
-                <span class="text-3xl sm:text-4xl font-black text-slate-900"
-                      th:text="${'$ ' + #numbers.formatDecimal(effectivePrice, 1, 'POINT', 0, 'COMMA')}">$0</span>
-                <span th:if="${sp.discountPrice != null and sp.discountPrice > 0}"
-                      class="text-lg text-slate-400 line-through font-medium mb-1"
-                      th:text="${'$ ' + #numbers.formatDecimal(sp.price, 1, 'POINT', 0, 'COMMA')}">$0</span>
-            </div>
+            <div class="sv-spotlight-body space-y-4">
+                <div>
+                    <p class="text-xs font-black uppercase tracking-widest text-brand mb-1"
+                       th:text="${sp.category != null ? sp.category.name : 'Destacado'}">Categoría</p>
+                    <a th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${sp.id})}">
+                        <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight hover:text-brand transition-colors"
+                            th:text="${!#strings.isEmpty(customTitle) ? customTitle : sp.name}">Producto Estrella</h2>
+                    </a>
+                </div>
 
-            <p class="text-sm sm:text-base text-slate-600 leading-relaxed line-clamp-4 whitespace-pre-line"
-               th:text="${!#strings.isEmpty(customSubtitle) ? customSubtitle : (sp.description != null and !sp.description.isBlank() ? sp.description : 'Calidad garantizada con disponibilidad inmediata en nuestra tienda.')}"></p>
+                <div class="flex items-end gap-3 flex-wrap">
+                    <span th:if="${sp.hasVariants}" class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1.5">Desde</span>
+                    <span class="text-3xl font-black text-slate-900"
+                          th:text="${'$ ' + #numbers.formatDecimal(effectivePrice, 1, 'POINT', 0, 'COMMA')}">$0</span>
+                    <span th:if="${sp.discountPrice != null and sp.discountPrice > 0}"
+                          class="text-lg text-slate-400 line-through font-medium mb-1"
+                          th:text="${'$ ' + #numbers.formatDecimal(sp.price, 1, 'POINT', 0, 'COMMA')}">$0</span>
+                </div>
 
-            <div class="pt-2 flex flex-col sm:flex-row gap-3">
-                <button th:if="${!sp.hasVariants and !isOutOfStock}"
-                        type="button" th:data-slug="${slug}" th:data-id="${sp.id}"
-                        onclick="buyNowFast(this.getAttribute('data-slug'), this.getAttribute('data-id'))"
-                        class="flex-1 bg-brand hover-bg-brand text-white font-bold py-3.5 px-8 rounded-xl shadow-lg transition text-center text-sm sm:text-base">
-                    Comprar ahora
-                </button>
-                <a th:if="${sp.hasVariants and !isOutOfStock}"
-                   th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${sp.id})}"
-                   class="flex-1 bg-brand hover-bg-brand text-white font-bold py-3.5 px-8 rounded-xl shadow-lg transition text-center text-sm sm:text-base">
-                    Elegir opciones
-                </a>
-                <a th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${sp.id})}"
-                   class="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-3.5 px-6 rounded-xl transition text-center text-sm sm:text-base">
-                    Ver ficha completa
-                </a>
+                <p class="text-sm sm:text-base text-slate-600 leading-relaxed line-clamp-3 whitespace-pre-line"
+                   th:text="${!#strings.isEmpty(customSubtitle) ? customSubtitle : (sp.description != null and !sp.description.isBlank() ? sp.description : 'Calidad garantizada con disponibilidad inmediata en nuestra tienda.')}"></p>
+
+                <div class="pt-3 flex flex-col sm:flex-row gap-3">
+                    <button th:if="${!sp.hasVariants and !isOutOfStock}"
+                            type="button" th:data-slug="${slug}" th:data-id="${sp.id}"
+                            onclick="buyNowFast(this.getAttribute('data-slug'), this.getAttribute('data-id'))"
+                            class="flex-1 bg-brand hover-bg-brand text-white font-bold py-3.5 px-6 rounded-xl shadow-md transition text-center text-sm">
+                        Comprar ahora
+                    </button>
+                    <a th:if="${sp.hasVariants and !isOutOfStock}"
+                       th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${sp.id})}"
+                       class="flex-1 bg-brand hover-bg-brand text-white font-bold py-3.5 px-6 rounded-xl shadow-md transition text-center text-sm">
+                        Elegir opciones
+                    </a>
+                    <a th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${sp.id})}"
+                       class="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-3.5 px-6 rounded-xl transition text-center text-sm">
+                        Ver ficha completa
+                    </a>
+                </div>
             </div>
         </div>
     </div>
 
-    <div th:if="${#lists.isEmpty(matchedList) and isDraftPreview}" class="text-center py-12 px-4 bg-white text-slate-600 store-radius border border-dashed border-slate-300">
+    <div th:if="${#lists.isEmpty(matchedList) and (isDraftPreview == true)}" class="text-center py-12 px-4 bg-white text-slate-600 store-radius border border-dashed border-slate-300">
         <p class="font-bold text-slate-800 text-sm">Sección Producto Estrella</p>
         <p class="text-xs text-slate-500 mt-1">Agrega al menos un producto activo en tu inventario para destacarlo aquí en gran formato.</p>
     </div>
 </section>
 
 <!-- ======================================================================= -->
-<!-- 4. CATEGORÍAS DESTACADAS (SOPORTA FOTO AUTOMÁTICA, ÍCONO Y PÍLDORAS)    -->
+<!-- 4. CATEGORÍAS DESTACADAS                                                -->
 <!-- ======================================================================= -->
-<section th:fragment="featured-categories(sec)"
-         th:with="title=${sec.settingStr('title', 'Explora por Categoría')},
-                  subtitle=${sec.settingStr('subtitle', 'Encuentra rápidamente lo que estás buscando')},
-                  cardLayout=${sec.settingStr('cardLayout', 'visual')},
-                  cols=${sec.settingStr('columns', '4')},
-                  gridColsClass=${cols == '3' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4'},
-                  displayCats=${not #lists.isEmpty(navCategories) ? navCategories : categories},
-                  catImgMap=${new java.util.HashMap()}"
-         th:if="${not #lists.isEmpty(displayCats) or isDraftPreview}"
-         class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+<th:block th:fragment="featured-categories(sec)"
+          th:with="title=${sec.settingStr('title', 'Explora por Categoría')},
+                   subtitle=${sec.settingStr('subtitle', 'Encuentra rápidamente lo que estás buscando')},
+                   cardLayout=${sec.settingStr('cardLayout', 'visual')},
+                   cols=${sec.settingStr('columns', '4')},
+                   gridColsClass=${cols == '3' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4'},
+                   displayCats=${not #lists.isEmpty(navCategories) ? navCategories : categories},
+                   catImgMap=${new java.util.HashMap()}">
+    <section th:if="${not #lists.isEmpty(displayCats) or (isDraftPreview == true)}"
+             class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
 
-    <th:block th:if="${products != null}" th:each="prod : ${products}">
-        <th:block th:if="${prod.category != null and (prod.mainImageUrl != null or prod.getMainImageThumbnailUrl() != null)}"
-                  th:with="pImg=${prod.getMainImageThumbnailUrl() != null ? prod.getMainImageThumbnailUrl() : prod.mainImageUrl}">
-            <th:block th:if="${!catImgMap.containsKey(prod.category.id)}"
-                      th:with="ign=${catImgMap.put(prod.category.id, pImg)}"></th:block>
-            <th:block th:if="${prod.category.parentCategory != null and !catImgMap.containsKey(prod.category.parentCategory.id)}"
-                      th:with="ign2=${catImgMap.put(prod.category.parentCategory.id, pImg)}"></th:block>
+        <th:block th:if="${products != null}" th:each="prod : ${products}">
+            <th:block th:if="${prod.category != null and (prod.mainImageUrl != null or prod.getMainImageThumbnailUrl() != null)}"
+                      th:with="pImg=${prod.getMainImageThumbnailUrl() != null ? prod.getMainImageThumbnailUrl() : prod.mainImageUrl}">
+                <th:block th:if="${!catImgMap.containsKey(prod.category.id)}"
+                          th:with="ign=${catImgMap.put(prod.category.id, pImg)}"></th:block>
+                <th:block th:if="${prod.category.parentCategory != null and !catImgMap.containsKey(prod.category.parentCategory.id)}"
+                          th:with="ign2=${catImgMap.put(prod.category.parentCategory.id, pImg)}"></th:block>
+            </th:block>
         </th:block>
-    </th:block>
 
-    <div class="text-center mb-8">
-        <h2 class="text-2xl sm:text-3xl font-black store-heading tracking-tight" th:text="${title}">Categorías</h2>
-        <p th:if="${!#strings.isEmpty(subtitle)}" class="store-muted mt-1 text-sm sm:text-base" th:text="${subtitle}"></p>
-    </div>
+        <div class="text-center mb-8">
+            <h2 class="text-2xl sm:text-3xl font-black store-heading tracking-tight" th:text="${title}">Categorías</h2>
+            <p th:if="${!#strings.isEmpty(subtitle)}" class="store-muted mt-1 text-sm sm:text-base" th:text="${subtitle}"></p>
+        </div>
 
-    <div th:if="${not #lists.isEmpty(displayCats) and cardLayout == 'visual'}"
-         th:class="'grid gap-4 sm:gap-6 ' + ${gridColsClass}">
-        <a th:each="cat : ${displayCats}"
-           th:if="${cat.isActive and cat.parentCategory == null}"
-           th:with="catImg=${catImgMap.get(cat.id)}"
-           th:href="@{/s/{slug}/catalog(slug=${slug}, category=${cat.id})}"
-           class="group relative aspect-[4/3] bg-slate-900 text-white store-radius overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 flex flex-col justify-end p-5 sm:p-6">
+        <div th:if="${not #lists.isEmpty(displayCats) and cardLayout == 'visual'}"
+             th:class="'grid gap-4 sm:gap-6 ' + ${gridColsClass}">
+            <a th:each="cat : ${displayCats}"
+               th:if="${cat.isActive and cat.parentCategory == null}"
+               th:with="catImg=${catImgMap.get(cat.id)}"
+               th:href="@{/s/{slug}/catalog(slug=${slug}, category=${cat.id})}"
+               class="group relative aspect-[4/3] bg-slate-900 text-white store-radius overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 flex flex-col justify-end p-5 sm:p-6">
+                <img th:if="${catImg != null}"
+                     th:src="${catImg}"
+                     th:alt="${cat.name}"
+                     loading="lazy"
+                     decoding="async"
+                     class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                <div th:if="${catImg != null}" class="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/35 to-transparent"></div>
+                <div th:if="${catImg == null}" class="absolute inset-0 bg-secondary opacity-95 group-hover:opacity-100 transition-opacity"></div>
 
-            <img th:if="${catImg != null}"
-                 th:src="${catImg}"
-                 th:alt="${cat.name}"
-                 loading="lazy"
-                 decoding="async"
-                 class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
-
-            <div th:if="${catImg != null}" class="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/35 to-transparent"></div>
-            <div th:if="${catImg == null}" class="absolute inset-0 bg-secondary opacity-95 group-hover:opacity-100 transition-opacity"></div>
-
-            <div class="relative z-10 flex items-end justify-between gap-3">
-                <div class="min-w-0">
-                    <h3 class="text-lg sm:text-xl font-black text-white tracking-tight truncate" th:text="${cat.name}">Categoría</h3>
-                    <p class="text-xs text-white/80 mt-0.5 line-clamp-1"
-                       th:text="${cat.description != null and !cat.description.isBlank() ? cat.description : 'Ver productos'}"></p>
+                <div class="relative z-10 flex items-end justify-between gap-3">
+                    <div class="min-w-0">
+                        <h3 class="text-lg sm:text-xl font-black text-white tracking-tight truncate" th:text="${cat.name}">Categoría</h3>
+                        <p class="text-xs text-white/80 mt-0.5 line-clamp-1"
+                           th:text="${cat.description != null and !cat.description.isBlank() ? cat.description : 'Ver productos'}"></p>
+                    </div>
+                    <span class="w-9 h-9 rounded-full bg-white/20 backdrop-blur-sm text-white group-hover:bg-brand flex items-center justify-center flex-shrink-0 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
+                    </span>
                 </div>
-                <span class="w-9 h-9 rounded-full bg-white/20 backdrop-blur-sm text-white group-hover:bg-brand flex items-center justify-center flex-shrink-0 transition-colors">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
-                </span>
-            </div>
-        </a>
-    </div>
+            </a>
+        </div>
 
-    <div th:if="${not #lists.isEmpty(displayCats) and cardLayout == 'icon'}"
-         th:class="'grid gap-4 ' + ${gridColsClass}">
-        <a th:each="cat : ${displayCats}"
-           th:if="${cat.isActive and cat.parentCategory == null}"
-           th:href="@{/s/{slug}/catalog(slug=${slug}, category=${cat.id})}"
-           class="group bg-white text-slate-900 border border-slate-200 hover:border-brand store-radius p-6 transition-all duration-300 shadow-sm hover:shadow-xl flex flex-col justify-between">
-            <div class="w-12 h-12 rounded-xl bg-slate-100 text-brand group-hover:bg-brand group-hover:text-white flex items-center justify-center mb-4 transition-colors">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
-            </div>
-            <div>
-                <h3 class="text-lg font-black text-slate-900 group-hover:text-brand transition-colors" th:text="${cat.name}">Categoría</h3>
-                <p class="text-xs text-slate-500 mt-1 line-clamp-2"
-                   th:text="${cat.description != null and !cat.description.isBlank() ? cat.description : 'Explorar productos →'}"></p>
-            </div>
-        </a>
-    </div>
+        <div th:if="${not #lists.isEmpty(displayCats) and cardLayout == 'icon'}"
+             th:class="'grid gap-4 ' + ${gridColsClass}">
+            <a th:each="cat : ${displayCats}"
+               th:if="${cat.isActive and cat.parentCategory == null}"
+               th:href="@{/s/{slug}/catalog(slug=${slug}, category=${cat.id})}"
+               class="group bg-white text-slate-900 border border-slate-200 hover:border-brand store-radius p-6 transition-all duration-300 shadow-sm hover:shadow-xl flex flex-col justify-between">
+                <div class="w-12 h-12 rounded-xl bg-slate-100 text-brand group-hover:bg-brand group-hover:text-white flex items-center justify-center mb-4 transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                </div>
+                <div>
+                    <h3 class="text-lg font-black text-slate-900 group-hover:text-brand transition-colors" th:text="${cat.name}">Categoría</h3>
+                    <p class="text-xs text-slate-500 mt-1 line-clamp-2"
+                       th:text="${cat.description != null and !cat.description.isBlank() ? cat.description : 'Explorar productos →'}"></p>
+                </div>
+            </a>
+        </div>
 
-    <div th:if="${not #lists.isEmpty(displayCats) and cardLayout == 'pills'}"
-         class="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
-        <a th:each="cat : ${displayCats}"
-           th:if="${cat.isActive and cat.parentCategory == null}"
-           th:with="catImg=${catImgMap.get(cat.id)}"
-           th:href="@{/s/{slug}/catalog(slug=${slug}, category=${cat.id})}"
-           class="group bg-white text-slate-900 hover:bg-brand hover:text-white border border-slate-200 hover:border-brand rounded-full p-2 pr-5 shadow-sm hover:shadow-lg transition-all duration-300 inline-flex items-center gap-3">
-            <img th:if="${catImg != null}" th:src="${catImg}" th:alt="${cat.name}" class="w-10 h-10 rounded-full object-cover flex-shrink-0 border border-slate-100">
-            <span th:if="${catImg == null}" class="w-10 h-10 rounded-full bg-slate-100 text-brand group-hover:bg-white/20 group-hover:text-white flex items-center justify-center flex-shrink-0 font-black text-sm"
-                  th:text="${#strings.substring(cat.name, 0, 1)}">C</span>
-            <span class="font-bold text-sm sm:text-base tracking-tight" th:text="${cat.name}">Categoría</span>
-            <svg class="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-        </a>
-    </div>
+        <div th:if="${not #lists.isEmpty(displayCats) and cardLayout == 'pills'}"
+             class="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
+            <a th:each="cat : ${displayCats}"
+               th:if="${cat.isActive and cat.parentCategory == null}"
+               th:with="catImg=${catImgMap.get(cat.id)}"
+               th:href="@{/s/{slug}/catalog(slug=${slug}, category=${cat.id})}"
+               class="group bg-white text-slate-900 hover:bg-brand hover:text-white border border-slate-200 hover:border-brand rounded-full p-2 pr-5 shadow-sm hover:shadow-lg transition-all duration-300 inline-flex items-center gap-3">
+                <img th:if="${catImg != null}" th:src="${catImg}" th:alt="${cat.name}" class="w-10 h-10 rounded-full object-cover flex-shrink-0 border border-slate-100">
+                <span th:if="${catImg == null}" class="w-10 h-10 rounded-full bg-slate-100 text-brand group-hover:bg-white/20 group-hover:text-white flex items-center justify-center flex-shrink-0 font-black text-sm"
+                      th:text="${#strings.substring(cat.name, 0, 1)}">C</span>
+                <span class="font-bold text-sm sm:text-base tracking-tight" th:text="${cat.name}">Categoría</span>
+                <svg class="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+            </a>
+        </div>
 
-    <div th:if="${#lists.isEmpty(displayCats) and isDraftPreview}" class="text-center py-10 px-4 bg-white text-slate-600 store-radius border border-dashed border-slate-300">
-        <p class="font-bold text-slate-800 text-sm">Aún no tienes categorías activas en tu tienda</p>
-        <p class="text-xs text-slate-500 mt-1">Crea tus categorías en el menú "Categorías" del panel administrativo y aparecerán automáticamente aquí.</p>
-    </div>
-</section>
+        <div th:if="${#lists.isEmpty(displayCats) and (isDraftPreview == true)}" class="text-center py-10 px-4 bg-white text-slate-600 store-radius border border-dashed border-slate-300">
+            <p class="font-bold text-slate-800 text-sm">Aún no tienes categorías activas en tu tienda</p>
+            <p class="text-xs text-slate-500 mt-1">Crea tus categorías en el menú "Categorías" del panel administrativo y aparecerán automáticamente aquí.</p>
+        </div>
+    </section>
+</th:block>
 
 <!-- ======================================================================= -->
-<!-- 4.B NUEVO: BANNER CON CONTADOR REGRESIVO DE OFERTA (COUNTDOWN PROMO)    -->
+<!-- 4.B BANNER CON CONTADOR REGRESIVO DE OFERTA                             -->
 <!-- ======================================================================= -->
 <section th:fragment="countdown-promo(sec)"
-         th:with="badgeText=${sec.settingStr('badgeText', '⚡ Oferta por Tiempo Limitado')},
+         th:with="badgeText=${sec.settingStr('badgeText', '⏳ Oferta por Tiempo Limitado')},
                   title=${sec.settingStr('title', '¡Aprovecha nuestros descuentos especiales!')},
                   subtitle=${sec.settingStr('subtitle', 'Unidades limitadas disponibles antes de que termine la promoción.')},
                   endDate=${sec.settingStr('endDate', '')},
@@ -574,7 +570,6 @@
 
     <div th:style="|background-color: ${bgColor}; color: ${textColor};|"
          class="store-radius p-8 sm:p-12 shadow-xl flex flex-col lg:flex-row items-center justify-between gap-8">
-
         <div class="space-y-3 text-center lg:text-left max-w-xl">
             <span th:if="${!#strings.isEmpty(badgeText)}"
                   style="background-color: rgba(255,255,255,0.16);"
@@ -585,7 +580,6 @@
         </div>
 
         <div class="flex flex-col sm:flex-row items-center gap-6 flex-shrink-0">
-            <!-- Reloj en vivo -->
             <div th:id="'cd-box-' + ${sec.id}" th:attr="data-end=${endDate}" class="flex items-center gap-2 sm:gap-3 text-center">
                 <div style="background-color: rgba(255,255,255,0.12);" class="w-16 sm:w-20 py-3 rounded-xl backdrop-blur-sm border border-white/15">
                     <span class="cd-days block text-xl sm:text-2xl font-black leading-none">00</span>
@@ -620,14 +614,11 @@
             if (!box) return;
             const rawEnd = box.getAttribute('data-end');
             let targetTime = rawEnd ? new Date(rawEnd).getTime() : NaN;
-
-            // Si no se definió fecha o ya pasó, mantiene un ciclo activo de 24h para no mostrar 00:00:00
             if (isNaN(targetTime) || targetTime <= Date.now()) {
                 const now = new Date();
                 now.setHours(23, 59, 59, 999);
                 targetTime = now.getTime();
             }
-
             const dEl = box.querySelector('.cd-days');
             const hEl = box.querySelector('.cd-hours');
             const mEl = box.querySelector('.cd-mins');
@@ -642,7 +633,6 @@
                 const m = Math.floor(diff / (1000 * 60));
                 diff -= m * (1000 * 60);
                 const s = Math.floor(diff / 1000);
-
                 if (dEl) dEl.textContent = String(d).padStart(2, '0');
                 if (hEl) hEl.textContent = String(h).padStart(2, '0');
                 if (mEl) mEl.textContent = String(m).padStart(2, '0');
@@ -655,7 +645,7 @@
 </section>
 
 <!-- ======================================================================= -->
-<!-- 5. BANNER PROMOCIONAL / IMAGEN CON TEXTO (PROMO BANNER)                 -->
+<!-- 5. BANNER PROMOCIONAL / IMAGEN CON TEXTO                                -->
 <!-- ======================================================================= -->
 <section th:fragment="promo-banner(sec)"
          th:with="title=${sec.settingStr('title', 'Promoción Especial')},
@@ -698,7 +688,7 @@
 </section>
 
 <!-- ======================================================================= -->
-<!-- 6. MOSAICO DOBLE DE BANNERS / COLECCIONES (MULTI BANNERS)               -->
+<!-- 6. MOSAICO DOBLE DE BANNERS                                             -->
 <!-- ======================================================================= -->
 <section th:fragment="multi-banners(sec)"
          th:with="waRaw=${settings.whatsapp != null ? #strings.replace(#strings.replace(#strings.replace(settings.whatsapp, ' ', ''), '+', ''), '-', '') : ''},
@@ -766,89 +756,58 @@
 </section>
 
 <!-- ======================================================================= -->
-<!-- 6.B NUEVO: TESTIMONIOS Y RESEÑAS DE CLIENTES (TESTIMONIALS)             -->
+<!-- 6.B RESEÑAS 100% REALES VERIFICADAS POR PEDIDO (OPCIÓN B)               -->
 <!-- ======================================================================= -->
-<section th:fragment="testimonials(sec)"
-         th:with="title=${sec.settingStr('title', 'Lo que dicen nuestros clientes')},
-                  subtitle=${sec.settingStr('subtitle', 'Compradores reales que ya recibieron su pedido')},
-                  t1Name=${sec.settingStr('t1Name', 'Laura Gómez')},
-                  t1City=${sec.settingStr('t1City', 'Medellín')},
-                  t1Text=${sec.settingStr('t1Text', 'Excelente calidad y atención. Mi pedido llegó súper rápido y tal cual como se ve en las fotos.')},
-                  t2Name=${sec.settingStr('t2Name', 'Carlos Ramírez')},
-                  t2City=${sec.settingStr('t2City', 'Bogotá D.C.')},
-                  t2Text=${sec.settingStr('t2Text', 'Muy fácil comprar en la página, me asesoraron por WhatsApp con mi talla y todo llegó perfecto.')},
-                  t3Name=${sec.settingStr('t3Name', 'Valentina Torres')},
-                  t3City=${sec.settingStr('t3City', 'Cali')},
-                  t3Text=${sec.settingStr('t3Text', 'Me encantó el empaque y la rapidez del envío. Sin duda volveré a comprar pronto.')}"
-         class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+<th:block th:fragment="testimonials(sec)"
+          th:with="title=${sec.settingStr('title', 'Opiniones de Compradores Reales')},
+                   subtitle=${sec.settingStr('subtitle', 'Calificaciones verificadas de clientes que compraron en nuestra tienda')},
+                   hasRealReviews=${storeReviews != null and not #lists.isEmpty(storeReviews)}">
+    <section th:if="${(hasRealReviews == true) or (isDraftPreview == true)}"
+             class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
 
-    <div class="text-center mb-10">
-        <h2 class="text-2xl sm:text-3xl font-black store-heading tracking-tight" th:text="${title}">Testimonios</h2>
-        <p th:if="${!#strings.isEmpty(subtitle)}" class="store-muted mt-1 text-sm sm:text-base" th:text="${subtitle}"></p>
-    </div>
+        <div class="text-center mb-10">
+            <h2 class="text-2xl sm:text-3xl font-black store-heading tracking-tight" th:text="${title}">Reseñas</h2>
+            <p th:if="${!#strings.isEmpty(subtitle)}" class="store-muted mt-1 text-sm sm:text-base" th:text="${subtitle}"></p>
+        </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <!-- Testimonio 1 -->
-        <div th:if="${!#strings.isEmpty(t1Text)}" class="bg-white text-slate-900 p-6 sm:p-7 store-radius border border-slate-100 shadow-sm flex flex-col justify-between gap-4">
-            <div class="space-y-3">
-                <div class="flex items-center gap-1 text-amber-400">
-                    <span class="text-base leading-none">★★★★★</span>
-                    <span class="ml-1.5 text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Compra verificada</span>
+        <div th:if="${hasRealReviews == true}" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div th:each="rev : ${storeReviews}"
+                 class="bg-white text-slate-900 p-6 sm:p-7 store-radius border border-slate-100 shadow-sm flex flex-col justify-between gap-4">
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between gap-2 flex-wrap">
+                        <span class="text-amber-400 text-base tracking-widest leading-none"
+                              th:text="${#strings.repeat('★', rev.rating != null ? rev.rating : 5) + #strings.repeat('☆', 5 - (rev.rating != null ? rev.rating : 5))}">★★★★★</span>
+                        <span class="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+                            ✓ Pedido #<span th:text="${rev.orderId}">1</span> verificado
+                        </span>
+                    </div>
+                    <p class="text-sm text-slate-600 leading-relaxed italic" th:text="'“' + ${rev.comment} + '”'"></p>
                 </div>
-                <p class="text-sm text-slate-600 leading-relaxed italic" th:text="'“' + ${t1Text} + '”'"></p>
-            </div>
-            <div class="flex items-center gap-3 pt-3 border-t border-slate-100">
-                <div class="w-9 h-9 rounded-full bg-brand text-white font-black text-sm flex items-center justify-center flex-shrink-0"
-                     th:text="${!#strings.isEmpty(t1Name) ? #strings.substring(t1Name, 0, 1) : 'C'}">L</div>
-                <div>
-                    <p class="text-sm font-bold text-slate-900 leading-tight" th:text="${t1Name}">Cliente</p>
-                    <p th:if="${!#strings.isEmpty(t1City)}" class="text-xs text-slate-400" th:text="${t1City}">Ciudad</p>
+                <div class="flex items-center justify-between gap-3 pt-3 border-t border-slate-100">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-9 h-9 rounded-full bg-brand text-white font-black text-sm flex items-center justify-center flex-shrink-0 uppercase"
+                             th:text="${rev.customerName != null and !#strings.isEmpty(rev.customerName) ? #strings.substring(rev.customerName, 0, 1) : 'C'}">C</div>
+                        <div class="min-w-0">
+                            <p class="text-sm font-bold text-slate-900 leading-tight truncate" th:text="${rev.customerName}">Cliente</p>
+                            <p th:if="${rev.customerCity != null and !#strings.isEmpty(rev.customerCity)}" class="text-xs text-slate-400 truncate" th:text="${rev.customerCity}">Ciudad</p>
+                        </div>
+                    </div>
+                    <span th:if="${rev.createdAt != null}" class="text-[11px] text-slate-400 flex-shrink-0" th:text="${#temporals.format(rev.createdAt, 'dd/MM/yyyy')}"></span>
                 </div>
             </div>
         </div>
 
-        <!-- Testimonio 2 -->
-        <div th:if="${!#strings.isEmpty(t2Text)}" class="bg-white text-slate-900 p-6 sm:p-7 store-radius border border-slate-100 shadow-sm flex flex-col justify-between gap-4">
-            <div class="space-y-3">
-                <div class="flex items-center gap-1 text-amber-400">
-                    <span class="text-base leading-none">★★★★★</span>
-                    <span class="ml-1.5 text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Compra verificada</span>
-                </div>
-                <p class="text-sm text-slate-600 leading-relaxed italic" th:text="'“' + ${t2Text} + '”'"></p>
-            </div>
-            <div class="flex items-center gap-3 pt-3 border-t border-slate-100">
-                <div class="w-9 h-9 rounded-full bg-brand text-white font-black text-sm flex items-center justify-center flex-shrink-0"
-                     th:text="${!#strings.isEmpty(t2Name) ? #strings.substring(t2Name, 0, 1) : 'C'}">C</div>
-                <div>
-                    <p class="text-sm font-bold text-slate-900 leading-tight" th:text="${t2Name}">Cliente</p>
-                    <p th:if="${!#strings.isEmpty(t2City)}" class="text-xs text-slate-400" th:text="${t2City}">Ciudad</p>
-                </div>
-            </div>
+        <div th:if="${(hasRealReviews != true) and (isDraftPreview == true)}" class="text-center py-10 px-6 bg-white text-slate-600 store-radius border border-dashed border-slate-300 max-w-2xl mx-auto">
+            <p class="font-bold text-slate-800 text-sm">Sección de Reseñas Reales Verificadas</p>
+            <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+                Para garantizar total transparencia ante tus compradores, esta sección no muestra testimonios inventados. Aquí aparecerán automáticamente las calificaciones reales que dejen tus clientes al finalizar sus pedidos.
+            </p>
         </div>
-
-        <!-- Testimonio 3 -->
-        <div th:if="${!#strings.isEmpty(t3Text)}" class="bg-white text-slate-900 p-6 sm:p-7 store-radius border border-slate-100 shadow-sm flex flex-col justify-between gap-4">
-            <div class="space-y-3">
-                <div class="flex items-center gap-1 text-amber-400">
-                    <span class="text-base leading-none">★★★★★</span>
-                    <span class="ml-1.5 text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Compra verificada</span>
-                </div>
-                <p class="text-sm text-slate-600 leading-relaxed italic" th:text="'“' + ${t3Text} + '”'"></p>
-            </div>
-            <div class="flex items-center gap-3 pt-3 border-t border-slate-100">
-                <div class="w-9 h-9 rounded-full bg-brand text-white font-black text-sm flex items-center justify-center flex-shrink-0"
-                     th:text="${!#strings.isEmpty(t3Name) ? #strings.substring(t3Name, 0, 1) : 'C'}">V</div>
-                <div>
-                    <p class="text-sm font-bold text-slate-900 leading-tight" th:text="${t3Name}">Cliente</p>
-                    <p th:if="${!#strings.isEmpty(t3City)}" class="text-xs text-slate-400" th:text="${t3City}">Ciudad</p>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
+    </section>
+</th:block>
 
 <!-- ======================================================================= -->
-<!-- 6.C NUEVO: CÓMO COMPRAR EN 3 PASOS + MEDIOS DE PAGO (HOW TO BUY)        -->
+<!-- 6.C CÓMO COMPRAR EN 3 PASOS + MEDIOS DE PAGO                            -->
 <!-- ======================================================================= -->
 <section th:fragment="how-to-buy(sec)"
          th:with="title=${sec.settingStr('title', '¿Cómo comprar en nuestra tienda?')},
@@ -887,7 +846,6 @@
         </div>
     </div>
 
-    <!-- Cintillo de medios de pago y envíos en Colombia -->
     <div th:if="${showPay}" class="mt-6 bg-white text-slate-700 px-6 py-4 store-radius border border-slate-100 shadow-sm flex flex-wrap items-center justify-center gap-3 sm:gap-5 text-xs font-bold">
         <span class="text-slate-400 uppercase tracking-wider">Medios aceptados:</span>
         <span class="px-3 py-1 rounded-full bg-slate-100 text-slate-800">🏦 PSE</span>
@@ -899,7 +857,7 @@
 </section>
 
 <!-- ======================================================================= -->
-<!-- 7. CINTILLO DE CONFIANZA (CON SELECTOR DE 8 ÍCONOS Y 3 ESTILOS)         -->
+<!-- 7. CINTILLO DE CONFIANZA                                                -->
 <!-- ======================================================================= -->
 <th:block th:fragment="trust-icon(iconName)">
     <th:block th:switch="${iconName}">
@@ -928,7 +886,6 @@
          class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
 
     <div th:class="${badgeStyle == 'secondary'} ? 'bg-secondary text-white store-radius p-6 sm:p-8 shadow-xl grid grid-cols-1 md:grid-cols-3 gap-6' : 'grid grid-cols-1 md:grid-cols-3 gap-6'">
-
         <div th:class="${badgeStyle == 'cards'} ? 'bg-white text-slate-900 p-6 store-radius border border-slate-100 shadow-sm flex items-start gap-4' : (${badgeStyle == 'secondary'} ? 'flex items-start gap-4' : 'p-4 flex items-start gap-4')">
             <div th:class="${badgeStyle == 'secondary'} ? 'w-12 h-12 rounded-xl bg-white/15 text-white flex items-center justify-center flex-shrink-0' : 'w-12 h-12 rounded-xl bg-brand/10 text-brand flex items-center justify-center flex-shrink-0'">
                 <th:block th:replace="~{storefront/sections/theme-sections :: trust-icon(${ic1})}"></th:block>
@@ -958,12 +915,11 @@
                 <p th:class="${badgeStyle == 'cards'} ? 'text-sm text-slate-500 mt-1' : (${badgeStyle == 'secondary'} ? 'text-sm text-white/80 mt-1' : 'text-sm store-muted mt-1')" th:text="${d3}">Descripción</p>
             </div>
         </div>
-
     </div>
 </section>
 
 <!-- ======================================================================= -->
-<!-- 8. BLOQUE DE TEXTO LIBRE / HISTORIA DE MARCA (RICH TEXT)                -->
+<!-- 8. BLOQUE DE TEXTO LIBRE / HISTORIA DE MARCA                            -->
 <!-- ======================================================================= -->
 <section th:fragment="rich-text(sec)"
          th:with="title=${sec.settingStr('title', 'Sobre Nosotros')},
@@ -976,7 +932,7 @@
 </section>
 
 <!-- ======================================================================= -->
-<!-- 9. PREGUNTAS FRECUENTES EN ACORDEÓN (SOPORTA HASTA 5 PREGUNTAS)         -->
+<!-- 9. PREGUNTAS FRECUENTES EN ACORDEÓN                                     -->
 <!-- ======================================================================= -->
 <section th:fragment="faq-accordion(sec)"
          th:with="title=${sec.settingStr('title', 'Preguntas Frecuentes')},
@@ -1042,7 +998,7 @@
 </section>
 
 <!-- ======================================================================= -->
-<!-- 10. BANNER DE ASESORÍA DIRECTA POR WHATSAPP (WHATSAPP CTA)              -->
+<!-- 10. BANNER DE ASESORÍA DIRECTA POR WHATSAPP                             -->
 <!-- ======================================================================= -->
 <section th:fragment="whatsapp-cta(sec)"
          th:with="title=${sec.settingStr('title', '¿Tienes dudas con tu talla o pedido?')},

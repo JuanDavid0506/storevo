@@ -4,6 +4,7 @@ import com.storevo.backend.admin.model.Store;
 import com.storevo.backend.tenant.dto.ThemeConfigDto;
 import com.storevo.backend.tenant.model.Category;
 import com.storevo.backend.tenant.model.Product;
+import com.storevo.backend.tenant.repository.StoreReviewRepository;
 import com.storevo.backend.tenant.service.CategoryService;
 import com.storevo.backend.tenant.service.ProductService;
 import com.storevo.backend.tenant.service.StoreThemeService;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,6 +32,7 @@ public class StoreFrontController {
     private final ProductService productService;
     private final CategoryService categoryService;
     private final StoreThemeService storeThemeService;
+    private final StoreReviewRepository storeReviewRepository;
 
     @GetMapping
     public String home(
@@ -45,6 +48,13 @@ public class StoreFrontController {
         model.addAttribute("theme", theme);
         model.addAttribute("isDraftPreview", isDraftPreview);
         model.addAttribute("products", productService.getPublicCatalog(null));
+
+        try {
+            model.addAttribute("storeReviews", storeReviewRepository.findTop6ByIsVisibleTrueOrderByCreatedAtDesc());
+        } catch (Exception e) {
+            model.addAttribute("storeReviews", Collections.emptyList());
+        }
+
         model.addAttribute("pageTitle", "Inicio");
         return "storefront/home";
     }

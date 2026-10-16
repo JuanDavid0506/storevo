@@ -1,13 +1,10 @@
 /* ============================================================
    Componentes configurables de la tienda (Storevo)
-   Se controlan con data-attributes en <body>:
-   data-button-radius | data-card-style
+   Se controlan con data-attributes en <body> y #storeNavbar.
    Independiente de la compilación de Tailwind.
    ============================================================ */
 
-/* ---------- Forma de los botones ----------
-   Detecta botones y enlaces-botón por sus clases (font-bold + rounded-xl/lg).
-   "classic" no aplica ninguna regla: se ve como siempre. */
+/* ---------- Forma de los botones ---------- */
 body[data-button-radius="square"] :is(a, button)[class*="font-bold"]:is([class*="rounded-xl"], [class*="rounded-lg"]) {
     border-radius: 0 !important;
 }
@@ -18,10 +15,7 @@ body[data-button-radius="sync"] :is(a, button)[class*="font-bold"]:is([class*="r
     border-radius: min(var(--store-radius, 1rem), 1rem) !important;
 }
 
-/* ---------- Estilo de las tarjetas de producto ----------
-   "elevated" es el diseño actual (borde sutil + sombra al pasar el mouse). */
-
-/* Editorial limpia: sin marco ni sombra (el fondo se mantiene para asegurar contraste) */
+/* ---------- Estilo de las tarjetas de producto ---------- */
 body[data-card-style="clean"] .product-card {
     border-color: transparent !important;
     box-shadow: none !important;
@@ -30,7 +24,6 @@ body[data-card-style="clean"] .product-card:hover {
     box-shadow: none !important;
 }
 
-/* Contorno definido: borde marcado con el color de texto de la tienda */
 body[data-card-style="outlined"] .product-card {
     border: 2px solid var(--store-text) !important;
     box-shadow: none !important;
@@ -38,4 +31,198 @@ body[data-card-style="outlined"] .product-card {
 body[data-card-style="outlined"] .product-card:hover {
     box-shadow: 4px 4px 0 var(--store-text) !important;
     transform: translate(-2px, -2px);
+}
+
+/* ---------- Sincronización del Navbar, Buscador, Desplegables y Menú Lateral con el Fondo de Página ---------- */
+
+/* 1. Barra principal en modo "page" o "glass" (usa el color real de --store-bg en lugar de teñir con blanco) */
+.sv-nav[data-nav-style="page"] .sv-nav__bar {
+    background-color: var(--store-bg) !important;
+    color: var(--store-text) !important;
+    border-bottom: 1px solid color-mix(in srgb, var(--store-text) 12%, transparent) !important;
+}
+.sv-nav[data-nav-style="glass"] .sv-nav__bar {
+    background-color: color-mix(in srgb, var(--store-bg) 86%, transparent) !important;
+    backdrop-filter: blur(14px) !important;
+    -webkit-backdrop-filter: blur(14px) !important;
+    color: var(--store-text) !important;
+    border-bottom: 1px solid color-mix(in srgb, var(--store-text) 12%, transparent) !important;
+}
+
+/* 2. Buscador del navbar integrado con el color de fondo y texto */
+.sv-nav[data-nav-style="page"] .sv-nav__search input,
+.sv-nav[data-nav-style="glass"] .sv-nav__search input {
+    background-color: color-mix(in srgb, var(--store-text) 7%, var(--store-bg)) !important;
+    color: var(--store-text) !important;
+    border: 1px solid color-mix(in srgb, var(--store-text) 16%, transparent) !important;
+}
+.sv-nav[data-nav-style="page"] .sv-nav__search input::placeholder,
+.sv-nav[data-nav-style="glass"] .sv-nav__search input::placeholder,
+.sv-nav[data-nav-style="page"] .sv-nav__search svg,
+.sv-nav[data-nav-style="glass"] .sv-nav__search svg {
+    color: var(--store-text) !important;
+    opacity: 0.65 !important;
+}
+
+/* 3. Submenús desplegables (Dropdown y Flyout de 3 niveles) con el fondo y texto de la tienda */
+.sv-nav__dropdown,
+.sv-nav__flyout {
+    background-color: var(--store-bg) !important;
+    color: var(--store-text) !important;
+    border: 1px solid color-mix(in srgb, var(--store-text) 14%, transparent) !important;
+    border-radius: var(--store-radius, 0.875rem) !important;
+    box-shadow: 0 18px 40px -12px rgba(15, 23, 42, 0.22) !important;
+}
+.sv-nav__dropdown-link {
+    color: var(--store-text) !important;
+}
+.sv-nav__dropdown-link:hover {
+    background-color: color-mix(in srgb, var(--brand-color) 12%, var(--store-bg)) !important;
+    color: var(--brand-color) !important;
+}
+
+/* 4. Menú lateral desplegable (#mobile-menu en modo Minimalista y Móvil) con el fondo y texto de la tienda */
+.sv-drawer {
+    background-color: var(--store-bg) !important;
+    color: var(--store-text) !important;
+    border-right: 1px solid color-mix(in srgb, var(--store-text) 14%, transparent) !important;
+}
+.sv-drawer__header,
+.sv-drawer__footer {
+    background-color: color-mix(in srgb, var(--store-text) 4%, var(--store-bg)) !important;
+    border-color: color-mix(in srgb, var(--store-text) 12%, transparent) !important;
+}
+.sv-drawer__header {
+    border-bottom: 1px solid color-mix(in srgb, var(--store-text) 12%, transparent) !important;
+}
+.sv-drawer__footer {
+    border-top: 1px solid color-mix(in srgb, var(--store-text) 12%, transparent) !important;
+}
+.sv-drawer__search-wrap {
+    border-bottom: 1px solid color-mix(in srgb, var(--store-text) 12%, transparent) !important;
+}
+.sv-drawer__search-input {
+    background-color: color-mix(in srgb, var(--store-text) 7%, var(--store-bg)) !important;
+    color: var(--store-text) !important;
+    border: 1px solid color-mix(in srgb, var(--store-text) 16%, transparent) !important;
+}
+.sv-drawer__search-input::placeholder {
+    color: var(--store-text) !important;
+    opacity: 0.6;
+}
+.sv-drawer__link,
+.sv-drawer__sublink,
+.sv-drawer__close {
+    color: var(--store-text) !important;
+}
+.sv-drawer__link:hover,
+.sv-drawer__sublink:hover,
+.sv-drawer__close:hover {
+    color: var(--brand-color) !important;
+}
+.sv-drawer__link,
+.sv-drawer__group {
+    border-bottom: 1px solid color-mix(in srgb, var(--store-text) 10%, transparent) !important;
+}
+.sv-drawer__sublist {
+    border-left: 2px solid color-mix(in srgb, var(--store-text) 16%, transparent) !important;
+}
+.sv-drawer__wish-btn {
+    background-color: color-mix(in srgb, var(--store-text) 6%, var(--store-bg)) !important;
+    color: var(--store-text) !important;
+    border: 1px solid color-mix(in srgb, var(--store-text) 16%, transparent) !important;
+}
+.sv-drawer__wish-btn:hover {
+    border-color: var(--brand-color) !important;
+    color: var(--brand-color) !important;
+}
+
+/* ---------- Contador de Favoritos con Color Primario (--brand-color) ---------- */
+#navWishlistCounter,
+.sv-nav__badge--wish {
+    background-color: var(--brand-color) !important;
+    color: #ffffff !important;
+}
+.sv-nav[data-nav-style="primary"] #navWishlistCounter,
+.sv-nav[data-nav-style="primary"] .sv-nav__badge--wish {
+    background-color: #ffffff !important;
+    color: var(--brand-color) !important;
+}
+.sv-nav__icon--wish:hover {
+    color: var(--brand-color) !important;
+}
+
+/* ---------- Layout PC y Móvil para Producto Estrella (Spotlight Product) ---------- */
+.sv-spotlight-wrapper {
+    max-width: 64rem;
+    margin-left: auto;
+    margin-right: auto;
+}
+.sv-spotlight-card {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.sv-spotlight-media {
+    width: 100%;
+    height: 300px;
+    position: relative;
+    background-color: #f8fafc;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+.sv-spotlight-body {
+    width: 100%;
+    padding: 1.75rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+@media (min-width: 1024px) {
+    .sv-spotlight-card {
+        flex-direction: row;
+        align-items: stretch;
+        min-height: 400px;
+        max-height: 460px;
+    }
+    .sv-spotlight-card[data-image-side="right"] {
+        flex-direction: row-reverse;
+    }
+    .sv-spotlight-media {
+        width: 46%;
+        height: auto;
+        min-height: 400px;
+        max-height: 460px;
+    }
+    .sv-spotlight-body {
+        width: 54%;
+        padding: 2.75rem 3rem;
+    }
+}
+
+/* ---------- Layout PC para Hero Banner en Modo Dividido Editorial ---------- */
+.sv-hero-split {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    align-items: center;
+}
+.sv-hero-split__content,
+.sv-hero-split__media {
+    width: 100%;
+}
+@media (min-width: 1024px) {
+    .sv-hero-split {
+        flex-direction: row;
+        justify-content: space-between;
+        gap: 3rem;
+    }
+    .sv-hero-split__content {
+        width: 56%;
+    }
+    .sv-hero-split__media {
+        width: 44%;
+        max-width: 460px;
+    }
 }

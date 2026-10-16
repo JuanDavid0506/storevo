@@ -6,7 +6,7 @@
 </head>
 <body>
 <div layout:fragment="content" class="max-w-3xl mx-auto px-4 py-12 sm:py-20 text-center">
-    <div class="bg-white p-6 sm:p-10 rounded-2xl shadow-sm border border-slate-200">
+    <div class="bg-white text-slate-900 p-6 sm:p-10 store-radius shadow-sm border border-slate-200">
         <div class="w-20 h-20 bg-emerald-500 text-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
             <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-6l-4 4v-4z"></path></svg>
         </div>
@@ -15,7 +15,7 @@
         <p class="text-slate-600 mb-8">Tu número de pedido es el <strong class="text-slate-900" th:text="'#' + ${order.id}"></strong></p>
 
         <div class="bg-slate-50 p-6 rounded-xl border border-slate-200 text-left mb-8">
-            <h3 class="font-bold text-lg mb-4">Resumen</h3>
+            <h3 class="font-bold text-lg text-slate-900 mb-4">Resumen</h3>
             <div class="space-y-2.5 mb-4">
                 <div th:each="item : ${order.items}" class="flex justify-between text-sm">
                     <span class="text-slate-600 truncate pr-4">
@@ -29,12 +29,12 @@
             </div>
             <div class="flex justify-between items-center border-t border-slate-200 pt-4">
                 <span class="text-slate-600 font-bold">Total</span>
-                <span class="font-black text-xl text-brand" th:text="${'$ ' + #numbers.formatDecimal(order.total, 1, 'POINT', 0, 'COMMA')}">$0</span>
+                <span class="font-black text-xl text-slate-900" th:text="${'$ ' + #numbers.formatDecimal(order.total, 1, 'POINT', 0, 'COMMA')}">$0</span>
             </div>
             <p class="text-sm text-slate-500 mt-3">Estado actual: <span class="font-bold text-orange-500">Solicitud pendiente de confirmación</span></p>
         </div>
 
-        <div th:if="${whatsappConfigured}" class="space-y-4">
+        <div th:if="${whatsappConfigured}" class="space-y-4 mb-8">
             <a th:href="${whatsappLink}" target="_blank" rel="noopener"
                id="whatsappRedirectLink"
                class="inline-flex items-center justify-center gap-2 w-full sm:w-auto bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 px-8 rounded-xl shadow-md transition">
@@ -48,6 +48,44 @@
             Tu pedido ya quedó registrado, pero esta tienda todavía no configuró su número de WhatsApp para recibir pedidos. Contáctala directamente para confirmar la disponibilidad.
         </div>
 
+        <!-- BLOQUE DE CALIFICACIÓN REAL DEL COMPRADOR -->
+        <div class="max-w-md mx-auto mt-6 text-left">
+            <div th:if="${reviewSuccess}" class="mb-4 bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-xl text-xs font-bold" th:text="${reviewSuccess}"></div>
+            <div th:if="${reviewError}" class="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-xs font-bold" th:text="${reviewError}"></div>
+
+            <div th:if="${existingReview == null}" class="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-3">
+                <h3 class="text-sm font-black text-slate-900">¿Qué te pareció hacer tu pedido en nuestra tienda?</h3>
+                <p class="text-xs text-slate-500">Deja tu calificación verificada para ayudar a otros compradores.</p>
+                <form th:action="@{/s/{slug}/order/{id}/review(slug=${slug}, id=${order.id})}" method="POST" class="space-y-3">
+                    <input type="hidden" name="origin" value="whatsapp">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Calificación</label>
+                        <select name="rating" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm font-bold text-slate-900">
+                            <option value="5">★★★★★ (5/5 - Excelente experiencia)</option>
+                            <option value="4">★★★★☆ (4/5 - Muy buena)</option>
+                            <option value="3">★★★☆☆ (3/5 - Buena)</option>
+                            <option value="2">★★☆☆☆ (2/5 - Regular)</option>
+                            <option value="1">★☆☆☆☆ (1/5 - Por mejorar)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Tu comentario</label>
+                        <textarea name="comment" rows="2" required maxlength="500"
+                                  placeholder="Ej: Muy fácil elegir mis productos y hacer el pedido..."
+                                  class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-900"></textarea>
+                    </div>
+                    <button type="submit" class="w-full bg-brand hover-bg-brand text-white font-bold py-2.5 px-4 rounded-xl text-xs shadow-sm transition">
+                        Publicar mi calificación verificada
+                    </button>
+                </form>
+            </div>
+
+            <div th:if="${existingReview != null}" class="bg-emerald-50/70 p-4 rounded-xl border border-emerald-200 text-xs text-emerald-900">
+                <p class="font-bold">✓ Tu reseña verificada para el Pedido #<span th:text="${order.id}"></span>:</p>
+                <p class="mt-1 italic" th:text="'“' + ${existingReview.comment} + '”'"></p>
+            </div>
+        </div>
+
         <div class="mt-8 pt-6 border-t border-slate-100">
             <a th:href="@{/s/{slug}(slug=${slug})}" class="inline-block bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 px-6 rounded-xl text-sm transition">
                 Volver a la tienda
@@ -57,7 +95,8 @@
 </div>
 
 <th:block layout:fragment="scripts">
-    <script th:if="${whatsappConfigured}" th:src="@{/js/modules/orderWhatsapp.js}"></script>
+    <!-- Solo redirige automáticamente a WhatsApp en la carga inicial, no cuando regresa de enviar la reseña (?reviewed=true) -->
+    <script th:if="${whatsappConfigured and param.reviewed == null}" th:src="@{/js/modules/orderWhatsapp.js}"></script>
 </th:block>
 </body>
 </html>

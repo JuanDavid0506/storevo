@@ -125,20 +125,11 @@ Storevo.ThemeEditor = {
             }
         },
         testimonials: {
-            label: 'Testimonios y Reseñas de Clientes',
-            description: '3 tarjetas con calificación de 5 estrellas y opiniones reales para dar máxima confianza.',
+            label: 'Reseñas Verificadas de Clientes',
+            description: 'Muestra automáticamente las calificaciones reales dejadas por compradores en sus pedidos.',
             defaultSettings: {
-                title: 'Lo que dicen nuestros clientes',
-                subtitle: 'Compradores reales que ya recibieron su pedido',
-                t1Name: 'Laura Gómez',
-                t1City: 'Medellín',
-                t1Text: 'Excelente calidad y atención. Mi pedido llegó súper rápido y tal cual como se ve en las fotos.',
-                t2Name: 'Carlos Ramírez',
-                t2City: 'Bogotá D.C.',
-                t2Text: 'Muy fácil comprar en la página, me asesoraron por WhatsApp con mi talla y todo llegó perfecto.',
-                t3Name: 'Valentina Torres',
-                t3City: 'Cali',
-                t3Text: 'Me encantó el empaque y la rapidez del envío. Sin duda volveré a comprar pronto.'
+                title: 'Opiniones de Compradores Reales',
+                subtitle: 'Calificaciones verificadas de clientes que compraron en nuestra tienda'
             }
         },
         how_to_buy: {
@@ -1003,17 +994,8 @@ Storevo.ThemeEditor = {
                 ];
             case 'testimonials':
                 return [
-                    { key: 'title', label: 'Título de la sección', type: 'text', defaultVal: 'Lo que dicen nuestros clientes' },
-                    { key: 'subtitle', label: 'Subtítulo', type: 'text', defaultVal: 'Compradores reales que ya recibieron su pedido' },
-                    { key: 't1Name', label: 'Cliente 1: Nombre', type: 'text' },
-                    { key: 't1City', label: 'Cliente 1: Ciudad', type: 'text' },
-                    { key: 't1Text', label: 'Cliente 1: Comentario', type: 'textarea' },
-                    { key: 't2Name', label: 'Cliente 2: Nombre', type: 'text' },
-                    { key: 't2City', label: 'Cliente 2: Ciudad', type: 'text' },
-                    { key: 't2Text', label: 'Cliente 2: Comentario', type: 'textarea' },
-                    { key: 't3Name', label: 'Cliente 3: Nombre', type: 'text' },
-                    { key: 't3City', label: 'Cliente 3: Ciudad', type: 'text' },
-                    { key: 't3Text', label: 'Cliente 3: Comentario', type: 'textarea' }
+                    { key: 'title', label: 'Título de la sección', type: 'text', placeholder: 'Opiniones de Compradores Reales' },
+                    { key: 'subtitle', label: 'Subtítulo descriptivo', type: 'text', placeholder: 'Calificaciones verificadas de clientes...' }
                 ];
             case 'how_to_buy':
                 return [

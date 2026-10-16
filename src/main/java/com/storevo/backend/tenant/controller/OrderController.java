@@ -6,6 +6,8 @@ import com.storevo.backend.config.tenant.TenantContext;
 import com.storevo.backend.tenant.dto.WompiCheckoutData;
 import com.storevo.backend.tenant.model.Order;
 import com.storevo.backend.tenant.model.OrderStatus;
+import com.storevo.backend.tenant.model.StoreReview;
+import com.storevo.backend.tenant.repository.StoreReviewRepository;
 import com.storevo.backend.tenant.service.OrderService;
 import com.storevo.backend.tenant.service.WompiService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -13,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -25,12 +28,12 @@ public class OrderController {
     private final StoreSettingsService storeSettingsService;
     private final OrderService orderService;
     private final WompiService wompiService;
+    private final StoreReviewRepository storeReviewRepository;
 
     @GetMapping("/{id}/success")
     public String orderSuccess(@PathVariable String slug, @PathVariable Long id, HttpServletRequest request, Model model) {
         Order order = orderService.getOrderById(id);
 
-        // Si el pedido ya fue pagado, redirigimos a la pantalla de resultado para evitar cobros duplicados
         if (order.getStatus() == OrderStatus.PAID) {
             return "redirect:/s/" + slug + "/order/" + id + "/wompi-result";
         }
@@ -41,12 +44,8 @@ public class OrderController {
         model.addAttribute("pageTitle", "Pagar Pedido");
 
         try {
-            // 1. Apagamos el switch para buscar las llaves de Wompi en la BD de Administración
             TenantContext.clear();
-
             WompiCheckoutData checkoutData = wompiService.prepareCheckout(store, order);
-
-            // 2. Volvemos a bajar el switch hacia la BD de la tienda
             TenantContext.setCurrentTenant(store.getSchemaName());
 
             String scheme = request.getHeader("X-Forwarded-Proto") != null ? request.getHeader("X-Forwarded-Proto") : request.getScheme();
@@ -84,6 +83,7 @@ public class OrderController {
         TenantContext.setCurrentTenant(store.getSchemaName());
 
         model.addAttribute("order", order);
+        model.addAttribute("existingReview", storeReviewRepository.findByOrderId(id).orElse(null));
         model.addAttribute("pageTitle", "Pedido enviado por WhatsApp");
 
         String rawWhatsapp = settings != null ? settings.getWhatsapp() : null;
@@ -98,14 +98,6 @@ public class OrderController {
         }
 
         return "storefront/order-whatsapp";
-    }
-
-    private String normalizeWhatsappNumber(String raw) {
-        String digitsOnly = raw.replaceAll("[^0-9]", "");
-        if (digitsOnly.length() == 10) {
-            return "57" + digitsOnly;
-        }
-        return digitsOnly;
     }
 
     @GetMapping("/{id}/wompi-result")
@@ -130,6 +122,7 @@ public class OrderController {
         model.addAttribute("order", order);
         model.addAttribute("wompiTransactionId", wompiTransactionId);
         model.addAttribute("wompiTxStatus", wompiTxStatus);
+        model.addAttribute("existingReview", storeReviewRepository.findByOrderId(id).orElse(null));
 
         boolean paymentFailed = "DECLINED".equals(wompiTxStatus)
                 || "ERROR".equals(wompiTxStatus)
@@ -144,5 +137,75 @@ public class OrderController {
 
         model.addAttribute("pageTitle", "Resultado del Pago");
         return "storefront/order-result";
+    }
+
+    /**
+     * Registra una reseña 100% real asociada a un pedido existente de la tienda.
+     */
+    @PostMapping("/{id}/review")
+    public String submitOrderReview(
+            @PathVariable String slug,
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "5") Integer rating,
+            @RequestParam String comment,
+            @RequestParam(defaultValue = "result") String origin,
+            HttpServletRequest request,
+            RedirectAttributes redirectAttributes) {
+
+        Store store = (Store) request.getAttribute("currentStore");
+        if (store != null) {
+            TenantContext.setCurrentTenant(store.getSchemaName());
+        }
+
+        String redirectTarget = "whatsapp".equalsIgnoreCase(origin)
+                ? "redirect:/s/" + slug + "/order/" + id + "/whatsapp?reviewed=true"
+                : "redirect:/s/" + slug + "/order/" + id + "/wompi-result";
+
+        try {
+            Order order = orderService.getOrderById(id);
+            if (order.getStatus() == OrderStatus.CANCELLED) {
+                return redirectTarget;
+            }
+
+            if (storeReviewRepository.findByOrderId(id).isPresent()) {
+                redirectAttributes.addFlashAttribute("reviewSuccess", "¡Ya habíamos registrado tu calificación para este pedido!");
+                return redirectTarget;
+            }
+
+            String cleanComment = comment != null ? comment.trim() : "";
+            if (cleanComment.length() < 4) {
+                redirectAttributes.addFlashAttribute("reviewError", "Por favor escribe un comentario breve sobre tu experiencia.");
+                return redirectTarget;
+            }
+            if (cleanComment.length() > 500) {
+                cleanComment = cleanComment.substring(0, 500);
+            }
+
+            int safeRating = Math.max(1, Math.min(rating != null ? rating : 5, 5));
+
+            StoreReview review = StoreReview.builder()
+                    .orderId(order.getId())
+                    .customerName(order.getCustomerName())
+                    .customerCity(order.getCity())
+                    .rating(safeRating)
+                    .comment(cleanComment)
+                    .isVisible(true)
+                    .build();
+
+            storeReviewRepository.save(review);
+            redirectAttributes.addFlashAttribute("reviewSuccess", "¡Muchas gracias! Tu calificación verificada ya fue publicada en la tienda.");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("reviewError", "No se pudo guardar tu reseña en este momento.");
+        }
+
+        return redirectTarget;
+    }
+
+    private String normalizeWhatsappNumber(String raw) {
+        String digitsOnly = raw.replaceAll("[^0-9]", "");
+        if (digitsOnly.length() == 10) {
+            return "57" + digitsOnly;
+        }
+        return digitsOnly;
     }
 }
