@@ -10,8 +10,9 @@
     <script id="storevo-filter-data-json" type="application/json"
             th:if="${catalogFilterDataJson != null}"
             th:utext="${catalogFilterDataJson}"></script>
-
-    <th:block th:if="${theme != null}" th:with="catalogSections=${theme.getPageSections('catalog')}">
+    <th:block th:if="${theme != null}"
+              th:with="activeKey=${editorPageKey != null ? editorPageKey : 'catalog'},
+                       catalogSections=${theme.getPageSections(activeKey)}">
         <th:block th:each="sec : ${catalogSections}" th:if="${sec.enabled}">
             <div th:replace="~{storefront/sections/theme-sections :: render-section(${sec})}"></div>
         </th:block>

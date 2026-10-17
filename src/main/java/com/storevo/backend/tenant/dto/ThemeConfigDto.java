@@ -27,7 +27,7 @@ public class ThemeConfigDto {
     @Builder.Default
     private List<ThemeSectionDto> sections = new ArrayList<>();
 
-    /** Mapa de secciones por página (home, catalog, product) */
+    /** Mapa de secciones por página (home, catalog, product y category:{id}) */
     @Builder.Default
     private Map<String, List<ThemeSectionDto>> pages = new LinkedHashMap<>();
 
@@ -39,17 +39,33 @@ public class ThemeConfigDto {
         if (pageKey == null || pageKey.isBlank()) {
             return sections != null ? sections : new ArrayList<>();
         }
-        if (pageKey.startsWith("page:")) {
-            String targetSlug = pageKey.substring(5).trim();
+        String cleanKey = pageKey.trim();
+
+        // 1. Páginas personalizadas (page:{slug})
+        if (cleanKey.startsWith("page:")) {
+            String targetSlug = cleanKey.substring(5).trim();
             ThemeCustomPageDto cp = findCustomPage(targetSlug);
             if (cp != null && cp.getSections() != null) {
                 return cp.getSections();
             }
+            return new ArrayList<>();
         }
-        if (pages != null && pages.containsKey(pageKey) && pages.get(pageKey) != null) {
-            return pages.get(pageKey);
+
+        // 2. Coincidencia directa en el mapa de páginas (incluye category:{id} si ya fue personalizada)
+        if (pages != null && pages.containsKey(cleanKey)) {
+            List<ThemeSectionDto> specific = pages.get(cleanKey);
+            if (specific != null && !specific.isEmpty()) {
+                return specific;
+            }
         }
-        if ("home".equalsIgnoreCase(pageKey) && sections != null) {
+
+        // 3. Fallback automático: si es una categoría sin diseño propio aún, hereda el diseño de 'catalog'
+        if (cleanKey.startsWith("category:") && pages != null && pages.get("catalog") != null) {
+            return pages.get("catalog");
+        }
+
+        // 4. Fallback para portada
+        if ("home".equalsIgnoreCase(cleanKey) && sections != null) {
             return sections;
         }
         return new ArrayList<>();

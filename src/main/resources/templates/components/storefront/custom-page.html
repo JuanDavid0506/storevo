@@ -3,7 +3,7 @@
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layouts/store-layout}">
 <head>
-    <title th:text="${customPage != null ? customPage.title : 'Página'}">Página</title>
+    <title th:text="${pageTitle}">Página</title>
 </head>
 <body>
 <div layout:fragment="content" class="min-h-[70vh]">
@@ -11,23 +11,21 @@
             th:if="${catalogFilterDataJson != null}"
             th:utext="${catalogFilterDataJson}"></script>
 
-    <th:block th:if="${customPage != null and customPage.sections != null and not #lists.isEmpty(customPage.sections)}">
-        <th:block th:each="sec : ${customPage.sections}" th:if="${sec.enabled}">
+    <th:block th:if="${theme != null}"
+              th:with="activeKey=${editorPageKey != null ? editorPageKey : ('page:' + customPage.slug)},
+                       customSections=${theme.getPageSections(activeKey)}">
+        <th:block th:each="sec : ${customSections}" th:if="${sec.enabled}">
             <div th:replace="~{storefront/sections/theme-sections :: render-section(${sec})}"></div>
         </th:block>
-    </th:block>
 
-    <!-- Estado vacío si la página aún no tiene secciones activas -->
-    <div th:if="${customPage == null or customPage.sections == null or #lists.isEmpty(customPage.sections)}"
-         class="max-w-4xl mx-auto px-4 py-20 text-center">
-        <div class="bg-white text-slate-900 p-10 store-radius border border-slate-200/80 shadow-sm">
-            <h1 class="text-2xl sm:text-3xl font-black text-slate-900 mb-2"
-                th:text="${customPage != null ? customPage.title : 'Página personalizada'}">Página</h1>
-            <p class="text-sm text-slate-500">
-                Esta página aún no tiene secciones visibles. Agrega bloques desde el Editor Visual de tu tienda.
-            </p>
+        <div th:if="${#lists.isEmpty(customSections) and (isDraftPreview == true)}"
+             class="max-w-3xl mx-auto px-4 py-16 text-center">
+            <div class="bg-white text-slate-800 p-8 store-radius border border-dashed border-slate-300 shadow-sm">
+                <p class="font-bold text-base">Esta página aún no tiene secciones activas</p>
+                <p class="text-xs text-slate-500 mt-1">Usa el botón "+ Agregar nueva sección" en el panel izquierdo para construir el contenido de esta página.</p>
+            </div>
         </div>
-    </div>
+    </th:block>
 </div>
 <th:block layout:fragment="scripts">
     <script th:src="@{/js/modules/storeCatalog.js}"></script>

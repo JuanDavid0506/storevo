@@ -78,19 +78,22 @@ public class StoreFrontController {
         List<Product> allProducts = (category == null) ? catalogProducts : productService.getPublicCatalog(null);
         hydratePageContext(request, model, allProducts);
         model.addAttribute("products", catalogProducts);
-        model.addAttribute("editorPageKey", "catalog");
 
+        String activePageKey = "catalog";
         if (category != null) {
             try {
                 Category currentCat = categoryService.getCategoryById(category);
                 model.addAttribute("currentCategory", currentCat);
                 model.addAttribute("pageTitle", currentCat.getName());
+                activePageKey = "category:" + currentCat.getId();
             } catch (Exception e) {
                 model.addAttribute("pageTitle", "Catálogo");
             }
         } else {
             model.addAttribute("pageTitle", "Catálogo");
         }
+
+        model.addAttribute("editorPageKey", activePageKey);
         return "storefront/catalog";
     }
 

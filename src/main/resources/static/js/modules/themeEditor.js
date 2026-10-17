@@ -5,7 +5,7 @@ Storevo.ThemeEditor = {
     storeName: 'Nuestra Tienda',
     previewUrl: '',
     activePage: 'home',
-    theme: { globalStyles: {}, sections: [], pages: {} },
+    theme: { globalStyles: {}, sections: [], pages: {}, customPages: [] },
     categories: [],
     catalogProducts: [],
     activeSectionId: null,
@@ -265,13 +265,61 @@ Storevo.ThemeEditor = {
         this.theme.sections = this.theme.pages.home;
     },
 
+    findCategoryObj: function(catId) {
+        const target = String(catId || '').trim();
+        if (!target || !Array.isArray(this.categories)) return null;
+        return this.categories.find(c => c && String(c.id) === target) || null;
+    },
+
+    isCategoryCustomized: function(catId) {
+        this.ensurePagesStructure();
+        const key = 'category:' + String(catId || '').trim();
+        return Boolean(Array.isArray(this.theme.pages[key]) && this.theme.pages[key].length > 0);
+    },
+
+    buildDefaultSectionsForCategory: function(catId) {
+        this.ensurePagesStructure();
+        const cat = this.findCategoryObj(catId);
+        const baseCatalog = Array.isArray(this.theme.pages.catalog) && this.theme.pages.catalog.length > 0
+            ? JSON.parse(JSON.stringify(this.theme.pages.catalog))
+            : [{
+                id: 'sec_catalog_results_' + catId,
+                type: 'catalog_results',
+                enabled: true,
+                locked: true,
+                settings: JSON.parse(JSON.stringify(this.catalogDefinitions.catalog_results.defaultSettings))
+            }];
+
+        return baseCatalog.map((sec, idx) => {
+            const copy = JSON.parse(JSON.stringify(sec));
+            if (copy.type === 'catalog_results') {
+                copy.id = 'sec_catalog_results_' + catId;
+                copy.locked = true;
+                copy.enabled = true;
+                copy.settings = copy.settings || {};
+                if (cat) {
+                    const displayTitle = cat.rawName || cat.name || 'Todo el Catálogo';
+                    if (!copy.settings.headerTitle || copy.settings.headerTitle === 'Todo el Catálogo') {
+                        copy.settings.headerTitle = displayTitle;
+                    }
+                    if (cat.description && (!copy.settings.headerSubtitle || copy.settings.headerSubtitle === 'Explora todos nuestros productos disponibles.')) {
+                        copy.settings.headerSubtitle = cat.description;
+                    }
+                }
+            } else {
+                copy.id = `${copy.id || 'sec'}_cat_${catId}_${idx}`;
+            }
+            return copy;
+        });
+    },
+
     findCustomPageObj: function(slug) {
         this.ensurePagesStructure();
         const clean = String(slug || '').trim().toLowerCase();
         return this.theme.customPages.find(cp => cp && String(cp.slug || '').trim().toLowerCase() === clean) || null;
     },
 
-    getActivePageSections: function() {
+    getActivePageSections: function(materializeCategory = false) {
         this.ensurePagesStructure();
         if (this.activePage && this.activePage.startsWith('page:')) {
             const pageSlug = this.activePage.substring(5);
@@ -280,6 +328,21 @@ Storevo.ThemeEditor = {
                 if (!Array.isArray(cp.sections)) cp.sections = [];
                 return cp.sections;
             }
+        }
+        if (this.activePage && this.activePage.startsWith('category:')) {
+            const catId = this.activePage.substring(9);
+            const key = 'category:' + catId;
+            if (Array.isArray(this.theme.pages[key]) && this.theme.pages[key].length > 0) {
+                return this.theme.pages[key];
+            }
+            const generated = this.buildDefaultSectionsForCategory(catId);
+            if (materializeCategory) {
+                this.theme.pages[key] = generated;
+                this.renderPageSelector();
+                this.syncPageContextBars();
+                return this.theme.pages[key];
+            }
+            return generated;
         }
         if (!Array.isArray(this.theme.pages[this.activePage])) {
             this.theme.pages[this.activePage] = [];
@@ -301,12 +364,20 @@ Storevo.ThemeEditor = {
         if (this.activePage === 'home') {
             this.theme.sections = newList;
         }
+        if (this.activePage && this.activePage.startsWith('category:')) {
+            this.renderPageSelector();
+            this.syncPageContextBars();
+        }
     },
 
     getPreviewUrlForPage: function(pageKey) {
         if (pageKey && pageKey.startsWith('page:')) {
             const pageSlug = pageKey.substring(5);
             return `/s/${this.slug}/page/${encodeURIComponent(pageSlug)}?preview=draft`;
+        }
+        if (pageKey && pageKey.startsWith('category:')) {
+            const catId = pageKey.substring(9);
+            return `/s/${this.slug}/catalog?category=${encodeURIComponent(catId)}&preview=draft`;
         }
         if (pageKey === 'catalog') {
             return `/s/${this.slug}/catalog?preview=draft`;
@@ -323,11 +394,12 @@ Storevo.ThemeEditor = {
         if (!sel) return;
         sel.innerHTML = '';
 
+        // 1. Páginas principales de la tienda
         const mainGroup = document.createElement('optgroup');
         mainGroup.label = 'Páginas Principales';
         [
             { value: 'home', label: '🏠 Página de Inicio (Portada)' },
-            { value: 'catalog', label: '🛍️ Página de Catálogo' },
+            { value: 'catalog', label: '🛍️ Página de Catálogo General' },
             { value: 'product', label: '📦 Ficha de Producto (Detalle)' }
         ].forEach(item => {
             const o = document.createElement('option');
@@ -337,6 +409,39 @@ Storevo.ThemeEditor = {
         });
         sel.appendChild(mainGroup);
 
+        // 2. Páginas de Categorías existentes (priorizando las enlazadas al Navbar)
+        if (Array.isArray(this.categories) && this.categories.length > 0) {
+            const navCats = this.categories.filter(c => c && c.showInNav !== false);
+            const otherCats = this.categories.filter(c => c && c.showInNav === false);
+
+            if (navCats.length > 0) {
+                const navCatGroup = document.createElement('optgroup');
+                navCatGroup.label = 'Categorías en tu Menú (Navbar)';
+                navCats.forEach(c => {
+                    const o = document.createElement('option');
+                    o.value = 'category:' + c.id;
+                    const customTag = this.isCategoryCustomized(c.id) ? ' ✨ Personalizada' : '';
+                    o.textContent = `🏷️ ${c.name}${customTag}`;
+                    navCatGroup.appendChild(o);
+                });
+                sel.appendChild(navCatGroup);
+            }
+
+            if (otherCats.length > 0) {
+                const otherCatGroup = document.createElement('optgroup');
+                otherCatGroup.label = 'Otras Categorías de la Tienda';
+                otherCats.forEach(c => {
+                    const o = document.createElement('option');
+                    o.value = 'category:' + c.id;
+                    const customTag = this.isCategoryCustomized(c.id) ? ' ✨ Personalizada' : '';
+                    o.textContent = `📁 ${c.name}${customTag}`;
+                    otherCatGroup.appendChild(o);
+                });
+                sel.appendChild(otherCatGroup);
+            }
+        }
+
+        // 3. Páginas Personalizadas creadas por el comerciante
         if (this.theme.customPages && this.theme.customPages.length > 0) {
             const customGroup = document.createElement('optgroup');
             customGroup.label = 'Páginas Personalizadas';
@@ -351,6 +456,89 @@ Storevo.ThemeEditor = {
         }
 
         sel.value = this.activePage;
+    },
+
+    syncPageContextBars: function() {
+        this.syncCustomPageSettingsBar();
+        this.syncCategoryPageSettingsBar();
+    },
+
+    syncCategoryPageSettingsBar: function() {
+        const bar = document.getElementById('category-page-settings-bar');
+        if (!bar) return;
+
+        if (!this.activePage || !this.activePage.startsWith('category:')) {
+            bar.classList.add('hidden');
+            return;
+        }
+
+        const catId = this.activePage.substring(9);
+        const cat = this.findCategoryObj(catId);
+        if (!cat) {
+            bar.classList.add('hidden');
+            return;
+        }
+
+        bar.classList.remove('hidden');
+        const isCustom = this.isCategoryCustomized(catId);
+
+        const titleEl = document.getElementById('category-page-title-label');
+        const hintEl = document.getElementById('category-page-status-hint');
+        const badgeEl = document.getElementById('category-page-status-badge');
+        const urlEl = document.getElementById('category-page-url-preview');
+        const resetBtn = document.getElementById('category-page-reset-btn');
+
+        if (titleEl) {
+            titleEl.textContent = `Categoría: ${cat.rawName || cat.name}`;
+        }
+        if (hintEl) {
+            hintEl.textContent = cat.showInNav !== false
+                ? 'Enlazada al menú Navbar • Se conserva automáticamente'
+                : 'Categoría activa de tu catálogo';
+        }
+        if (badgeEl) {
+            if (isCustom) {
+                badgeEl.textContent = '✨ Diseño propio';
+                badgeEl.className = 'text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-storevo-500/15 text-storevo-300 border border-storevo-500/30 flex-shrink-0';
+            } else {
+                badgeEl.textContent = 'Diseño general';
+                badgeEl.className = 'text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 flex-shrink-0';
+            }
+        }
+        if (urlEl) {
+            urlEl.textContent = `/catalog?category=${cat.id}`;
+        }
+        if (resetBtn) {
+            resetBtn.classList.toggle('hidden', !isCustom);
+        }
+    },
+
+    resetActiveCategoryPage: function() {
+        if (!this.activePage || !this.activePage.startsWith('category:')) return;
+        const catId = this.activePage.substring(9);
+        const cat = this.findCategoryObj(catId);
+        const key = 'category:' + catId;
+        if (!this.isCategoryCustomized(catId)) return;
+
+        const doReset = () => {
+            delete this.theme.pages[key];
+            this.closeInspector();
+            this.renderPageSelector();
+            this.syncPageContextBars();
+            this.renderSectionsList();
+            this.markUnpublishedChanges(true);
+            this.saveDraft(false, true);
+            if (Storevo.UI && Storevo.UI.Toast) {
+                Storevo.UI.Toast.show(
+                    `La categoría "${cat ? (cat.rawName || cat.name) : catId}" volvió al diseño general de catálogo`,
+                    'success'
+                );
+            }
+        };
+
+        if (confirm(`¿Restablecer la categoría "${cat ? (cat.rawName || cat.name) : catId}" para que use nuevamente el diseño general del catálogo?`)) {
+            doReset();
+        }
     },
 
     syncCustomPageSettingsBar: function() {
@@ -405,14 +593,101 @@ Storevo.ThemeEditor = {
             .substring(0, 45);
     },
 
+    findExistingPageMatch: function(rawTitle, rawSlug) {
+        this.ensurePagesStructure();
+        const candidateSlug = this.slugifyPageTitle(rawSlug || rawTitle);
+        const cleanTitle = String(rawTitle || '').trim().toLowerCase();
+        if (!candidateSlug && !cleanTitle) return null;
+
+        // 1. Verificar si coincide con una página principal
+        if (candidateSlug === 'inicio' || candidateSlug === 'home' || candidateSlug === 'portada') {
+            return {
+                pageKey: 'home',
+                message: 'La página de Inicio ya existe en tu tienda. Puedes editarla directamente sin crear otra.'
+            };
+        }
+        if (candidateSlug === 'catalogo' || candidateSlug === 'catalog') {
+            return {
+                pageKey: 'catalog',
+                message: 'La página de Catálogo General ya existe. Selecciónala para personalizarla.'
+            };
+        }
+
+        // 2. Verificar si coincide con una Categoría existente del comerciante
+        if (Array.isArray(this.categories)) {
+            const matchedCat = this.categories.find(c => {
+                if (!c) return false;
+                const rawName = String(c.rawName || c.name || '').trim().toLowerCase();
+                const fullName = String(c.name || '').trim().toLowerCase();
+                const catSlug = this.slugifyPageTitle(rawName);
+                return (cleanTitle && (rawName === cleanTitle || fullName === cleanTitle))
+                    || (candidateSlug && catSlug === candidateSlug);
+            });
+            if (matchedCat) {
+                return {
+                    pageKey: 'category:' + matchedCat.id,
+                    message: `Ya tienes la categoría «${matchedCat.rawName || matchedCat.name}» en tu tienda. No necesitas crear otra página para personalizar su diseño.`
+                };
+            }
+        }
+
+        // 3. Verificar si coincide con una Página Personalizada ya creada
+        if (Array.isArray(this.theme.customPages)) {
+            const matchedCp = this.theme.customPages.find(cp => {
+                if (!cp) return false;
+                const cpSlug = String(cp.slug || '').trim().toLowerCase();
+                const cpTitle = String(cp.title || '').trim().toLowerCase();
+                return (candidateSlug && cpSlug === candidateSlug)
+                    || (cleanTitle && cpTitle === cleanTitle);
+            });
+            if (matchedCp) {
+                return {
+                    pageKey: 'page:' + matchedCp.slug,
+                    message: `Ya existe la página personalizada «${matchedCp.title}» (/page/${matchedCp.slug}). Puedes abrirla y editarla directamente.`
+                };
+            }
+        }
+
+        return null;
+    },
+
+    checkNewPageCollision: function() {
+        const titleInput = document.getElementById('new-custom-page-title');
+        const slugInput = document.getElementById('new-custom-page-slug');
+        const box = document.getElementById('new-custom-page-collision-box');
+        const textEl = document.getElementById('new-custom-page-collision-text');
+        const btn = document.getElementById('btn-edit-existing-page');
+        if (!box || !textEl || !btn) return null;
+
+        const match = this.findExistingPageMatch(
+            titleInput ? titleInput.value : '',
+            slugInput ? slugInput.value : ''
+        );
+
+        if (!match) {
+            box.classList.add('hidden');
+            return null;
+        }
+
+        textEl.textContent = match.message;
+        btn.onclick = () => {
+            this.closeCreatePageModal();
+            this.switchPage(match.pageKey, true);
+        };
+        box.classList.remove('hidden');
+        return match;
+    },
+
     openCreatePageModal: function() {
         const modal = document.getElementById('create-custom-page-modal');
         const titleInput = document.getElementById('new-custom-page-title');
         const slugInput = document.getElementById('new-custom-page-slug');
         const navChk = document.getElementById('new-custom-page-navbar');
+        const collisionBox = document.getElementById('new-custom-page-collision-box');
         if (titleInput) titleInput.value = '';
         if (slugInput) slugInput.value = '';
         if (navChk) navChk.checked = true;
+        if (collisionBox) collisionBox.classList.add('hidden');
         if (modal) modal.classList.remove('hidden');
         if (titleInput) setTimeout(() => titleInput.focus(), 50);
     },
@@ -427,6 +702,7 @@ Storevo.ThemeEditor = {
         if (slugInput) {
             slugInput.value = this.slugifyPageTitle(titleVal);
         }
+        this.checkNewPageCollision();
     },
 
     buildStarterSectionsForCustomPage: function(templateType, pageTitle) {
@@ -519,15 +795,20 @@ Storevo.ThemeEditor = {
             baseSlug = 'pagina-' + (this.theme.customPages.length + 1);
         }
 
-        let finalSlug = baseSlug;
-        let counter = 2;
-        while (this.findCustomPageObj(finalSlug)) {
-            finalSlug = `${baseSlug}-${counter++}`;
+        // Si ya existe una página personalizada con el mismo slug, abrirla directamente en lugar de duplicarla
+        const existingCustom = this.findCustomPageObj(baseSlug);
+        if (existingCustom) {
+            this.closeCreatePageModal();
+            this.switchPage('page:' + existingCustom.slug, true);
+            if (Storevo.UI && Storevo.UI.Toast) {
+                Storevo.UI.Toast.show(`Abriendo la página existente "${existingCustom.title}"`, 'info');
+            }
+            return;
         }
 
         const tplType = tplSelect ? tplSelect.value : 'about';
         const newPage = {
-            slug: finalSlug,
+            slug: baseSlug,
             title: title,
             showInNavbar: navChk ? Boolean(navChk.checked) : true,
             sections: this.buildStarterSectionsForCustomPage(tplType, title)
@@ -535,10 +816,10 @@ Storevo.ThemeEditor = {
 
         this.theme.customPages.push(newPage);
         this.closeCreatePageModal();
-        this.activePage = 'page:' + finalSlug;
+        this.activePage = 'page:' + baseSlug;
         this.previewUrl = this.getPreviewUrlForPage(this.activePage);
         this.renderPageSelector();
-        this.syncCustomPageSettingsBar();
+        this.syncPageContextBars();
         this.renderSectionsList();
         this.markUnpublishedChanges(true);
         this.saveDraft(false, true);
@@ -577,8 +858,16 @@ Storevo.ThemeEditor = {
             target = pageKey;
         } else if (pageKey && pageKey.startsWith('page:')) {
             const slug = pageKey.substring(5);
-            if (this.findCustomPageObj(slug)) {
-                target = 'page:' + slug;
+            const cp = this.findCustomPageObj(slug);
+            if (cp) {
+                target = 'page:' + cp.slug;
+            }
+        } else if (pageKey && pageKey.startsWith('category:')) {
+            const catId = pageKey.substring(9);
+            if (this.findCategoryObj(catId)) {
+                target = 'category:' + catId;
+            } else {
+                target = 'catalog';
             }
         }
 
@@ -587,13 +876,16 @@ Storevo.ThemeEditor = {
         this.previewUrl = this.getPreviewUrlForPage(target);
 
         this.renderPageSelector();
-        this.syncCustomPageSettingsBar();
+        this.syncPageContextBars();
 
         const badge = document.getElementById('editor-active-page-badge');
         if (badge) {
             if (target.startsWith('page:')) {
                 const cp = this.findCustomPageObj(target.substring(5));
                 badge.textContent = cp ? cp.title : 'Página';
+            } else if (target.startsWith('category:')) {
+                const cat = this.findCategoryObj(target.substring(9));
+                badge.textContent = cat ? (cat.rawName || cat.name) : 'Categoría';
             } else {
                 const labels = { home: 'Inicio', catalog: 'Catálogo', product: 'Producto' };
                 badge.textContent = labels[target] || 'Inicio';
@@ -635,7 +927,7 @@ Storevo.ThemeEditor = {
 
         this.ensurePagesStructure();
         this.renderPageSelector();
-        this.syncCustomPageSettingsBar();
+        this.syncPageContextBars();
         this.renderSectionsList();
         this.initSortable();
         this.initGlobalStylesInputs();
@@ -774,7 +1066,7 @@ Storevo.ThemeEditor = {
             animation: 180,
             ghostClass: 'sortable-ghost',
             onEnd: () => {
-                const currentList = this.getActivePageSections();
+                const currentList = this.getActivePageSections(true);
                 const orderedIds = Array.from(container.querySelectorAll('[data-sec-id]'))
                     .map(el => el.getAttribute('data-sec-id'));
 
@@ -797,7 +1089,7 @@ Storevo.ThemeEditor = {
         const container = document.getElementById('sortable-sections-container');
         if (!container) return;
         container.innerHTML = '';
-        const currentList = this.getActivePageSections();
+        const currentList = this.getActivePageSections(false);
 
         if (currentList.length === 0) {
             container.innerHTML = `
@@ -864,13 +1156,17 @@ Storevo.ThemeEditor = {
                 });
                 row.querySelector('.sec-toggle-btn').addEventListener('click', (e) => {
                     e.stopPropagation();
-                    sec.enabled = !isEnabled;
-                    this.renderSectionsList();
-                    this.scheduleAutoSave();
+                    const mutableList = this.getActivePageSections(true);
+                    const targetSec = mutableList.find(item => item.id === sec.id);
+                    if (targetSec) {
+                        targetSec.enabled = !isEnabled;
+                        this.renderSectionsList();
+                        this.scheduleAutoSave();
+                    }
                 });
                 row.querySelector('.sec-delete-btn').addEventListener('click', (e) => {
                     e.stopPropagation();
-                    const filtered = this.getActivePageSections().filter(item => item.id !== sec.id);
+                    const filtered = this.getActivePageSections(true).filter(item => item.id !== sec.id);
                     this.setActivePageSections(filtered);
                     this.renderSectionsList();
                     this.scheduleAutoSave();
@@ -882,7 +1178,7 @@ Storevo.ThemeEditor = {
     },
 
     duplicateSection: function(sectionId) {
-        const list = this.getActivePageSections();
+        const list = this.getActivePageSections(true);
         const index = list.findIndex(s => s.id === sectionId);
         if (index === -1) return;
 
@@ -930,23 +1226,49 @@ Storevo.ThemeEditor = {
         return clean;
     },
 
+    ensureCategoryMaterializedOnEdit: function(sectionId) {
+        if (!this.activePage || !this.activePage.startsWith('category:')) return null;
+        const mutableList = this.getActivePageSections(true);
+        return mutableList.find(s => s.id === sectionId) || mutableList.find(s => s.type === 'catalog_results') || null;
+    },
+
     openInspector: function(sectionId) {
         this.syncProductsFromIframe();
-        let sec = this.getActivePageSections().find(s => s.id === sectionId);
+        let activeList = this.getActivePageSections(false);
+        let sec = activeList.find(s => s.id === sectionId);
+
+        // Si el clic viene del iframe sobre la sección heredada 'sec_catalog_results' de una categoría
+        if (!sec && this.activePage && this.activePage.startsWith('category:') && sectionId === 'sec_catalog_results') {
+            sec = activeList.find(s => s.type === 'catalog_results');
+        }
+
         if (!sec && this.theme.pages) {
             for (const [pageKey, list] of Object.entries(this.theme.pages)) {
                 const found = (list || []).find(s => s.id === sectionId);
                 if (found) {
                     this.activePage = pageKey;
-                    const sel = document.getElementById('editor-page-select');
-                    if (sel) sel.value = pageKey;
+                    this.renderPageSelector();
+                    this.syncPageContextBars();
                     sec = found;
                     break;
                 }
             }
         }
         if (!sec) return;
-        this.activeSectionId = sectionId;
+        this.activeSectionId = sec.id;
+
+        const commitSectionChange = (key, value) => {
+            if (this.activePage && this.activePage.startsWith('category:') && !this.isCategoryCustomized(this.activePage.substring(9))) {
+                const materializedSec = this.ensureCategoryMaterializedOnEdit(this.activeSectionId);
+                if (materializedSec) {
+                    sec = materializedSec;
+                    this.activeSectionId = sec.id;
+                }
+            }
+            if (!sec.settings) sec.settings = {};
+            sec.settings[key] = value;
+            this.scheduleAutoSave();
+        };
 
         const dupBtn = document.getElementById('inspector-duplicate-btn');
         if (dupBtn) {
@@ -1032,11 +1354,10 @@ Storevo.ThemeEditor = {
                         .then(r => r.json())
                         .then(data => {
                             if (data.success && data.url) {
-                                sec.settings[field.key] = data.url;
                                 urlInput.value = data.url;
                                 imgEl.src = data.url;
                                 previewWrap.classList.remove('hidden');
-                                this.scheduleAutoSave();
+                                commitSectionChange(field.key, data.url);
                                 if (Storevo.UI && Storevo.UI.Toast) {
                                     Storevo.UI.Toast.show('Imagen subida y aplicada', 'success');
                                 }
@@ -1057,23 +1378,21 @@ Storevo.ThemeEditor = {
                 });
 
                 removeBtn.addEventListener('click', () => {
-                    sec.settings[field.key] = '';
                     urlInput.value = '';
                     imgEl.src = '';
                     previewWrap.classList.add('hidden');
-                    this.scheduleAutoSave();
+                    commitSectionChange(field.key, '');
                 });
 
                 urlInput.addEventListener('input', () => {
                     const val = urlInput.value.trim();
-                    sec.settings[field.key] = val;
                     if (val) {
                         imgEl.src = val;
                         previewWrap.classList.remove('hidden');
                     } else {
                         previewWrap.classList.add('hidden');
                     }
-                    this.scheduleAutoSave();
+                    commitSectionChange(field.key, val);
                 });
 
                 actionsRow.appendChild(fileInput);
@@ -1135,6 +1454,23 @@ Storevo.ThemeEditor = {
                     presetSelect.appendChild(catGroup);
                 }
 
+                if (this.theme.customPages && this.theme.customPages.length > 0) {
+                    const cpGroup = document.createElement('optgroup');
+                    cpGroup.label = 'Páginas Personalizadas';
+                    this.theme.customPages.forEach(cp => {
+                        if (!cp || !cp.slug) return;
+                        const o = document.createElement('option');
+                        o.value = `/page/${cp.slug}`;
+                        o.textContent = `Página: ${cp.title || cp.slug}`;
+                        if (o.value === normalizedCurrent) {
+                            o.selected = true;
+                            matchedPreset = true;
+                        }
+                        cpGroup.appendChild(o);
+                    });
+                    presetSelect.appendChild(cpGroup);
+                }
+
                 const extGroup = document.createElement('optgroup');
                 extGroup.label = 'Externo';
                 const customOpt = document.createElement('option');
@@ -1158,14 +1494,12 @@ Storevo.ThemeEditor = {
                         customUrlInput.focus();
                     } else {
                         customUrlInput.classList.add('hidden');
-                        sec.settings[field.key] = presetSelect.value;
-                        this.scheduleAutoSave();
+                        commitSectionChange(field.key, presetSelect.value);
                     }
                 });
 
                 customUrlInput.addEventListener('input', () => {
-                    sec.settings[field.key] = customUrlInput.value.trim();
-                    this.scheduleAutoSave();
+                    commitSectionChange(field.key, customUrlInput.value.trim());
                 });
 
                 urlBox.appendChild(presetSelect);
@@ -1179,8 +1513,7 @@ Storevo.ThemeEditor = {
                 input.placeholder = field.placeholder || '';
                 input.className = 'w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:border-storevo-500 focus:outline-none';
                 input.addEventListener('input', () => {
-                    sec.settings[field.key] = input.value;
-                    this.scheduleAutoSave();
+                    commitSectionChange(field.key, input.value);
                 });
                 wrapper.appendChild(input);
 
@@ -1195,7 +1528,7 @@ Storevo.ThemeEditor = {
                     select.appendChild(o);
                 });
                 select.addEventListener('change', () => {
-                    sec.settings[field.key] = select.value;
+                    commitSectionChange(field.key, select.value);
 
                     if (sec.type === 'product_grid') {
                         if (field.key === 'source') {
@@ -1209,8 +1542,6 @@ Storevo.ThemeEditor = {
                             if (sourceSelect) sourceSelect.value = 'CATEGORY';
                         }
                     }
-
-                    this.scheduleAutoSave();
                 });
                 wrapper.appendChild(select);
 
@@ -1237,14 +1568,12 @@ Storevo.ThemeEditor = {
 
                 colorInput.addEventListener('input', () => {
                     hexInput.value = colorInput.value;
-                    sec.settings[field.key] = colorInput.value;
-                    this.scheduleAutoSave();
+                    commitSectionChange(field.key, colorInput.value);
                 });
                 hexInput.addEventListener('input', () => {
                     if (/^#[0-9a-fA-F]{6}$/.test(hexInput.value.trim())) {
                         colorInput.value = hexInput.value.trim();
-                        sec.settings[field.key] = hexInput.value.trim();
-                        this.scheduleAutoSave();
+                        commitSectionChange(field.key, hexInput.value.trim());
                     }
                 });
 
@@ -1260,8 +1589,7 @@ Storevo.ThemeEditor = {
                 chk.checked = Boolean(currentVal);
                 chk.className = 'w-4 h-4 rounded border-slate-700 text-storevo-500';
                 chk.addEventListener('change', () => {
-                    sec.settings[field.key] = chk.checked;
-                    this.scheduleAutoSave();
+                    commitSectionChange(field.key, chk.checked);
                 });
                 const span = document.createElement('span');
                 span.className = 'text-xs font-medium text-slate-300';
@@ -1278,14 +1606,13 @@ Storevo.ThemeEditor = {
                 input.placeholder = field.placeholder || '';
                 input.className = 'w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:border-storevo-500 focus:outline-none [color-scheme:dark]';
                 input.addEventListener('input', () => {
-                    sec.settings[field.key] = input.value;
+                    commitSectionChange(field.key, input.value);
                     if (sec.type === 'hero_banner' && field.key === 'secondaryButtonText') {
                         const secUrlWrap = container.querySelector('[data-field-key="secondaryButtonUrl"]');
                         if (secUrlWrap) {
                             secUrlWrap.classList.toggle('hidden', !input.value.trim());
                         }
                     }
-                    this.scheduleAutoSave();
                 });
                 wrapper.appendChild(input);
             }
@@ -1301,7 +1628,7 @@ Storevo.ThemeEditor = {
         });
 
         this.switchTab('sections');
-        this.highlightSectionInIframe(sectionId);
+        this.highlightSectionInIframe(this.activeSectionId);
     },
 
     closeInspector: function() {
@@ -1515,7 +1842,7 @@ Storevo.ThemeEditor = {
                 return [
                     { key: 'showHeader', label: 'Encabezado del Catálogo', type: 'checkbox', placeholder: 'Mostrar título y descripción del catálogo', defaultVal: true },
                     { key: 'headerBadge', label: 'Etiqueta superior', type: 'text', defaultVal: 'Colección', placeholder: 'Ej: Colección' },
-                    { key: 'headerTitle', label: 'Título principal del catálogo', type: 'text', defaultVal: 'Todo el Catálogo' },
+                    { key: 'headerTitle', label: 'Título principal de esta página', type: 'text', defaultVal: 'Todo el Catálogo' },
                     { key: 'headerSubtitle', label: 'Subtítulo descriptivo', type: 'textarea', defaultVal: 'Explora todos nuestros productos disponibles.' },
                     { key: 'showCategoryPills', label: 'Navegación rápida de categorías', type: 'checkbox', placeholder: 'Mostrar píldoras de categorías arriba del listado', defaultVal: true },
                     { key: 'showSearchAndSort', label: 'Buscador y Ordenamiento', type: 'checkbox', placeholder: 'Mostrar barra de búsqueda en vivo y selector de orden', defaultVal: true },
@@ -2401,7 +2728,6 @@ Storevo.ThemeEditor = {
     applyPreset: function(preset) {
         this.ensurePagesStructure();
 
-        // Guardar punto de restauración antes de la primera prueba de plantilla
         if (!this.previousThemeSnapshot) {
             this.previousThemeSnapshot = JSON.parse(JSON.stringify(this.theme));
         }
@@ -2413,6 +2739,16 @@ Storevo.ThemeEditor = {
         const currentCustomPages = Array.isArray(this.theme.customPages)
             ? JSON.parse(JSON.stringify(this.theme.customPages)) : [];
 
+        // Conservar personalizaciones existentes de páginas de categoría
+        const preservedCategoryPages = {};
+        if (this.theme.pages && typeof this.theme.pages === 'object') {
+            Object.entries(this.theme.pages).forEach(([k, v]) => {
+                if (k.startsWith('category:') && Array.isArray(v) && v.length > 0) {
+                    preservedCategoryPages[k] = JSON.parse(JSON.stringify(v));
+                }
+            });
+        }
+
         const nextTheme = JSON.parse(JSON.stringify(preset.config));
         if (!nextTheme.pages) nextTheme.pages = {};
         if (Array.isArray(nextTheme.sections)) {
@@ -2421,6 +2757,12 @@ Storevo.ThemeEditor = {
 
         if (keepContent && Array.isArray(nextTheme.pages.home)) {
             this.mergeUserContentIntoPreset(oldHomeSections, nextTheme.pages.home);
+        }
+
+        if (keepContent) {
+            Object.entries(preservedCategoryPages).forEach(([k, v]) => {
+                nextTheme.pages[k] = v;
+            });
         }
 
         this.theme = nextTheme;
@@ -2435,7 +2777,7 @@ Storevo.ThemeEditor = {
 
         this.markUnpublishedChanges(true);
         this.renderPageSelector();
-        this.syncCustomPageSettingsBar();
+        this.syncPageContextBars();
         this.renderSectionsList();
         this.initGlobalStylesInputs();
         this.renderPresetsCatalog();
@@ -2463,7 +2805,7 @@ Storevo.ThemeEditor = {
 
         this.ensurePagesStructure();
         this.renderPageSelector();
-        this.syncCustomPageSettingsBar();
+        this.syncPageContextBars();
         this.renderSectionsList();
         this.initGlobalStylesInputs();
         this.renderPresetsCatalog();
@@ -2520,8 +2862,19 @@ Storevo.ThemeEditor = {
             settings: JSON.parse(JSON.stringify(def.defaultSettings || {}))
         };
 
-        this.getActivePageSections().push(newSection);
+        const list = this.getActivePageSections(true);
+        // Si estamos en una página de categoría o catálogo y agregamos un banner/contador, colocarlo arriba del listado si el listado es el único bloque
+        if ((this.activePage === 'catalog' || (this.activePage && this.activePage.startsWith('category:')))
+            && (type === 'hero_banner' || type === 'countdown_promo' || type === 'promo_banner' || type === 'announcement_bar')
+            && list.length === 1 && list[0].type === 'catalog_results') {
+            list.unshift(newSection);
+        } else {
+            list.push(newSection);
+        }
+
         this.closeAddSectionModal();
+        this.renderPageSelector();
+        this.syncPageContextBars();
         this.renderSectionsList();
         this.openInspector(newSection.id);
         this.scheduleAutoSave(true);
@@ -2612,6 +2965,8 @@ Storevo.ThemeEditor = {
                         this.ensurePagesStructure();
                         this.markUnpublishedChanges(false);
                         this.closeInspector();
+                        this.renderPageSelector();
+                        this.syncPageContextBars();
                         this.renderSectionsList();
                         this.initGlobalStylesInputs();
                         this.reloadPreviewIframe();
@@ -2639,6 +2994,8 @@ Storevo.ThemeEditor = {
                         this.ensurePagesStructure();
                         this.markUnpublishedChanges(true);
                         this.closeInspector();
+                        this.renderPageSelector();
+                        this.syncPageContextBars();
                         this.renderSectionsList();
                         this.initGlobalStylesInputs();
                         this.reloadPreviewIframe();

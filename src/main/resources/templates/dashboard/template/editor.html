@@ -48,7 +48,7 @@
             background-color: rgba(99, 102, 241, 0.15) !important;
             border: 1px dashed #6366f1 !important;
         }
-        /* Marco para la simulación móvil y PC */
+        /* Marco para la simulación Móvil y PC */
         #preview-viewport-wrapper[data-device="mobile"] #preview-frame-container {
             width: 385px;
             height: 760px;
@@ -70,7 +70,6 @@
             background: rgba(99, 102, 241, 0.14);
             color: #ffffff;
         }
-
         /* Secciones recogibles del panel de Estilos (independiente de Tailwind JIT) */
         .style-acc {
             border: 1px solid #1e293b;
@@ -224,19 +223,19 @@
         <!-- =================================================================== -->
         <aside id="theme-editor-sidebar" class="bg-slate-900 border-b lg:border-b-0 lg:border-r border-slate-800">
 
-            <!-- Selector de Página a personalizar + Creación y Ajustes de Páginas Personalizadas -->
+            <!-- Selector de Página a personalizar + Creación y Ajustes de Páginas -->
             <div class="px-3 pt-3 pb-2.5 bg-slate-950 border-b border-slate-800/80 flex-shrink-0 space-y-2">
                 <div class="flex items-center justify-between gap-2">
                     <label for="editor-page-select" class="text-[10px] font-black uppercase tracking-wider text-slate-400">
                         Página que estás editando
                     </label>
                     <div class="flex items-center gap-1.5">
-                        <span id="editor-active-page-badge" class="text-[10px] font-bold text-storevo-400 bg-storevo-500/10 border border-storevo-500/20 px-2 py-0.5 rounded-full">
+                        <span id="editor-active-page-badge" class="text-[10px] font-bold text-storevo-400 bg-storevo-500/10 border border-storevo-500/20 px-2 py-0.5 rounded-full truncate max-w-[110px]">
                             Inicio
                         </span>
                         <button type="button" onclick="Storevo.ThemeEditor.openCreatePageModal()"
                                 class="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg bg-storevo-500 hover:bg-storevo-600 text-white shadow-sm transition inline-flex items-center gap-1">
-                            <span>+ Crear página</span>
+                            <span>+ Nueva página</span>
                         </button>
                     </div>
                 </div>
@@ -244,9 +243,30 @@
                         onchange="Storevo.ThemeEditor.switchPage(this.value)"
                         class="w-full px-3 py-2 bg-slate-900 border border-slate-700 hover:border-storevo-500/60 rounded-xl text-xs font-bold text-white focus:border-storevo-500 focus:outline-none cursor-pointer transition">
                     <option value="home">🏠 Página de Inicio (Portada)</option>
-                    <option value="catalog">🛍️ Página de Catálogo</option>
+                    <option value="catalog">🛍️ Página de Catálogo General</option>
                     <option value="product">📦 Ficha de Producto (Detalle)</option>
                 </select>
+
+                <!-- Barra contextual cuando se edita una Categoría existente del Navbar -->
+                <div id="category-page-settings-bar" class="hidden p-2.5 rounded-xl bg-slate-900/90 border border-storevo-500/30 space-y-2">
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="min-w-0">
+                            <p id="category-page-title-label" class="text-xs font-bold text-white truncate">Categoría</p>
+                            <p id="category-page-status-hint" class="text-[10px] text-slate-400">Enlazada al menú de tu tienda</p>
+                        </div>
+                        <span id="category-page-status-badge" class="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 flex-shrink-0">
+                            Diseño general
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80 text-[11px]">
+                        <span id="category-page-url-preview" class="text-[10px] font-mono text-slate-500 truncate">/catalog?category=...</span>
+                        <button type="button" id="category-page-reset-btn"
+                                onclick="Storevo.ThemeEditor.resetActiveCategoryPage()"
+                                class="hidden text-[10px] font-bold text-amber-400 hover:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/25 px-2 py-1 rounded-lg transition flex-shrink-0">
+                            Usar diseño general
+                        </button>
+                    </div>
+                </div>
 
                 <!-- Barra de configuración rápida (solo aparece cuando se edita una Página Personalizada) -->
                 <div id="custom-page-settings-bar" class="hidden p-2.5 rounded-xl bg-slate-900/90 border border-storevo-500/30 space-y-2">
@@ -535,7 +555,7 @@
                             </div>
                         </div>
 
-                        <!-- CONTROLES AVANZADOS DE SUBMENÚS Y MEGA MENÚ (7 ARQUITECTURAS + 6 ANIMACIONES) -->
+                        <!-- CONTROLES AVANZADOS DE SUBMENÚS Y MEGA MENÚ -->
                         <div class="pt-2 border-t border-slate-800/80 space-y-3">
                             <p class="text-[11px] font-black uppercase tracking-wider text-storevo-400">Menú de Categorías e Interacción</p>
 
@@ -693,6 +713,7 @@
                                 </optgroup>
                             </select>
                         </div>
+
                         <div>
                             <label class="block text-xs font-bold text-slate-300 mb-1.5">Fuente de Textos y Descripciones</label>
                             <select id="style-body-font" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:border-storevo-500">
@@ -816,8 +837,9 @@
                 </details>
             </div>
 
-            <!-- VISTA 4: PLANTILLAS ESTRUCTURALES EN 1 CLIC + VISTA PREVIA SEGURA (FASE 5) -->
+            <!-- VISTA 4: PLANTILLAS ESTRUCTURALES EN 1 CLIC + VISTA PREVIA SEGURA -->
             <div id="panel-theme-presets" class="hidden flex-1 overflow-y-auto p-4 space-y-3.5">
+
                 <!-- Protección no destructiva: Conservar contenido + Deshacer -->
                 <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-2.5">
                     <label class="flex items-start gap-2.5 cursor-pointer select-none">
@@ -894,7 +916,7 @@
             <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-5">
                 <div class="flex items-center justify-between border-b border-slate-800 pb-3">
                     <div>
-                        <h3 class="text-lg font-bold text-white">Agregar sección a tu tienda</h3>
+                        <h3 class="text-lg font-bold text-white">Agregar sección a esta página</h3>
                         <p class="text-xs text-slate-400">Elige el bloque que deseas añadir. Luego podrás moverlo y personalizarlo.</p>
                     </div>
                     <button type="button" onclick="Storevo.ThemeEditor.closeAddSectionModal()" class="p-1.5 text-slate-400 hover:text-white bg-slate-800 rounded-lg">
@@ -915,10 +937,21 @@
                 <div class="flex items-center justify-between border-b border-slate-800 pb-3">
                     <div>
                         <h3 class="text-base font-bold text-white">Crear Página Personalizada</h3>
-                        <p class="text-xs text-slate-400">Agrega una nueva página a tu tienda y enlázala al menú.</p>
+                        <p class="text-xs text-slate-400">Para promociones, «Sobre nosotros», preguntas frecuentes o campañas.</p>
                     </div>
                     <button type="button" onclick="Storevo.ThemeEditor.closeCreatePageModal()" class="p-1.5 text-slate-400 hover:text-white bg-slate-800 rounded-lg">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+
+                <!-- Aviso inteligente si el comerciante escribe el nombre de una Categoría o Página que ya existe -->
+                <div id="new-custom-page-collision-box" class="hidden p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-2">
+                    <p id="new-custom-page-collision-text" class="text-xs text-amber-300 font-semibold leading-snug">
+                        Ya tienes una página con este nombre en tu tienda.
+                    </p>
+                    <button type="button" id="btn-edit-existing-page"
+                            class="w-full py-1.5 px-3 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs transition">
+                        Abrir y editar la página existente →
                     </button>
                 </div>
 
@@ -936,6 +969,7 @@
                         <div class="flex items-center bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-slate-400">
                             <span class="opacity-60">/page/</span>
                             <input type="text" id="new-custom-page-slug"
+                                   oninput="Storevo.ThemeEditor.checkNewPageCollision()"
                                    placeholder="nosotros"
                                    class="flex-1 bg-transparent text-white focus:outline-none">
                         </div>

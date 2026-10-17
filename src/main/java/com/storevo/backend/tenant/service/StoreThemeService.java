@@ -54,8 +54,12 @@ public class StoreThemeService {
             "color", "underline", "pill",
             "underline_center", "underline_slide", "slide_bg", "opacity"
     );
-    private static final Set<String> ALLOWED_NAV_DROPDOWN_STYLES = Set.of("mega", "cascade", "drawer", "none");
-    private static final Set<String> ALLOWED_NAV_DROPDOWN_ANIMS = Set.of("fade", "slide_up", "scale");
+    private static final Set<String> ALLOWED_NAV_DROPDOWN_STYLES = Set.of(
+            "mega", "flyout", "accordion", "split", "cascade", "strip", "drawer", "none"
+    );
+    private static final Set<String> ALLOWED_NAV_DROPDOWN_ANIMS = Set.of(
+            "fade", "slide_up", "slide_down", "scale", "reveal", "stagger"
+    );
     private static final Set<String> ALLOWED_NAV_TRIGGERS = Set.of("hover", "click");
     private static final Set<String> ALLOWED_NAV_SPEEDS = Set.of("fast", "normal", "slow");
     private static final Set<String> ALLOWED_HEADING_TRANSFORMS = Set.of("none", "uppercase");
@@ -619,27 +623,50 @@ public class StoreThemeService {
         }
 
         List<ThemeSectionDto> catalogSections = pages.computeIfAbsent("catalog", k -> buildDefaultCatalogSections());
-        boolean hasCatalogAnchor = catalogSections.stream().anyMatch(s -> "catalog_results".equalsIgnoreCase(s.getType()));
+        boolean hasCatalogAnchor = catalogSections.stream().anyMatch(s -> s != null && "catalog_results".equalsIgnoreCase(s.getType()));
         if (!hasCatalogAnchor) {
             catalogSections.add(0, buildCatalogAnchorSection());
         }
 
         List<ThemeSectionDto> productSections = pages.computeIfAbsent("product", k -> buildDefaultProductSections());
-        boolean hasProductAnchor = productSections.stream().anyMatch(s -> "product_main".equalsIgnoreCase(s.getType()));
+        boolean hasProductAnchor = productSections.stream().anyMatch(s -> s != null && "product_main".equalsIgnoreCase(s.getType()));
         if (!hasProductAnchor) {
             productSections.add(0, buildProductAnchorSection());
         }
 
-        config.setSections(pages.get("home"));
+        // Sanitizar páginas de categorías personalizadas (category:{id})
+        Iterator<Map.Entry<String, List<ThemeSectionDto>>> pageIt = pages.entrySet().iterator();
+        while (pageIt.hasNext()) {
+            Map.Entry<String, List<ThemeSectionDto>> entry = pageIt.next();
+            String key = entry.getKey();
+            List<ThemeSectionDto> list = entry.getValue();
 
-        for (List<ThemeSectionDto> sectionList : pages.values()) {
-            if (sectionList == null) continue;
-            for (ThemeSectionDto sec : sectionList) {
-                sanitizeSingleSection(sec);
+            if (key != null && key.startsWith("category:")) {
+                if (list == null || list.isEmpty()) {
+                    // Si está vacía, se elimina la clave para que herede limpiamente de 'catalog'
+                    pageIt.remove();
+                    continue;
+                }
+                list.removeIf(s -> s == null || "product_main".equalsIgnoreCase(s.getType()));
+                boolean hasCatAnchor = list.stream().anyMatch(s -> "catalog_results".equalsIgnoreCase(s.getType()));
+                if (!hasCatAnchor) {
+                    ThemeSectionDto anchor = buildCatalogAnchorSection();
+                    anchor.setId("sec_catalog_results_" + key.substring(9));
+                    list.add(anchor);
+                }
+            }
+
+            if (list != null) {
+                list.removeIf(Objects::isNull);
+                for (ThemeSectionDto sec : list) {
+                    sanitizeSingleSection(sec);
+                }
             }
         }
 
-        // Sanitizar páginas personalizadas
+        config.setSections(pages.get("home"));
+
+        // Sanitizar páginas personalizadas (page:{slug})
         if (config.getCustomPages() == null) {
             config.setCustomPages(new ArrayList<>());
         } else {
@@ -671,7 +698,6 @@ public class StoreThemeService {
                 if (cp.getSections() == null) {
                     cp.setSections(new ArrayList<>());
                 }
-                // En páginas personalizadas no se permiten las secciones ancla exclusivas de catálogo o producto
                 cp.getSections().removeIf(s -> s == null
                         || "catalog_results".equalsIgnoreCase(s.getType())
                         || "product_main".equalsIgnoreCase(s.getType()));
@@ -704,6 +730,9 @@ public class StoreThemeService {
             sec.setEnabled(true);
         } else if (sec.getLocked() == null) {
             sec.setLocked(false);
+        }
+        if (sec.getEnabled() == null) {
+            sec.setEnabled(true);
         }
 
         if (sec.getSettings() != null) {

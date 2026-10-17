@@ -28,7 +28,7 @@ public class DashboardTemplateController {
     private final CloudinaryService cloudinaryService;
     private final ObjectMapper objectMapper;
 
-    private static final long MAX_BANNER_SIZE = 10 * 1024 * 1024; // 10 MB
+    private static final long MAX_BANNER_SIZE = 10L * 1024 * 1024; // 10 MB
     private static final List<String> ALLOWED_TYPES = Arrays.asList("image/jpeg", "image/png", "image/webp");
 
     @GetMapping
@@ -225,10 +225,16 @@ public class DashboardTemplateController {
     private void flattenCategories(List<Category> categories, String prefix, List<Map<String, Object>> result) {
         if (categories == null) return;
         for (Category cat : categories) {
+            if (cat == null || Boolean.FALSE.equals(cat.getIsActive())) continue;
+
             String fullName = prefix.isEmpty() ? cat.getName() : prefix + " › " + cat.getName();
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("id", cat.getId());
             item.put("name", fullName);
+            item.put("rawName", cat.getName());
+            item.put("description", cat.getDescription() != null ? cat.getDescription() : "");
+            item.put("showInNav", Boolean.TRUE.equals(cat.getShowInNav()));
+            item.put("parentId", cat.getParentCategory() != null ? cat.getParentCategory().getId() : null);
             result.add(item);
 
             if (cat.getSubCategories() != null && !cat.getSubCategories().isEmpty()) {
