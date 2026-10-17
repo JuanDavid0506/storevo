@@ -641,3 +641,31 @@ body[data-sv-nav-compact="true"].sv-is-scrolled .sv-nav__grid {
         grid-template-rows: 3.25rem auto;
     }
 }
+/* --------------------------------------------------------------------------
+   10) BLINDAJE DE CONTRASTE PARA PÁGINAS PERSONALIZADAS Y ENLACES ACTIVOS
+   Evita que .text-brand o estilos activos pinten el texto del color de fondo
+   cuando el navbar usa data-nav-style="primary" o "secondary".
+   -------------------------------------------------------------------------- */
+.sv-nav .sv-nav__menu > a,
+.sv-nav .sv-nav__menu > a span,
+.sv-nav .sv-nav__menu .sv-nav__link,
+.sv-nav .sv-nav__menu .sv-nav__link span {
+    color: var(--nav-link) !important;
+}
+
+.sv-nav .sv-nav__menu > a:hover,
+.sv-nav .sv-nav__menu > a:hover span,
+.sv-nav .sv-nav__menu > a.active,
+.sv-nav .sv-nav__menu > a.active span,
+.sv-nav .sv-nav__menu > a.is-active,
+.sv-nav .sv-nav__menu > a.is-active span,
+.sv-nav .sv-nav__menu > a.text-brand,
+.sv-nav .sv-nav__menu > a .text-brand,
+.sv-nav .sv-nav__menu > a[aria-current="page"],
+.sv-nav .sv-nav__menu > a[aria-current="page"] span,
+.sv-nav .sv-nav__menu .sv-nav__link:hover,
+.sv-nav .sv-nav__menu .sv-nav__link:hover span,
+.sv-nav .sv-nav__menu .nav-parent:hover > .sv-nav__link,
+.sv-nav .sv-nav__menu .nav-parent:hover > .sv-nav__link span {
+    color: var(--nav-hover) !important;
+}
