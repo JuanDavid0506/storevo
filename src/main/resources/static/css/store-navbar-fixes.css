@@ -1,0 +1,126 @@
+/* ==========================================================================
+   Storevo - Correcciones del navbar
+   Cargar DESPUÉS de store-navbar.css
+
+   1) Grilla: todos los diseños tienen dónde colocar logo, menú, buscador y acciones
+   2) Sin scroll horizontal por desplegables
+   3) Desplegables que respetan el borde de la pantalla (junto con navbar.js)
+   4) Efectos de hover del menú aislados de los desplegables
+   5) Opcional: alturas del diseño "compacto" y compactar al hacer scroll
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1) GRILLA
+   Los diseños centered, marketplace y minimal ya tienen su grilla en
+   store-navbar.css. Cualquier otro valor (classic, editorial, compact,
+   double_bar, hero_overlay, o un valor vacío) usa la grilla clásica.
+   -------------------------------------------------------------------------- */
+@media (min-width: 768px) {
+    .sv-nav:not([data-nav-layout="centered"]):not([data-nav-layout="marketplace"]):not([data-nav-layout="minimal"]) .sv-nav__grid {
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        grid-template-areas: "logo menu actions";
+        column-gap: 1.5rem;
+    }
+}
+
+/* Desde 1024px aparece el buscador en la misma fila */
+@media (min-width: 1024px) {
+    .sv-nav:not([data-nav-layout="centered"]):not([data-nav-layout="marketplace"]):not([data-nav-layout="minimal"]) .sv-nav__grid {
+        grid-template-columns: auto minmax(0, 1fr) auto auto;
+        grid-template-areas: "logo menu search actions";
+    }
+    .sv-nav:not([data-nav-layout="centered"]):not([data-nav-layout="marketplace"]):not([data-nav-layout="minimal"]) .sv-nav__search {
+        display: flex;
+    }
+}
+
+@media (min-width: 1280px) {
+    .sv-nav:not([data-nav-layout="centered"]):not([data-nav-layout="marketplace"]):not([data-nav-layout="minimal"]) .sv-nav__search input {
+        width: 14rem;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   2) SIN SCROLL HORIZONTAL
+   Un elemento con visibility:hidden sigue ocupando área de scroll. Se recorta
+   en horizontal (clip no crea contenedor de scroll, así que sticky sigue
+   funcionando y los desplegables siguen saliendo hacia abajo).
+   -------------------------------------------------------------------------- */
+.sv-nav {
+    overflow-x: clip;
+}
+body {
+    overflow-x: hidden;   /* respaldo para navegadores antiguos */
+    overflow-x: clip;
+}
+
+/* --------------------------------------------------------------------------
+   3) DESPLEGABLES QUE RESPETAN EL BORDE
+   navbar.js agrega estas clases según el espacio disponible.
+   -------------------------------------------------------------------------- */
+.sv-nav__dropdown.is-align-right {
+    left: auto;
+    right: 0;
+}
+.sv-nav__flyout.is-flip {
+    left: auto;
+    right: 100%;
+    transform: translateX(0.5rem);
+}
+.nav-flyout-parent:hover > .sv-nav__flyout.is-flip {
+    transform: translateX(0);
+}
+
+/* --------------------------------------------------------------------------
+   4) EFECTOS DE HOVER AISLADOS
+   El JS marca todos los enlaces con .sv-interactive-link, incluidos los de
+   los desplegables, y los subrayados del menú se filtraban ahí.
+   -------------------------------------------------------------------------- */
+.sv-nav__dropdown .sv-interactive-link::before,
+.sv-nav__dropdown .sv-interactive-link::after,
+.sv-nav__flyout .sv-interactive-link::before,
+.sv-nav__flyout .sv-interactive-link::after {
+    content: none !important;
+}
+body[data-sv-nav-hover="slide_bg"] .sv-nav__dropdown .sv-interactive-link,
+body[data-sv-nav-hover="slide_bg"] .sv-nav__flyout .sv-interactive-link {
+    padding: 0.625rem 1.25rem !important;
+    border-radius: 0;
+    overflow: visible;
+}
+
+/* --------------------------------------------------------------------------
+   5) OPCIONAL: ALTURAS DEL DISEÑO COMPACTO Y COMPACTAR AL HACER SCROLL
+   Las reglas originales apuntaban a clases (.h-16 / .h-20) que el navbar ya
+   no usa, por eso no tenían efecto. Si no quieres este comportamiento,
+   elimina todo lo que sigue.
+   El padding del enlace y el alto de la fila deben cambiar juntos para que
+   los desplegables sigan pegados a la barra.
+   -------------------------------------------------------------------------- */
+.sv-nav__grid {
+    transition: min-height var(--sv-nav-duration, 250ms) ease,
+    grid-template-rows var(--sv-nav-duration, 250ms) ease;
+}
+
+.sv-nav[data-nav-layout="compact"] .sv-nav__grid {
+    min-height: 3.25rem;
+}
+.sv-nav[data-nav-layout="compact"] .sv-nav__link {
+    padding: 0.875rem 0;
+    font-size: 0.8125rem;
+}
+
+body[data-sv-nav-compact="true"].sv-is-scrolled .sv-nav__grid {
+    min-height: 3.25rem;
+}
+@media (min-width: 768px) {
+    body[data-sv-nav-compact="true"].sv-is-scrolled .sv-nav:not([data-nav-layout="centered"]):not([data-nav-layout="marketplace"]) .sv-nav__link {
+        padding: 0.875rem 0;
+    }
+    body[data-sv-nav-compact="true"].sv-is-scrolled .sv-nav[data-nav-layout="centered"] .sv-nav__grid {
+        grid-template-rows: 3.5rem auto;
+    }
+    body[data-sv-nav-compact="true"].sv-is-scrolled .sv-nav[data-nav-layout="marketplace"] .sv-nav__grid {
+        grid-template-rows: 3.25rem auto;
+    }
+}

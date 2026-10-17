@@ -15,6 +15,8 @@
 
     <link rel="stylesheet" th:href="@{/css/app.css}">
     <link rel="stylesheet" th:href="@{/css/store-navbar.css}">
+    <link rel="stylesheet" th:href="@{/css/store-navbar-fixes.css}">
+    <link rel="stylesheet" th:href="@{/css/store-filters-fixes.css}">
     <link rel="stylesheet" th:href="@{/css/store-components.css}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -322,8 +324,7 @@
             href: a.getAttribute('href')
         }));
 
-        const navRoot = document.getElementById('store-navbar') || document.querySelector('nav') || document.querySelector('header');
-        if (!navRoot) return;
+        const navRoot = document.getElementById('storeNavbar') || document.querySelector('nav.sv-nav') || document.querySelector('nav') || document.querySelector('header');        if (!navRoot) return;
         navRoot.classList.add('sv-nav-root');
 
         // 2. Montar enlaces de Páginas Personalizadas en el Navbar (PC y Móvil)
@@ -580,14 +581,24 @@
                 });
             });
         }
+        function fitDropdownPanel() {
+            if (!dropdownPanel || !menuWrap) return;
+            const navUi = window.Storevo && Storevo.UI && Storevo.UI.Navbar;
+            if (navUi && typeof navUi.fitPanel === 'function') {
+                navUi.fitPanel(dropdownPanel, menuWrap);
+            }
+        }
 
-        // Control de apertura por Hover o Click y Accesibilidad (Tecla Escape)
-        let closeTimer = null;
         function setDropdownOpen(open) {
             if (!menuWrap || !chevronBtn) return;
+            if (open) fitDropdownPanel();
             menuWrap.classList.toggle('sv-catalog-menu-open', open);
             chevronBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
         }
+
+        window.addEventListener('resize', () => {
+            if (menuWrap && menuWrap.classList.contains('sv-catalog-menu-open')) fitDropdownPanel();
+        });
 
         if (menuWrap && chevronBtn) {
             menuWrap.addEventListener('mouseenter', () => {

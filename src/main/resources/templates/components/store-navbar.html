@@ -2,7 +2,7 @@
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
 <body>
 
-<nav th:fragment="storeNavbar" id="storeNavbar" class="sv-nav"
+<nav th:fragment="storeNavbar" id="storeNavbar" class="sv-nav sv-nav-root"
      th:with="gs=${theme != null ? theme.globalStyles : null},
               navLayout=${gs != null and gs.navbarLayout != null ? gs.navbarLayout : 'classic'},
               navStyle=${gs != null and gs.navbarStyle != null ? gs.navbarStyle : 'page'},

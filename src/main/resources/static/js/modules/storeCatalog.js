@@ -3,6 +3,12 @@
  * Funciona tanto en la página de Catálogo (catalog_results) como en Vitrinas (product_grid con showFilters=true).
  */
 (function() {
+    // Máximo de opciones visibles por grupo de filtros antes de mostrar "Ver más"
+    const FACET_COLLAPSE_LIMIT = 8;
+    // true: "Jeans" y "jeans" (o con tildes distintas) cuentan como la misma categoría en el filtro.
+    // false: se muestran por separado, como antes.
+    const MERGE_CATEGORIES_BY_NAME = true;
+
     const COLOR_SWATCH_MAP = {
         'negro': '#111827', 'black': '#111827',
         'blanco': '#ffffff', 'white': '#ffffff',
@@ -32,6 +38,10 @@
     function normalizeKey(str) {
         return String(str || '').trim().toLowerCase()
             .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    }
+
+    function categoryKeyOf(name) {
+        return MERGE_CATEGORIES_BY_NAME ? normalizeKey(name) : String(name || '');
     }
 
     function getSwatchStyle(valueName) {
@@ -77,6 +87,9 @@
         const secSettings = (bridgeData.sections && bridgeData.sections[secId]) || {};
 
         if (secType === 'product_grid' && String(secSettings.showFilters) !== 'true') {
+            // Si el servidor pintó la barra pero esta vitrina no tiene filtros activos, se retira
+            const staleToolbar = sectionEl.querySelector('.sv-grid-toolbar');
+            if (staleToolbar) staleToolbar.remove();
             return;
         }
 
@@ -129,6 +142,7 @@
                 hasDiscount,
                 madeToOrder,
                 categoryName,
+                categoryKey: categoryKeyOf(categoryName),
                 options,
                 attributes
             };
@@ -163,6 +177,8 @@
 
         // Calcular Facets dinámicos aplicando la regla de >= 2 valores distintos
         const facets = computeFacets(items, config);
+        const categoryLabelByKey = {};
+        facets.categories.forEach(([label, , key]) => { categoryLabelByKey[key] = label; });
 
         // Construir estructura DOM de filtros alrededor de la grilla
         const searchInput = sectionEl.querySelector('#catalog-search-input, .sv-search-input');
@@ -210,7 +226,9 @@
         let filterToggleBtn = null;
         let filterBadgeEl = null;
         if (facets.hasAnyFacet && config.filterLayout !== 'none' && sortSelect && sortSelect.parentNode) {
-            const btnWrap = sortSelect.parentNode.parentNode;
+            // Siempre en el grupo derecho de la barra (junto al contador), igual en Catálogo y en Vitrinas
+            const countHolder = visibleCountEl && visibleCountEl.parentElement;
+            const btnWrap = (countHolder && countHolder.parentElement) || sortSelect.parentNode.parentNode;
             filterToggleBtn = document.createElement('button');
             filterToggleBtn.type = 'button';
             filterToggleBtn.className = (config.filterLayout === 'sidebar' ? 'sv-mobile-filter-btn ' : '') +
@@ -246,6 +264,11 @@
             </div>
         `;
         document.body.appendChild(drawerBackdrop);
+
+        function setDrawerOpen(open) {
+            drawerBackdrop.classList.toggle('is-open', open);
+            document.body.classList.toggle('overflow-hidden', open);
+        }
 
         // Estado reactivo de filtros
         const state = {
@@ -294,6 +317,52 @@
             applyFilters();
         }
 
+        function createPill(facet, groupName, value, innerHtml, onClick) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'sv-facet-pill';
+            btn.dataset.facet = facet;
+            if (groupName !== null) btn.dataset.group = groupName;
+            if (value !== null) btn.dataset.value = value;
+            btn.setAttribute('aria-pressed', 'false');
+            btn.innerHTML = innerHtml;
+            btn.addEventListener('click', onClick);
+            return btn;
+        }
+
+        function createGroup(title, rightHtml) {
+            const group = document.createElement('div');
+            group.className = 'sv-facet-group';
+            group.innerHTML = `<div class="sv-facet-title"><span>${escapeHtml(title)}</span>${rightHtml || ''}</div><div class="sv-facet-options-pills"></div>`;
+            return group;
+        }
+
+        // Si un grupo tiene muchas opciones, muestra las primeras y un botón "Ver más"
+        function enableCollapse(group) {
+            const pillsWrap = group.querySelector('.sv-facet-options-pills');
+            const pills = Array.from(pillsWrap.children);
+            if (pills.length <= FACET_COLLAPSE_LIMIT) return;
+
+            pills.forEach((pill, i) => { if (i >= FACET_COLLAPSE_LIMIT) pill.classList.add('sv-pill-extra'); });
+            group.setAttribute('data-collapsed', 'true');
+
+            const hiddenCount = pills.length - FACET_COLLAPSE_LIMIT;
+            const toggle = document.createElement('button');
+            toggle.type = 'button';
+            toggle.className = 'sv-facet-more';
+            toggle.textContent = `Ver más (${hiddenCount})`;
+            toggle.setAttribute('aria-expanded', 'false');
+            toggle.addEventListener('click', () => {
+                const wasCollapsed = group.getAttribute('data-collapsed') === 'true';
+                group.setAttribute('data-collapsed', wasCollapsed ? 'false' : 'true');
+                toggle.textContent = wasCollapsed ? 'Ver menos' : `Ver más (${hiddenCount})`;
+                toggle.setAttribute('aria-expanded', wasCollapsed ? 'true' : 'false');
+            });
+            group.appendChild(toggle);
+        }
+
+        // Se construye UNA sola vez. Después solo se actualiza el estado de lo que ya existe
+        // (ver syncFacetUI), para no perder el foco ni las listas expandidas.
         function renderFacetsInto(container, isTopbarGrid) {
             container.innerHTML = '';
             const wrapper = document.createElement('div');
@@ -301,26 +370,18 @@
 
             // 1. Disponibilidad y Ofertas
             if (facets.showAvailabilityBlock) {
-                const group = document.createElement('div');
-                group.className = 'sv-facet-group';
-                group.innerHTML = `<div class="sv-facet-title"><span>Disponibilidad</span></div><div class="sv-facet-options-pills"></div>`;
+                const group = createGroup('Disponibilidad');
                 const pillsWrap = group.querySelector('.sv-facet-options-pills');
 
                 if (facets.inStockCount > 0 && facets.inStockCount < items.length) {
-                    const btn = document.createElement('button');
-                    btn.type = 'button';
-                    btn.className = 'sv-facet-pill' + (state.onlyInStock ? ' is-active' : '');
-                    btn.innerHTML = `<span>Disponible en stock</span><span class="sv-facet-count">(${facets.inStockCount})</span>`;
-                    btn.onclick = () => { state.onlyInStock = !state.onlyInStock; applyFilters(); };
-                    pillsWrap.appendChild(btn);
+                    pillsWrap.appendChild(createPill('stock', null, null,
+                        `<span>Disponible en stock</span><span class="sv-facet-count">(${facets.inStockCount})</span>`,
+                        () => { state.onlyInStock = !state.onlyInStock; applyFilters(); }));
                 }
                 if (facets.offersCount > 0) {
-                    const btn = document.createElement('button');
-                    btn.type = 'button';
-                    btn.className = 'sv-facet-pill' + (state.onlyOffers ? ' is-active' : '');
-                    btn.innerHTML = `<span>🔥 En Oferta</span><span class="sv-facet-count">(${facets.offersCount})</span>`;
-                    btn.onclick = () => { state.onlyOffers = !state.onlyOffers; applyFilters(); };
-                    pillsWrap.appendChild(btn);
+                    pillsWrap.appendChild(createPill('offers', null, null,
+                        `<span>🔥 En Oferta</span><span class="sv-facet-count">(${facets.offersCount})</span>`,
+                        () => { state.onlyOffers = !state.onlyOffers; applyFilters(); }));
                 }
                 wrapper.appendChild(group);
             }
@@ -335,8 +396,8 @@
                         <span class="text-[10px] font-semibold text-slate-400">${formatCOP(facets.minPrice)} - ${formatCOP(facets.maxPrice)}</span>
                     </div>
                     <div class="grid grid-cols-2 gap-2">
-                        <input type="number" class="sv-price-min w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800" placeholder="Mín (${facets.minPrice})" value="${state.minPrice !== null ? state.minPrice : ''}">
-                        <input type="number" class="sv-price-max w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800" placeholder="Máx (${facets.maxPrice})" value="${state.maxPrice !== null ? state.maxPrice : ''}">
+                        <input type="number" class="sv-price-min w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800" placeholder="Mín (${facets.minPrice})">
+                        <input type="number" class="sv-price-max w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800" placeholder="Máx (${facets.maxPrice})">
                     </div>
                 `;
                 const minIn = group.querySelector('.sv-price-min');
@@ -344,7 +405,7 @@
                 const onPriceChange = () => {
                     state.minPrice = minIn.value.trim() !== '' ? Number(minIn.value) : null;
                     state.maxPrice = maxIn.value.trim() !== '' ? Number(maxIn.value) : null;
-                    applyFilters(true);
+                    applyFilters();
                 };
                 minIn.addEventListener('change', onPriceChange);
                 maxIn.addEventListener('change', onPriceChange);
@@ -353,66 +414,80 @@
 
             // 3. Categorías (si hay >= 2 categorías distintas en la vista)
             if (facets.categories.length >= 2) {
-                const group = document.createElement('div');
-                group.className = 'sv-facet-group';
-                group.innerHTML = `<div class="sv-facet-title"><span>Categoría</span></div><div class="sv-facet-options-pills"></div>`;
+                const group = createGroup('Categoría');
                 const pillsWrap = group.querySelector('.sv-facet-options-pills');
-                facets.categories.forEach(([catName, count]) => {
-                    const active = state.categories.has(catName);
-                    const btn = document.createElement('button');
-                    btn.type = 'button';
-                    btn.className = 'sv-facet-pill' + (active ? ' is-active' : '');
-                    btn.innerHTML = `<span>${escapeHtml(catName)}</span><span class="sv-facet-count">(${count})</span>`;
-                    btn.onclick = () => { toggleSetValue(state.categories, catName); applyFilters(); };
-                    pillsWrap.appendChild(btn);
+                facets.categories.forEach(([catLabel, count, catKey]) => {
+                    pillsWrap.appendChild(createPill('cat', null, catKey,
+                        `<span>${escapeHtml(catLabel)}</span><span class="sv-facet-count">(${count})</span>`,
+                        () => { toggleSetValue(state.categories, catKey); applyFilters(); }));
                 });
+                enableCollapse(group);
                 wrapper.appendChild(group);
             }
 
             // 4. Opciones de Variantes (Talla, Color con Swatches, etc. con >= 2 valores)
             Object.entries(facets.options).forEach(([optName, entries]) => {
                 const isColor = isColorOptionName(optName);
-                const group = document.createElement('div');
-                group.className = 'sv-facet-group';
-                group.innerHTML = `<div class="sv-facet-title"><span>${escapeHtml(optName)}</span></div><div class="sv-facet-options-pills"></div>`;
+                const group = createGroup(optName);
                 const pillsWrap = group.querySelector('.sv-facet-options-pills');
 
                 entries.forEach(([valName, count]) => {
-                    const active = Boolean(state.options[optName] && state.options[optName].has(valName));
-                    const btn = document.createElement('button');
-                    btn.type = 'button';
-                    btn.className = 'sv-facet-pill' + (active ? ' is-active' : '');
                     const swatchCss = isColor ? getSwatchStyle(valName) : null;
                     const swatchHtml = swatchCss
                         ? `<span class="sv-color-swatch" style="background: ${swatchCss};"></span>`
                         : '';
-                    btn.innerHTML = `${swatchHtml}<span>${escapeHtml(valName)}</span><span class="sv-facet-count">(${count})</span>`;
-                    btn.onclick = () => { toggleMapSetValue(state.options, optName, valName); applyFilters(); };
-                    pillsWrap.appendChild(btn);
+                    pillsWrap.appendChild(createPill('opt', optName, valName,
+                        `${swatchHtml}<span>${escapeHtml(valName)}</span><span class="sv-facet-count">(${count})</span>`,
+                        () => { toggleMapSetValue(state.options, optName, valName); applyFilters(); }));
                 });
+                enableCollapse(group);
                 wrapper.appendChild(group);
             });
 
             // 5. Atributos de Ficha Técnica (Marca, Material, Género, etc. con >= 2 valores)
             Object.entries(facets.attributes).forEach(([attrName, entries]) => {
-                const group = document.createElement('div');
-                group.className = 'sv-facet-group';
-                group.innerHTML = `<div class="sv-facet-title"><span>${escapeHtml(attrName)}</span></div><div class="sv-facet-options-pills"></div>`;
+                const group = createGroup(attrName);
                 const pillsWrap = group.querySelector('.sv-facet-options-pills');
 
                 entries.forEach(([valName, count]) => {
-                    const active = Boolean(state.attributes[attrName] && state.attributes[attrName].has(valName));
-                    const btn = document.createElement('button');
-                    btn.type = 'button';
-                    btn.className = 'sv-facet-pill' + (active ? ' is-active' : '');
-                    btn.innerHTML = `<span>${escapeHtml(valName)}</span><span class="sv-facet-count">(${count})</span>`;
-                    btn.onclick = () => { toggleMapSetValue(state.attributes, attrName, valName); applyFilters(); };
-                    pillsWrap.appendChild(btn);
+                    pillsWrap.appendChild(createPill('attr', attrName, valName,
+                        `<span>${escapeHtml(valName)}</span><span class="sv-facet-count">(${count})</span>`,
+                        () => { toggleMapSetValue(state.attributes, attrName, valName); applyFilters(); }));
                 });
+                enableCollapse(group);
                 wrapper.appendChild(group);
             });
 
             container.appendChild(wrapper);
+        }
+
+        function pillIsActive(btn) {
+            const facet = btn.dataset.facet;
+            const value = btn.dataset.value;
+            const group = btn.dataset.group;
+            if (facet === 'stock') return state.onlyInStock;
+            if (facet === 'offers') return state.onlyOffers;
+            if (facet === 'cat') return state.categories.has(value);
+            if (facet === 'opt') return Boolean(state.options[group] && state.options[group].has(value));
+            if (facet === 'attr') return Boolean(state.attributes[group] && state.attributes[group].has(value));
+            return false;
+        }
+
+        // Actualiza en sitio las tres copias del filtro (barra lateral, panel superior y drawer móvil)
+        function syncFacetUI() {
+            const containers = [sidebar, topbarPanel, drawerBackdrop.querySelector('.sv-drawer-body')];
+            containers.forEach(container => {
+                if (!container) return;
+                container.querySelectorAll('.sv-facet-pill').forEach(btn => {
+                    const active = pillIsActive(btn);
+                    btn.classList.toggle('is-active', active);
+                    btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+                });
+                const minIn = container.querySelector('.sv-price-min');
+                const maxIn = container.querySelector('.sv-price-max');
+                if (minIn && minIn !== document.activeElement) minIn.value = state.minPrice !== null ? state.minPrice : '';
+                if (maxIn && maxIn !== document.activeElement) maxIn.value = state.maxPrice !== null ? state.maxPrice : '';
+            });
         }
 
         function renderActiveChips() {
@@ -434,7 +509,7 @@
                 chips.push({ label: `Precio: ${minTxt} - ${maxTxt}`, remove: () => { state.minPrice = null; state.maxPrice = null; } });
             }
             state.categories.forEach(cat => {
-                chips.push({ label: `Categoría: ${cat}`, remove: () => state.categories.delete(cat) });
+                chips.push({ label: `Categoría: ${categoryLabelByKey[cat] || cat}`, remove: () => state.categories.delete(cat) });
             });
             Object.entries(state.options).forEach(([optName, valSet]) => {
                 valSet.forEach(val => {
@@ -475,7 +550,7 @@
             chipsBar.appendChild(clearAll);
         }
 
-        function applyFilters(skipFacetInputReRender) {
+        function applyFilters() {
             const query = (state.q || '').trim().toLowerCase();
             if (clearSearchBtn) {
                 clearSearchBtn.classList.toggle('hidden', query.length === 0);
@@ -489,7 +564,7 @@
                 if (ok && state.onlyOffers && !item.hasDiscount) ok = false;
                 if (ok && state.minPrice !== null && item.price < state.minPrice) ok = false;
                 if (ok && state.maxPrice !== null && item.price > state.maxPrice) ok = false;
-                if (ok && state.categories.size > 0 && !state.categories.has(item.categoryName)) ok = false;
+                if (ok && state.categories.size > 0 && !state.categories.has(item.categoryKey)) ok = false;
 
                 if (ok) {
                     for (const [optName, selectedVals] of Object.entries(state.options)) {
@@ -531,10 +606,8 @@
                 grid.classList.toggle('hidden', matched.length === 0);
             }
 
-            if (!skipFacetInputReRender && facets.hasAnyFacet && config.filterLayout !== 'none') {
-                renderFacetsInto(sidebar, false);
-                renderFacetsInto(topbarPanel, true);
-                renderFacetsInto(drawerBackdrop.querySelector('.sv-drawer-body'), false);
+            if (facets.hasAnyFacet && config.filterLayout !== 'none') {
+                syncFacetUI();
             }
             renderActiveChips();
 
@@ -572,21 +645,31 @@
         if (filterToggleBtn) {
             filterToggleBtn.addEventListener('click', () => {
                 if (window.innerWidth < 1024) {
-                    drawerBackdrop.classList.add('is-open');
+                    setDrawerOpen(true);
                 } else if (config.filterLayout === 'topbar') {
                     topbarPanel.classList.toggle('is-open');
                 } else {
-                    drawerBackdrop.classList.add('is-open');
+                    setDrawerOpen(true);
                 }
             });
         }
 
-        drawerBackdrop.querySelector('.sv-drawer-close').addEventListener('click', () => drawerBackdrop.classList.remove('is-open'));
-        drawerBackdrop.querySelector('.sv-drawer-apply').addEventListener('click', () => drawerBackdrop.classList.remove('is-open'));
+        drawerBackdrop.querySelector('.sv-drawer-close').addEventListener('click', () => setDrawerOpen(false));
+        drawerBackdrop.querySelector('.sv-drawer-apply').addEventListener('click', () => setDrawerOpen(false));
         drawerBackdrop.querySelector('.sv-drawer-clear').addEventListener('click', resetAllFilters);
         drawerBackdrop.addEventListener('click', (e) => {
-            if (e.target === drawerBackdrop) drawerBackdrop.classList.remove('is-open');
+            if (e.target === drawerBackdrop) setDrawerOpen(false);
         });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && drawerBackdrop.classList.contains('is-open')) setDrawerOpen(false);
+        });
+
+        // Los filtros se construyen una sola vez; applyFilters solo actualiza su estado
+        if (facets.hasAnyFacet && config.filterLayout !== 'none') {
+            renderFacetsInto(sidebar, false);
+            renderFacetsInto(topbarPanel, true);
+            renderFacetsInto(drawerBackdrop.querySelector('.sv-drawer-body'), false);
+        }
 
         applyFilters();
     }
@@ -611,7 +694,9 @@
             if (it.hasDiscount) offersCount++;
 
             if (it.categoryName) {
-                catCounts.set(it.categoryName, (catCounts.get(it.categoryName) || 0) + 1);
+                const entry = catCounts.get(it.categoryKey) || { label: it.categoryName, count: 0 };
+                entry.count++;
+                catCounts.set(it.categoryKey, entry);
             }
             Object.entries(it.options || {}).forEach(([optName, vals]) => {
                 if (!optCounts[optName]) optCounts[optName] = new Map();
@@ -647,7 +732,7 @@
         }
 
         const categories = config.showCategory && catCounts.size >= 2
-            ? Array.from(catCounts.entries()) : [];
+            ? Array.from(catCounts.entries()).map(([key, e]) => [e.label, e.count, key]) : [];
         const showPriceBlock = config.showPrice && distinctPrices.size >= 2 && isFinite(minPrice) && isFinite(maxPrice);
         const showAvailabilityBlock = config.showAvailability && (offersCount > 0 || (inStockCount > 0 && inStockCount < items.length));
 
@@ -726,13 +811,37 @@
         } catch (e) {}
     }
 
+    // Publica la altura real del navbar fijo para que la barra lateral sticky no quede debajo de él
+    function syncNavOffset() {
+        const nav = document.getElementById('storeNavbar');
+        if (!nav) return;
+        const apply = () => {
+            const position = window.getComputedStyle(nav).position;
+            const isStuck = position === 'sticky' || position === 'fixed';
+            const height = isStuck ? Math.round(nav.getBoundingClientRect().height) : 0;
+            document.documentElement.style.setProperty('--sv-nav-h', height + 'px');
+        };
+        apply();
+        if ('ResizeObserver' in window) new ResizeObserver(apply).observe(nav);
+        window.addEventListener('resize', apply);
+    }
+
     function boot() {
+        syncNavOffset();
+
         const bridgeData = parseBridgeData();
         const catalogSections = document.querySelectorAll('.storevo-theme-section[data-section-type="catalog_results"]');
-        catalogSections.forEach((sec, idx) => initFilterableSection(sec, bridgeData, idx === 0));
-
         const gridSections = document.querySelectorAll('.storevo-theme-section[data-section-type="product_grid"]');
-        gridSections.forEach(sec => initFilterableSection(sec, bridgeData, false));
+
+        // sv-filters-ready revela la barra de búsqueda/orden ya armada (ver store-filters-fixes.css)
+        catalogSections.forEach((sec, idx) => {
+            try { initFilterableSection(sec, bridgeData, idx === 0); }
+            finally { sec.classList.add('sv-filters-ready'); }
+        });
+        gridSections.forEach(sec => {
+            try { initFilterableSection(sec, bridgeData, false); }
+            finally { sec.classList.add('sv-filters-ready'); }
+        });
     }
 
     if (document.readyState === 'loading') {

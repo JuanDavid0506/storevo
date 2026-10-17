@@ -1,0 +1,82 @@
+/* ==========================================================================
+   Storevo - Correcciones de filtros del catálogo
+   Cargar DESPUÉS de store-components.css
+   ========================================================================== */
+
+/* 1) Barra lateral sticky: respeta la altura real del navbar
+      (storeCatalog.js publica --sv-nav-h; 4rem es el valor de respaldo) */
+@media (min-width: 1024px) {
+    .sv-catalog-workspace[data-filter-layout="sidebar"].has-facets .sv-catalog-sidebar {
+        top: calc(var(--sv-nav-h, 4rem) + 1.5rem);
+        max-height: calc(100vh - var(--sv-nav-h, 4rem) - 3rem);
+        overscroll-behavior: contain;
+    }
+}
+
+/* 2) Panel superior: columnas compactas (sin huecos entre grupos) y con altura máxima */
+.sv-catalog-topbar-panel {
+    max-height: min(70vh, 34rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+.sv-topbar-facets-grid {
+    display: block;
+    column-count: 1;
+    column-gap: 1.5rem;
+}
+@media (min-width: 640px) {
+    .sv-topbar-facets-grid { column-count: 2; }
+}
+@media (min-width: 1024px) {
+    .sv-topbar-facets-grid { column-count: 4; }
+}
+.sv-topbar-facets-grid > .sv-facet-group {
+    break-inside: avoid;
+    -webkit-column-break-inside: avoid;
+}
+
+/* 3) Listas largas: "Ver más / Ver menos" (una opción activa siempre queda visible) */
+.sv-facet-group[data-collapsed="true"] .sv-pill-extra:not(.is-active) {
+    display: none;
+}
+.sv-facet-more {
+    margin-top: 0.6rem;
+    padding: 0;
+    border: 0;
+    background: none;
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: var(--brand-color, #6366f1);
+    cursor: pointer;
+}
+.sv-facet-more:hover {
+    text-decoration: underline;
+}
+
+/* 4) Accesibilidad y legibilidad */
+.sv-facet-pill:focus-visible,
+.sv-facet-more:focus-visible {
+    outline: 2px solid var(--brand-color, #6366f1);
+    outline-offset: 2px;
+}
+.sv-facet-count {
+    opacity: 0.85;
+}
+
+/* 5) Barra de búsqueda/orden: no se muestra hasta que el JS terminó de armarla,
+      así el botón "Filtros" no aparece de golpe ni mueve el resto.
+      Si el JS falla, se revela sola a los 1.5 s. */
+.storevo-theme-section[data-section-type="catalog_results"]:not(.sv-filters-ready) .sv-grid-toolbar,
+.storevo-theme-section[data-section-type="product_grid"]:not(.sv-filters-ready) .sv-grid-toolbar {
+    visibility: hidden;
+    animation: sv-toolbar-reveal 0s linear 1.5s forwards;
+}
+@keyframes sv-toolbar-reveal {
+    to { visibility: visible; }
+}
+
+/* 6) La barra de filtros activos ("chips") se oculta de verdad cuando está vacía.
+      Antes su display:flex le ganaba a la clase .hidden y dejaba un hueco fantasma de 1rem. */
+.sv-active-chips-bar.hidden {
+    display: none;
+}
