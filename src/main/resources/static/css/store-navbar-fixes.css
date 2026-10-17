@@ -1,19 +1,10 @@
 /* ==========================================================================
-   Storevo - Correcciones del navbar
+   Storevo - Correcciones, Arquitecturas de Submenú y Animaciones del Navbar
    Cargar DESPUÉS de store-navbar.css
-
-   1) Grilla: todos los diseños tienen dónde colocar logo, menú, buscador y acciones
-   2) Sin scroll horizontal por desplegables
-   3) Desplegables que respetan el borde de la pantalla (junto con navbar.js)
-   4) Efectos de hover del menú aislados de los desplegables
-   5) Opcional: alturas del diseño "compacto" y compactar al hacer scroll
    ========================================================================== */
 
 /* --------------------------------------------------------------------------
-   1) GRILLA
-   Los diseños centered, marketplace y minimal ya tienen su grilla en
-   store-navbar.css. Cualquier otro valor (classic, editorial, compact,
-   double_bar, hero_overlay, o un valor vacío) usa la grilla clásica.
+   1) GRILLA UNIFICADA PARA LOS 8 DISEÑOS DE NAVBAR
    -------------------------------------------------------------------------- */
 @media (min-width: 768px) {
     .sv-nav:not([data-nav-layout="centered"]):not([data-nav-layout="marketplace"]):not([data-nav-layout="minimal"]) .sv-nav__grid {
@@ -23,7 +14,6 @@
     }
 }
 
-/* Desde 1024px aparece el buscador en la misma fila */
 @media (min-width: 1024px) {
     .sv-nav:not([data-nav-layout="centered"]):not([data-nav-layout="marketplace"]):not([data-nav-layout="minimal"]) .sv-nav__grid {
         grid-template-columns: auto minmax(0, 1fr) auto auto;
@@ -41,75 +31,602 @@
 }
 
 /* --------------------------------------------------------------------------
-   2) SIN SCROLL HORIZONTAL
-   Un elemento con visibility:hidden sigue ocupando área de scroll. Se recorta
-   en horizontal (clip no crea contenedor de scroll, así que sticky sigue
-   funcionando y los desplegables siguen saliendo hacia abajo).
+   2) CONTENCIÓN DE SCROLL HORIZONTAL
    -------------------------------------------------------------------------- */
 .sv-nav {
     overflow-x: clip;
 }
 body {
-    overflow-x: hidden;   /* respaldo para navegadores antiguos */
+    overflow-x: hidden;
     overflow-x: clip;
 }
 
 /* --------------------------------------------------------------------------
-   3) DESPLEGABLES QUE RESPETAN EL BORDE
-   navbar.js agrega estas clases según el espacio disponible.
+   3) BLINDAJE DE ICONOS Y CONTADORES (FAVORITOS Y BOLSA)
    -------------------------------------------------------------------------- */
-.sv-nav__dropdown.is-align-right {
-    left: auto;
-    right: 0;
+.sv-nav__actions {
+    padding: 0.35rem 0.35rem 0.35rem 0 !important;
+    overflow: visible !important;
 }
+.sv-nav__icon {
+    overflow: visible !important;
+    padding: 0.25rem !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+}
+.sv-nav__icon::before,
+.sv-nav__icon::after {
+    content: none !important;
+    display: none !important;
+}
+#navWishlistCounter,
+#navCartCounter,
+.sv-nav__badge {
+    position: absolute !important;
+    top: -0.35rem !important;
+    right: -0.45rem !important;
+    min-width: 1.25rem !important;
+    height: 1.25rem !important;
+    padding: 0 0.25rem !important;
+    border-radius: 9999px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 0.7rem !important;
+    font-weight: 800 !important;
+    line-height: 1 !important;
+    background-color: var(--brand-color, #6366f1) !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 0 2px var(--nav-bg, #ffffff) !important;
+    z-index: 5 !important;
+}
+.sv-nav[data-nav-style="primary"] #navWishlistCounter,
+.sv-nav[data-nav-style="primary"] #navCartCounter,
+.sv-nav[data-nav-style="primary"] .sv-nav__badge {
+    background-color: #ffffff !important;
+    color: var(--brand-color, #0f172a) !important;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.2) !important;
+}
+.sv-nav[data-nav-style="primary"][data-nav-tone="light-bg"] #navWishlistCounter,
+.sv-nav[data-nav-style="primary"][data-nav-tone="light-bg"] #navCartCounter,
+.sv-nav[data-nav-style="primary"][data-nav-tone="light-bg"] .sv-nav__badge {
+    background-color: #0f172a !important;
+    color: #ffffff !important;
+}
+
+/* --------------------------------------------------------------------------
+   4) ALINEACIÓN UNIFICADA DE ENLACES, FLECHAS Y HERO OVERLAY
+   -------------------------------------------------------------------------- */
+.sv-catalog-menu-trigger-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+.sv-catalog-menu-open > a .nav-arrow,
+.nav-parent.is-open > a .nav-arrow {
+    transform: rotate(-180deg);
+}
+
+/* En modo píldora, envolver texto + flecha de forma idéntica en todos los ítems */
+.sv-nav[data-nav-link-hover="pill"] .sv-nav__menu > .sv-nav__link,
+.sv-nav[data-nav-link-hover="pill"] .sv-nav__menu .nav-parent > .sv-nav__link {
+    padding: 0.4rem 0.85rem !important;
+    margin: 0.55rem 0;
+    border-radius: 9999px;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+.sv-nav[data-nav-link-hover="pill"] .sv-nav__label {
+    padding: 0 !important;
+    background: transparent !important;
+}
+.sv-nav[data-nav-link-hover="pill"] .sv-nav__menu > .sv-nav__link:hover,
+.sv-nav[data-nav-link-hover="pill"] .sv-nav__menu .nav-parent:hover > .sv-nav__link,
+.sv-nav[data-nav-link-hover="pill"] .sv-nav__menu .nav-parent.is-open > .sv-nav__link,
+.sv-nav[data-nav-link-hover="pill"] .sv-catalog-menu-open > .sv-nav__link {
+    background: var(--nav-pill) !important;
+}
+
+@media (min-width: 768px) {
+    body[data-sv-nav-layout="hero_overlay"].sv-has-hero-first main .storevo-theme-section[data-section-type="hero_banner"]:first-of-type > section {
+        padding-top: calc(var(--sv-nav-h, 4.5rem) + 3.5rem) !important;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   5) UNIFICACIÓN DE PANELES Y PUENTES INVISIBLES (HOVER INTENT)
+   El HTML antiguo .sv-nav__dropdown se oculta una vez hidratado el motor
+   para que "Todo el Catálogo" y las categorías usen exactamente el mismo panel.
+   -------------------------------------------------------------------------- */
+.sv-nav.sv-unified-menus-ready .nav-parent > .sv-nav__dropdown {
+    display: none !important;
+}
+
+.sv-dropdown-panel::before {
+    content: "";
+    position: absolute;
+    top: -0.85rem;
+    left: 0;
+    right: 0;
+    height: 0.85rem;
+    background: transparent;
+}
+.sv-nav__flyout::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -0.85rem;
+    width: 0.85rem;
+    background: transparent;
+}
+.sv-nav__flyout.is-flip::before {
+    left: auto;
+    right: -0.85rem;
+}
+
 .sv-nav__flyout.is-flip {
     left: auto;
     right: 100%;
-    transform: translateX(0.5rem);
 }
-.nav-flyout-parent:hover > .sv-nav__flyout.is-flip {
-    transform: translateX(0);
+
+/* Ocultar desplegables e iconos de flecha cuando el modo es "none" o "drawer" */
+body[data-sv-dropdown-style="none"] .sv-dropdown-panel,
+body[data-sv-dropdown-style="none"] .nav-arrow,
+body[data-sv-dropdown-style="none"] .sv-catalog-chevron,
+body[data-sv-dropdown-style="drawer"] .sv-dropdown-panel {
+    display: none !important;
+}
+
+/* Apertura de sub-cajas laterales en modo flyout */
+.nav-flyout-parent.is-flyout-open > .sv-nav__flyout {
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+    transform: translateX(0) scale(1) !important;
 }
 
 /* --------------------------------------------------------------------------
-   4) EFECTOS DE HOVER AISLADOS
-   El JS marca todos los enlaces con .sv-interactive-link, incluidos los de
-   los desplegables, y los subrayados del menú se filtraban ahí.
+   6) MOTOR DE 6 ANIMACIONES UNIFICADAS PARA TODOS LOS ELEMENTOS DEL NAVBAR
+   (slide_up | slide_down | fade | scale | reveal | stagger)
    -------------------------------------------------------------------------- */
-.sv-nav__dropdown .sv-interactive-link::before,
-.sv-nav__dropdown .sv-interactive-link::after,
-.sv-nav__flyout .sv-interactive-link::before,
-.sv-nav__flyout .sv-interactive-link::after {
-    content: none !important;
+.sv-dropdown-panel,
+.sv-nav__flyout {
+    transition: opacity var(--sv-nav-duration, 250ms) cubic-bezier(0.16, 1, 0.3, 1),
+    transform var(--sv-nav-duration, 250ms) cubic-bezier(0.16, 1, 0.3, 1),
+    clip-path var(--sv-nav-duration, 250ms) cubic-bezier(0.16, 1, 0.3, 1),
+    visibility var(--sv-nav-duration, 250ms) ease !important;
 }
-body[data-sv-nav-hover="slide_bg"] .sv-nav__dropdown .sv-interactive-link,
-body[data-sv-nav-hover="slide_bg"] .sv-nav__flyout .sv-interactive-link {
-    padding: 0.625rem 1.25rem !important;
-    border-radius: 0;
-    overflow: visible;
+
+/* 6.1 Deslizar desde abajo (slide_up) */
+body[data-sv-dropdown-anim="slide_up"] .sv-dropdown-panel {
+    transform: translateY(12px);
+}
+body[data-sv-dropdown-anim="slide_up"] .sv-nav__flyout {
+    transform: translateX(-8px);
+}
+body[data-sv-dropdown-anim="slide_up"] .sv-nav__flyout.is-flip {
+    transform: translateX(8px);
+}
+
+/* 6.2 Deslizar desde arriba (slide_down) */
+body[data-sv-dropdown-anim="slide_down"] .sv-dropdown-panel {
+    transform: translateY(-12px);
+}
+body[data-sv-dropdown-anim="slide_down"] .sv-nav__flyout {
+    transform: translateY(-8px);
+}
+
+/* 6.3 Desvanecer puro (fade) */
+body[data-sv-dropdown-anim="fade"] .sv-dropdown-panel,
+body[data-sv-dropdown-anim="fade"] .sv-nav__flyout {
+    transform: none !important;
+}
+
+/* 6.4 Escala sutil (scale) */
+body[data-sv-dropdown-anim="scale"] .sv-dropdown-panel {
+    transform: scale(0.94);
+    transform-origin: top center;
+}
+body[data-sv-dropdown-anim="scale"] .sv-nav__flyout {
+    transform: scale(0.94);
+    transform-origin: top left;
+}
+body[data-sv-dropdown-anim="scale"] .sv-nav__flyout.is-flip {
+    transform-origin: top right;
+}
+
+/* 6.5 Cortina desplegable (reveal) */
+body[data-sv-dropdown-anim="reveal"] .sv-dropdown-panel {
+    transform: none !important;
+    clip-path: inset(0 -30px 100% -30px);
+}
+body[data-sv-dropdown-anim="reveal"] .sv-nav__flyout {
+    transform: none !important;
+    clip-path: inset(0 100% -30px 0);
+}
+body[data-sv-dropdown-anim="reveal"] .sv-nav__flyout.is-flip {
+    clip-path: inset(0 0 -30px 100%);
+}
+body[data-sv-dropdown-anim="reveal"] .sv-catalog-menu-open > .sv-dropdown-panel,
+body[data-sv-dropdown-anim="reveal"] .nav-parent.is-open > .sv-dropdown-panel,
+body[data-sv-dropdown-anim="reveal"] .nav-flyout-parent.is-flyout-open > .sv-nav__flyout {
+    clip-path: inset(-15px -35px -45px -35px) !important;
+}
+
+/* 6.6 Cascada secuencial de ítems (stagger) */
+body[data-sv-dropdown-anim="stagger"] .sv-dropdown-panel {
+    transform: translateY(6px);
+}
+body[data-sv-dropdown-anim="stagger"] .sv-stagger-item {
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity var(--sv-nav-duration, 250ms) ease,
+    transform var(--sv-nav-duration, 250ms) cubic-bezier(0.16, 1, 0.3, 1);
+    transition-delay: calc(var(--stagger-idx, 0) * 32ms);
+}
+body[data-sv-dropdown-anim="stagger"] .sv-catalog-menu-open .sv-stagger-item,
+body[data-sv-dropdown-anim="stagger"] .nav-parent.is-open .sv-stagger-item {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Estado abierto general para todos los paneles del navbar */
+.nav-parent.is-open > .sv-dropdown-panel,
+.sv-catalog-menu-open > .sv-dropdown-panel {
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+    transform: translateY(0) scale(1) !important;
 }
 
 /* --------------------------------------------------------------------------
-   5) OPCIONAL: ALTURAS DEL DISEÑO COMPACTO Y COMPACTAR AL HACER SCROLL
-   Las reglas originales apuntaban a clases (.h-16 / .h-20) que el navbar ya
-   no usa, por eso no tenían efecto. Si no quieres este comportamiento,
-   elimina todo lo que sigue.
-   El padding del enlace y el alto de la fila deben cambiar juntos para que
-   los desplegables sigan pegados a la barra.
+   7) ESTILOS DE LAS ARQUITECTURAS DE SUBMENÚ (UNIFICADOS)
+   -------------------------------------------------------------------------- */
+
+/* 7.1 Estilo ACORDEÓN PROGRESIVO (is-accordion) */
+.sv-dropdown-panel.is-accordion {
+    width: 280px;
+    padding: 0.6rem;
+    max-height: 74vh;
+    overflow-y: auto;
+}
+.sv-acc-item {
+    border-bottom: 1px solid #f1f5f9;
+}
+.sv-acc-item:last-child {
+    border-bottom: 0;
+}
+.sv-acc-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.35rem;
+    border-radius: 0.6rem;
+    transition: background-color 0.15s ease;
+}
+.sv-acc-header:hover {
+    background-color: #f8fafc;
+}
+.sv-acc-link {
+    flex: 1;
+    padding: 0.55rem 0.7rem;
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: #0f172a !important;
+    text-decoration: none;
+}
+.sv-acc-link:hover {
+    color: var(--brand-color, #6366f1) !important;
+}
+.sv-acc-toggle {
+    padding: 0.45rem 0.6rem;
+    color: #64748b !important;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    border-radius: 0.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.sv-acc-toggle svg {
+    width: 0.9rem;
+    height: 0.9rem;
+    transition: transform var(--sv-nav-duration, 250ms) ease;
+}
+.sv-acc-item.is-expanded > .sv-acc-header .sv-acc-toggle svg {
+    transform: rotate(180deg);
+    color: var(--brand-color, #6366f1);
+}
+.sv-acc-body {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows var(--sv-nav-duration, 250ms) cubic-bezier(0.16, 1, 0.3, 1);
+}
+.sv-acc-item.is-expanded > .sv-acc-body {
+    grid-template-rows: 1fr;
+}
+.sv-acc-body-inner {
+    overflow: hidden;
+}
+.sv-acc-sublist {
+    padding: 0.15rem 0.5rem 0.55rem 0.85rem;
+    margin-left: 0.65rem;
+    border-left: 2px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+.sv-acc-sublink {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #475569 !important;
+    padding: 0.25rem 0.45rem;
+    border-radius: 0.4rem;
+    text-decoration: none;
+    transition: color 0.15s ease, background-color 0.15s ease;
+}
+.sv-acc-sublink:hover {
+    color: var(--brand-color, #6366f1) !important;
+    background-color: #f8fafc;
+}
+.sv-acc-level3-list {
+    padding-left: 0.75rem;
+    margin: 0.1rem 0 0.25rem 0.45rem;
+    border-left: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+}
+.sv-acc-level3-link {
+    font-size: 0.73rem;
+    font-weight: 500;
+    color: #64748b !important;
+    padding: 0.15rem 0.35rem;
+    text-decoration: none;
+    transition: color 0.15s ease;
+}
+.sv-acc-level3-link:hover {
+    color: var(--brand-color, #6366f1) !important;
+}
+
+/* 7.2 Estilo PANEL DIVIDIDO MAESTRO-DETALLE (is-split) */
+.sv-dropdown-panel.is-split {
+    width: min(92vw, 560px);
+    padding: 0;
+    display: grid;
+    grid-template-columns: 200px minmax(0, 1fr);
+    overflow: hidden;
+    min-height: 230px;
+}
+.sv-split-master {
+    background: #f8fafc;
+    border-right: 1px solid #e2e8f0;
+    padding: 0.65rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    max-height: 68vh;
+    overflow-y: auto;
+}
+.sv-split-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.55rem 0.75rem;
+    border-radius: 0.6rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #334155 !important;
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+.sv-split-trigger:hover,
+.sv-split-trigger.is-active {
+    background: #ffffff;
+    color: var(--brand-color, #6366f1) !important;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
+}
+.sv-split-detail {
+    padding: 1.1rem 1.25rem;
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+.sv-split-pane {
+    display: none;
+    flex-direction: column;
+    gap: 0.75rem;
+    height: 100%;
+}
+.sv-split-pane.is-active {
+    display: flex;
+}
+.sv-split-pane-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #f1f5f9;
+    padding-bottom: 0.55rem;
+}
+.sv-split-pane-title {
+    font-size: 0.92rem;
+    font-weight: 800;
+    color: #0f172a !important;
+    text-decoration: none;
+}
+.sv-split-pane-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem 0.85rem;
+}
+.sv-split-subgroup {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+.sv-split-sublink {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #334155 !important;
+    padding: 0.25rem 0.4rem;
+    border-radius: 0.45rem;
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+.sv-split-sublink:hover {
+    background: #f8fafc;
+    color: var(--brand-color, #6366f1) !important;
+}
+.sv-split-l3-list {
+    padding-left: 0.65rem;
+    margin-left: 0.4rem;
+    border-left: 2px solid #f1f5f9;
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+}
+.sv-split-l3-link {
+    font-size: 0.73rem;
+    font-weight: 500;
+    color: #64748b !important;
+    padding: 0.12rem 0.3rem;
+    text-decoration: none;
+    transition: color 0.15s ease;
+}
+.sv-split-l3-link:hover {
+    color: var(--brand-color, #6366f1) !important;
+}
+
+/* 7.3 Estilo CINTA HORIZONTAL EDITORIAL (is-strip) */
+.sv-dropdown-panel.is-strip {
+    width: max-content;
+    min-width: 300px;
+    max-width: min(94vw, 860px);
+    padding: 1.1rem 1.35rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 1.25rem 2.25rem;
+}
+.sv-strip-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    min-width: 130px;
+}
+.sv-strip-title {
+    font-size: 0.8rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #0f172a !important;
+    text-decoration: none;
+}
+.sv-strip-title:hover {
+    color: var(--brand-color, #6366f1) !important;
+}
+.sv-strip-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+.sv-strip-pill {
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: #475569 !important;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    padding: 0.25rem 0.7rem;
+    border-radius: 9999px;
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+.sv-strip-pill:hover {
+    background: var(--brand-color, #6366f1);
+    border-color: var(--brand-color, #6366f1);
+    color: #ffffff !important;
+}
+
+/* 7.4 Estilo FLOTANTE CLÁSICO UNIFICADO (is-flyout-root) */
+.sv-dropdown-panel.is-flyout-root {
+    width: 230px;
+    padding: 0.45rem 0;
+    overflow: visible !important;
+}
+.sv-dropdown-panel.is-flyout-root .sv-nav__flyout {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    border: 1px solid rgba(226, 232, 240, 0.95) !important;
+    border-radius: var(--store-radius, 1rem) !important;
+    box-shadow: 0 20px 38px -10px rgba(15, 23, 42, 0.2) !important;
+    width: 220px;
+    padding: 0.45rem 0;
+}
+
+/* --------------------------------------------------------------------------
+   8) BLINDAJE DE LEGIBILIDAD EN DESPLEGABLES
+   -------------------------------------------------------------------------- */
+.sv-dropdown-panel {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+}
+.sv-dropdown-panel .sv-mega-cat-title,
+.sv-dropdown-panel .sv-mega-cat-title span,
+.sv-dropdown-panel .sv-cascade-link,
+.sv-dropdown-panel .sv-cascade-link span {
+    color: #0f172a !important;
+}
+.sv-dropdown-panel .sv-mega-subcat-link,
+.sv-dropdown-panel .sv-cascade-children a,
+.sv-dropdown-panel .sv-mega-level3-link {
+    color: #475569 !important;
+}
+.sv-dropdown-panel .sv-mega-level3-link {
+    font-size: 0.73rem;
+    font-weight: 500;
+    padding: 0.12rem 0 0.12rem 1rem;
+    border-left: 2px solid #f1f5f9;
+    text-decoration: none;
+    display: block;
+    transition: all 0.15s ease;
+}
+.sv-dropdown-panel .sv-mega-cat-title:hover,
+.sv-dropdown-panel .sv-mega-cat-title:hover span,
+.sv-dropdown-panel .sv-mega-subcat-link:hover,
+.sv-dropdown-panel .sv-mega-level3-link:hover,
+.sv-dropdown-panel .sv-cascade-link:hover,
+.sv-dropdown-panel .sv-cascade-link:hover span,
+.sv-dropdown-panel .sv-cascade-children a:hover {
+    color: var(--brand-color, #6366f1) !important;
+}
+.sv-dropdown-panel .sv-mega-spotlight,
+.sv-dropdown-panel .sv-mega-spotlight h4,
+.sv-dropdown-panel .sv-mega-spotlight p,
+.sv-dropdown-panel .sv-mega-spotlight span {
+    color: #ffffff !important;
+}
+
+.sv-dropdown-panel .sv-nav__dropdown-link,
+.sv-dropdown-panel .sv-nav__dropdown-link span,
+.sv-dropdown-panel .sv-nav__dropdown-link svg {
+    color: #0f172a !important;
+}
+.sv-dropdown-panel .sv-nav__dropdown-link:hover,
+.sv-dropdown-panel .sv-nav__dropdown-link:hover span,
+.sv-dropdown-panel .sv-nav__dropdown-link:hover svg {
+    background-color: color-mix(in srgb, var(--brand-color, #6366f1) 10%, #ffffff) !important;
+    color: var(--brand-color, #6366f1) !important;
+}
+
+/* --------------------------------------------------------------------------
+   9) ALTURAS DEL DISEÑO COMPACTO Y COMPACTAR AL HACER SCROLL
    -------------------------------------------------------------------------- */
 .sv-nav__grid {
     transition: min-height var(--sv-nav-duration, 250ms) ease,
     grid-template-rows var(--sv-nav-duration, 250ms) ease;
 }
-
-.sv-nav[data-nav-layout="compact"] .sv-nav__grid {
-    min-height: 3.25rem;
-}
-.sv-nav[data-nav-layout="compact"] .sv-nav__link {
-    padding: 0.875rem 0;
-    font-size: 0.8125rem;
-}
-
 body[data-sv-nav-compact="true"].sv-is-scrolled .sv-nav__grid {
     min-height: 3.25rem;
 }

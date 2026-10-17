@@ -126,9 +126,17 @@
     </style>
 </head>
 <body class="antialiased min-h-screen flex flex-col"
-      th:attr="data-heading-case=${theme != null and theme.globalStyles != null and theme.globalStyles.headingTransform != null ? theme.globalStyles.headingTransform : 'none'},
-               data-button-radius=${theme != null and theme.globalStyles != null and theme.globalStyles.buttonRadius != null ? theme.globalStyles.buttonRadius : 'classic'},
-               data-card-style=${theme != null and theme.globalStyles != null and theme.globalStyles.cardStyle != null ? theme.globalStyles.cardStyle : 'elevated'}">
+      th:with="gs=${theme != null and theme.globalStyles != null ? theme.globalStyles : null}"
+      th:attr="data-heading-case=${gs != null and gs.headingTransform != null ? gs.headingTransform : 'none'},
+               data-button-radius=${gs != null and gs.buttonRadius != null ? gs.buttonRadius : 'classic'},
+               data-card-style=${gs != null and gs.cardStyle != null ? gs.cardStyle : 'elevated'},
+               data-sv-nav-layout=${gs != null and gs.navbarLayout != null ? gs.navbarLayout : 'classic'},
+               data-sv-nav-hover=${gs != null and gs.navbarLinkHover != null ? gs.navbarLinkHover : 'color'},
+               data-sv-dropdown-style=${gs != null and gs.navbarDropdownStyle != null ? gs.navbarDropdownStyle : 'mega'},
+               data-sv-dropdown-anim=${gs != null and gs.navbarDropdownAnim != null ? gs.navbarDropdownAnim : 'slide_up'},
+               data-sv-nav-trigger=${gs != null and gs.navbarTrigger != null ? gs.navbarTrigger : 'hover'},
+               data-sv-nav-speed=${gs != null and gs.navbarSpeed != null ? gs.navbarSpeed : 'normal'},
+               data-sv-nav-compact=${gs != null and gs.navbarCompactOnScroll != null ? gs.navbarCompactOnScroll : false}">
 
 <nav th:replace="~{components/store-navbar :: storeNavbar}"></nav>
 <script th:src="@{/js/ui/navbarStyle.js}"></script>
@@ -209,16 +217,7 @@
     </div>
 </footer>
 
-<script th:src="@{/js/storevo.js}"></script>
-<script th:src="@{/js/ui/toast.js}"></script>
-<script th:src="@{/js/ui/navbar.js}"></script>
-<script th:src="@{/js/ui/form.js}"></script>
-<script th:src="@{/js/ui/gallery.js}"></script>
-<script th:src="@{/js/modules/cart.js}"></script>
-<script th:src="@{/js/modules/wishlist.js}"></script>
-<script th:src="@{/js/ui/modal.js}"></script>
-
-<!-- Puente de datos del Navbar Avanzado (Categorías con Foto Automática + Páginas Personalizadas + Configuración) -->
+<!-- Puente de datos del Navbar Avanzado (Categorías de hasta 3 niveles con Foto Automática + Páginas Personalizadas) -->
 <div id="storevo-navbar-advanced-bridge" class="hidden"
      th:with="gs=${theme != null and theme.globalStyles != null ? theme.globalStyles : null},
               allCats=${categories != null and not #lists.isEmpty(categories) ? categories : navCategories},
@@ -230,7 +229,7 @@
               data-whatsapp=${waPhone},
               data-is-preview=${isDraftPreview == true},
               data-nav-layout=${gs != null and gs.navbarLayout != null ? gs.navbarLayout : 'classic'},
-              data-nav-style=${gs != null and gs.navbarStyle != null ? gs.navbarStyle : 'light'},
+              data-nav-style=${gs != null and gs.navbarStyle != null ? gs.navbarStyle : 'page'},
               data-nav-format=${gs != null and gs.navbarLinkFormat != null ? gs.navbarLinkFormat : 'normal'},
               data-nav-hover=${gs != null and gs.navbarLinkHover != null ? gs.navbarLinkHover : 'color'},
               data-nav-sticky=${gs != null and gs.navbarSticky != null ? gs.navbarSticky : true},
@@ -279,7 +278,7 @@
 <script th:src="@{/js/modules/wishlist.js}"></script>
 <script th:src="@{/js/ui/modal.js}"></script>
 
-<!-- Motor Interactivo Fase 4: Páginas Personalizadas + Doble Barra + Hero Overlay + Mega Menú + Cascada + Drawer -->
+<!-- Motor Interactivo Unificado: Misma arquitectura de submenú y animación para Catálogo y Categorías del Navbar -->
 <script>
     (function() {
         const bridge = document.getElementById('storevo-navbar-advanced-bridge');
@@ -299,20 +298,92 @@
                 .replace(/"/g, '&quot;');
         }
 
-        // 1. Leer árbol de categorías y páginas personalizadas
-        const rawCats = Array.from(bridge.querySelectorAll('.sv-nav-cat-node')).map(n => ({
-            id: n.getAttribute('data-id'),
-            name: n.getAttribute('data-name') || 'Categoría',
-            desc: n.getAttribute('data-desc') || '',
-            parentId: n.getAttribute('data-parent-id') || '',
-            img: n.getAttribute('data-img') || '',
-            url: n.getAttribute('data-url') || `/s/${slug}/catalog`
-        }));
+        function extractCatIdFromHref(href) {
+            if (!href) return '';
+            const m = String(href).match(/[?&]category=([^&#]+)/);
+            return m ? m[1] : '';
+        }
 
-        const rootCats = rawCats.filter(c => !c.parentId);
+        const navRoot = document.getElementById('storeNavbar') || document.querySelector('nav.sv-nav') || document.querySelector('nav') || document.querySelector('header');
+        if (!navRoot) return;
+        navRoot.classList.add('sv-nav-root', 'sv-unified-menus-ready');
+
+        // 1. Construir árbol de 3 niveles combinando el bridge con el DOM de store-navbar.html
+        const catMap = new Map();
+        Array.from(bridge.querySelectorAll('.sv-nav-cat-node')).forEach(n => {
+            const id = String(n.getAttribute('data-id') || '');
+            if (!id) return;
+            catMap.set(id, {
+                id: id,
+                name: n.getAttribute('data-name') || 'Categoría',
+                desc: n.getAttribute('data-desc') || '',
+                parentId: String(n.getAttribute('data-parent-id') || ''),
+                img: n.getAttribute('data-img') || '',
+                url: n.getAttribute('data-url') || `/s/${slug}/catalog`,
+                children: []
+            });
+        });
+
+        const domNavParents = Array.from(navRoot.querySelectorAll('.sv-nav__menu > .nav-parent'));
+        domNavParents.forEach(parentEl => {
+            const rootLink = parentEl.querySelector(':scope > a.sv-nav__link');
+            if (!rootLink) return;
+            const rootHref = rootLink.getAttribute('href') || '';
+            const rootId = extractCatIdFromHref(rootHref) || rootLink.textContent.trim();
+            const rootName = (rootLink.querySelector('.sv-nav__label') || rootLink).textContent.trim();
+            parentEl.setAttribute('data-cat-id', rootId);
+
+            if (!catMap.has(rootId)) {
+                catMap.set(rootId, { id: rootId, name: rootName, desc: '', parentId: '', img: '', url: rootHref, children: [] });
+            }
+
+            const subParents = Array.from(parentEl.querySelectorAll(':scope > .sv-nav__dropdown .nav-flyout-parent'));
+            subParents.forEach(subEl => {
+                const subLink = subEl.querySelector(':scope > a.sv-nav__dropdown-link');
+                if (!subLink) return;
+                const subHref = subLink.getAttribute('href') || '';
+                const subId = extractCatIdFromHref(subHref) || (rootId + '_' + subLink.textContent.trim());
+                const subName = (subLink.querySelector('span') || subLink).textContent.trim();
+
+                if (!catMap.has(subId)) {
+                    catMap.set(subId, { id: subId, name: subName, desc: '', parentId: rootId, img: '', url: subHref, children: [] });
+                } else {
+                    catMap.get(subId).parentId = rootId;
+                }
+
+                const level3Links = Array.from(subEl.querySelectorAll(':scope > .sv-nav__flyout a.sv-nav__dropdown-link'));
+                level3Links.forEach(l3 => {
+                    const l3Href = l3.getAttribute('href') || '';
+                    const l3Id = extractCatIdFromHref(l3Href) || (subId + '_' + l3.textContent.trim());
+                    const l3Name = l3.textContent.trim();
+                    if (!catMap.has(l3Id)) {
+                        catMap.set(l3Id, { id: l3Id, name: l3Name, desc: '', parentId: subId, img: '', url: l3Href, children: [] });
+                    } else {
+                        catMap.get(l3Id).parentId = subId;
+                    }
+                });
+            });
+        });
+
+        catMap.forEach(node => { node.children = []; });
+        catMap.forEach(node => {
+            if (node.parentId && catMap.has(node.parentId)) {
+                const parentNode = catMap.get(node.parentId);
+                if (!parentNode.children.some(ch => ch.id === node.id)) {
+                    parentNode.children.push(node);
+                }
+            }
+        });
+
+        const rootCats = Array.from(catMap.values()).filter(c => !c.parentId || !catMap.has(c.parentId));
         rootCats.forEach(rc => {
-            rc.children = rawCats.filter(c => String(c.parentId) === String(rc.id));
-            if (!rc.img) {
+            rc.children.forEach(sub => {
+                if (!sub.img && sub.children && sub.children.length > 0) {
+                    const l3Img = sub.children.find(l3 => l3.img);
+                    if (l3Img) sub.img = l3Img.img;
+                }
+            });
+            if (!rc.img && rc.children && rc.children.length > 0) {
                 const childWithImg = rc.children.find(ch => ch.img);
                 if (childWithImg) rc.img = childWithImg.img;
             }
@@ -323,9 +394,6 @@
             title: a.getAttribute('data-title'),
             href: a.getAttribute('href')
         }));
-
-        const navRoot = document.getElementById('storeNavbar') || document.querySelector('nav.sv-nav') || document.querySelector('nav') || document.querySelector('header');        if (!navRoot) return;
-        navRoot.classList.add('sv-nav-root');
 
         // 2. Montar enlaces de Páginas Personalizadas en el Navbar (PC y Móvil)
         if (customPages.length > 0) {
@@ -354,7 +422,7 @@
                     } else {
                         const a = catAnchor.cloneNode(false);
                         a.setAttribute('href', cp.href);
-                        a.textContent = cp.title;
+                        a.innerHTML = `<span class="sv-nav__label">${esc(cp.title)}</span>`;
                         if (isCurrent) a.classList.add('text-brand', 'font-bold');
                         container.appendChild(a);
                     }
@@ -362,12 +430,10 @@
             });
         }
 
-        // 3. Añadir clases para efectos avanzados de hover (.sv-interactive-link)
-        const navLinks = Array.from(navRoot.querySelectorAll('a[href^="/s/"]')).filter(a => {
-            const hasIconOnly = a.querySelector('svg') && a.textContent.trim().length === 0;
-            const isLogo = a.querySelector('img') || a.classList.contains('font-black') || a.classList.contains('text-xl') || a.classList.contains('text-2xl');
-            return !hasIconOnly && !isLogo;
-        });
+        // 3. Añadir .sv-interactive-link EXCLUSIVAMENTE a los enlaces principales del menú (.sv-nav__menu)
+        const navLinks = Array.from(
+            navRoot.querySelectorAll('.sv-nav__menu > a.sv-nav__link, .sv-nav__menu > .nav-parent > a.sv-nav__link')
+        );
         navLinks.forEach(a => {
             a.classList.add('sv-interactive-link');
             if (a.parentElement) {
@@ -404,13 +470,22 @@
         `;
         navRoot.insertBefore(doubleStrip, navRoot.firstChild);
 
-        // 5. Construir Drawer Lateral de Categorías (.sv-nav-drawer-backdrop)
+        // 5. Construir Drawer Lateral de Categorías (.sv-nav-drawer-backdrop) con 3 niveles
         const drawerBackdrop = document.createElement('div');
         drawerBackdrop.className = 'sv-nav-drawer-backdrop';
         const drawerCatsHtml = rootCats.map(rc => {
             const subHtml = (rc.children && rc.children.length > 0)
-                ? `<div class="pl-4 mt-1 space-y-1 border-l-2 border-slate-100">
-                       ${rc.children.map(ch => `<a href="${esc(ch.url)}" class="block py-1 text-xs font-semibold text-slate-500 hover:text-brand">${esc(ch.name)}</a>`).join('')}
+                ? `<div class="pl-4 mt-1 space-y-1.5 border-l-2 border-slate-100">
+                       ${rc.children.map(ch => {
+                    const l3Html = (ch.children && ch.children.length > 0)
+                        ? `<div class="pl-3 mt-1 space-y-1 border-l border-slate-200">
+                                      ${ch.children.map(l3 => `<a href="${esc(l3.url)}" class="block py-0.5 text-[11px] font-medium text-slate-400 hover:text-brand">${esc(l3.name)}</a>`).join('')}
+                                  </div>`
+                        : '';
+                    return `<div>
+                                       <a href="${esc(ch.url)}" class="block py-1 text-xs font-bold text-slate-600 hover:text-brand">${esc(ch.name)}</a>${l3Html}
+                                   </div>`;
+                }).join('')}
                    </div>`
                 : '';
             return `
@@ -459,54 +534,57 @@
             if (e.target === drawerBackdrop) closeNavDrawer();
         });
 
-        // 6. Construir Mega Menú y Menú en Cascada sobre el enlace principal de Catálogo en PC
-        const desktopCatalogLink = navLinks.find(a => {
-            const href = a.getAttribute('href') || '';
-            return href.includes('/catalog') && !href.includes('category=') && !a.closest('.sv-nav-double-strip');
-        });
-
-        let menuWrap = null;
-        let dropdownPanel = null;
-        let chevronBtn = null;
-
-        if (desktopCatalogLink && rootCats.length > 0) {
-            menuWrap = document.createElement('span');
-            menuWrap.className = 'sv-catalog-menu-trigger-wrap';
-            desktopCatalogLink.parentNode.insertBefore(menuWrap, desktopCatalogLink);
-            menuWrap.appendChild(desktopCatalogLink);
-
-            chevronBtn = document.createElement('button');
-            chevronBtn.type = 'button';
-            chevronBtn.setAttribute('aria-label', 'Abrir submenú de categorías');
-            chevronBtn.setAttribute('aria-expanded', 'false');
-            chevronBtn.className = 'inline-flex items-center justify-center p-1 text-current opacity-75 hover:opacity-100 focus:outline-none';
-            chevronBtn.innerHTML = `<svg class="sv-catalog-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>`;
-            menuWrap.appendChild(chevronBtn);
-
-            dropdownPanel = document.createElement('div');
-            dropdownPanel.className = 'sv-dropdown-panel is-mega';
-            menuWrap.appendChild(dropdownPanel);
+        // Helper para asignar la clase de estilo SIN borrar nunca .sv-cat-custom-panel
+        function setPanelClass(panelEl, modeClass) {
+            const isCatPanel = panelEl.dataset.isCatPanel === 'true' || panelEl.classList.contains('sv-cat-custom-panel');
+            panelEl.className = 'sv-dropdown-panel ' + modeClass + (isCatPanel ? ' sv-cat-custom-panel' : '');
         }
 
-        function renderDropdownContent(styleMode) {
-            if (!dropdownPanel || !chevronBtn) return;
-            if (styleMode === 'none') {
-                chevronBtn.classList.add('hidden');
-                menuWrap.classList.remove('sv-catalog-menu-open');
+        // 6. Generador Universal de Paneles (Idéntico para "Todo el Catálogo" y Categorías Personalizadas)
+        function buildPanelMarkup(panelEl, items, styleMode, fallbackSpotlightCat) {
+            if (!panelEl || !items || items.length === 0) return;
+
+            // MODO 1: FLOTANTE CLÁSICO MULTINIVEL (flyout - hasta 3 niveles)
+            if (styleMode === 'flyout') {
+                setPanelClass(panelEl, 'is-flyout-root');
+                const renderFlyoutLevel = (list, isRootLevel) => {
+                    return `<div class="py-1 flex flex-col">
+                        ${list.map((item, idx) => {
+                        const hasSub = item.children && item.children.length > 0;
+                        const subFlyout = hasSub
+                            ? `<div class="sv-nav__flyout">${renderFlyoutLevel(item.children, false)}</div>`
+                            : '';
+                        return `<div class="relative nav-flyout-parent group/item ${isRootLevel ? 'sv-stagger-item' : ''}" ${isRootLevel ? `style="--stagger-idx:${idx}"` : ''}>
+                                        <a href="${esc(item.url)}" class="sv-nav__dropdown-link px-5 py-2.5 text-sm font-medium transition flex justify-between items-center w-full">
+                                            <span>${esc(item.name)}</span>${hasSub ? `<svg class="w-4 h-4 opacity-60 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>` : ''}
+                                        </a>
+                                        ${subFlyout}
+                                    </div>`;
+                    }).join('')}
+                    </div>`;
+                };
+                panelEl.innerHTML = renderFlyoutLevel(items, true);
                 return;
             }
-            chevronBtn.classList.remove('hidden');
 
+            // MODO 2: CASCADA CON ÁRBOL GUÍA (cascade)
             if (styleMode === 'cascade') {
-                dropdownPanel.className = 'sv-dropdown-panel is-cascade';
-                dropdownPanel.innerHTML = rootCats.map(rc => {
+                setPanelClass(panelEl, 'is-cascade');
+                panelEl.innerHTML = items.map((rc, idx) => {
                     const subLinks = (rc.children && rc.children.length > 0)
                         ? `<div class="sv-cascade-children">
-                               ${rc.children.map(ch => `<a href="${esc(ch.url)}" class="text-xs font-semibold text-slate-500 hover:text-brand py-1">${esc(ch.name)}</a>`).join('')}
+                               ${rc.children.map(ch => {
+                            const l3Links = (ch.children && ch.children.length > 0)
+                                ? `<div class="pl-3 mt-0.5 space-y-0.5 border-l border-slate-200">
+                                              ${ch.children.map(l3 => `<a href="${esc(l3.url)}" class="block text-[11px] font-medium text-slate-400 hover:text-brand py-0.5">${esc(l3.name)}</a>`).join('')}
+                                          </div>`
+                                : '';
+                            return `<div><a href="${esc(ch.url)}">${esc(ch.name)}</a>${l3Links}</div>`;
+                        }).join('')}
                            </div>`
                         : '';
                     return `
-                        <div class="sv-cascade-item">
+                        <div class="sv-cascade-item sv-stagger-item" style="--stagger-idx:${idx}">
                             <a href="${esc(rc.url)}" class="sv-cascade-link">
                                 <span>${esc(rc.name)}</span>
                                 <span class="text-xs text-slate-400">→</span>
@@ -518,18 +596,158 @@
                 return;
             }
 
-            // Por defecto: Mega Menú Multicolumna con Tarjeta Destacada e Imagen Automática
-            dropdownPanel.className = 'sv-dropdown-panel is-mega';
-            const firstWithImg = rootCats.find(c => c.img) || rootCats[0];
-            const colsHtml = rootCats.map(rc => {
+            // MODO 3: ACORDEÓN PROGRESIVO EN 1 SOLA CAJA (accordion)
+            if (styleMode === 'accordion') {
+                setPanelClass(panelEl, 'is-accordion');
+                panelEl.innerHTML = items.map((item, idx) => {
+                    const hasSub = item.children && item.children.length > 0;
+                    const subHtml = hasSub
+                        ? `<div class="sv-acc-body">
+                               <div class="sv-acc-body-inner">
+                                   <div class="sv-acc-sublist">
+                                       ${item.children.map(ch => {
+                            const l3Html = (ch.children && ch.children.length > 0)
+                                ? `<div class="sv-acc-level3-list">
+                                                      ${ch.children.map(l3 => `<a href="${esc(l3.url)}" class="sv-acc-level3-link">${esc(l3.name)}</a>`).join('')}
+                                                  </div>`
+                                : '';
+                            return `<div><a href="${esc(ch.url)}" class="sv-acc-sublink block">${esc(ch.name)}</a>${l3Html}</div>`;
+                        }).join('')}
+                                   </div>
+                               </div>
+                           </div>`
+                        : '';
+                    return `
+                        <div class="sv-acc-item sv-stagger-item ${idx === 0 && hasSub ? 'is-expanded' : ''}" style="--stagger-idx:${idx}">
+                            <div class="sv-acc-header">
+                                <a href="${esc(item.url)}" class="sv-acc-link">${esc(item.name)}</a>
+                                ${hasSub ? `<button type="button" class="sv-acc-toggle" aria-label="Expandir ${esc(item.name)}"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg></button>` : ''}
+                            </div>
+                            ${subHtml}
+                        </div>
+                    `;
+                }).join('');
+
+                panelEl.querySelectorAll('.sv-acc-item').forEach(accItem => {
+                    const btn = accItem.querySelector('.sv-acc-toggle');
+                    if (!btn) return;
+                    const expandCurrent = (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const wasOpen = accItem.classList.contains('is-expanded');
+                        panelEl.querySelectorAll('.sv-acc-item').forEach(other => other.classList.remove('is-expanded'));
+                        if (!wasOpen) accItem.classList.add('is-expanded');
+                    };
+                    btn.addEventListener('click', expandCurrent);
+                    accItem.addEventListener('mouseenter', () => {
+                        if ((document.body.getAttribute('data-sv-nav-trigger') || 'hover') === 'hover') {
+                            panelEl.querySelectorAll('.sv-acc-item').forEach(other => other.classList.remove('is-expanded'));
+                            accItem.classList.add('is-expanded');
+                        }
+                    });
+                });
+                return;
+            }
+
+            // MODO 4: PANEL DIVIDIDO MAESTRO-DETALLE (split)
+            if (styleMode === 'split') {
+                setPanelClass(panelEl, 'is-split');
+                const masterHtml = items.map((item, idx) => `
+                    <a href="${esc(item.url)}" data-split-idx="${idx}" class="sv-split-trigger sv-stagger-item ${idx === 0 ? 'is-active' : ''}" style="--stagger-idx:${idx}">
+                        <span>${esc(item.name)}</span>
+                        <span class="text-xs opacity-60">→</span>
+                    </a>
+                `).join('');
+
+                const detailHtml = items.map((item, idx) => {
+                    const children = item.children || [];
+                    const gridLinks = children.length > 0
+                        ? `<div class="sv-split-pane-grid">
+                               ${children.map(ch => {
+                            const l3Html = (ch.children && ch.children.length > 0)
+                                ? `<div class="sv-split-l3-list">
+                                              ${ch.children.map(l3 => `<a href="${esc(l3.url)}" class="sv-split-l3-link">${esc(l3.name)}</a>`).join('')}
+                                          </div>`
+                                : '';
+                            return `<div class="sv-split-subgroup">
+                                               <a href="${esc(ch.url)}" class="sv-split-sublink">${esc(ch.name)}</a>${l3Html}
+                                           </div>`;
+                        }).join('')}
+                           </div>`
+                        : `<div class="py-2">
+                               <p class="text-xs text-slate-500 mb-3">Explora todas las referencias disponibles en ${esc(item.name)}.</p>
+                               <a href="${esc(item.url)}" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-slate-100 hover:bg-brand text-slate-800 hover:text-white text-xs font-bold transition">
+                                   <span>Ir a ${esc(item.name)}</span>
+                                   <span>→</span>
+                               </a>
+                           </div>`;
+                    return `
+                        <div class="sv-split-pane ${idx === 0 ? 'is-active' : ''}" data-split-pane="${idx}">
+                            <div class="space-y-3">
+                                <div class="sv-split-pane-header">
+                                    <a href="${esc(item.url)}" class="sv-split-pane-title">${esc(item.name)}</a>
+                                    <a href="${esc(item.url)}" class="text-xs font-bold text-brand hover:underline">Ver todo →</a>
+                                </div>
+                                ${gridLinks}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                panelEl.innerHTML = `
+                    <div class="sv-split-master">${masterHtml}</div>
+                    <div class="sv-split-detail">${detailHtml}</div>
+                `;
+
+                const triggers = panelEl.querySelectorAll('.sv-split-trigger');
+                const panes = panelEl.querySelectorAll('.sv-split-pane');
+                triggers.forEach(tr => {
+                    tr.addEventListener('mouseenter', () => {
+                        const targetIdx = tr.getAttribute('data-split-idx');
+                        triggers.forEach(t => t.classList.toggle('is-active', t === tr));
+                        panes.forEach(p => p.classList.toggle('is-active', p.getAttribute('data-split-pane') === targetIdx));
+                    });
+                });
+                return;
+            }
+
+            // MODO 5: CINTA HORIZONTAL EDITORIAL CON PÍLDORAS (strip)
+            if (styleMode === 'strip') {
+                setPanelClass(panelEl, 'is-strip');
+                panelEl.innerHTML = items.map((item, idx) => {
+                    const pills = (item.children && item.children.length > 0)
+                        ? `<div class="sv-strip-pills">
+                               ${item.children.map(ch => `<a href="${esc(ch.url)}" class="sv-strip-pill">${esc(ch.name)}</a>`).join('')}
+                           </div>`
+                        : `<div class="sv-strip-pills"><a href="${esc(item.url)}" class="sv-strip-pill">Ver colección →</a></div>`;
+                    return `
+                        <div class="sv-strip-group sv-stagger-item" style="--stagger-idx:${idx}">
+                            <a href="${esc(item.url)}" class="sv-strip-title">${esc(item.name)}</a>
+                            ${pills}
+                        </div>
+                    `;
+                }).join('');
+                return;
+            }
+
+            // MODO 6 (POR DEFECTO): MEGA MENÚ MULTICOLUMNA CON TARJETA DESTACADA (mega)
+            setPanelClass(panelEl, 'is-mega');
+            const firstWithImg = items.find(c => c.img) || fallbackSpotlightCat || items[0];
+            const colsHtml = items.map((rc, idx) => {
                 const subs = (rc.children && rc.children.length > 0)
-                    ? rc.children.map(ch => `<a href="${esc(ch.url)}" class="sv-mega-subcat-link">${esc(ch.name)}</a>`).join('')
+                    ? rc.children.map(ch => {
+                        const l3 = (ch.children && ch.children.length > 0)
+                            ? ch.children.map(subsub => `<a href="${esc(subsub.url)}" class="sv-mega-level3-link">${esc(subsub.name)}</a>`).join('')
+                            : '';
+                        return `<a href="${esc(ch.url)}" class="sv-mega-subcat-link">${esc(ch.name)}</a>${l3}`;
+                    }).join('')
                     : `<a href="${esc(rc.url)}" class="sv-mega-subcat-link">Ver colección →</a>`;
                 return `
-                    <div class="sv-mega-cat-group"
+                    <div class="sv-mega-cat-group sv-stagger-item"
+                         style="--stagger-idx:${idx}"
                          data-cat-name="${esc(rc.name)}"
                          data-cat-desc="${esc(rc.desc || 'Explora los productos de esta colección')}"
-                         data-cat-img="${esc(rc.img)}"
+                         data-cat-img="${esc(rc.img || (fallbackSpotlightCat && fallbackSpotlightCat.img) || '')}"
                          data-cat-url="${esc(rc.url)}">
                         <a href="${esc(rc.url)}" class="sv-mega-cat-title">
                             <span>${esc(rc.name)}</span>
@@ -539,7 +757,7 @@
                 `;
             }).join('');
 
-            dropdownPanel.innerHTML = `
+            panelEl.innerHTML = `
                 <div class="sv-mega-columns">${colsHtml}</div>
                 <a href="${esc(firstWithImg ? firstWithImg.url : `/s/${slug}/catalog`)}" class="sv-mega-spotlight">
                     <img class="sv-mega-spot-img ${firstWithImg && firstWithImg.img ? '' : 'hidden'}"
@@ -555,13 +773,12 @@
                 </a>
             `;
 
-            // Actualizar tarjeta destacada al pasar el mouse por cada columna de categoría
-            const spotEl = dropdownPanel.querySelector('.sv-mega-spotlight');
-            const spotImg = dropdownPanel.querySelector('.sv-mega-spot-img');
-            const spotTitle = dropdownPanel.querySelector('.sv-mega-spot-title');
-            const spotDesc = dropdownPanel.querySelector('.sv-mega-spot-desc');
+            const spotEl = panelEl.querySelector('.sv-mega-spotlight');
+            const spotImg = panelEl.querySelector('.sv-mega-spot-img');
+            const spotTitle = panelEl.querySelector('.sv-mega-spot-title');
+            const spotDesc = panelEl.querySelector('.sv-mega-spot-desc');
 
-            dropdownPanel.querySelectorAll('.sv-mega-cat-group').forEach(grp => {
+            panelEl.querySelectorAll('.sv-mega-cat-group').forEach(grp => {
                 grp.addEventListener('mouseenter', () => {
                     const cName = grp.getAttribute('data-cat-name');
                     const cDesc = grp.getAttribute('data-cat-desc');
@@ -581,84 +798,201 @@
                 });
             });
         }
-        function fitDropdownPanel() {
-            if (!dropdownPanel || !menuWrap) return;
-            const navUi = window.Storevo && Storevo.UI && Storevo.UI.Navbar;
-            if (navUi && typeof navUi.fitPanel === 'function') {
-                navUi.fitPanel(dropdownPanel, menuWrap);
+
+        // 7. Montar estructura idéntica en "Todo el Catálogo" y en cada categoría (.nav-parent)
+        const desktopCatalogLink = navLinks.find(a => {
+            const href = a.getAttribute('href') || '';
+            return href.includes('/catalog') && !href.includes('category=') && !a.closest('.sv-nav-double-strip');
+        });
+
+        let menuWrap = null;
+        let dropdownPanel = null;
+        let chevronSvg = null;
+
+        if (desktopCatalogLink && rootCats.length > 0) {
+            menuWrap = document.createElement('div');
+            menuWrap.className = 'nav-parent sv-catalog-menu-trigger-wrap';
+            desktopCatalogLink.parentNode.insertBefore(menuWrap, desktopCatalogLink);
+            menuWrap.appendChild(desktopCatalogLink);
+
+            // Insertar la flecha DENTRO del enlace igual que en Hombres y Mujeres para que el subrayado/píldora sea idéntico
+            chevronSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            chevronSvg.setAttribute('class', 'nav-arrow sv-catalog-chevron w-4 h-4 transition-transform duration-300');
+            chevronSvg.setAttribute('fill', 'none');
+            chevronSvg.setAttribute('stroke', 'currentColor');
+            chevronSvg.setAttribute('viewBox', '0 0 24 24');
+            chevronSvg.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>`;
+            desktopCatalogLink.appendChild(chevronSvg);
+
+            dropdownPanel = document.createElement('div');
+            dropdownPanel.className = 'sv-dropdown-panel is-mega';
+            menuWrap._customPanel = dropdownPanel;
+            menuWrap.appendChild(dropdownPanel);
+        }
+
+        // Crear contenedor personalizado persistente en cada categoría principal con hijos
+        domNavParents.forEach(parentEl => {
+            const catId = parentEl.getAttribute('data-cat-id');
+            const catObj = catMap.get(catId);
+            if (!catObj || !catObj.children || catObj.children.length === 0) return;
+
+            let customPanel = parentEl._customPanel || parentEl.querySelector(':scope > .sv-cat-custom-panel');
+            if (!customPanel) {
+                customPanel = document.createElement('div');
+                customPanel.className = 'sv-dropdown-panel sv-cat-custom-panel';
+                customPanel.dataset.isCatPanel = 'true';
+                parentEl._customPanel = customPanel;
+                parentEl.appendChild(customPanel);
+            }
+        });
+
+        function renderDropdownContent(styleMode) {
+            const effectiveStyle = styleMode || 'mega';
+
+            // 1. Renderizar "Todo el Catálogo"
+            if (dropdownPanel && menuWrap) {
+                if (effectiveStyle === 'none' || effectiveStyle === 'drawer') {
+                    dropdownPanel.innerHTML = '';
+                    menuWrap.classList.remove('sv-catalog-menu-open', 'is-open');
+                } else {
+                    buildPanelMarkup(dropdownPanel, rootCats, effectiveStyle, rootCats[0]);
+                }
+            }
+
+            // 2. Renderizar cada Categoría Personalizada del Navbar con el MISMO estilo
+            domNavParents.forEach(parentEl => {
+                const catId = parentEl.getAttribute('data-cat-id');
+                const catObj = catMap.get(catId);
+                const customPanel = parentEl._customPanel || parentEl.querySelector(':scope > .sv-cat-custom-panel');
+                if (!catObj || !catObj.children || catObj.children.length === 0 || !customPanel) return;
+
+                if (effectiveStyle === 'none' || effectiveStyle === 'drawer') {
+                    customPanel.innerHTML = '';
+                    parentEl.classList.remove('is-open');
+                    return;
+                }
+                buildPanelMarkup(customPanel, catObj.children, effectiveStyle, catObj);
+            });
+
+            // 3. Vincular detección de bordes e intención de hover para sub-cajas laterales
+            if (window.Storevo && Storevo.UI && Storevo.UI.Navbar) {
+                if (typeof Storevo.UI.Navbar.bindFlyoutIntent === 'function') {
+                    Storevo.UI.Navbar.bindFlyoutIntent(navRoot);
+                }
+                if (menuWrap && menuWrap.classList.contains('is-open')) {
+                    Storevo.UI.Navbar.placeDropdown(menuWrap);
+                }
+                domNavParents.forEach(p => {
+                    if (p.classList.contains('is-open')) {
+                        Storevo.UI.Navbar.placeDropdown(p);
+                    }
+                });
             }
         }
 
-        function setDropdownOpen(open) {
-            if (!menuWrap || !chevronBtn) return;
-            if (open) fitDropdownPanel();
-            menuWrap.classList.toggle('sv-catalog-menu-open', open);
-            chevronBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        // Control unificado de apertura por Hover (con intención de 150ms) o Click + Accesibilidad
+        const allMenuParents = (menuWrap ? [menuWrap] : []).concat(domNavParents);
+
+        function closeAllCategoryMenus(exceptEl) {
+            allMenuParents.forEach(p => {
+                if (p !== exceptEl) {
+                    p.classList.remove('is-open', 'sv-catalog-menu-open');
+                }
+            });
+        }
+
+        function setParentMenuOpen(parentEl, open) {
+            if (!parentEl || !parentEl._customPanel) return;
+            if (open) {
+                closeAllCategoryMenus(parentEl);
+                if (window.Storevo && Storevo.UI && Storevo.UI.Navbar) {
+                    Storevo.UI.Navbar.placeDropdown(parentEl);
+                }
+            }
+            parentEl.classList.toggle('is-open', open);
+            if (parentEl === menuWrap) {
+                parentEl.classList.toggle('sv-catalog-menu-open', open);
+            }
         }
 
         window.addEventListener('resize', () => {
-            if (menuWrap && menuWrap.classList.contains('sv-catalog-menu-open')) fitDropdownPanel();
+            allMenuParents.forEach(p => {
+                if (p.classList.contains('is-open') && window.Storevo && Storevo.UI && Storevo.UI.Navbar) {
+                    Storevo.UI.Navbar.placeDropdown(p);
+                }
+            });
         });
 
-        if (menuWrap && chevronBtn) {
-            menuWrap.addEventListener('mouseenter', () => {
+        allMenuParents.forEach(parentEl => {
+            let hoverTimer = null;
+            const linkEl = parentEl.querySelector(':scope > a.sv-nav__link');
+            if (!linkEl || !parentEl._customPanel) return;
+
+            parentEl.addEventListener('mouseenter', () => {
                 const trigger = document.body.getAttribute('data-sv-nav-trigger') || 'hover';
                 const dStyle = document.body.getAttribute('data-sv-dropdown-style') || 'mega';
-                if (trigger === 'hover' && (dStyle === 'mega' || dStyle === 'cascade')) {
-                    clearTimeout(closeTimer);
-                    setDropdownOpen(true);
+                if (trigger === 'hover' && dStyle !== 'none' && dStyle !== 'drawer') {
+                    clearTimeout(hoverTimer);
+                    setParentMenuOpen(parentEl, true);
                 }
             });
 
-            menuWrap.addEventListener('mouseleave', () => {
+            parentEl.addEventListener('mouseleave', () => {
                 const trigger = document.body.getAttribute('data-sv-nav-trigger') || 'hover';
                 if (trigger === 'hover') {
-                    closeTimer = setTimeout(() => setDropdownOpen(false), 160);
+                    hoverTimer = setTimeout(() => {
+                        setParentMenuOpen(parentEl, false);
+                    }, 150);
                 }
             });
 
-            const onTriggerClick = (e) => {
+            linkEl.addEventListener('click', (e) => {
                 const dStyle = document.body.getAttribute('data-sv-dropdown-style') || 'mega';
                 const trigger = document.body.getAttribute('data-sv-nav-trigger') || 'hover';
-                if (dStyle === 'none') return;
+                const isTouch = window.matchMedia && window.matchMedia('(hover: none)').matches;
+                const clickedArrow = Boolean(e.target && e.target.closest && e.target.closest('.nav-arrow'));
 
+                if (dStyle === 'none') return;
                 if (dStyle === 'drawer') {
                     e.preventDefault();
                     e.stopPropagation();
                     drawerBackdrop.classList.add('is-open');
                     return;
                 }
-                if (trigger === 'click' || e.currentTarget === chevronBtn) {
+
+                if (clickedArrow) {
                     e.preventDefault();
                     e.stopPropagation();
-                    setDropdownOpen(!menuWrap.classList.contains('sv-catalog-menu-open'));
+                    setParentMenuOpen(parentEl, !parentEl.classList.contains('is-open'));
+                    return;
                 }
-            };
 
-            chevronBtn.addEventListener('click', onTriggerClick);
-            desktopCatalogLink.addEventListener('click', (e) => {
-                const dStyle = document.body.getAttribute('data-sv-dropdown-style') || 'mega';
-                const trigger = document.body.getAttribute('data-sv-nav-trigger') || 'hover';
-                if (dStyle === 'drawer' || (trigger === 'click' && dStyle !== 'none')) {
-                    onTriggerClick(e);
+                if (trigger === 'click' || isTouch) {
+                    if (!parentEl.classList.contains('is-open')) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setParentMenuOpen(parentEl, true);
+                    }
                 }
             });
+        });
 
-            document.addEventListener('click', (e) => {
-                if (menuWrap && !menuWrap.contains(e.target)) {
-                    setDropdownOpen(false);
+        document.addEventListener('click', (e) => {
+            allMenuParents.forEach(p => {
+                if (!p.contains(e.target)) {
+                    setParentMenuOpen(p, false);
                 }
             });
-        }
+        });
 
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
-                setDropdownOpen(false);
+                closeAllCategoryMenus(null);
                 closeNavDrawer();
             }
         });
 
-        // 7. Detectar si la primera sección de la página es un Hero Banner (para Navbar Transparente Seguro)
+        // 8. Detectar si la primera sección de la página es un Hero Banner (para Navbar Transparente Seguro)
         function checkHeroOverlayEligibility() {
             const firstSection = document.querySelector('main .storevo-theme-section');
             const isHeroFirst = Boolean(firstSection && firstSection.getAttribute('data-section-type') === 'hero_banner');
@@ -672,16 +1006,18 @@
         handleScrollState();
         checkHeroOverlayEligibility();
 
-        // 8. Aplicar configuración de Navbar (en carga inicial y en vivo desde el Editor Visual)
+        // 9. Aplicar configuración de Navbar (en carga inicial y en vivo desde el Editor Visual)
         function applyAdvancedNavbarSettings(s) {
             if (!s) return;
-            const layout = s.navbarLayout || 'classic';
-            const hover = s.navbarLinkHover || 'color';
-            const dStyle = s.navbarDropdownStyle || 'mega';
-            const dAnim = s.navbarDropdownAnim || 'slide_up';
-            const trigger = s.navbarTrigger || 'hover';
-            const speed = s.navbarSpeed || 'normal';
-            const compact = String(s.navbarCompactOnScroll) === 'true';
+            const layout = s.navbarLayout || document.body.getAttribute('data-sv-nav-layout') || 'classic';
+            const hover = s.navbarLinkHover || document.body.getAttribute('data-sv-nav-hover') || 'color';
+            const dStyle = s.navbarDropdownStyle || document.body.getAttribute('data-sv-dropdown-style') || 'mega';
+            const dAnim = s.navbarDropdownAnim || document.body.getAttribute('data-sv-dropdown-anim') || 'slide_up';
+            const trigger = s.navbarTrigger || document.body.getAttribute('data-sv-nav-trigger') || 'hover';
+            const speed = s.navbarSpeed || document.body.getAttribute('data-sv-nav-speed') || 'normal';
+            const compact = s.navbarCompactOnScroll !== undefined
+                ? String(s.navbarCompactOnScroll) === 'true'
+                : document.body.getAttribute('data-sv-nav-compact') === 'true';
 
             document.body.setAttribute('data-sv-nav-layout', layout);
             document.body.setAttribute('data-sv-nav-hover', hover);
@@ -695,7 +1031,6 @@
             renderDropdownContent(dStyle);
         }
 
-        // Inicializar con los atributos del servidor
         applyAdvancedNavbarSettings({
             navbarLayout: bridge.getAttribute('data-nav-layout'),
             navbarStyle: bridge.getAttribute('data-nav-style'),

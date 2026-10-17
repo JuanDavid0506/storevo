@@ -188,19 +188,16 @@
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg>
                 <span>Descartar cambios</span>
             </button>
-
             <button type="button" onclick="Storevo.ThemeEditor.resetTheme()"
                     title="Restablecer a la estructura inicial de fábrica"
                     class="p-2 text-xs font-bold text-slate-400 hover:text-white bg-slate-950 hover:bg-slate-800 border border-slate-800 rounded-xl transition hidden sm:inline-flex items-center gap-1"
                     aria-label="Restablecer">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
             </button>
-
             <button type="button" id="btn-save-draft" onclick="Storevo.ThemeEditor.saveDraft(true)"
                     class="px-3 py-2 text-xs font-bold text-slate-200 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl transition hidden sm:inline-block">
                 Guardar borrador
             </button>
-
             <button type="button" id="btn-publish-theme" onclick="Storevo.ThemeEditor.publish()"
                     class="px-3.5 sm:px-4 py-2 text-xs font-bold text-white bg-storevo-500 hover:bg-storevo-600 rounded-xl shadow-lg shadow-storevo-500/25 transition flex items-center gap-1.5">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
@@ -226,6 +223,7 @@
         <!-- COLUMNA IZQUIERDA: PANEL CONSTRUCTOR (SECCIONES, ESTILOS Y PRESETS) -->
         <!-- =================================================================== -->
         <aside id="theme-editor-sidebar" class="bg-slate-900 border-b lg:border-b-0 lg:border-r border-slate-800">
+
             <!-- Selector de Página a personalizar + Creación y Ajustes de Páginas Personalizadas -->
             <div class="px-3 pt-3 pb-2.5 bg-slate-950 border-b border-slate-800/80 flex-shrink-0 space-y-2">
                 <div class="flex items-center justify-between gap-2">
@@ -242,7 +240,6 @@
                         </button>
                     </div>
                 </div>
-
                 <select id="editor-page-select"
                         onchange="Storevo.ThemeEditor.switchPage(this.value)"
                         class="w-full px-3 py-2 bg-slate-900 border border-slate-700 hover:border-storevo-500/60 rounded-xl text-xs font-bold text-white focus:border-storevo-500 focus:outline-none cursor-pointer transition">
@@ -328,13 +325,11 @@
                         <span>Duplicar</span>
                     </button>
                 </div>
-
                 <div id="inspector-fields-container" class="flex-1 overflow-y-auto p-4 space-y-4">
                     <!-- Campos dinámicos e inputs de subida de imagen -->
                 </div>
             </div>
 
-            <!-- VISTA 3: ESTILOS GLOBALES (COLORES, TIPOGRAFÍAS Y BORDES) -->
             <!-- VISTA 3: ESTILOS GLOBALES (secciones recogibles) -->
             <div id="panel-global-styles" class="hidden flex-1 overflow-y-auto p-4 space-y-3">
 
@@ -347,7 +342,6 @@
                         </span>
                         <svg class="style-acc-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </summary>
-
                     <div class="style-acc-body">
                         <div class="grid grid-cols-2 gap-3">
                             <div class="bg-slate-950 p-3 rounded-xl border border-slate-800">
@@ -357,7 +351,6 @@
                                     <input type="text" id="style-primary-color-hex" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs font-mono text-white">
                                 </div>
                             </div>
-
                             <div class="bg-slate-950 p-3 rounded-xl border border-slate-800">
                                 <label class="block text-xs font-bold text-slate-300 mb-2">Color Secundario</label>
                                 <div class="flex items-center gap-2">
@@ -365,7 +358,6 @@
                                     <input type="text" id="style-secondary-color-hex" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs font-mono text-white">
                                 </div>
                             </div>
-
                             <div class="bg-slate-950 p-3 rounded-xl border border-slate-800">
                                 <label class="block text-xs font-bold text-slate-300 mb-2">Fondo de Página</label>
                                 <div class="flex items-center gap-2">
@@ -373,7 +365,6 @@
                                     <input type="text" id="style-bg-color-hex" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs font-mono text-white">
                                 </div>
                             </div>
-
                             <div class="bg-slate-950 p-3 rounded-xl border border-slate-800">
                                 <label class="block text-xs font-bold text-slate-300 mb-2">Color de Texto</label>
                                 <div class="flex items-center gap-2">
@@ -390,7 +381,7 @@
                     <summary>
                         <span class="min-w-0">
                             <span class="style-acc-title">Navegación y Cabecera</span>
-                            <span class="style-acc-hint">Diseño, efectos, mega menú y comportamiento</span>
+                            <span class="style-acc-hint">Diseño, efectos, submenús y animaciones</span>
                         </span>
                         <svg class="style-acc-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </summary>
@@ -544,7 +535,7 @@
                             </div>
                         </div>
 
-                        <!-- CONTROLES AVANZADOS DE SUBMENÚS Y MEGA MENÚ -->
+                        <!-- CONTROLES AVANZADOS DE SUBMENÚS Y MEGA MENÚ (7 ARQUITECTURAS + 6 ANIMACIONES) -->
                         <div class="pt-2 border-t border-slate-800/80 space-y-3">
                             <p class="text-[11px] font-black uppercase tracking-wider text-storevo-400">Menú de Categorías e Interacción</p>
 
@@ -552,8 +543,12 @@
                                 <label class="block text-xs font-bold text-slate-300 mb-1.5">Tipo de submenú para Categorías</label>
                                 <select id="style-navbar-dropdown-style" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:border-storevo-500">
                                     <option value="mega">Mega Menú con columnas e imagen destacada</option>
-                                    <option value="cascade">Menú desplegable en cascada</option>
-                                    <option value="drawer">Panel lateral deslizable (Drawer)</option>
+                                    <option value="flyout">Flotante clásico multinivel (Cajas laterales)</option>
+                                    <option value="accordion">Acordeón progresivo (Expansión en 1 sola caja)</option>
+                                    <option value="split">Panel dividido Maestro-Detalle (2 columnas)</option>
+                                    <option value="cascade">Menú desplegable en cascada (Árbol guía)</option>
+                                    <option value="strip">Cinta horizontal editorial (Franja con píldoras)</option>
+                                    <option value="drawer">Panel lateral deslizable (Drawer completo)</option>
                                     <option value="none">Solo enlaces directos (Sin desplegable)</option>
                                 </select>
                             </div>
@@ -562,9 +557,12 @@
                                 <div>
                                     <label class="block text-xs font-bold text-slate-300 mb-1.5">Animación del menú</label>
                                     <select id="style-navbar-dropdown-anim" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:border-storevo-500">
-                                        <option value="slide_up">Deslizar suave</option>
+                                        <option value="slide_up">Deslizar suave (Abajo)</option>
+                                        <option value="slide_down">Deslizar desde arriba</option>
                                         <option value="fade">Desvanecer (Fade)</option>
                                         <option value="scale">Escala sutil (Zoom)</option>
+                                        <option value="reveal">Cortina desplegable</option>
+                                        <option value="stagger">Cascada secuencial</option>
                                     </select>
                                 </div>
                                 <div>
@@ -612,7 +610,6 @@
                         </span>
                         <svg class="style-acc-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </summary>
-
                     <div class="style-acc-body" id="style-typography-section">
                         <div class="flex justify-end">
                             <button type="button" id="style-typography-reset"
@@ -696,7 +693,6 @@
                                 </optgroup>
                             </select>
                         </div>
-
                         <div>
                             <label class="block text-xs font-bold text-slate-300 mb-1.5">Fuente de Textos y Descripciones</label>
                             <select id="style-body-font" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:border-storevo-500">
@@ -750,7 +746,6 @@
                         </span>
                         <svg class="style-acc-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </summary>
-
                     <div class="style-acc-body" id="style-shapes-section">
                         <div class="flex justify-end">
                             <button type="button" id="style-shape-reset"
@@ -784,7 +779,6 @@
                         <div>
                             <label class="block text-xs font-bold text-slate-300 mb-1.5">Estilo de las tarjetas de producto</label>
                             <div id="style-card-style" class="grid grid-cols-3 gap-2">
-
                                 <button type="button" data-value="elevated"
                                         class="card-style-opt flex flex-col items-center gap-1.5 p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
                                     <svg viewBox="0 0 64 44" class="w-full h-10" fill="currentColor">
@@ -796,7 +790,6 @@
                                     </svg>
                                     <span class="text-[10px] font-bold text-center leading-tight">Elevada</span>
                                 </button>
-
                                 <button type="button" data-value="clean"
                                         class="card-style-opt flex flex-col items-center gap-1.5 p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
                                     <svg viewBox="0 0 64 44" class="w-full h-10" fill="currentColor">
@@ -806,7 +799,6 @@
                                     </svg>
                                     <span class="text-[10px] font-bold text-center leading-tight">Editorial limpia</span>
                                 </button>
-
                                 <button type="button" data-value="outlined"
                                         class="card-style-opt flex flex-col items-center gap-1.5 p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
                                     <svg viewBox="0 0 64 44" class="w-full h-10" fill="currentColor">
@@ -881,14 +873,12 @@
         <!-- =================================================================== -->
         <section id="preview-viewport-wrapper" data-device="desktop"
                  class="flex-1 bg-slate-950 p-3 sm:p-5 flex items-center justify-center overflow-hidden relative">
-
             <div id="preview-frame-container" class="bg-white overflow-hidden transition-all duration-300 relative shadow-2xl">
                 <div id="preview-loading-overlay" class="hidden absolute inset-0 z-20 bg-slate-950/50 backdrop-blur-sm flex items-center justify-center">
                     <span class="px-4 py-2 rounded-full bg-slate-900 text-white text-xs font-bold shadow-lg border border-slate-700">
                         Actualizando vista previa...
                     </span>
                 </div>
-
                 <iframe id="storefront-preview-iframe"
                         th:src="@{/s/{slug}(slug=${slug}, preview='draft')}"
                         class="w-full h-full bg-white"
@@ -911,12 +901,12 @@
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                     </button>
                 </div>
-
                 <div id="available-sections-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto pr-1">
                     <!-- Generado por themeEditor.js -->
                 </div>
             </div>
         </div>
+
         <!-- =================================================================== -->
         <!-- MODAL PARA CREAR NUEVA PÁGINA PERSONALIZADA                         -->
         <!-- =================================================================== -->

@@ -20,8 +20,9 @@ Storevo.UI.NavbarStyle = {
         const b = toLinear(parseInt(h.substr(4, 2), 16));
         const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
 
-        // Por encima de ~0.179 el texto negro contrasta mejor que el blanco
-        return luminance > 0.179;
+        // Solo usamos texto oscuro si el color de fondo es genuinamente claro (cremas, blancos, pasteles).
+        // Colores medios/intensos (esmeralda, azul rey, rojo, dorado) usan siempre texto blanco nítido.
+        return luminance > 0.42;
     },
 
     apply: function(styles) {

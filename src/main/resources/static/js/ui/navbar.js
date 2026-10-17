@@ -14,7 +14,8 @@ Storevo.UI.Navbar = {
         const backdrop = document.getElementById('mobile-menu-backdrop');
         const closeBtn = document.getElementById('mobile-menu-close');
 
-        if (!btn || !menu) return;
+        if (!btn || !menu || btn.dataset.mobileMenuBound === 'true') return;
+        btn.dataset.mobileMenuBound = 'true';
 
         const openMenu = () => {
             menu.classList.remove('-translate-x-full');
@@ -47,9 +48,7 @@ Storevo.UI.Navbar = {
     },
 
     /**
-     * Mantiene dentro de la pantalla un panel absoluto (mega menú o cascada).
-     * El panel queda alineado al borde izquierdo de `anchor` y se desplaza hacia
-     * la izquierda solo lo necesario. Se llama justo antes de abrirlo.
+     * Mantiene dentro de la pantalla cualquier panel absoluto (mega menú, split, strip, acordeón, flyout o cascada).
      */
     fitPanel: function (panel, anchor) {
         if (!panel || !anchor) return;
@@ -72,28 +71,42 @@ Storevo.UI.Navbar = {
     },
 
     // ---------------------------------------------------------------
-    // Desplegables de categorías (.nav-parent > .sv-nav__dropdown > .sv-nav__flyout)
+    // Posicionamiento de paneles y sub-cajas laterales (.sv-nav__flyout)
     // ---------------------------------------------------------------
     placeDropdown: function (parent) {
-        const dropdown = parent.querySelector(':scope > .sv-nav__dropdown');
-        if (!dropdown) return;
+        if (!parent) return;
 
-        const margin = this.EDGE_MARGIN;
-        const vw = this.viewportWidth();
-
-        dropdown.classList.remove('is-align-right');
-
-        const rect = parent.getBoundingClientRect();
-        const width = dropdown.offsetWidth;
-        const spaceRight = vw - margin - rect.left;   // si se alinea al borde izquierdo del padre
-        const spaceLeft = rect.right - margin;        // si se alinea al borde derecho del padre
-
-        if (width > spaceRight && spaceLeft > spaceRight) {
-            dropdown.classList.add('is-align-right');
+        const customPanel = parent._customPanel || parent.querySelector(':scope > .sv-dropdown-panel');
+        if (customPanel) {
+            this.fitPanel(customPanel, parent);
+            customPanel.querySelectorAll('.nav-flyout-parent').forEach((fp, idx) => {
+                fp.style.setProperty('--stagger-idx', String(idx));
+                this.placeFlyout(fp);
+            });
+            return;
         }
 
-        // Los flyouts se calculan después de alinear el desplegable que los contiene
-        dropdown.querySelectorAll('.nav-flyout-parent').forEach((fp) => this.placeFlyout(fp));
+        const dropdown = parent.querySelector(':scope > .sv-nav__dropdown');
+        if (dropdown) {
+            const margin = this.EDGE_MARGIN;
+            const vw = this.viewportWidth();
+
+            dropdown.classList.remove('is-align-right');
+
+            const rect = parent.getBoundingClientRect();
+            const width = dropdown.offsetWidth;
+            const spaceRight = vw - margin - rect.left;
+            const spaceLeft = rect.right - margin;
+
+            if (width > spaceRight && spaceLeft > spaceRight) {
+                dropdown.classList.add('is-align-right');
+            }
+
+            dropdown.querySelectorAll('.nav-flyout-parent').forEach((fp, idx) => {
+                fp.style.setProperty('--stagger-idx', String(idx));
+                this.placeFlyout(fp);
+            });
+        }
     },
 
     placeFlyout: function (flyoutParent) {
@@ -106,7 +119,7 @@ Storevo.UI.Navbar = {
         flyout.classList.remove('is-flip');
 
         const rect = flyoutParent.getBoundingClientRect();
-        const width = flyout.offsetWidth;
+        const width = flyout.offsetWidth || 220;
         const spaceRight = vw - margin - rect.right;
         const spaceLeft = rect.left - margin;
 
@@ -115,15 +128,42 @@ Storevo.UI.Navbar = {
         }
     },
 
+    bindFlyoutIntent: function (rootContainer) {
+        if (!rootContainer) return;
+        rootContainer.querySelectorAll('.nav-flyout-parent').forEach((fp) => {
+            if (fp.dataset.flyoutBound === 'true') return;
+            fp.dataset.flyoutBound = 'true';
+
+            let flyoutTimer = null;
+            fp.addEventListener('mouseenter', () => {
+                clearTimeout(flyoutTimer);
+                const siblings = fp.parentElement ? Array.from(fp.parentElement.querySelectorAll(':scope > .nav-flyout-parent')) : [];
+                siblings.forEach(s => {
+                    if (s !== fp) s.classList.remove('is-flyout-open');
+                });
+                this.placeFlyout(fp);
+                fp.classList.add('is-flyout-open');
+            });
+            fp.addEventListener('mouseleave', () => {
+                flyoutTimer = setTimeout(() => {
+                    fp.classList.remove('is-flyout-open');
+                }, 140);
+            });
+        });
+    },
+
     initDropdownEdgeGuard: function () {
         const nav = document.getElementById('storeNavbar');
-        if (!nav || nav.dataset.edgeGuard === 'true') return;
+        if (!nav) return;
+
+        this.bindFlyoutIntent(nav);
+
+        if (nav.dataset.edgeGuard === 'true') return;
         nav.dataset.edgeGuard = 'true';
 
         nav.addEventListener('mouseover', (e) => {
             const parent = e.target && e.target.closest ? e.target.closest('.nav-parent') : null;
             if (!parent) return;
-            // Solo cuando el mouse entra al grupo, no en cada movimiento interno
             if (e.relatedTarget && parent.contains(e.relatedTarget)) return;
             this.placeDropdown(parent);
         });
