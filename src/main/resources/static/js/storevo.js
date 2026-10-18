@@ -80,7 +80,7 @@ Storevo.Router = (function() {
         '/js/ui/toast.js',
         '/js/ui/modal.js',
         '/js/ui/form.js',
-        '/js/ui/gallery.js',
+        '/js/modules/gallery.js',
         '/js/modules/cart.js',
         '/js/modules/wishlist.js',
         '/js/modules/storeCatalog.js',

@@ -63,7 +63,15 @@
             </button>
 
             <!-- Logo -->
-            <a th:href="@{/s/{slug}(slug=${slug}, preview=${previewParam})}" class="sv-nav__logo" th:text="${settings.storeName}">Mi Tienda</a>
+            <a th:href="@{/s/{slug}(slug=${slug}, preview=${previewParam})}" class="sv-nav__logo flex items-center">
+                <img th:if="${settings != null and not #strings.isEmpty(settings.logoUrl)}"
+                     th:src="${settings.logoUrl}"
+                     th:alt="${settings != null and settings.storeName != null ? settings.storeName : 'Tienda'}"
+                     class="h-8 w-auto max-h-8 object-contain">
+                <span th:if="${settings == null or #strings.isEmpty(settings.logoUrl)}"
+                      class="truncate"
+                      th:text="${settings != null and settings.storeName != null ? settings.storeName : 'Mi Tienda'}">Mi Tienda</span>
+            </a>
 
             <!-- Navegación Desktop (SSR completo: Inicio + Catálogo + Categorías + Páginas Personalizadas) -->
             <div class="sv-nav__menu sv-nav-links-group" data-custom-pages-mounted="true">
@@ -160,7 +168,15 @@
 
     <div id="mobile-menu" class="sv-drawer fixed top-0 left-0 h-full w-4/5 max-w-sm shadow-2xl z-[70] transform -translate-x-full transition-transform duration-300 flex flex-col overflow-y-auto">
         <div class="sv-drawer__header p-4 flex justify-between items-center">
-            <span class="font-black text-brand text-lg truncate pr-2" th:text="${settings.storeName}">Mi Tienda</span>
+            <div class="flex items-center min-w-0 pr-2">
+                <img th:if="${settings != null and not #strings.isEmpty(settings.logoUrl)}"
+                     th:src="${settings.logoUrl}"
+                     th:alt="${settings != null and settings.storeName != null ? settings.storeName : 'Tienda'}"
+                     class="h-7 w-auto max-h-7 object-contain max-w-[180px]">
+                <span th:if="${settings == null or #strings.isEmpty(settings.logoUrl)}"
+                      class="font-black text-brand text-lg truncate"
+                      th:text="${settings != null and settings.storeName != null ? settings.storeName : 'Mi Tienda'}">Mi Tienda</span>
+            </div>
             <button type="button" id="mobile-menu-close" class="sv-drawer__close p-2" aria-label="Cerrar menú">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>

@@ -33,6 +33,7 @@ public class StoreSettingsService {
                 .tiktok(settings.getTiktok())
                 .primaryColor(settings.getPrimaryColor())
                 .secondaryColor(settings.getSecondaryColor())
+                .logoUrl(settings.getLogoUrl())
 
                 // MAPEO DE POLÍTICAS (Lectura BD -> Vista)
                 // Se valida contra null por si es una tienda antigua creada antes de la migración
@@ -68,6 +69,7 @@ public class StoreSettingsService {
 
         if (dto.getPrimaryColor() != null) settings.setPrimaryColor(dto.getPrimaryColor());
         if (dto.getSecondaryColor() != null) settings.setSecondaryColor(dto.getSecondaryColor());
+        if (dto.getLogoUrl() != null) settings.setLogoUrl(dto.getLogoUrl());
 
         // 4. MAPEO DE POLÍTICAS (Guardado Formulario -> BD)
         // Spring MVC manda nulo si un checkbox no está marcado, por lo que asignamos false en ese caso

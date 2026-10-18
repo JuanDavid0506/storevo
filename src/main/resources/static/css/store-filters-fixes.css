@@ -80,3 +80,30 @@
 .sv-active-chips-bar.hidden {
     display: none;
 }
+
+/* 7) Barra de herramientas responsive en móviles (< 640px):
+      Fila 1: [Filtros] y [Conteo de productos] distribuidos sin desbordamiento.
+      Fila 2: [Selector de ordenamiento] al ancho completo de su contenedor.
+      En pantallas >= 640px se preserva la distribución horizontal y ancho original. */
+@media (max-width: 639.98px) {
+    .sv-grid-toolbar > div:last-child {
+        width: 100%;
+        max-width: 100%;
+    }
+    .sv-grid-toolbar .sv-mobile-filter-btn {
+        flex-shrink: 0;
+    }
+    .sv-grid-toolbar .sv-sort-wrap {
+        flex: 0 0 100%;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    .sv-grid-toolbar #catalog-sort-select,
+    .sv-grid-toolbar .sv-sort-select {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+    }
+}

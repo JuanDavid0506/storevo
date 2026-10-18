@@ -16,6 +16,7 @@ public class StoreSettingsDto {
     private String emailContact;
     private String primaryColor;
     private String secondaryColor;
+    private String logoUrl;
 
     // --- Redes Sociales ---
     private String whatsapp;

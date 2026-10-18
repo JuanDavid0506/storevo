@@ -725,3 +725,22 @@ body[data-sv-nav-compact="true"].sv-is-scrolled .sv-nav__grid {
     pointer-events: none;
     transition: opacity 120ms ease;
 }
+
+/* Alineación a la derecha para submenús que desbordan el margen derecho */
+.sv-nav__dropdown.is-align-right {
+    left: auto !important;
+    right: 0 !important;
+}
+
+/* Evitar doble subrayado en enlaces activos con efectos underline_center y underline_slide */
+body[data-sv-nav-hover="underline_center"] .sv-interactive-link.is-active::after,
+body[data-sv-nav-hover="underline_center"] .sv-interactive-link[aria-current="page"]::after,
+body[data-sv-nav-hover="underline_slide"] .sv-interactive-link.is-active::after,
+body[data-sv-nav-hover="underline_slide"] .sv-interactive-link[aria-current="page"]::after {
+    display: none !important;
+}
+
+/* Elevar stacking context del navbar únicamente mientras el drawer móvil esté abierto */
+#storeNavbar:has(#mobile-menu:not(.-translate-x-full)) {
+    z-index: 80 !important;
+}

@@ -987,11 +987,11 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
             </div>
-            <div class="flex items-center justify-between sm:justify-end gap-4">
+            <div class="flex items-center justify-between sm:justify-end gap-3 flex-wrap">
                 <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">
                     <span id="catalog-visible-count" class="text-slate-900 font-black" th:text="${#lists.size(products)}">0</span> productos
                 </span>
-                <div class="flex items-center gap-2">
+                <div class="sv-sort-wrap flex items-center gap-2">
                     <label for="catalog-sort-select" class="text-xs font-bold text-slate-500 uppercase hidden md:inline">Ordenar:</label>
                     <select id="catalog-sort-select"
                             class="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:border-brand focus:outline-none cursor-pointer">
