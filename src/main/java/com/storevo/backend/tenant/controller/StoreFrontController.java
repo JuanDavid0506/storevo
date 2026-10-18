@@ -44,6 +44,7 @@ public class StoreFrontController {
         }
         List<Product> allForFilters = (pageProducts != null && !pageProducts.isEmpty())
                 ? pageProducts : productService.getPublicCatalog(null);
+        model.addAttribute("allCatalogProducts", allForFilters);
         model.addAttribute("catalogFilterDataJson",
                 storeThemeService.buildCatalogFilterDataJson(store, theme, allForFilters));
 
@@ -78,6 +79,7 @@ public class StoreFrontController {
         List<Product> allProducts = (category == null) ? catalogProducts : productService.getPublicCatalog(null);
         hydratePageContext(request, model, allProducts);
         model.addAttribute("products", catalogProducts);
+        model.addAttribute("currentCategoryId", category);
 
         String activePageKey = "catalog";
         if (category != null) {
@@ -116,6 +118,7 @@ public class StoreFrontController {
         hydratePageContext(request, model, allProducts);
         model.addAttribute("products", allProducts);
         model.addAttribute("customPage", customPage);
+        model.addAttribute("pageSlug", customPage.getSlug());
         model.addAttribute("editorPageKey", "page:" + customPage.getSlug());
         model.addAttribute("pageTitle", customPage.getTitle());
         return "storefront/custom-page";
@@ -130,7 +133,8 @@ public class StoreFrontController {
 
         Product product = productService.getProductById(id);
         if (Boolean.TRUE.equals(product.getIsDeleted())) {
-            return "redirect:/s/" + slug + "/catalog";
+            boolean isDraft = "draft".equalsIgnoreCase(request.getParameter("preview"));
+            return "redirect:/s/" + slug + "/catalog" + (isDraft ? "?preview=draft" : "");
         }
 
         List<Product> allProducts = productService.getPublicCatalog(null);

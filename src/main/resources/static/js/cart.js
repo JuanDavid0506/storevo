@@ -1,15 +1,44 @@
 window.Storevo = window.Storevo || {};
 
 Storevo.Cart = {
-    initForms: function() {
-        const addToCartForms = document.querySelectorAll('form[action$="/cart/add"]');
+    init: function() {
+        this.initForms();
+    },
 
+    initForms: function() {
+        // 1. Formularios de Agregar a la Bolsa (Ficha de producto)
+        const addToCartForms = document.querySelectorAll('form[action$="/cart/add"]');
         addToCartForms.forEach(form => {
+            if (form.dataset.cartBound === 'true') return;
+            form.dataset.cartBound = 'true';
+
             form.addEventListener('submit', async (e) => {
+                if (e.defaultPrevented) return;
+
+                const detailBridge = document.getElementById('product-detail-bridge');
+                const hasVariants = detailBridge && detailBridge.getAttribute('data-has-variants') === 'true';
+                const variantInput = document.getElementById('selectedVariantId');
+                if (hasVariants && (!variantInput || !variantInput.value)) {
+                    e.preventDefault();
+                    document.querySelectorAll('.variant-option-group').forEach(g => {
+                        const optName = g.getAttribute('data-option-name');
+                        const selected = Storevo.ProductDetail && Storevo.ProductDetail.state && Storevo.ProductDetail.state.selectedOptions
+                            ? Storevo.ProductDetail.state.selectedOptions[optName]
+                            : null;
+                        if (!selected) {
+                            const errEl = g.querySelector('.option-error');
+                            if (errEl) errEl.classList.remove('hidden');
+                        }
+                    });
+                    if (Storevo.UI && Storevo.UI.Toast) {
+                        Storevo.UI.Toast.show('Selecciona las opciones que deseas', 'warning');
+                    }
+                    return;
+                }
+
                 e.preventDefault();
                 const formData = new FormData(form);
                 const ajaxAction = form.action.replace('/cart/add', '/cart/add-ajax');
-
                 try {
                     const response = await fetch(ajaxAction, {
                         method: 'POST',
@@ -19,17 +48,17 @@ Storevo.Cart = {
                             'Content-Type': 'application/x-www-form-urlencoded'
                         }
                     });
-
                     if (response.ok) {
                         const data = await response.json();
                         if (data.success) {
                             Storevo.Cart.updateGlobalCounter(data.cartCount, true);
+                            if (Storevo.Router && typeof Storevo.Router.invalidateCache === 'function') {
+                                Storevo.Router.invalidateCache();
+                            }
                             Storevo.UI.Toast.show(data.message, data.isWarning ? 'warning' : 'success');
                         } else {
                             Storevo.UI.Toast.show(data.message, 'error');
                         }
-                    } else {
-                        Storevo.UI.Toast.show('No se pudo agregar el producto.', 'error');
                     }
                 } catch (error) {
                     console.error('Error al agregar a la bolsa:', error);
@@ -37,10 +66,64 @@ Storevo.Cart = {
                 }
             });
         });
+
+        // 2. Formularios de Actualizar cantidad (+/-) y Eliminar dentro de cart.html (SPA sin recarga)
+        const cartMutationForms = document.querySelectorAll('form[action$="/cart/update"], form[action$="/cart/remove"]');
+        cartMutationForms.forEach(form => {
+            if (form.dataset.cartMutationBound === 'true') return;
+            form.dataset.cartMutationBound = 'true';
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const submitBtn = form.querySelector('button[type="submit"]');
+                if (submitBtn) submitBtn.disabled = true;
+
+                const currentMain = document.getElementById('storevoMainContent') || document.querySelector('main');
+                if (currentMain) currentMain.classList.add('sv-main-transitioning');
+
+                try {
+                    const formData = new FormData(form);
+                    const response = await fetch(form.action, {
+                        method: 'POST',
+                        body: new URLSearchParams(formData),
+                        credentials: 'same-origin',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-Storevo-Navigation': 'partial'
+                        }
+                    });
+
+                    if (response.ok) {
+                        const html = await response.text();
+                        const parser = new DOMParser();
+                        const nextDoc = parser.parseFromString(html, 'text/html');
+                        const nextMain = nextDoc.getElementById('storevoMainContent') || nextDoc.querySelector('main');
+
+                        if (nextMain && currentMain) {
+                            currentMain.innerHTML = nextMain.innerHTML;
+                            const nextCounter = nextDoc.getElementById('navCartCounter');
+                            if (nextCounter) {
+                                Storevo.Cart.updateGlobalCounter(nextCounter.textContent.trim(), true);
+                            }
+                            if (Storevo.Router && typeof Storevo.Router.invalidateCache === 'function') {
+                                Storevo.Router.invalidateCache();
+                            }
+                            Storevo.Cart.initForms();
+                            return;
+                        }
+                    }
+                    window.location.reload();
+                } catch (err) {
+                    window.location.reload();
+                } finally {
+                    if (currentMain) currentMain.classList.remove('sv-main-transitioning');
+                }
+            });
+        });
     },
 
     addItem: function(btn, slug, productId) {
-        if (!btn || btn.classList.contains('pointer-events-none')) return;
+        if (btn.classList.contains('pointer-events-none')) return;
         btn.classList.add('pointer-events-none');
 
         const formData = new FormData();
@@ -57,7 +140,6 @@ Storevo.Cart = {
                 if (data.success) {
                     const emptyIcon = btn.querySelector('.icon-empty');
                     const filledIcon = btn.querySelector('.icon-filled');
-
                     if (emptyIcon && filledIcon) {
                         emptyIcon.classList.add('hidden');
                         filledIcon.classList.remove('hidden');
@@ -65,20 +147,23 @@ Storevo.Cart = {
                         btn.classList.add('bg-white', 'border-brand');
                     }
                     Storevo.Cart.updateGlobalCounter(data.cartCount, true);
+                    if (Storevo.Router && typeof Storevo.Router.invalidateCache === 'function') {
+                        Storevo.Router.invalidateCache();
+                    }
                     Storevo.UI.Toast.show(data.message, data.isWarning ? 'warning' : 'success');
                 } else {
-                    Storevo.UI.Toast.show(data.message || 'No disponible.', 'error');
+                    Storevo.UI.Toast.show(data.message, 'error');
                 }
-            })
-            .catch(() => {
-                Storevo.UI.Toast.show('Error de red al agregar a la bolsa.', 'error');
-            })
-            .finally(() => btn.classList.remove('pointer-events-none'));
+            }).finally(() => btn.classList.remove('pointer-events-none'));
     },
 
     buyNowFast: function(slug, productId, hasVariants, productUrl) {
-        if (hasVariants && productUrl) {
-            window.location.href = productUrl;
+        if (hasVariants) {
+            if (window.Storevo && Storevo.Router && typeof Storevo.Router.navigate === 'function') {
+                Storevo.Router.navigate(productUrl);
+            } else {
+                window.location.href = productUrl;
+            }
             return;
         }
 
@@ -96,11 +181,8 @@ Storevo.Cart = {
                 if (data.success) {
                     window.location.href = `/s/${slug}/cart/checkout`;
                 } else {
-                    Storevo.UI.Toast.show(data.message || 'No disponible.', 'error');
+                    Storevo.UI.Toast.show(data.message, 'error');
                 }
-            })
-            .catch(() => {
-                Storevo.UI.Toast.show('Error de conexión. Intenta nuevamente.', 'error');
             });
     },
 
@@ -111,7 +193,7 @@ Storevo.Cart = {
                 if (isAbsolute) {
                     badge.textContent = value;
                 } else {
-                    let current = parseInt(badge.textContent) || 0;
+                    let current = parseInt(badge.textContent, 10) || 0;
                     let newVal = current + value;
                     badge.textContent = newVal < 0 ? 0 : newVal;
                 }
@@ -120,15 +202,17 @@ Storevo.Cart = {
     },
 
     addWithQty: function(btn, slug, productId) {
-        const qty = document.getElementById('qty').value;
+        const qtyEl = document.getElementById('qty');
+        const qty = qtyEl ? qtyEl.value : 1;
         const formData = new FormData();
         formData.append('productId', productId);
         formData.append('quantity', qty);
 
         const textSpan = btn.querySelector('.btn-text');
-        const originalHTML = textSpan.innerHTML;
+        const originalHTML = textSpan ? textSpan.innerHTML : btn.innerHTML;
+
         btn.classList.add('opacity-75', 'pointer-events-none');
-        textSpan.innerHTML = 'Procesando...';
+        if (textSpan) textSpan.innerHTML = 'Procesando...';
 
         fetch(`/s/${slug}/cart/add-ajax`, {
             method: 'POST',
@@ -138,31 +222,33 @@ Storevo.Cart = {
             .then(res => res.json())
             .then(data => {
                 btn.classList.remove('opacity-75', 'pointer-events-none');
+
                 if (data.success) {
-                    textSpan.innerHTML = '¡Agregado!';
+                    if (textSpan) textSpan.innerHTML = '¡Agregado!';
                     btn.classList.replace('bg-white', 'bg-brand');
                     btn.classList.replace('text-brand', 'text-white');
+
                     Storevo.Cart.updateGlobalCounter(data.cartCount, true);
+                    if (Storevo.Router && typeof Storevo.Router.invalidateCache === 'function') {
+                        Storevo.Router.invalidateCache();
+                    }
                     Storevo.UI.Toast.show(data.message, data.isWarning ? 'warning' : 'success');
                 } else {
-                    textSpan.innerHTML = 'Sin Stock';
+                    if (textSpan) textSpan.innerHTML = 'Sin Stock';
                     Storevo.UI.Toast.show(data.message, 'error');
                 }
+
                 setTimeout(() => {
-                    textSpan.innerHTML = originalHTML;
+                    if (textSpan) textSpan.innerHTML = originalHTML;
                     btn.classList.replace('bg-brand', 'bg-white');
                     btn.classList.replace('text-white', 'text-brand');
                 }, 2000);
-            })
-            .catch(() => {
-                btn.classList.remove('opacity-75', 'pointer-events-none');
-                textSpan.innerHTML = originalHTML;
-                Storevo.UI.Toast.show('Error de conexión.', 'error');
             });
     },
 
     buyNowWithQty: function(slug, productId) {
-        const qty = document.getElementById('qty').value;
+        const qtyEl = document.getElementById('qty');
+        const qty = qtyEl ? qtyEl.value : 1;
         const formData = new FormData();
         formData.append('productId', productId);
         formData.append('quantity', qty);
@@ -176,18 +262,17 @@ Storevo.Cart = {
             .then(data => {
                 if (data.success) window.location.href = `/s/${slug}/cart/checkout`;
                 else Storevo.UI.Toast.show(data.message, 'error');
-            })
-            .catch(() => {
-                Storevo.UI.Toast.show('Error de conexión.', 'error');
             });
     }
 };
 
-document.addEventListener('DOMContentLoaded', Storevo.Cart.initForms);
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => Storevo.Cart.init());
+} else {
+    Storevo.Cart.init();
+}
 
-// Puentes globales (ambos nombres disponibles para evitar cualquier ReferenceError)
 window.addItemToCart = Storevo.Cart.addItem;
-window.toggleCartItem = Storevo.Cart.addItem;
 window.buyNowFast = Storevo.Cart.buyNowFast;
 window.updateCartGlobalCounter = Storevo.Cart.updateGlobalCounter;
 window.addToCartWithQty = Storevo.Cart.addWithQty;

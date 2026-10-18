@@ -135,7 +135,60 @@
                data-sv-nav-compact=${gs != null and gs.navbarCompactOnScroll != null ? gs.navbarCompactOnScroll : false}">
 <nav th:replace="~{components/store-navbar :: storeNavbar}"></nav>
 <script th:src="@{/js/ui/navbarStyle.js}"></script>
-<main class="flex-1 flex flex-col">
+<main id="storevoMainContent" class="flex-1 flex flex-col">
+    <script>
+        (function() {
+            if (!window.__storevoLifecycleHookInstalled) {
+                window.__storevoLifecycleHookInstalled = true;
+                window.__storevoPageIntervals = window.__storevoPageIntervals || [];
+                window.__storevoViewCallbacks = window.__storevoViewCallbacks || new Map();
+
+                const nativeSetInterval = window.setInterval.bind(window);
+                const nativeDocAddEvent = document.addEventListener.bind(document);
+
+                window.setInterval = function(fn, delay, ...args) {
+                    const id = nativeSetInterval(fn, delay, ...args);
+                    window.__storevoPageIntervals.push(id);
+                    return id;
+                };
+
+                document.addEventListener = function(type, listener, options) {
+                    if (type === 'DOMContentLoaded' && typeof listener === 'function') {
+                        const activeKey = window.__storevoCurrentViewScriptKey || (function() {
+                            const cs = document.currentScript;
+                            if (!cs || !cs.src) return null;
+                            try {
+                                const u = new URL(cs.src, window.location.origin);
+                                return u.origin + u.pathname;
+                            } catch (e) {
+                                return null;
+                            }
+                        })();
+
+                        if (activeKey) {
+                            const list = window.__storevoViewCallbacks.get(activeKey) || [];
+                            if (!list.includes(listener)) {
+                                list.push(listener);
+                            }
+                            window.__storevoViewCallbacks.set(activeKey, list);
+                        }
+
+                        if (document.readyState !== 'loading') {
+                            queueMicrotask(() => {
+                                try {
+                                    listener(new Event('DOMContentLoaded'));
+                                } catch (err) {
+                                    console.error('[Storevo.Router] Error inicializando script de vista:', err);
+                                }
+                            });
+                            return;
+                        }
+                    }
+                    return nativeDocAddEvent(type, listener, options);
+                };
+            }
+        })();
+    </script>
     <div class="flex-1 w-full">
         <div layout:fragment="content"></div>
     </div>
@@ -226,7 +279,7 @@
               data-nav-trigger=${gs != null and gs.navbarTrigger != null ? gs.navbarTrigger : 'hover'},
               data-nav-speed=${gs != null and gs.navbarSpeed != null ? gs.navbarSpeed : 'normal'},
               data-nav-compact=${gs != null and gs.navbarCompactOnScroll != null ? gs.navbarCompactOnScroll : false}">
-    <th:block th:if="${products != null}" th:each="prod : ${products}">
+    <th:block th:with="bridgeProds=${allCatalogProducts != null ? allCatalogProducts : products}" th:if="${bridgeProds != null}" th:each="prod : ${bridgeProds}">
         <th:block th:if="${prod.category != null and (prod.mainImageUrl != null or prod.getMainImageThumbnailUrl() != null)}"
                   th:with="pImg=${prod.getMainImageThumbnailUrl() != null ? prod.getMainImageThumbnailUrl() : prod.mainImageUrl}">
             <th:block th:if="${!catImgMap.containsKey(prod.category.id)}"
@@ -261,6 +314,8 @@
 <script th:src="@{/js/ui/gallery.js}"></script>
 <script th:src="@{/js/modules/cart.js}"></script>
 <script th:src="@{/js/modules/wishlist.js}"></script>
+<script th:src="@{/js/modules/storeCatalog.js}"></script>
+<script th:src="@{/js/modules/productDetail.js}"></script>
 <script th:src="@{/js/ui/modal.js}"></script>
 
 <!-- Motor Interactivo Unificado: Misma arquitectura de submenú y animación para Catálogo y Categorías del Navbar -->
@@ -274,6 +329,12 @@
         const waPhone = bridge.getAttribute('data-whatsapp') || '';
         const isPreview = bridge.getAttribute('data-is-preview') === 'true';
         const previewSuffix = isPreview ? '?preview=draft' : '';
+        const catImgCacheKey = `storevo_cat_imgs_${slug || 'default'}`;
+
+        let cachedCatImgs = {};
+        try {
+            cachedCatImgs = JSON.parse(sessionStorage.getItem(catImgCacheKey) || '{}');
+        } catch (e) {}
 
         function esc(str) {
             return String(str || '')
@@ -293,33 +354,39 @@
         if (!navRoot) return;
         navRoot.classList.add('sv-nav-root', 'sv-unified-menus-ready');
 
-        // 1. Construir árbol de 3 niveles combinando el bridge con el DOM de store-navbar.html
+        // 1. Construir árbol de 3 niveles combinando el bridge con el DOM de store-navbar.html y caché de imágenes
         const catMap = new Map();
         Array.from(bridge.querySelectorAll('.sv-nav-cat-node')).forEach(n => {
             const id = String(n.getAttribute('data-id') || '');
             if (!id) return;
+            const nodeImg = n.getAttribute('data-img') || cachedCatImgs[id] || '';
+            if (nodeImg) cachedCatImgs[id] = nodeImg;
             catMap.set(id, {
                 id: id,
                 name: n.getAttribute('data-name') || 'Categoría',
                 desc: n.getAttribute('data-desc') || '',
                 parentId: String(n.getAttribute('data-parent-id') || ''),
-                img: n.getAttribute('data-img') || '',
+                img: nodeImg,
                 url: n.getAttribute('data-url') || `/s/${slug}/catalog`,
                 children: []
             });
         });
 
-        const domNavParents = Array.from(navRoot.querySelectorAll('.sv-nav__menu > .nav-parent'));
+        try {
+            sessionStorage.setItem(catImgCacheKey, JSON.stringify(cachedCatImgs));
+        } catch (e) {}
+
+        const domNavParents = Array.from(navRoot.querySelectorAll('.sv-nav__menu > .nav-parent:not(.sv-catalog-menu-trigger-wrap)'));
         domNavParents.forEach(parentEl => {
             const rootLink = parentEl.querySelector(':scope > a.sv-nav__link');
             if (!rootLink) return;
             const rootHref = rootLink.getAttribute('href') || '';
-            const rootId = extractCatIdFromHref(rootHref) || rootLink.textContent.trim();
+            const rootId = parentEl.getAttribute('data-cat-id') || extractCatIdFromHref(rootHref) || rootLink.textContent.trim();
             const rootName = (rootLink.querySelector('.sv-nav__label') || rootLink).textContent.trim();
             parentEl.setAttribute('data-cat-id', rootId);
 
             if (!catMap.has(rootId)) {
-                catMap.set(rootId, { id: rootId, name: rootName, desc: '', parentId: '', img: '', url: rootHref, children: [] });
+                catMap.set(rootId, { id: rootId, name: rootName, desc: '', parentId: '', img: cachedCatImgs[rootId] || '', url: rootHref, children: [] });
             }
 
             const subParents = Array.from(parentEl.querySelectorAll(':scope > .sv-nav__dropdown .nav-flyout-parent'));
@@ -331,7 +398,7 @@
                 const subName = (subLink.querySelector('span') || subLink).textContent.trim();
 
                 if (!catMap.has(subId)) {
-                    catMap.set(subId, { id: subId, name: subName, desc: '', parentId: rootId, img: '', url: subHref, children: [] });
+                    catMap.set(subId, { id: subId, name: subName, desc: '', parentId: rootId, img: cachedCatImgs[subId] || '', url: subHref, children: [] });
                 } else {
                     catMap.get(subId).parentId = rootId;
                 }
@@ -342,7 +409,7 @@
                     const l3Id = extractCatIdFromHref(l3Href) || (subId + '_' + l3.textContent.trim());
                     const l3Name = l3.textContent.trim();
                     if (!catMap.has(l3Id)) {
-                        catMap.set(l3Id, { id: l3Id, name: l3Name, desc: '', parentId: subId, img: '', url: l3Href, children: [] });
+                        catMap.set(l3Id, { id: l3Id, name: l3Name, desc: '', parentId: subId, img: cachedCatImgs[l3Id] || '', url: l3Href, children: [] });
                     } else {
                         catMap.get(l3Id).parentId = subId;
                     }
@@ -380,42 +447,29 @@
             href: a.getAttribute('href')
         }));
 
-        // 2. Montar enlaces de Páginas Personalizadas en el Navbar (PC y Móvil)
+        // 2. Fallback seguro: solo montar páginas personalizadas por JS si la plantilla no las montó en SSR
         if (customPages.length > 0) {
             const catalogAnchors = Array.from(navRoot.querySelectorAll('a[href*="/catalog"]'))
-                .filter(a => !a.getAttribute('href').includes('category='));
+                .filter(a => !a.getAttribute('href').includes('category=') && !a.closest('.sv-nav-double-strip'));
 
             catalogAnchors.forEach(catAnchor => {
-                const parent = catAnchor.parentElement;
-                if (!parent) return;
-                const isListItem = parent.tagName === 'LI';
-                const container = isListItem ? parent.parentElement : parent;
-                if (!container || container.hasAttribute('data-custom-pages-mounted')) return;
+                const container = catAnchor.closest('[data-custom-pages-mounted]') || catAnchor.closest('.sv-nav__menu') || catAnchor.parentElement;
+                if (!container || container.getAttribute('data-custom-pages-mounted') === 'true') return;
                 container.setAttribute('data-custom-pages-mounted', 'true');
 
                 customPages.forEach(cp => {
                     const isCurrent = window.location.pathname === new URL(cp.href, window.location.origin).pathname;
-                    if (isListItem) {
-                        const li = parent.cloneNode(true);
-                        const a = li.querySelector('a');
-                        if (a) {
-                            a.setAttribute('href', cp.href);
-                            a.textContent = cp.title;
-                            if (isCurrent) a.classList.add('text-brand', 'font-bold');
-                        }
-                        container.appendChild(li);
-                    } else {
-                        const a = catAnchor.cloneNode(false);
-                        a.setAttribute('href', cp.href);
-                        a.innerHTML = `<span class="sv-nav__label">${esc(cp.title)}</span>`;
-                        if (isCurrent) a.classList.add('text-brand', 'font-bold');
-                        container.appendChild(a);
-                    }
+                    const a = document.createElement('a');
+                    a.className = 'sv-nav__link sv-interactive-link' + (isCurrent ? ' is-active font-bold' : '');
+                    a.setAttribute('href', cp.href);
+                    if (isCurrent) a.setAttribute('aria-current', 'page');
+                    a.innerHTML = `<span class="sv-nav__label">${esc(cp.title)}</span>`;
+                    container.appendChild(a);
                 });
             });
         }
 
-        // 3. Añadir .sv-interactive-link EXCLUSIVAMENTE a los enlaces principales del menú (.sv-nav__menu)
+        // 3. Asegurar clases interactivas en enlaces principales del menú (.sv-nav__menu)
         const navLinks = Array.from(
             navRoot.querySelectorAll('.sv-nav__menu > a.sv-nav__link, .sv-nav__menu > .nav-parent > a.sv-nav__link')
         );
@@ -426,34 +480,36 @@
             }
         });
 
-        // 4. Construir Doble Barra Comercial (.sv-nav-double-strip)
-        const doubleStrip = document.createElement('div');
-        doubleStrip.className = 'sv-nav-double-strip';
-        const topStripLinks = [];
-        topStripLinks.push(`<a href="/s/${slug}/catalog${previewSuffix}">Todo el Catálogo</a>`);
-        rootCats.slice(0, 5).forEach(rc => {
-            topStripLinks.push(`<a href="${esc(rc.url)}">${esc(rc.name)}</a>`);
-        });
-        customPages.forEach(cp => {
-            topStripLinks.push(`<a href="${esc(cp.href)}">${esc(cp.title)}</a>`);
-        });
+        // 4. Doble Barra Comercial (.sv-nav-double-strip): reutilizar la renderizada en SSR si ya existe
+        if (!navRoot.querySelector(':scope > .sv-nav-double-strip')) {
+            const doubleStrip = document.createElement('div');
+            doubleStrip.className = 'sv-nav-double-strip';
+            const topStripLinks = [];
+            topStripLinks.push(`<a href="/s/${slug}/catalog${previewSuffix}">Todo el Catálogo</a>`);
+            rootCats.slice(0, 5).forEach(rc => {
+                topStripLinks.push(`<a href="${esc(rc.url)}">${esc(rc.name)}</a>`);
+            });
+            customPages.forEach(cp => {
+                topStripLinks.push(`<a href="${esc(cp.href)}">${esc(cp.title)}</a>`);
+            });
 
-        const waBadgeHtml = waPhone
-            ? `<a href="https://wa.me/${esc(waPhone)}" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 font-bold text-emerald-300 hover:text-white transition">
-                   <span>💬 Atención WhatsApp</span>
-               </a>`
-            : `<span class="opacity-80 font-semibold">🔒 Compra 100% segura en ${esc(storeName)}</span>`;
+            const waBadgeHtml = waPhone
+                ? `<a href="https://wa.me/${esc(waPhone)}" target="_blank" rel="noopener" data-no-spa="true" class="inline-flex items-center gap-1.5 font-bold text-emerald-300 hover:text-white transition">
+                       <span>💬 Atención WhatsApp</span>
+                   </a>`
+                : `<span class="opacity-80 font-semibold">🔒 Compra 100% segura en ${esc(storeName)}</span>`;
 
-        doubleStrip.innerHTML = `
-            <div class="sv-nav-double-strip__inner">
-                <div class="sv-nav-double-strip__links">${topStripLinks.join('')}</div>
-                <div class="hidden sm:flex items-center gap-4 flex-shrink-0">
-                    ${waBadgeHtml}
-                    <a href="/s/${slug}/wishlist${previewSuffix}" class="text-white/85 hover:text-white font-semibold">Favoritos</a>
+            doubleStrip.innerHTML = `
+                <div class="sv-nav-double-strip__inner">
+                    <div class="sv-nav-double-strip__links">${topStripLinks.join('')}</div>
+                    <div class="hidden sm:flex items-center gap-4 flex-shrink-0">
+                        ${waBadgeHtml}
+                        <a href="/s/${slug}/wishlist${previewSuffix}" class="text-white/85 hover:text-white font-semibold">Favoritos</a>
+                    </div>
                 </div>
-            </div>
-        `;
-        navRoot.insertBefore(doubleStrip, navRoot.firstChild);
+            `;
+            navRoot.insertBefore(doubleStrip, navRoot.firstChild);
+        }
 
         // 5. Construir Drawer Lateral de Categorías (.sv-nav-drawer-backdrop) con 3 niveles
         const drawerBackdrop = document.createElement('div');
@@ -520,17 +576,15 @@
             if (e.target === drawerBackdrop) closeNavDrawer();
         });
 
-        // Helper para asignar la clase de estilo SIN borrar nunca .sv-cat-custom-panel
         function setPanelClass(panelEl, modeClass) {
             const isCatPanel = panelEl.dataset.isCatPanel === 'true' || panelEl.classList.contains('sv-cat-custom-panel');
             panelEl.className = 'sv-dropdown-panel ' + modeClass + (isCatPanel ? ' sv-cat-custom-panel' : '');
         }
 
-        // 6. Generador Universal de Paneles (Idéntico para "Todo el Catálogo" y Categorías Personalizadas)
+        // 6. Generador Universal de Paneles
         function buildPanelMarkup(panelEl, items, styleMode, fallbackSpotlightCat) {
             if (!panelEl || !items || items.length === 0) return;
 
-            // MODO 1: FLOTANTE CLÁSICO MULTINIVEL (flyout - hasta 3 niveles)
             if (styleMode === 'flyout') {
                 setPanelClass(panelEl, 'is-flyout-root');
                 const renderFlyoutLevel = (list, isRootLevel) => {
@@ -553,7 +607,6 @@
                 return;
             }
 
-            // MODO 2: CASCADA CON ÁRBOL GUÍA (cascade)
             if (styleMode === 'cascade') {
                 setPanelClass(panelEl, 'is-cascade');
                 panelEl.innerHTML = items.map((rc, idx) => {
@@ -582,7 +635,6 @@
                 return;
             }
 
-            // MODO 3: ACORDEÓN PROGRESIVO EN 1 SOLA CAJA (accordion)
             if (styleMode === 'accordion') {
                 setPanelClass(panelEl, 'is-accordion');
                 panelEl.innerHTML = items.map((item, idx) => {
@@ -635,7 +687,6 @@
                 return;
             }
 
-            // MODO 4: PANEL DIVIDIDO MAESTRO-DETALLE (split)
             if (styleMode === 'split') {
                 setPanelClass(panelEl, 'is-split');
                 const masterHtml = items.map((item, idx) => `
@@ -697,7 +748,6 @@
                 return;
             }
 
-            // MODO 5: CINTA HORIZONTAL EDITORIAL CON PÍLDORAS (strip)
             if (styleMode === 'strip') {
                 setPanelClass(panelEl, 'is-strip');
                 panelEl.innerHTML = items.map((item, idx) => {
@@ -716,7 +766,6 @@
                 return;
             }
 
-            // MODO 6 (POR DEFECTO): MEGA MENÚ MULTICOLUMNA CON TARJETA DESTACADA (mega)
             setPanelClass(panelEl, 'is-mega');
             const firstWithImg = items.find(c => c.img) || fallbackSpotlightCat || items[0];
             const colsHtml = items.map((rc, idx) => {
@@ -786,7 +835,7 @@
             });
         }
 
-        // 7. Montar estructura idéntica en "Todo el Catálogo" y en cada categoría (.nav-parent)
+        // 7. Reutilizar estructura SSR de "Todo el Catálogo" sin re-envolver ni duplicar íconos
         const desktopCatalogLink = navLinks.find(a => {
             const href = a.getAttribute('href') || '';
             return href.includes('/catalog') && !href.includes('category=') && !a.closest('.sv-nav-double-strip');
@@ -794,26 +843,39 @@
 
         let menuWrap = null;
         let dropdownPanel = null;
-        let chevronSvg = null;
 
         if (desktopCatalogLink && rootCats.length > 0) {
-            menuWrap = document.createElement('div');
-            menuWrap.className = 'nav-parent sv-catalog-menu-trigger-wrap';
-            desktopCatalogLink.parentNode.insertBefore(menuWrap, desktopCatalogLink);
-            menuWrap.appendChild(desktopCatalogLink);
+            const existingWrap = desktopCatalogLink.closest('.sv-catalog-menu-trigger-wrap');
+            if (existingWrap) {
+                menuWrap = existingWrap;
+                dropdownPanel = existingWrap.querySelector(':scope > .sv-dropdown-panel');
+                if (!dropdownPanel) {
+                    dropdownPanel = document.createElement('div');
+                    dropdownPanel.className = 'sv-dropdown-panel is-mega';
+                    existingWrap.appendChild(dropdownPanel);
+                }
+                menuWrap._customPanel = dropdownPanel;
+            } else {
+                menuWrap = document.createElement('div');
+                menuWrap.className = 'nav-parent sv-catalog-menu-trigger-wrap';
+                desktopCatalogLink.parentNode.insertBefore(menuWrap, desktopCatalogLink);
+                menuWrap.appendChild(desktopCatalogLink);
 
-            chevronSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-            chevronSvg.setAttribute('class', 'nav-arrow sv-catalog-chevron w-4 h-4 transition-transform duration-300');
-            chevronSvg.setAttribute('fill', 'none');
-            chevronSvg.setAttribute('stroke', 'currentColor');
-            chevronSvg.setAttribute('viewBox', '0 0 24 24');
-            chevronSvg.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>`;
-            desktopCatalogLink.appendChild(chevronSvg);
+                if (!desktopCatalogLink.querySelector('.sv-catalog-chevron')) {
+                    const chevronSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                    chevronSvg.setAttribute('class', 'nav-arrow sv-catalog-chevron w-4 h-4 transition-transform duration-300');
+                    chevronSvg.setAttribute('fill', 'none');
+                    chevronSvg.setAttribute('stroke', 'currentColor');
+                    chevronSvg.setAttribute('viewBox', '0 0 24 24');
+                    chevronSvg.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>`;
+                    desktopCatalogLink.appendChild(chevronSvg);
+                }
 
-            dropdownPanel = document.createElement('div');
-            dropdownPanel.className = 'sv-dropdown-panel is-mega';
-            menuWrap._customPanel = dropdownPanel;
-            menuWrap.appendChild(dropdownPanel);
+                dropdownPanel = document.createElement('div');
+                dropdownPanel.className = 'sv-dropdown-panel is-mega';
+                menuWrap._customPanel = dropdownPanel;
+                menuWrap.appendChild(dropdownPanel);
+            }
         }
 
         domNavParents.forEach(parentEl => {
@@ -982,6 +1044,10 @@
             document.body.classList.toggle('sv-is-scrolled', window.scrollY > 24);
         }
         window.addEventListener('scroll', handleScrollState, { passive: true });
+        document.addEventListener('storevo:page-load', () => {
+            checkHeroOverlayEligibility();
+            handleScrollState();
+        });
         handleScrollState();
         checkHeroOverlayEligibility();
 
@@ -1090,32 +1156,37 @@
             }
         });
 
+        window.__storevoApplyLiveStyles = function(s) {
+            if (!s) return;
+            window.__storevoLiveStyles = Object.assign({}, window.__storevoLiveStyles || {}, s);
+            const root = document.documentElement;
+            if (s.primaryColor) root.style.setProperty('--brand-color', s.primaryColor);
+            if (s.secondaryColor) root.style.setProperty('--brand-secondary', s.secondaryColor);
+            if (s.backgroundColor) root.style.setProperty('--store-bg', s.backgroundColor);
+            if (s.textColor) root.style.setProperty('--store-text', s.textColor);
+
+            const SERIF_FONTS = ['Playfair Display', 'Lora', 'Cormorant Garamond', 'Cinzel'];
+            if (s.headingFont) root.style.setProperty('--font-heading', `'${s.headingFont}', ${SERIF_FONTS.includes(s.headingFont) ? 'serif' : 'sans-serif'}`);
+            if (s.bodyFont) root.style.setProperty('--font-body', `'${s.bodyFont}', ${SERIF_FONTS.includes(s.bodyFont) ? 'serif' : 'sans-serif'}`);
+            if (s.headingTransform) document.body.dataset.headingCase = s.headingTransform;
+            if (s.fontScale) {
+                const scales = { compact: '95%', standard: '100%', large: '106%' };
+                root.style.setProperty('--store-font-scale', scales[s.fontScale] || '100%');
+            }
+            if (s.buttonRadius) document.body.dataset.buttonRadius = s.buttonRadius;
+            if (s.cardStyle) document.body.dataset.cardStyle = s.cardStyle;
+            if (s.borderRadius) root.style.setProperty('--store-radius', s.borderRadius);
+
+            if (window.Storevo && Storevo.UI && Storevo.UI.NavbarStyle) {
+                Storevo.UI.NavbarStyle.apply(s);
+            }
+        };
+
         window.addEventListener('message', function(e) {
             if (e.origin !== window.location.origin || !e.data) return;
 
             if (e.data.type === 'storevo:live-styles' && e.data.styles) {
-                const root = document.documentElement;
-                const s = e.data.styles;
-                if (s.primaryColor) root.style.setProperty('--brand-color', s.primaryColor);
-                if (s.secondaryColor) root.style.setProperty('--brand-secondary', s.secondaryColor);
-                if (s.backgroundColor) root.style.setProperty('--store-bg', s.backgroundColor);
-                if (s.textColor) root.style.setProperty('--store-text', s.textColor);
-
-                const SERIF_FONTS = ['Playfair Display', 'Lora', 'Cormorant Garamond', 'Cinzel'];
-                if (s.headingFont) root.style.setProperty('--font-heading', `'${s.headingFont}', ${SERIF_FONTS.includes(s.headingFont) ? 'serif' : 'sans-serif'}`);
-                if (s.bodyFont) root.style.setProperty('--font-body', `'${s.bodyFont}', ${SERIF_FONTS.includes(s.bodyFont) ? 'serif' : 'sans-serif'}`);
-                if (s.headingTransform) document.body.dataset.headingCase = s.headingTransform;
-                if (s.fontScale) {
-                    const scales = { compact: '95%', standard: '100%', large: '106%' };
-                    root.style.setProperty('--store-font-scale', scales[s.fontScale] || '100%');
-                }
-                if (s.buttonRadius) document.body.dataset.buttonRadius = s.buttonRadius;
-                if (s.cardStyle) document.body.dataset.cardStyle = s.cardStyle;
-                if (s.borderRadius) root.style.setProperty('--store-radius', s.borderRadius);
-
-                if (window.Storevo && Storevo.UI && Storevo.UI.NavbarStyle) {
-                    Storevo.UI.NavbarStyle.apply(s);
-                }
+                window.__storevoApplyLiveStyles(e.data.styles);
             }
 
             if (e.data.type === 'storevo:highlight-section') {
@@ -1127,9 +1198,19 @@
                     }
                 });
             }
+            if (e.data.type === 'storevo:live-custom-page' && e.data.page) {
+                const p = e.data.page;
+                document.querySelectorAll(`#storeNavbar a[data-page-slug="${p.slug}"]`).forEach(link => {
+                    const label = link.querySelector('.sv-nav__label') || link;
+                    if (p.title) label.textContent = p.title;
+                    link.classList.toggle('hidden', p.showInNavbar === false);
+                });
+            }
         });
     })();
 </script>
-<th:block layout:fragment="scripts"></th:block>
+<div id="storevo-page-scripts">
+    <th:block layout:fragment="scripts"></th:block>
+</div>
 </body>
 </html>

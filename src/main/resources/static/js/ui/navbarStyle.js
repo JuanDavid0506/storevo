@@ -2,8 +2,8 @@ window.Storevo = window.Storevo || {};
 Storevo.UI = Storevo.UI || {};
 
 /**
- * Aplica la configuración de navegación al #storeNavbar y calcula el tono
- * (texto claro u oscuro) cuando el navbar usa el color primario o secundario.
+ * Aplica la configuración de navegación al #storeNavbar, calcula el tono
+ * (texto claro u oscuro) y marca de inmediato el enlace activo sin FOUC.
  */
 Storevo.UI.NavbarStyle = {
     isLightColor: function(hex) {
@@ -20,9 +20,59 @@ Storevo.UI.NavbarStyle = {
         const b = toLinear(parseInt(h.substr(4, 2), 16));
         const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
 
-        // Solo usamos texto oscuro si el color de fondo es genuinamente claro (cremas, blancos, pasteles).
-        // Colores medios/intensos (esmeralda, azul rey, rojo, dorado) usan siempre texto blanco nítido.
         return luminance > 0.42;
+    },
+
+    syncActiveLinks: function(targetUrlObj) {
+        const nav = document.getElementById('storeNavbar');
+        if (!nav) return;
+
+        let currentUrl;
+        try {
+            currentUrl = targetUrlObj || new URL(window.location.href);
+        } catch (e) {
+            return;
+        }
+
+        const currentPath = currentUrl.pathname.replace(/\/+$/, '') || '/';
+        const currentCat = currentUrl.searchParams.get('category') || '';
+        const slugMatch = currentPath.match(/^\/s\/([^/?#]+)/);
+        const slug = slugMatch ? slugMatch[1] : '';
+        const homePath = slug ? `/s/${slug}` : '';
+        const catalogPath = slug ? `/s/${slug}/catalog` : '';
+
+        nav.querySelectorAll('.sv-nav__menu a.sv-nav__link, #mobile-menu a.sv-drawer__link').forEach(a => {
+            const rawHref = a.getAttribute('href');
+            if (!rawHref) return;
+            let linkUrl;
+            try {
+                linkUrl = new URL(rawHref, window.location.origin);
+            } catch (e) {
+                return;
+            }
+
+            const linkPath = linkUrl.pathname.replace(/\/+$/, '') || '/';
+            const linkCat = linkUrl.searchParams.get('category') || '';
+
+            let isActive = false;
+            if (homePath && linkPath === homePath) {
+                isActive = (currentPath === homePath);
+            } else if (catalogPath && linkPath === catalogPath) {
+                isActive = linkCat
+                    ? (currentPath === catalogPath && currentCat === linkCat)
+                    : (currentPath === catalogPath && !currentCat);
+            } else {
+                isActive = (currentPath === linkPath);
+            }
+
+            a.classList.toggle('is-active', isActive);
+            a.classList.remove('text-brand', 'font-bold');
+            if (isActive) {
+                a.setAttribute('aria-current', 'page');
+            } else {
+                a.removeAttribute('aria-current');
+            }
+        });
     },
 
     apply: function(styles) {
@@ -45,6 +95,8 @@ Storevo.UI.NavbarStyle = {
         } else {
             delete nav.dataset.navTone;
         }
+
+        this.syncActiveLinks();
     }
 };
 

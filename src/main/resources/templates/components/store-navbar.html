@@ -8,12 +8,50 @@
               navStyle=${gs != null and gs.navbarStyle != null ? gs.navbarStyle : 'page'},
               navLinkFormat=${gs != null and gs.navbarLinkFormat != null ? gs.navbarLinkFormat : 'normal'},
               navLinkHover=${gs != null and gs.navbarLinkHover != null ? gs.navbarLinkHover : 'color'},
-              navSticky=${gs == null or gs.navbarSticky}"
+              navSticky=${gs == null or gs.navbarSticky},
+              previewParam=${isDraftPreview == true ? 'draft' : null},
+              waRaw=${settings != null and settings.whatsapp != null ? #strings.replace(#strings.replace(#strings.replace(settings.whatsapp, ' ', ''), '+', ''), '-', '') : ''},
+              waPhone=${#strings.length(waRaw) == 10 ? '57' + waRaw : waRaw}"
      th:attr="data-nav-layout=${navLayout},
               data-nav-style=${navStyle},
               data-nav-link-format=${navLinkFormat},
               data-nav-link-hover=${navLinkHover},
               data-nav-sticky=${navSticky}">
+
+    <!-- Doble Barra Comercial renderizada en SSR (visible cuando data-sv-nav-layout="double_bar") -->
+    <div class="sv-nav-double-strip" data-ssr-mounted="true">
+        <div class="sv-nav-double-strip__inner">
+            <div class="sv-nav-double-strip__links">
+                <a th:href="@{/s/{slug}/catalog(slug=${slug}, preview=${previewParam})}">Todo el Catálogo</a>
+                <th:block th:if="${navCategories != null}">
+                    <a th:each="rc, iterStat : ${navCategories}"
+                       th:if="${iterStat.index < 5}"
+                       th:href="@{/s/{slug}/catalog(slug=${slug}, category=${rc.id}, preview=${previewParam})}"
+                       th:text="${rc.name}">Categoría</a>
+                </th:block>
+                <th:block th:if="${theme != null and not #lists.isEmpty(theme.navbarCustomPages)}">
+                    <a th:each="cp : ${theme.navbarCustomPages}"
+                       th:href="@{/s/{slug}/page/{pageSlug}(slug=${slug}, pageSlug=${cp.slug}, preview=${previewParam})}"
+                       th:attr="data-page-slug=${cp.slug}"
+                       th:text="${cp.title}">Página</a>
+                </th:block>
+            </div>
+            <div class="hidden sm:flex items-center gap-4 flex-shrink-0">
+                <a th:if="${waPhone != ''}"
+                   th:href="'https://wa.me/' + ${waPhone}"
+                   target="_blank" rel="noopener"
+                   data-no-spa="true"
+                   class="inline-flex items-center gap-1.5 font-bold text-emerald-300 hover:text-white transition">
+                    <span>💬 Atención WhatsApp</span>
+                </a>
+                <span th:if="${waPhone == ''}"
+                      class="opacity-80 font-semibold"
+                      th:text="'🔒 Compra 100% segura en ' + ${settings != null ? settings.storeName : 'Tienda'}">🔒 Compra 100% segura</span>
+                <a th:href="@{/s/{slug}/wishlist(slug=${slug}, preview=${previewParam})}"
+                   class="text-white/85 hover:text-white font-semibold">Favoritos</a>
+            </div>
+        </div>
+    </div>
 
     <div class="sv-nav__bar">
         <div class="sv-nav__grid">
@@ -25,15 +63,42 @@
             </button>
 
             <!-- Logo -->
-            <a th:href="@{/s/{slug}(slug=${slug})}" class="sv-nav__logo" th:text="${settings.storeName}">Mi Tienda</a>
+            <a th:href="@{/s/{slug}(slug=${slug}, preview=${previewParam})}" class="sv-nav__logo" th:text="${settings.storeName}">Mi Tienda</a>
 
-            <!-- Navegación Desktop (3 niveles) -->
-            <div class="sv-nav__menu">
-                <a th:href="@{/s/{slug}(slug=${slug})}" class="sv-nav__link"><span class="sv-nav__label">Inicio</span></a>
-                <a th:href="@{/s/{slug}/catalog(slug=${slug})}" class="sv-nav__link"><span class="sv-nav__label">Todo el Catálogo</span></a>
+            <!-- Navegación Desktop (SSR completo: Inicio + Catálogo + Categorías + Páginas Personalizadas) -->
+            <div class="sv-nav__menu sv-nav-links-group" data-custom-pages-mounted="true">
+                <a th:href="@{/s/{slug}(slug=${slug}, preview=${previewParam})}"
+                   class="sv-nav__link sv-interactive-link"
+                   th:classappend="${editorPageKey == 'home'} ? ' is-active' : ''"
+                   th:attr="data-sv-nav-link='home', aria-current=${editorPageKey == 'home' ? 'page' : null}">
+                    <span class="sv-nav__label">Inicio</span>
+                </a>
 
-                <div th:each="cat : ${navCategories}" class="nav-parent">
-                    <a th:href="@{/s/{slug}/catalog(slug=${slug}, category=${cat.id})}" class="sv-nav__link">
+                <!-- Todo el Catálogo con wrapper y flecha pre-renderizados si existen categorías -->
+                <div th:if="${not #lists.isEmpty(navCategories)}" class="nav-parent sv-catalog-menu-trigger-wrap sv-nav-links-group">
+                    <a th:href="@{/s/{slug}/catalog(slug=${slug}, preview=${previewParam})}"
+                       class="sv-nav__link sv-interactive-link"
+                       th:classappend="${editorPageKey == 'catalog'} ? ' is-active' : ''"
+                       th:attr="data-sv-nav-link='catalog', aria-current=${editorPageKey == 'catalog' ? 'page' : null}">
+                        <span class="sv-nav__label">Todo el Catálogo</span>
+                        <svg class="nav-arrow sv-catalog-chevron w-4 h-4 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </a>
+                    <div class="sv-dropdown-panel is-mega"></div>
+                </div>
+                <a th:if="${#lists.isEmpty(navCategories)}"
+                   th:href="@{/s/{slug}/catalog(slug=${slug}, preview=${previewParam})}"
+                   class="sv-nav__link sv-interactive-link"
+                   th:classappend="${editorPageKey == 'catalog'} ? ' is-active' : ''"
+                   th:attr="data-sv-nav-link='catalog', aria-current=${editorPageKey == 'catalog' ? 'page' : null}">
+                    <span class="sv-nav__label">Todo el Catálogo</span>
+                </a>
+
+                <!-- Categorías Raíz y Subcategorías -->
+                <div th:each="cat : ${navCategories}" class="nav-parent sv-nav-links-group" th:attr="data-cat-id=${cat.id}">
+                    <a th:href="@{/s/{slug}/catalog(slug=${slug}, category=${cat.id}, preview=${previewParam})}"
+                       class="sv-nav__link sv-interactive-link"
+                       th:classappend="${editorPageKey == 'category:' + cat.id} ? ' is-active' : ''"
+                       th:attr="data-sv-cat-id=${cat.id}, aria-current=${editorPageKey == 'category:' + cat.id ? 'page' : null}">
                         <span class="sv-nav__label" th:text="${cat.name}"></span>
                         <svg th:if="${not #lists.isEmpty(cat.subCategories)}" class="nav-arrow w-4 h-4 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </a>
@@ -41,20 +106,31 @@
                     <div th:if="${not #lists.isEmpty(cat.subCategories)}" class="sv-nav__dropdown">
                         <div class="py-2 flex flex-col">
                             <div th:each="sub : ${cat.subCategories}" th:if="${sub.isActive}" class="relative nav-flyout-parent group/item">
-                                <a th:href="@{/s/{slug}/catalog(slug=${slug}, category=${sub.id})}" class="sv-nav__dropdown-link px-5 py-2.5 text-sm font-medium transition flex justify-between items-center w-full">
+                                <a th:href="@{/s/{slug}/catalog(slug=${slug}, category=${sub.id}, preview=${previewParam})}" class="sv-nav__dropdown-link px-5 py-2.5 text-sm font-medium transition flex justify-between items-center w-full">
                                     <span th:text="${sub.name}">Subcategoría</span>
                                     <svg th:if="${not #lists.isEmpty(sub.subCategories)}" class="w-4 h-4 opacity-60 group-hover/item:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                                 </a>
 
                                 <div th:if="${not #lists.isEmpty(sub.subCategories)}" class="sv-nav__flyout">
                                     <div class="py-2 flex flex-col">
-                                        <a th:each="subsub : ${sub.subCategories}" th:if="${subsub.isActive}" th:href="@{/s/{slug}/catalog(slug=${slug}, category=${subsub.id})}" class="sv-nav__dropdown-link px-5 py-2.5 text-sm font-medium transition block" th:text="${subsub.name}">Sub-sub</a>
+                                        <a th:each="subsub : ${sub.subCategories}" th:if="${subsub.isActive}" th:href="@{/s/{slug}/catalog(slug=${slug}, category=${subsub.id}, preview=${previewParam})}" class="sv-nav__dropdown-link px-5 py-2.5 text-sm font-medium transition block" th:text="${subsub.name}">Sub-sub</a>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
+
+                <!-- Páginas Personalizadas renderizadas directamente en SSR -->
+                <th:block th:if="${theme != null and not #lists.isEmpty(theme.navbarCustomPages)}">
+                    <a th:each="cp : ${theme.navbarCustomPages}"
+                       th:href="@{/s/{slug}/page/{pageSlug}(slug=${slug}, pageSlug=${cp.slug}, preview=${previewParam})}"
+                       class="sv-nav__link sv-interactive-link"
+                       th:classappend="${(pageSlug != null and pageSlug == cp.slug) or (editorPageKey != null and editorPageKey == 'page:' + cp.slug)} ? ' is-active' : ''"
+                       th:attr="data-page-slug=${cp.slug}, aria-current=${((pageSlug != null and pageSlug == cp.slug) or (editorPageKey != null and editorPageKey == 'page:' + cp.slug)) ? 'page' : null}">
+                        <span class="sv-nav__label" th:text="${cp.title}">Página</span>
+                    </a>
+                </th:block>
             </div>
 
             <!-- Buscador -->
@@ -66,12 +142,12 @@
 
             <!-- Acciones: Favoritos + Bolsa -->
             <div class="sv-nav__actions">
-                <a th:href="@{/s/{slug}/wishlist(slug=${slug})}" class="sv-nav__icon sv-nav__icon--wish" title="Mis Favoritos" aria-label="Mis Favoritos">
+                <a th:href="@{/s/{slug}/wishlist(slug=${slug}, preview=${previewParam})}" class="sv-nav__icon sv-nav__icon--wish" title="Mis Favoritos" aria-label="Mis Favoritos">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
                     <span id="navWishlistCounter" class="sv-nav__badge sv-nav__badge--wish bg-brand text-white" th:text="${wishlistCount != null ? wishlistCount : 0}">0</span>
                 </a>
 
-                <a th:href="@{/s/{slug}/cart(slug=${slug})}" class="sv-nav__icon" title="Mi Bolsa" aria-label="Mi Bolsa">
+                <a th:href="@{/s/{slug}/cart(slug=${slug}, preview=${previewParam})}" class="sv-nav__icon" title="Mi Bolsa" aria-label="Mi Bolsa">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
                     <span id="navCartCounter" class="sv-nav__badge sv-nav__badge--cart bg-brand text-white" th:text="${cartCount != null ? cartCount : 0}">0</span>
                 </a>
@@ -101,20 +177,20 @@
             </form>
         </div>
 
-        <!-- Árbol de Categorías (hasta 3 niveles) -->
-        <div class="p-4 flex flex-col gap-1 flex-1">
-            <a th:href="@{/s/{slug}(slug=${slug})}" class="sv-drawer__link font-bold py-3">Inicio</a>
-            <a th:href="@{/s/{slug}/catalog(slug=${slug})}" class="sv-drawer__link font-bold py-3">Todo el Catálogo</a>
+        <!-- Árbol de Categorías (hasta 3 niveles) + Páginas Personalizadas en SSR -->
+        <div id="mobile-menu-links" class="p-4 flex flex-col gap-1 flex-1" data-custom-pages-mounted="true">
+            <a th:href="@{/s/{slug}(slug=${slug}, preview=${previewParam})}" class="sv-drawer__link font-bold py-3">Inicio</a>
+            <a th:href="@{/s/{slug}/catalog(slug=${slug}, preview=${previewParam})}" class="sv-drawer__link font-bold py-3">Todo el Catálogo</a>
 
             <div th:each="cat : ${navCategories}" class="sv-drawer__group">
                 <a th:if="${#lists.isEmpty(cat.subCategories)}"
-                   th:href="@{/s/{slug}/catalog(slug=${slug}, category=${cat.id})}"
+                   th:href="@{/s/{slug}/catalog(slug=${slug}, category=${cat.id}, preview=${previewParam})}"
                    class="sv-drawer__link font-bold py-3 block"
                    th:text="${cat.name}">Categoría</a>
 
                 <details th:if="${not #lists.isEmpty(cat.subCategories)}" class="group/mobcat">
                     <summary class="flex items-center justify-between py-3 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
-                        <a th:href="@{/s/{slug}/catalog(slug=${slug}, category=${cat.id})}"
+                        <a th:href="@{/s/{slug}/catalog(slug=${slug}, category=${cat.id}, preview=${previewParam})}"
                            onclick="event.stopPropagation();"
                            class="sv-drawer__link font-bold"
                            th:text="${cat.name}">Categoría</a>
@@ -126,13 +202,13 @@
                     <div class="sv-drawer__sublist pl-4 pb-3 flex flex-col gap-1 ml-1">
                         <div th:each="sub : ${cat.subCategories}" th:if="${sub.isActive}">
                             <a th:if="${#lists.isEmpty(sub.subCategories)}"
-                               th:href="@{/s/{slug}/catalog(slug=${slug}, category=${sub.id})}"
+                               th:href="@{/s/{slug}/catalog(slug=${slug}, category=${sub.id}, preview=${previewParam})}"
                                class="sv-drawer__sublink text-sm font-medium py-2 block"
                                th:text="${sub.name}">Subcategoría</a>
 
                             <details th:if="${not #lists.isEmpty(sub.subCategories)}" class="group/mobsub">
                                 <summary class="flex items-center justify-between py-2 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
-                                    <a th:href="@{/s/{slug}/catalog(slug=${slug}, category=${sub.id})}"
+                                    <a th:href="@{/s/{slug}/catalog(slug=${slug}, category=${sub.id}, preview=${previewParam})}"
                                        onclick="event.stopPropagation();"
                                        class="sv-drawer__sublink text-sm font-medium"
                                        th:text="${sub.name}">Subcategoría</a>
@@ -143,7 +219,7 @@
                                 <div class="sv-drawer__sublist pl-3 pb-1 flex flex-col gap-1 ml-1">
                                     <a th:each="subsub : ${sub.subCategories}"
                                        th:if="${subsub.isActive}"
-                                       th:href="@{/s/{slug}/catalog(slug=${slug}, category=${subsub.id})}"
+                                       th:href="@{/s/{slug}/catalog(slug=${slug}, category=${subsub.id}, preview=${previewParam})}"
                                        class="sv-drawer__sublink text-xs font-medium py-1.5 block opacity-85"
                                        th:text="${subsub.name}">Sub-subcategoría</a>
                                 </div>
@@ -152,16 +228,26 @@
                     </div>
                 </details>
             </div>
+
+            <!-- Páginas Personalizadas en el Drawer Móvil -->
+            <th:block th:if="${theme != null and not #lists.isEmpty(theme.navbarCustomPages)}">
+                <a th:each="cp : ${theme.navbarCustomPages}"
+                   th:href="@{/s/{slug}/page/{pageSlug}(slug=${slug}, pageSlug=${cp.slug}, preview=${previewParam})}"
+                   class="sv-drawer__link font-bold py-3 block"
+                   th:classappend="${(pageSlug != null and pageSlug == cp.slug) or (editorPageKey != null and editorPageKey == 'page:' + cp.slug)} ? ' is-active' : ''"
+                   th:attr="data-page-slug=${cp.slug}, aria-current=${((pageSlug != null and pageSlug == cp.slug) or (editorPageKey != null and editorPageKey == 'page:' + cp.slug)) ? 'page' : null}"
+                   th:text="${cp.title}">Página</a>
+            </th:block>
         </div>
 
         <!-- Accesos rápidos -->
         <div class="sv-drawer__footer p-4 space-y-2">
             <div class="grid grid-cols-2 gap-2">
-                <a th:href="@{/s/{slug}/wishlist(slug=${slug})}" class="sv-drawer__wish-btn flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-bold transition">
+                <a th:href="@{/s/{slug}/wishlist(slug=${slug}, preview=${previewParam})}" class="sv-drawer__wish-btn flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-bold transition">
                     <svg class="w-4 h-4 text-brand" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L12 8.343l3.172-3.171a4 4 0 115.656 5.656L12 21.414l-8.828-8.828a4 4 0 010-5.656z" clip-rule="evenodd"></path></svg>
                     <span>Favoritos</span>
                 </a>
-                <a th:href="@{/s/{slug}/cart(slug=${slug})}" class="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-brand text-white rounded-xl text-xs font-bold shadow-sm hover-bg-brand transition">
+                <a th:href="@{/s/{slug}/cart(slug=${slug}, preview=${previewParam})}" class="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-brand text-white rounded-xl text-xs font-bold shadow-sm hover-bg-brand transition">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
                     <span>Mi Bolsa</span>
                 </a>

@@ -140,6 +140,7 @@
 
             <a th:if="${invalidItemKeys == null or invalidItemKeys.isEmpty()}"
                th:href="@{/s/{slug}/cart/checkout(slug=${slug})}"
+               data-no-spa="true"
                class="block w-full text-center bg-brand text-white font-bold py-3.5 rounded-xl shadow-md hover-bg-brand transition">
                 Continuar Compra
             </a>

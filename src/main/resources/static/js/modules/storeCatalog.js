@@ -3,11 +3,11 @@
  * Funciona tanto en la página de Catálogo (catalog_results) como en Vitrinas (product_grid con showFilters=true).
  */
 (function() {
-    // Máximo de opciones visibles por grupo de filtros antes de mostrar "Ver más"
     const FACET_COLLAPSE_LIMIT = 8;
-    // true: "Jeans" y "jeans" (o con tildes distintas) cuentan como la misma categoría en el filtro.
-    // false: se muestran por separado, como antes.
     const MERGE_CATEGORIES_BY_NAME = true;
+
+    let navResizeObserver = null;
+    let navResizeBound = false;
 
     const COLOR_SWATCH_MAP = {
         'negro': '#111827', 'black': '#111827',
@@ -37,7 +37,7 @@
 
     function normalizeKey(str) {
         return String(str || '').trim().toLowerCase()
-            .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            .normalize('NFD').replace(/[\u0300-\u306f]/g, '');
     }
 
     function categoryKeyOf(name) {
@@ -82,12 +82,14 @@
     }
 
     function initFilterableSection(sectionEl, bridgeData, isPrimaryCatalog) {
+        if (sectionEl.dataset.catalogInitialized === 'true') return;
+        sectionEl.dataset.catalogInitialized = 'true';
+
         const secId = sectionEl.getAttribute('data-section-id') || '';
         const secType = sectionEl.getAttribute('data-section-type') || '';
         const secSettings = (bridgeData.sections && bridgeData.sections[secId]) || {};
 
         if (secType === 'product_grid' && String(secSettings.showFilters) !== 'true') {
-            // Si el servidor pintó la barra pero esta vitrina no tiene filtros activos, se retira
             const staleToolbar = sectionEl.querySelector('.sv-grid-toolbar');
             if (staleToolbar) staleToolbar.remove();
             return;
@@ -112,7 +114,6 @@
             showAttributes: secSettings.showFilterAttributes !== false && String(secSettings.showFilterAttributes) !== 'false'
         };
 
-        // Enriquecer cada tarjeta con los metadatos del puente
         const items = cards.map((card, idx) => {
             const pid = card.getAttribute('data-product-id') || '';
             const meta = (bridgeData.products && bridgeData.products[pid]) || {};
@@ -148,7 +149,6 @@
             };
         });
 
-        // Si es un product_grid con filtros activados, inyectar barra de búsqueda y ordenamiento
         if (secType === 'product_grid' && !sectionEl.querySelector('.sv-grid-toolbar')) {
             const toolbar = document.createElement('div');
             toolbar.className = 'sv-grid-toolbar bg-white text-slate-900 p-4 sm:px-5 sm:py-4 store-radius shadow-sm border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6';
@@ -175,12 +175,10 @@
             grid.parentNode.insertBefore(toolbar, grid);
         }
 
-        // Calcular Facets dinámicos aplicando la regla de >= 2 valores distintos
         const facets = computeFacets(items, config);
         const categoryLabelByKey = {};
         facets.categories.forEach(([label, , key]) => { categoryLabelByKey[key] = label; });
 
-        // Construir estructura DOM de filtros alrededor de la grilla
         const searchInput = sectionEl.querySelector('#catalog-search-input, .sv-search-input');
         const clearSearchBtn = sectionEl.querySelector('#catalog-search-clear, .sv-search-clear');
         const sortSelect = sectionEl.querySelector('#catalog-sort-select, .sv-sort-select');
@@ -222,11 +220,9 @@
         mainCol.appendChild(noMatchesEl);
         mainCol.appendChild(grid);
 
-        // Botón para abrir filtros (visible en móvil siempre que haya facets, y en PC cuando filterLayout == 'topbar')
         let filterToggleBtn = null;
         let filterBadgeEl = null;
         if (facets.hasAnyFacet && config.filterLayout !== 'none' && sortSelect && sortSelect.parentNode) {
-            // Siempre en el grupo derecho de la barra (junto al contador), igual en Catálogo y en Vitrinas
             const countHolder = visibleCountEl && visibleCountEl.parentElement;
             const btnWrap = (countHolder && countHolder.parentElement) || sortSelect.parentNode.parentNode;
             filterToggleBtn = document.createElement('button');
@@ -242,9 +238,9 @@
             btnWrap.insertBefore(filterToggleBtn, btnWrap.firstChild);
         }
 
-        // Drawer inferior para móvil
         const drawerBackdrop = document.createElement('div');
         drawerBackdrop.className = 'sv-filter-drawer-backdrop';
+        drawerBackdrop.setAttribute('data-sv-catalog-drawer', secId || 'primary');
         drawerBackdrop.innerHTML = `
             <div class="sv-filter-drawer">
                 <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
@@ -270,7 +266,6 @@
             document.body.classList.toggle('overflow-hidden', open);
         }
 
-        // Estado reactivo de filtros
         const state = {
             q: searchInput ? (searchInput.value || '').trim() : '',
             sort: 'default',
@@ -337,7 +332,6 @@
             return group;
         }
 
-        // Si un grupo tiene muchas opciones, muestra las primeras y un botón "Ver más"
         function enableCollapse(group) {
             const pillsWrap = group.querySelector('.sv-facet-options-pills');
             const pills = Array.from(pillsWrap.children);
@@ -361,14 +355,11 @@
             group.appendChild(toggle);
         }
 
-        // Se construye UNA sola vez. Después solo se actualiza el estado de lo que ya existe
-        // (ver syncFacetUI), para no perder el foco ni las listas expandidas.
         function renderFacetsInto(container, isTopbarGrid) {
             container.innerHTML = '';
             const wrapper = document.createElement('div');
             if (isTopbarGrid) wrapper.className = 'sv-topbar-facets-grid';
 
-            // 1. Disponibilidad y Ofertas
             if (facets.showAvailabilityBlock) {
                 const group = createGroup('Disponibilidad');
                 const pillsWrap = group.querySelector('.sv-facet-options-pills');
@@ -386,7 +377,6 @@
                 wrapper.appendChild(group);
             }
 
-            // 2. Rango de Precio (solo si hay >= 2 precios distintos)
             if (facets.showPriceBlock) {
                 const group = document.createElement('div');
                 group.className = 'sv-facet-group';
@@ -412,7 +402,6 @@
                 wrapper.appendChild(group);
             }
 
-            // 3. Categorías (si hay >= 2 categorías distintas en la vista)
             if (facets.categories.length >= 2) {
                 const group = createGroup('Categoría');
                 const pillsWrap = group.querySelector('.sv-facet-options-pills');
@@ -425,7 +414,6 @@
                 wrapper.appendChild(group);
             }
 
-            // 4. Opciones de Variantes (Talla, Color con Swatches, etc. con >= 2 valores)
             Object.entries(facets.options).forEach(([optName, entries]) => {
                 const isColor = isColorOptionName(optName);
                 const group = createGroup(optName);
@@ -444,7 +432,6 @@
                 wrapper.appendChild(group);
             });
 
-            // 5. Atributos de Ficha Técnica (Marca, Material, Género, etc. con >= 2 valores)
             Object.entries(facets.attributes).forEach(([attrName, entries]) => {
                 const group = createGroup(attrName);
                 const pillsWrap = group.querySelector('.sv-facet-options-pills');
@@ -473,7 +460,6 @@
             return false;
         }
 
-        // Actualiza en sitio las tres copias del filtro (barra lateral, panel superior y drawer móvil)
         function syncFacetUI() {
             const containers = [sidebar, topbarPanel, drawerBackdrop.querySelector('.sv-drawer-body')];
             containers.forEach(container => {
@@ -587,7 +573,6 @@
                 if (ok) matched.push(item);
             });
 
-            // Ordenar resultados visibles
             matched.sort((a, b) => {
                 if (state.sort === 'price_asc') return a.price - b.price;
                 if (state.sort === 'price_desc') return b.price - a.price;
@@ -616,7 +601,6 @@
             }
         }
 
-        // Eventos de barra de búsqueda, orden y drawer
         if (searchInput) {
             searchInput.addEventListener('input', () => {
                 state.q = searchInput.value;
@@ -664,7 +648,6 @@
             if (e.key === 'Escape' && drawerBackdrop.classList.contains('is-open')) setDrawerOpen(false);
         });
 
-        // Los filtros se construyen una sola vez; applyFilters solo actualiza su estado
         if (facets.hasAnyFacet && config.filterLayout !== 'none') {
             renderFacetsInto(sidebar, false);
             renderFacetsInto(topbarPanel, true);
@@ -712,7 +695,6 @@
             });
         });
 
-        // Filtrar grupos con la regla de >= 2 valores distintos
         const filteredOptions = {};
         if (config.showVariants) {
             Object.entries(optCounts).forEach(([k, map]) => {
@@ -771,6 +753,9 @@
             if (params.get('offers') === '1') state.onlyOffers = true;
             if (params.get('minPrice')) state.minPrice = Number(params.get('minPrice'));
             if (params.get('maxPrice')) state.maxPrice = Number(params.get('maxPrice'));
+            if (params.get('cats')) {
+                params.get('cats').split(',').filter(Boolean).forEach(c => state.categories.add(c));
+            }
 
             params.forEach((val, key) => {
                 if (key.startsWith('opt_') && val) {
@@ -799,6 +784,9 @@
             if (state.onlyOffers) url.searchParams.set('offers', '1');
             if (state.minPrice !== null) url.searchParams.set('minPrice', String(state.minPrice));
             if (state.maxPrice !== null) url.searchParams.set('maxPrice', String(state.maxPrice));
+            if (state.categories && state.categories.size > 0) {
+                url.searchParams.set('cats', Array.from(state.categories).join(','));
+            }
 
             Object.entries(state.options).forEach(([k, set]) => {
                 if (set && set.size > 0) url.searchParams.set('opt_' + k, Array.from(set).join(','));
@@ -807,11 +795,13 @@
                 if (set && set.size > 0) url.searchParams.set('attr_' + k, Array.from(set).join(','));
             });
 
-            window.history.replaceState({}, '', url.pathname + url.search);
+            const nextFull = url.pathname + url.search + url.hash;
+            if (nextFull !== (window.location.pathname + window.location.search + window.location.hash)) {
+                window.history.replaceState(window.history.state || { storevoSpa: true }, '', nextFull);
+            }
         } catch (e) {}
     }
 
-    // Publica la altura real del navbar fijo para que la barra lateral sticky no quede debajo de él
     function syncNavOffset() {
         const nav = document.getElementById('storeNavbar');
         if (!nav) return;
@@ -822,18 +812,40 @@
             document.documentElement.style.setProperty('--sv-nav-h', height + 'px');
         };
         apply();
-        if ('ResizeObserver' in window) new ResizeObserver(apply).observe(nav);
-        window.addEventListener('resize', apply);
+        if ('ResizeObserver' in window && !navResizeObserver) {
+            navResizeObserver = new ResizeObserver(apply);
+            navResizeObserver.observe(nav);
+        }
+        if (!navResizeBound) {
+            navResizeBound = true;
+            window.addEventListener('resize', apply, { passive: true });
+        }
+    }
+
+    function cleanupOrphanFilterDrawers() {
+        document.querySelectorAll('.sv-filter-drawer-backdrop').forEach(el => el.remove());
     }
 
     function boot() {
         syncNavOffset();
 
-        const bridgeData = parseBridgeData();
         const catalogSections = document.querySelectorAll('.storevo-theme-section[data-section-type="catalog_results"]');
         const gridSections = document.querySelectorAll('.storevo-theme-section[data-section-type="product_grid"]');
 
-        // sv-filters-ready revela la barra de búsqueda/orden ya armada (ver store-filters-fixes.css)
+        if (catalogSections.length === 0 && gridSections.length === 0) {
+            cleanupOrphanFilterDrawers();
+            return;
+        }
+
+        // Si las secciones en pantalla aún no están inicializadas, limpiar drawers de vistas anteriores
+        const hasUninitialized = Array.from(catalogSections).concat(Array.from(gridSections))
+            .some(sec => sec.dataset.catalogInitialized !== 'true');
+        if (hasUninitialized) {
+            cleanupOrphanFilterDrawers();
+        }
+
+        const bridgeData = parseBridgeData();
+
         catalogSections.forEach((sec, idx) => {
             try { initFilterableSection(sec, bridgeData, idx === 0); }
             finally { sec.classList.add('sv-filters-ready'); }
@@ -843,6 +855,9 @@
             finally { sec.classList.add('sv-filters-ready'); }
         });
     }
+
+    window.Storevo = window.Storevo || {};
+    Storevo.Catalog = { init: boot };
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', boot);

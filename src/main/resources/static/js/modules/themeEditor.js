@@ -567,6 +567,10 @@ Storevo.ThemeEditor = {
             titleInput.oninput = () => {
                 cp.title = titleInput.value;
                 this.renderPageSelector();
+                const badge = document.getElementById('editor-active-page-badge');
+                if (badge) badge.textContent = cp.title || 'Página';
+                // Actualizar el título de la página en el Navbar del iframe en tiempo real (0ms)
+                this.pushLiveCustomPageToIframe(cp);
                 this.scheduleAutoSave(true);
             };
         }
@@ -575,12 +579,27 @@ Storevo.ThemeEditor = {
             navChk.onchange = () => {
                 cp.showInNavbar = navChk.checked;
                 this.renderPageSelector();
+                this.pushLiveCustomPageToIframe(cp);
                 this.scheduleAutoSave(true);
             };
         }
         if (slugPreview) {
             slugPreview.textContent = `/page/${cp.slug}`;
         }
+    },
+    pushLiveCustomPageToIframe: function(cp) {
+        const iframe = document.getElementById('storefront-preview-iframe');
+        if (!iframe || !iframe.contentWindow || !cp) return;
+        try {
+            iframe.contentWindow.postMessage({
+                type: 'storevo:live-custom-page',
+                page: {
+                    slug: cp.slug,
+                    title: cp.title,
+                    showInNavbar: cp.showInNavbar !== false
+                }
+            }, window.location.origin);
+        } catch (e) {}
     },
 
     slugifyPageTitle: function(raw) {
@@ -901,6 +920,14 @@ Storevo.ThemeEditor = {
 
         this.renderSectionsList();
         if (reloadIframe) {
+            // Si no hay un autoguardado pendiente y el iframe ya tiene Storevo.Router activo, navegar en modo SPA sin recargar el iframe
+            const iframe = document.getElementById('storefront-preview-iframe');
+            if (!this.autoSaveTimer && iframe && iframe.contentWindow && iframe.contentWindow.Storevo && iframe.contentWindow.Storevo.Router) {
+                try {
+                    iframe.contentWindow.Storevo.Router.navigate(this.previewUrl);
+                    return;
+                } catch (e) {}
+            }
             this.reloadPreviewIframe();
         }
     },
@@ -3025,6 +3052,94 @@ Storevo.ThemeEditor = {
             }
         } catch (e) {}
 
+        // Intentar actualización quirúrgica sin parpadeo blanco si el iframe ya está cargado en el mismo origen
+        const canSoftRefresh = Boolean(
+            iframe.contentDocument &&
+            iframe.contentWindow &&
+            iframe.contentDocument.getElementById('storevoMainContent')
+        );
+
+        if (canSoftRefresh) {
+            const fetchUrl = `${this.previewUrl}${this.previewUrl.includes('?') ? '&' : '?'}t=${Date.now()}`;
+            fetch(fetchUrl, {
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: { 'Accept': 'text/html', 'X-Storevo-Navigation': 'partial' }
+            })
+                .then(res => res.ok ? res.text() : Promise.reject(new Error('HTTP ' + res.status)))
+                .then(html => {
+                    const parser = new DOMParser();
+                    const nextDoc = parser.parseFromString(html, 'text/html');
+                    const iDoc = iframe.contentDocument;
+                    const iWin = iframe.contentWindow;
+
+                    const currentMain = iDoc.getElementById('storevoMainContent');
+                    const nextMain = nextDoc.getElementById('storevoMainContent');
+                    if (!currentMain || !nextMain) {
+                        throw new Error('Contenedor principal no encontrado');
+                    }
+
+                    // 1. Sincronizar los enlaces de páginas personalizadas en el Navbar (si se crearon, renombraron o activaron/ocultaron)
+                    const currentMenu = iDoc.querySelector('#storeNavbar .sv-nav__menu');
+                    const nextMenu = nextDoc.querySelector('#storeNavbar .sv-nav__menu');
+                    if (currentMenu && nextMenu) {
+                        currentMenu.querySelectorAll('a[data-page-slug]').forEach(el => el.remove());
+                        nextMenu.querySelectorAll('a[data-page-slug]').forEach(el => {
+                            currentMenu.appendChild(iDoc.importNode(el, true));
+                        });
+                    }
+                    const currentStrip = iDoc.querySelector('#storeNavbar .sv-nav-double-strip');
+                    const nextStrip = nextDoc.querySelector('#storeNavbar .sv-nav-double-strip');
+                    if (currentStrip && nextStrip) {
+                        currentStrip.innerHTML = nextStrip.innerHTML;
+                    }
+
+                    // 2. Reemplazar el contenido principal (<main>) y puente de filtros
+                    currentMain.innerHTML = nextMain.innerHTML;
+
+                    const currentScriptsBox = iDoc.getElementById('storevo-page-scripts');
+                    const nextScriptsBox = nextDoc.getElementById('storevo-page-scripts');
+                    if (currentScriptsBox && nextScriptsBox) {
+                        currentScriptsBox.innerHTML = nextScriptsBox.innerHTML;
+                    }
+
+                    // 3. Re-ejecutar scripts inline de secciones (ej. contadores regresivos) y re-hidratar módulos en 0ms
+                    Array.from(currentMain.querySelectorAll('script:not([src])')).forEach(oldScript => {
+                        const newScript = iDoc.createElement('script');
+                        Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                        newScript.textContent = oldScript.textContent;
+                        oldScript.parentNode.replaceChild(newScript, oldScript);
+                    });
+
+                    if (iWin.Storevo) {
+                        if (iWin.Storevo.Catalog && typeof iWin.Storevo.Catalog.init === 'function') iWin.Storevo.Catalog.init();
+                        if (iWin.Storevo.ProductDetail && typeof iWin.Storevo.ProductDetail.init === 'function') iWin.Storevo.ProductDetail.init();
+                        if (iWin.Storevo.Cart && typeof iWin.Storevo.Cart.init === 'function') iWin.Storevo.Cart.init();
+                        if (iWin.Storevo.Router && typeof iWin.Storevo.Router.syncActiveLinks === 'function') {
+                            iWin.Storevo.Router.syncActiveLinks(new URL(this.previewUrl, window.location.origin));
+                        }
+                    }
+
+                    this.pushLiveStylesToIframe();
+                    this.syncProductsFromIframe();
+                    if (overlay) overlay.classList.add('hidden');
+
+                    if (this.activeSectionId) {
+                        this.highlightSectionInIframe(this.activeSectionId);
+                    } else if (previousScrollY > 0) {
+                        iWin.scrollTo(0, previousScrollY);
+                    }
+                })
+                .catch(() => {
+                    // Fallback seguro a recarga estándar del iframe si algo falla
+                    this.hardReloadPreviewIframe(iframe, overlay, previousScrollY);
+                });
+            return;
+        }
+
+        this.hardReloadPreviewIframe(iframe, overlay, previousScrollY);
+    },
+    hardReloadPreviewIframe: function(iframe, overlay, previousScrollY) {
         const onLoadHandler = () => {
             if (overlay) overlay.classList.add('hidden');
             this.syncProductsFromIframe();
@@ -3041,7 +3156,6 @@ Storevo.ThemeEditor = {
         iframe.addEventListener('load', onLoadHandler);
         iframe.src = `${this.previewUrl}&t=${Date.now()}`;
     },
-
     highlightSectionInIframe: function(sectionId) {
         const iframe = document.getElementById('storefront-preview-iframe');
         if (!iframe || !iframe.contentWindow) return;

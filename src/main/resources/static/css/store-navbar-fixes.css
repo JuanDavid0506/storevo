@@ -642,9 +642,7 @@ body[data-sv-nav-compact="true"].sv-is-scrolled .sv-nav__grid {
     }
 }
 /* --------------------------------------------------------------------------
-   10) BLINDAJE DE CONTRASTE PARA PÁGINAS PERSONALIZADAS Y ENLACES ACTIVOS
-   Evita que .text-brand o estilos activos pinten el texto del color de fondo
-   cuando el navbar usa data-nav-style="primary" o "secondary".
+   10) BLINDAJE DE CONTRASTE DE ENLACES ACTIVOS Y TRANSICIONES SPA (FASE 1 A 4)
    -------------------------------------------------------------------------- */
 .sv-nav .sv-nav__menu > a,
 .sv-nav .sv-nav__menu > a span,
@@ -665,7 +663,65 @@ body[data-sv-nav-compact="true"].sv-is-scrolled .sv-nav__grid {
 .sv-nav .sv-nav__menu > a[aria-current="page"] span,
 .sv-nav .sv-nav__menu .sv-nav__link:hover,
 .sv-nav .sv-nav__menu .sv-nav__link:hover span,
+.sv-nav .sv-nav__menu .sv-nav__link.is-active,
+.sv-nav .sv-nav__menu .sv-nav__link.is-active span,
+.sv-nav .sv-nav__menu .sv-nav__link[aria-current="page"],
+.sv-nav .sv-nav__menu .sv-nav__link[aria-current="page"] span,
 .sv-nav .sv-nav__menu .nav-parent:hover > .sv-nav__link,
 .sv-nav .sv-nav__menu .nav-parent:hover > .sv-nav__link span {
     color: var(--nav-hover) !important;
+}
+
+/* Indicador sutil del enlace activo según el modo de hover del navbar */
+.sv-nav:not([data-nav-link-hover="pill"]) .sv-nav__menu .sv-nav__link.is-active .sv-nav__label::after,
+.sv-nav:not([data-nav-link-hover="pill"]) .sv-nav__menu .sv-nav__link[aria-current="page"] .sv-nav__label::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -4px;
+    height: 2px;
+    border-radius: 9999px;
+    background: var(--nav-accent, var(--brand-color));
+    transform: scaleX(1);
+}
+
+.sv-nav[data-nav-link-hover="pill"] .sv-nav__menu > .sv-nav__link.is-active,
+.sv-nav[data-nav-link-hover="pill"] .sv-nav__menu > .sv-nav__link[aria-current="page"],
+.sv-nav[data-nav-link-hover="pill"] .sv-nav__menu .nav-parent > .sv-nav__link.is-active,
+.sv-nav[data-nav-link-hover="pill"] .sv-nav__menu .nav-parent > .sv-nav__link[aria-current="page"] {
+    background: var(--nav-pill) !important;
+}
+
+/* Barra de carga superior discreta (solo aparece si la red tarda > 180ms) */
+.sv-route-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 2.5px;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0;
+    transform: scaleX(0);
+    transform-origin: left center;
+    background: linear-gradient(90deg, var(--brand-color, #6366f1), var(--brand-secondary, #0f172a), var(--brand-color, #6366f1));
+    box-shadow: 0 1px 6px rgba(15, 23, 42, 0.18);
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.15s ease;
+}
+
+.sv-route-progress.is-active {
+    opacity: 1;
+}
+
+/* Contenedor principal sin apagones de opacidad (evita el parpadeo en navegación) */
+#storevoMainContent {
+    opacity: 1;
+}
+
+/* Solo se usa en mutaciones explícitas de formularios dentro de cart.html */
+#storevoMainContent.sv-main-transitioning {
+    opacity: 0.72;
+    pointer-events: none;
+    transition: opacity 120ms ease;
 }
