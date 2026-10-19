@@ -990,8 +990,23 @@ Storevo.ThemeEditor = {
         window.addEventListener('message', (e) => {
             if (e.origin !== window.location.origin || !e.data) return;
             if (e.data.type === 'storevo:page-loaded' && e.data.pageKey) {
+                const overlay = document.getElementById('preview-loading-overlay');
+                if (overlay) overlay.classList.add('hidden');
+
                 if (e.data.pageKey !== this.activePage) {
                     this.switchPage(e.data.pageKey, false);
+                }
+                if (typeof this.syncProductsFromIframe === 'function') {
+                    this.syncProductsFromIframe();
+                }
+                if (typeof this.pushLiveStylesToIframe === 'function') {
+                    this.pushLiveStylesToIframe();
+                }
+                if (this.activeSectionId && this.iframe && this.iframe.contentWindow) {
+                    this.iframe.contentWindow.postMessage({
+                        type: 'storevo:highlight-section',
+                        sectionId: this.activeSectionId
+                    }, window.location.origin);
                 }
             }
             if (e.data.type === 'storevo:select-section' && e.data.sectionId) {

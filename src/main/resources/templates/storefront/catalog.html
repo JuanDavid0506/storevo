@@ -10,6 +10,7 @@
     <script id="storevo-filter-data-json" type="application/json"
             th:if="${catalogFilterDataJson != null}"
             th:utext="${catalogFilterDataJson}"></script>
+
     <th:block th:if="${theme != null}"
               th:with="activeKey=${editorPageKey != null ? editorPageKey : 'catalog'},
                        catalogSections=${theme.getPageSections(activeKey)}">
@@ -18,5 +19,8 @@
         </th:block>
     </th:block>
 </div>
+<th:block layout:fragment="scripts">
+    <script th:src="@{/js/modules/storeCatalog.js}"></script>
+</th:block>
 </body>
 </html>

@@ -1119,44 +1119,119 @@
 <!-- Puente interactivo cuando la tienda está dentro del Editor Visual (preview=draft) -->
 <script th:if="${isDraftPreview}">
     (function() {
-        if (window.parent && window.parent !== window) {
-            const explicitKey = document.body.getAttribute('data-editor-page-key');
-            const path = window.location.pathname;
+        function detectCurrentEditorPageKey() {
+            const path = window.location.pathname || '';
             const params = new URLSearchParams(window.location.search);
-            let detectedPage = explicitKey && explicitKey.trim() ? explicitKey.trim() : 'home';
 
-            if (!explicitKey || !explicitKey.trim()) {
-                const pageMatch = path.match(/\/page\/([^/?#]+)/);
-                if (pageMatch && pageMatch[1]) {
-                    detectedPage = 'page:' + decodeURIComponent(pageMatch[1]);
-                } else if (path.includes('/catalog')) {
-                    const catParam = params.get('category');
-                    detectedPage = (catParam && /^\d+$/.test(catParam.trim()))
-                        ? ('category:' + catParam.trim())
-                        : 'catalog';
-                } else if (path.includes('/p/') || path.includes('/product-preview')) {
-                    detectedPage = 'product';
-                }
+            const pageMatch = path.match(/\/page\/([^/?#]+)/);
+            if (pageMatch && pageMatch[1]) {
+                return 'page:' + decodeURIComponent(pageMatch[1]);
             }
-
-            window.parent.postMessage({
-                type: 'storevo:page-loaded',
-                pageKey: detectedPage
-            }, window.location.origin);
+            if (path.includes('/catalog')) {
+                const catParam = params.get('category');
+                return (catParam && /^\d+$/.test(catParam.trim()))
+                    ? ('category:' + catParam.trim())
+                    : 'catalog';
+            }
+            if (path.includes('/p/') || path.includes('/product-preview')) {
+                return 'product';
+            }
+            if (/\/s\/[^/]+\/?$/.test(path)) {
+                return 'home';
+            }
+            const explicitKey = document.body.getAttribute('data-editor-page-key');
+            return (explicitKey && explicitKey.trim()) ? explicitKey.trim() : 'home';
         }
 
-        document.querySelectorAll('a[href^="/s/"]').forEach(link => {
-            try {
-                const url = new URL(link.getAttribute('href'), window.location.origin);
-                url.searchParams.set('preview', 'draft');
-                link.setAttribute('href', url.pathname + url.search);
-            } catch (e) {}
-        });
+        function ensureDraftPreviewLinks(rootNode) {
+            const scope = rootNode && rootNode.querySelectorAll ? rootNode : document;
+            scope.querySelectorAll('a[href^="/s/"]').forEach(link => {
+                try {
+                    const url = new URL(link.getAttribute('href'), window.location.origin);
+                    url.searchParams.set('preview', 'draft');
+                    link.setAttribute('href', url.pathname + url.search + url.hash);
+                } catch (e) {}
+            });
+        }
+
+        function notifyEditorPageLoaded() {
+            const detectedPage = detectCurrentEditorPageKey();
+            document.body.setAttribute('data-editor-page-key', detectedPage);
+            ensureDraftPreviewLinks(document);
+            if (window.__storevoLiveStyles) {
+                window.__storevoApplyLiveStyles(window.__storevoLiveStyles);
+            }
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({
+                    type: 'storevo:page-loaded',
+                    pageKey: detectedPage,
+                    url: window.location.pathname + window.location.search
+                }, window.location.origin);
+            }
+        }
+
+        function syncLiveFilterToolbarDOM() {
+            const ds = document.body.dataset;
+            const filterEnabled = ds.svFilterEnabled !== 'false';
+            const showSearch = ds.svFilterSearch !== 'false';
+            const showSort = ds.svFilterSort !== 'false';
+            const showCount = ds.svFilterCount !== 'false';
+
+            document.querySelectorAll('.sv-grid-toolbar').forEach(toolbar => {
+                const secAttr = toolbar.getAttribute('data-section-show-filters');
+                const sectionAllows = secAttr === null || secAttr === 'true';
+                const shouldShowToolbar = filterEnabled && sectionAllows;
+                toolbar.classList.toggle('hidden', !shouldShowToolbar);
+
+                const searchWrap = toolbar.querySelector('.sv-filter-search-wrap')
+                    || (toolbar.querySelector('.sv-search-input, #catalog-search-input')
+                        ? toolbar.querySelector('.sv-search-input, #catalog-search-input').parentElement
+                        : null);
+                if (searchWrap) {
+                    searchWrap.classList.toggle('hidden', !showSearch);
+                }
+
+                const sortWrap = toolbar.querySelector('.sv-filter-sort-wrap, .sv-sort-wrap')
+                    || toolbar.querySelector('.sv-sort-select, #catalog-sort-select');
+                if (sortWrap) {
+                    sortWrap.classList.toggle('hidden', !showSort);
+                }
+
+                const countWrap = toolbar.querySelector('.sv-filter-count-wrap')
+                    || (toolbar.querySelector('.sv-visible-count, #catalog-visible-count')
+                        ? toolbar.querySelector('.sv-visible-count, #catalog-visible-count').parentElement
+                        : null);
+                if (countWrap) {
+                    countWrap.classList.toggle('hidden', !showCount);
+                }
+            });
+
+            document.querySelectorAll('.sv-filter-trigger-btn, .sv-filter-topbar, .sv-filter-sidebar, .sv-filter-inline-panel, .sv-active-filters-bar').forEach(el => {
+                if (!filterEnabled) {
+                    el.classList.add('hidden');
+                } else {
+                    el.classList.remove('hidden');
+                }
+            });
+        }
+
+        // Interceptar en fase de captura cualquier clic en enlaces internos para que jamás se pierda ?preview=draft
+        document.addEventListener('click', function(e) {
+            const anchor = e.target && e.target.closest ? e.target.closest('a[href^="/s/"]') : null;
+            if (anchor) {
+                try {
+                    const url = new URL(anchor.getAttribute('href'), window.location.origin);
+                    if (url.searchParams.get('preview') !== 'draft') {
+                        url.searchParams.set('preview', 'draft');
+                        anchor.setAttribute('href', url.pathname + url.search + url.hash);
+                    }
+                } catch (err) {}
+            }
+        }, true);
 
         document.addEventListener('click', function(e) {
             const sectionEl = e.target.closest('.storevo-theme-section[data-section-id]');
             if (!sectionEl) return;
-
             if (window.parent && window.parent !== window) {
                 const sectionId = sectionEl.getAttribute('data-section-id');
                 document.querySelectorAll('.storevo-theme-section').forEach(el => el.classList.remove('editor-selected-section'));
@@ -1168,7 +1243,6 @@
             }
         });
 
-
         window.__storevoApplyLiveStyles = function(s) {
             if (!s) return;
             window.__storevoLiveStyles = Object.assign({}, window.__storevoLiveStyles || {}, s);
@@ -1177,6 +1251,7 @@
             if (s.secondaryColor) root.style.setProperty('--brand-secondary', s.secondaryColor);
             if (s.backgroundColor) root.style.setProperty('--store-bg', s.backgroundColor);
             if (s.textColor) root.style.setProperty('--store-text', s.textColor);
+
             const SERIF_FONTS = ['Playfair Display', 'Lora', 'Cormorant Garamond', 'Cinzel'];
             if (s.headingFont) root.style.setProperty('--font-heading', `'${s.headingFont}', ${SERIF_FONTS.includes(s.headingFont) ? 'serif' : 'sans-serif'}`);
             if (s.bodyFont) root.style.setProperty('--font-body', `'${s.bodyFont}', ${SERIF_FONTS.includes(s.bodyFont) ? 'serif' : 'sans-serif'}`);
@@ -1188,6 +1263,7 @@
             if (s.buttonRadius) document.body.dataset.buttonRadius = s.buttonRadius;
             if (s.cardStyle) document.body.dataset.cardStyle = s.cardStyle;
             if (s.borderRadius) root.style.setProperty('--store-radius', s.borderRadius);
+
             if (window.Storevo && Storevo.UI && Storevo.UI.NavbarStyle) {
                 Storevo.UI.NavbarStyle.apply(s);
             }
@@ -1206,23 +1282,21 @@
                 filterShowVariants: 'svFilterVariants',
                 filterShowSpecs: 'svFilterSpecs'
             };
-            let filtersChanged = false;
+            let hasFilterPayload = false;
             Object.keys(filterKeysMap).forEach(key => {
                 if (s[key] !== undefined) {
                     const dataKey = filterKeysMap[key];
-                    const nextVal = String(s[key]);
-                    if (document.body.dataset[dataKey] !== nextVal) {
-                        document.body.dataset[dataKey] = nextVal;
-                        filtersChanged = true;
-                    }
+                    document.body.dataset[dataKey] = String(s[key]);
+                    hasFilterPayload = true;
                 }
             });
-            if (filtersChanged) {
+
+            syncLiveFilterToolbarDOM();
+
+            if (hasFilterPayload) {
                 document.dispatchEvent(new CustomEvent('storevo:filter-config-updated', { detail: s }));
             }
         };
-
-
 
         window.addEventListener('message', function(e) {
             if (e.origin !== window.location.origin || !e.data) return;
@@ -1230,7 +1304,6 @@
             if (e.data.type === 'storevo:live-styles' && e.data.styles) {
                 window.__storevoApplyLiveStyles(e.data.styles);
             }
-
             if (e.data.type === 'storevo:highlight-section') {
                 document.querySelectorAll('.storevo-theme-section').forEach(el => {
                     const isMatch = el.getAttribute('data-section-id') === e.data.sectionId;
@@ -1249,6 +1322,11 @@
                 });
             }
         });
+
+        // Re-sincronizar con el editor en cada navegación SPA del iframe y en popstate
+        document.addEventListener('storevo:page-load', notifyEditorPageLoaded);
+        window.addEventListener('popstate', notifyEditorPageLoaded);
+        notifyEditorPageLoaded();
     })();
 </script>
 <div id="storevo-page-scripts">

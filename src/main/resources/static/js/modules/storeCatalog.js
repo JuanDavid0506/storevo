@@ -378,6 +378,11 @@
             document.body.appendChild(drawerBackdrop);
         }
 
+        function isSectionFilterAllowed() {
+            const secAttr = toolbarEl.getAttribute('data-section-show-filters');
+            return secAttr === null || secAttr === 'true';
+        }
+
         function resetAllFilters() {
             state.q = '';
             state.sort = 'default';
@@ -457,7 +462,7 @@
 
         function applyFiltersAndSort() {
             const cfg = getGlobalFilterConfig();
-            if (!cfg.enabled) {
+            if (!cfg.enabled || !isSectionFilterAllowed()) {
                 records.forEach(r => r.el.classList.remove('hidden'));
                 if (noMatchesEl) noMatchesEl.classList.add('hidden');
                 gridEl.classList.remove('hidden');
@@ -845,13 +850,15 @@
             });
         }
 
-        function renderFilterUI() {
+        function renderFilterUI(fromLiveEditorUpdate) {
             const cfg = getGlobalFilterConfig();
+            const effectiveEnabled = cfg.enabled && isSectionFilterAllowed();
 
-            toolbarEl.classList.toggle('hidden', !cfg.enabled);
-            dynamicHost.classList.toggle('hidden', !cfg.enabled);
-            if (!cfg.enabled) {
+            toolbarEl.classList.toggle('hidden', !effectiveEnabled);
+            dynamicHost.classList.toggle('hidden', !effectiveEnabled);
+            if (!effectiveEnabled) {
                 activeChipsBar.classList.add('hidden');
+                drawerBackdrop.classList.add('hidden');
                 resetSidebarWrapper();
                 return;
             }
@@ -907,6 +914,10 @@
                 if (e.target === drawerBackdrop) drawerBackdrop.classList.add('hidden');
             });
 
+            if (cfg.layout !== 'drawer') {
+                drawerBackdrop.classList.add('hidden');
+            }
+
             resetSidebarWrapper();
             dynamicHost.innerHTML = '';
 
@@ -916,6 +927,9 @@
                 dynamicHost.innerHTML = buildFacetsSectionsHtml(cfg, true);
                 bindFacetEvents(dynamicHost);
             } else if (cfg.layout === 'inline') {
+                if (fromLiveEditorUpdate && dynamicHost.dataset.inlineOpen === undefined) {
+                    dynamicHost.dataset.inlineOpen = 'true';
+                }
                 const isOpen = dynamicHost.dataset.inlineOpen === 'true';
                 dynamicHost.innerHTML = `
                     <div class="${isOpen ? 'block' : 'hidden'} sv-inline-filter-panel bg-white text-slate-900 p-5 store-radius border border-slate-200/80 shadow-xs grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -973,7 +987,7 @@
             if (cfg.layout === 'inline') {
                 const isOpen = dynamicHost.dataset.inlineOpen === 'true';
                 dynamicHost.dataset.inlineOpen = isOpen ? 'false' : 'true';
-                renderFilterUI();
+                renderFilterUI(false);
             } else {
                 drawerBackdrop.classList.remove('hidden');
             }
@@ -1009,13 +1023,13 @@
             resetSearchBtn.onclick = resetAllFilters;
         }
 
-        renderFilterUI();
+        renderFilterUI(false);
         applyFiltersAndSort();
         sectionRoot.classList.add('sv-filters-ready');
 
         return {
-            refreshConfig: () => {
-                renderFilterUI();
+            refreshConfig: (fromLiveEditorUpdate) => {
+                renderFilterUI(Boolean(fromLiveEditorUpdate));
                 applyFiltersAndSort();
                 sectionRoot.classList.add('sv-filters-ready');
             }
@@ -1059,11 +1073,11 @@
     document.addEventListener('DOMContentLoaded', initAllCatalogs);
     document.addEventListener('storevo:page-load', initAllCatalogs);
     document.addEventListener('storevo:filter-config-updated', () => {
-        activeInstances.forEach(inst => inst.refreshConfig());
+        activeInstances.forEach(inst => inst.refreshConfig(true));
     });
 
     Storevo.Catalog = {
         init: initAllCatalogs,
-        refresh: () => activeInstances.forEach(inst => inst.refreshConfig())
+        refresh: () => activeInstances.forEach(inst => inst.refreshConfig(true))
     };
 })();

@@ -248,7 +248,12 @@
                   catId=${sec.settingLong('categoryId')},
                   viewAllHref=${(source == 'CATEGORY' or catId != null) and catId != null and source != 'OFFERS' ? '/s/' + slug + '/catalog?category=' + catId : '/s/' + slug + '/catalog'},
                   gridProducts=${sec.resolvedProducts != null ? sec.resolvedProducts : products},
-                  showFilters=${sec.settingBool('showFilters', false)}"
+                  showFilters=${sec.settingBool('showFilters', true)},
+                  gs=${theme != null and theme.globalStyles != null ? theme.globalStyles : null},
+                  globalFilterOn=${gs == null or gs.filterEnabled == null or gs.filterEnabled},
+                  showSearchOn=${gs == null or gs.filterShowSearch == null or gs.filterShowSearch},
+                  showSortOn=${gs == null or gs.filterShowSort == null or gs.filterShowSort},
+                  showCountOn=${gs == null or gs.filterShowCount == null or gs.filterShowCount}"
          class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
     <div class="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
         <div th:classappend="${!showViewAll ? 'text-center w-full' : ''}">
@@ -264,28 +269,36 @@
     </div>
 
     <!-- Barra de búsqueda y orden gobernada por la configuración global de filtros -->
-    <div th:if="${(theme == null or theme.globalStyles == null or theme.globalStyles.filterEnabled == null or theme.globalStyles.filterEnabled) and showFilters == true and gridProducts != null and not #lists.isEmpty(gridProducts)}"
+    <div th:if="${gridProducts != null and not #lists.isEmpty(gridProducts) and (showFilters == true or isDraftPreview == true)}"
+         th:attr="data-section-show-filters=${showFilters}"
+         th:classappend="${(!globalFilterOn or !showFilters) ? 'hidden' : ''}"
          class="sv-grid-toolbar bg-white text-slate-900 p-4 sm:px-5 sm:py-4 store-radius shadow-sm border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <svg class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        <div class="sv-filter-search-wrap relative flex-1 max-w-md"
+             th:classappend="${!showSearchOn ? 'hidden' : ''}">
+            <svg class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
             <input type="text" autocomplete="off" class="sv-search-input w-full pl-10 pr-9 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 focus:border-brand rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none transition-all" placeholder="Buscar por nombre, marca, talla o color...">
             <button type="button" class="sv-search-clear hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         </div>
         <div class="flex items-center justify-between sm:justify-end gap-3 flex-wrap">
-            <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">
+            <span class="sv-filter-count-wrap text-xs font-bold text-slate-500 uppercase tracking-wider"
+                  th:classappend="${!showCountOn ? 'hidden' : ''}">
                 <span class="sv-visible-count text-slate-900 font-black" th:text="${#lists.size(gridProducts)}">0</span> productos
             </span>
-            <select class="sv-sort-select px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:border-brand focus:outline-none cursor-pointer">
-                <option value="default">Más recientes</option>
-                <option value="price_asc">Precio: menor a mayor</option>
-                <option value="price_desc">Precio: mayor a menor</option>
-                <option value="name_asc">Nombre: A - Z</option>
-            </select>
+            <div class="sv-filter-sort-wrap sv-sort-wrap flex items-center gap-2"
+                 th:classappend="${!showSortOn ? 'hidden' : ''}">
+                <select class="sv-sort-select px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:border-brand focus:outline-none cursor-pointer">
+                    <option value="default">Más recientes</option>
+                    <option value="price_asc">Precio: menor a mayor</option>
+                    <option value="price_desc">Precio: mayor a menor</option>
+                    <option value="name_asc">Nombre: A - Z</option>
+                </select>
+            </div>
         </div>
     </div>
 
-    <div th:unless="${#lists.isEmpty(gridProducts)}" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+    <div th:unless="${#lists.isEmpty(gridProducts)}" class="sv-catalog-grid grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
         <th:block th:each="p, pStat : ${gridProducts}">
             <div th:replace="~{components/storefront/product-card :: productCard(${p}, 'grid-' + ${sec.id}, ${pStat.index}, false, 'catalog-product-card', true)}"></div>
         </th:block>
@@ -970,10 +983,17 @@
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
         <!-- Barra de búsqueda y ordenamiento gobernada por la configuración global -->
-        <div th:if="${(theme == null or theme.globalStyles == null or theme.globalStyles.filterEnabled == null or theme.globalStyles.filterEnabled == true) and products != null and not #lists.isEmpty(products)}"
+        <div th:if="${products != null and not #lists.isEmpty(products)}"
+             th:with="gs=${theme != null and theme.globalStyles != null ? theme.globalStyles : null},
+                      globalFilterOn=${gs == null or gs.filterEnabled == null or gs.filterEnabled},
+                      showSearchOn=${gs == null or gs.filterShowSearch == null or gs.filterShowSearch},
+                      showSortOn=${gs == null or gs.filterShowSort == null or gs.filterShowSort},
+                      showCountOn=${gs == null or gs.filterShowCount == null or gs.filterShowCount}"
+             th:attr="data-section-show-filters=${showSearchAndSort}"
+             th:classappend="${(!globalFilterOn or !showSearchAndSort) ? 'hidden' : ''}"
              class="sv-grid-toolbar bg-white text-slate-900 p-4 sm:px-5 sm:py-4 store-radius shadow-sm border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-
-            <div class="relative flex-1 max-w-md">
+            <div class="sv-filter-search-wrap relative flex-1 max-w-md"
+                 th:classappend="${!showSearchOn ? 'hidden' : ''}">
                 <svg class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                 </svg>
@@ -981,20 +1001,22 @@
                        th:value="${param.q != null ? param.q[0] : ''}"
                        placeholder="Buscar producto en esta vista..."
                        autocomplete="off"
-                       class="w-full pl-10 pr-9 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 focus:border-brand rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none transition-all">
+                       class="sv-search-input w-full pl-10 pr-9 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 focus:border-brand rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none transition-all">
                 <button type="button" id="catalog-search-clear" title="Limpiar búsqueda"
-                        class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700">
+                        class="sv-search-clear hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
             </div>
             <div class="flex items-center justify-between sm:justify-end gap-3 flex-wrap">
-                <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                    <span id="catalog-visible-count" class="text-slate-900 font-black" th:text="${#lists.size(products)}">0</span> productos
+                <span class="sv-filter-count-wrap text-xs font-bold text-slate-500 uppercase tracking-wider"
+                      th:classappend="${!showCountOn ? 'hidden' : ''}">
+                    <span id="catalog-visible-count" class="sv-visible-count text-slate-900 font-black" th:text="${#lists.size(products)}">0</span> productos
                 </span>
-                <div class="sv-sort-wrap flex items-center gap-2">
+                <div class="sv-filter-sort-wrap sv-sort-wrap flex items-center gap-2"
+                     th:classappend="${!showSortOn ? 'hidden' : ''}">
                     <label for="catalog-sort-select" class="text-xs font-bold text-slate-500 uppercase hidden md:inline">Ordenar:</label>
                     <select id="catalog-sort-select"
-                            class="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:border-brand focus:outline-none cursor-pointer">
+                            class="sv-sort-select px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:border-brand focus:outline-none cursor-pointer">
                         <option value="default">Más recientes</option>
                         <option value="price_asc">Precio: menor a mayor</option>
                         <option value="price_desc">Precio: mayor a menor</option>
