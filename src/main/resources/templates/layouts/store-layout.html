@@ -132,7 +132,19 @@
                data-sv-dropdown-anim=${gs != null and gs.navbarDropdownAnim != null ? gs.navbarDropdownAnim : 'slide_up'},
                data-sv-nav-trigger=${gs != null and gs.navbarTrigger != null ? gs.navbarTrigger : 'hover'},
                data-sv-nav-speed=${gs != null and gs.navbarSpeed != null ? gs.navbarSpeed : 'normal'},
-               data-sv-nav-compact=${gs != null and gs.navbarCompactOnScroll != null ? gs.navbarCompactOnScroll : false}">
+               data-sv-nav-compact=${gs != null and gs.navbarCompactOnScroll != null ? gs.navbarCompactOnScroll : false},
+               data-sv-filter-enabled=${gs == null or gs.filterEnabled == null or gs.filterEnabled},
+               data-sv-filter-layout=${gs != null and gs.filterLayout != null ? gs.filterLayout : 'drawer'},
+               data-sv-filter-search=${gs == null or gs.filterShowSearch == null or gs.filterShowSearch},
+               data-sv-filter-sort=${gs == null or gs.filterShowSort == null or gs.filterShowSort},
+               data-sv-filter-count=${gs == null or gs.filterShowCount == null or gs.filterShowCount},
+               data-sv-filter-category=${gs == null or gs.filterShowCategory == null or gs.filterShowCategory},
+               data-sv-filter-price=${gs == null or gs.filterShowPrice == null or gs.filterShowPrice},
+               data-sv-filter-offers=${gs == null or gs.filterShowOffers == null or gs.filterShowOffers},
+               data-sv-filter-availability=${gs == null or gs.filterShowAvailability == null or gs.filterShowAvailability},
+               data-sv-filter-brand=${gs == null or gs.filterShowBrand == null or gs.filterShowBrand},
+               data-sv-filter-variants=${gs == null or gs.filterShowVariants == null or gs.filterShowVariants},
+               data-sv-filter-specs=${gs != null and gs.filterShowSpecs != null ? gs.filterShowSpecs : false}">
 <nav th:replace="~{components/store-navbar :: storeNavbar}"></nav>
 <script th:src="@{/js/ui/navbarStyle.js}"></script>
 <main id="storevoMainContent" class="flex-1 flex flex-col">
@@ -1156,6 +1168,7 @@
             }
         });
 
+
         window.__storevoApplyLiveStyles = function(s) {
             if (!s) return;
             window.__storevoLiveStyles = Object.assign({}, window.__storevoLiveStyles || {}, s);
@@ -1164,7 +1177,6 @@
             if (s.secondaryColor) root.style.setProperty('--brand-secondary', s.secondaryColor);
             if (s.backgroundColor) root.style.setProperty('--store-bg', s.backgroundColor);
             if (s.textColor) root.style.setProperty('--store-text', s.textColor);
-
             const SERIF_FONTS = ['Playfair Display', 'Lora', 'Cormorant Garamond', 'Cinzel'];
             if (s.headingFont) root.style.setProperty('--font-heading', `'${s.headingFont}', ${SERIF_FONTS.includes(s.headingFont) ? 'serif' : 'sans-serif'}`);
             if (s.bodyFont) root.style.setProperty('--font-body', `'${s.bodyFont}', ${SERIF_FONTS.includes(s.bodyFont) ? 'serif' : 'sans-serif'}`);
@@ -1176,11 +1188,41 @@
             if (s.buttonRadius) document.body.dataset.buttonRadius = s.buttonRadius;
             if (s.cardStyle) document.body.dataset.cardStyle = s.cardStyle;
             if (s.borderRadius) root.style.setProperty('--store-radius', s.borderRadius);
-
             if (window.Storevo && Storevo.UI && Storevo.UI.NavbarStyle) {
                 Storevo.UI.NavbarStyle.apply(s);
             }
+
+            const filterKeysMap = {
+                filterEnabled: 'svFilterEnabled',
+                filterLayout: 'svFilterLayout',
+                filterShowSearch: 'svFilterSearch',
+                filterShowSort: 'svFilterSort',
+                filterShowCount: 'svFilterCount',
+                filterShowCategory: 'svFilterCategory',
+                filterShowPrice: 'svFilterPrice',
+                filterShowOffers: 'svFilterOffers',
+                filterShowAvailability: 'svFilterAvailability',
+                filterShowBrand: 'svFilterBrand',
+                filterShowVariants: 'svFilterVariants',
+                filterShowSpecs: 'svFilterSpecs'
+            };
+            let filtersChanged = false;
+            Object.keys(filterKeysMap).forEach(key => {
+                if (s[key] !== undefined) {
+                    const dataKey = filterKeysMap[key];
+                    const nextVal = String(s[key]);
+                    if (document.body.dataset[dataKey] !== nextVal) {
+                        document.body.dataset[dataKey] = nextVal;
+                        filtersChanged = true;
+                    }
+                }
+            });
+            if (filtersChanged) {
+                document.dispatchEvent(new CustomEvent('storevo:filter-config-updated', { detail: s }));
+            }
         };
+
+
 
         window.addEventListener('message', function(e) {
             if (e.origin !== window.location.origin || !e.data) return;

@@ -835,6 +835,172 @@
                         </div>
                     </div>
                 </details>
+
+                <!-- ============ 5. SISTEMA GLOBAL DE FILTROS Y BÚSQUEDA ============ -->
+                <details class="style-acc" data-acc="filters">
+                    <summary>
+                        <span class="min-w-0">
+                            <span class="style-acc-title">Filtros y Búsqueda</span>
+                            <span class="style-acc-hint">Configuración global compartida en todas las páginas</span>
+                        </span>
+                        <svg class="style-acc-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </summary>
+                    <div class="style-acc-body" id="style-filters-section">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-storevo-400 bg-storevo-500/10 border border-storevo-500/20 px-2 py-0.5 rounded-full">
+                                Global en toda la tienda
+                            </span>
+                            <button type="button" id="style-filters-reset"
+                                    class="text-[11px] font-bold text-slate-400 hover:text-white transition">
+                                Restablecer sección
+                            </button>
+                        </div>
+
+                        <!-- Interruptor Maestro -->
+                        <label class="flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
+                            <div class="min-w-0">
+                                <span class="block text-xs font-bold text-white">Activar sistema de filtros</span>
+                                <span class="block text-[11px] text-slate-400">Habilita la barra de filtrado en el catálogo y vitrinas activas</span>
+                            </div>
+                            <input type="checkbox" id="style-filter-enabled" checked
+                                   class="w-4 h-4 rounded border-slate-700 text-storevo-500 focus:ring-storevo-500">
+                        </label>
+
+                        <!-- Selector visual de disposición (Layout de Filtros) -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 mb-1.5">Disposición visual de los filtros</label>
+                            <div id="style-filter-layout" class="grid grid-cols-2 gap-2">
+                                <button type="button" data-value="drawer"
+                                        class="nav-layout-opt flex flex-col items-center gap-1.5 p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
+                                    <svg viewBox="0 0 64 36" class="w-full h-8" fill="currentColor">
+                                        <rect x="4" y="4" width="56" height="6" rx="1.5" opacity=".35"/>
+                                        <rect x="44" y="4" width="16" height="28" rx="2"/>
+                                        <rect x="6" y="14" width="16" height="16" rx="1.5" opacity=".4"/>
+                                        <rect x="25" y="14" width="16" height="16" rx="1.5" opacity=".4"/>
+                                    </svg>
+                                    <span class="text-[11px] font-bold">Panel Lateral (Drawer)</span>
+                                </button>
+                                <button type="button" data-value="topbar"
+                                        class="nav-layout-opt flex flex-col items-center gap-1.5 p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
+                                    <svg viewBox="0 0 64 36" class="w-full h-8" fill="currentColor">
+                                        <rect x="4" y="4" width="56" height="6" rx="1.5" opacity=".35"/>
+                                        <rect x="4" y="12" width="12" height="5" rx="2.5"/>
+                                        <rect x="18" y="12" width="12" height="5" rx="2.5"/>
+                                        <rect x="32" y="12" width="12" height="5" rx="2.5"/>
+                                        <rect x="4" y="20" width="17" height="12" rx="1.5" opacity=".4"/>
+                                        <rect x="23.5" y="20" width="17" height="12" rx="1.5" opacity=".4"/>
+                                        <rect x="43" y="20" width="17" height="12" rx="1.5" opacity=".4"/>
+                                    </svg>
+                                    <span class="text-[11px] font-bold">Barra Horizontal</span>
+                                </button>
+                                <button type="button" data-value="sidebar"
+                                        class="nav-layout-opt flex flex-col items-center gap-1.5 p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
+                                    <svg viewBox="0 0 64 36" class="w-full h-8" fill="currentColor">
+                                        <rect x="4" y="4" width="16" height="28" rx="2"/>
+                                        <rect x="23" y="4" width="37" height="6" rx="1.5" opacity=".35"/>
+                                        <rect x="23" y="13" width="17" height="19" rx="1.5" opacity=".4"/>
+                                        <rect x="43" y="13" width="17" height="19" rx="1.5" opacity=".4"/>
+                                    </svg>
+                                    <span class="text-[11px] font-bold">Columna Fija (PC)</span>
+                                </button>
+                                <button type="button" data-value="inline"
+                                        class="nav-layout-opt flex flex-col items-center gap-1.5 p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
+                                    <svg viewBox="0 0 64 36" class="w-full h-8" fill="currentColor">
+                                        <rect x="4" y="4" width="56" height="5" rx="1.5" opacity=".35"/>
+                                        <rect x="4" y="11" width="56" height="10" rx="2"/>
+                                        <rect x="4" y="23" width="17" height="9" rx="1.5" opacity=".4"/>
+                                        <rect x="23.5" y="23" width="17" height="9" rx="1.5" opacity=".4"/>
+                                        <rect x="43" y="23" width="17" height="9" rx="1.5" opacity=".4"/>
+                                    </svg>
+                                    <span class="text-[11px] font-bold">Panel Desplegable</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Herramientas de Barra Principal -->
+                        <div class="pt-2 border-t border-slate-800/80 space-y-2">
+                            <p class="text-[11px] font-black uppercase tracking-wider text-storevo-400">Barra de Búsqueda y Orden</p>
+                            <div class="grid grid-cols-1 gap-2">
+                                <label class="flex items-center justify-between p-2.5 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
+                                    <span class="text-xs font-medium text-slate-300">Buscador instantáneo por palabra clave</span>
+                                    <input type="checkbox" id="style-filter-search" checked class="w-4 h-4 rounded border-slate-700 text-storevo-500">
+                                </label>
+                                <label class="flex items-center justify-between p-2.5 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
+                                    <span class="text-xs font-medium text-slate-300">Selector de ordenamiento (Precio, A-Z, Descuento)</span>
+                                    <input type="checkbox" id="style-filter-sort" checked class="w-4 h-4 rounded border-slate-700 text-storevo-500">
+                                </label>
+                                <label class="flex items-center justify-between p-2.5 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
+                                    <span class="text-xs font-medium text-slate-300">Mostrar contador de productos por filtro</span>
+                                    <input type="checkbox" id="style-filter-count" checked class="w-4 h-4 rounded border-slate-700 text-storevo-500">
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Selección de Criterios / Tipos de Filtros Disponibles -->
+                        <div class="pt-2 border-t border-slate-800/80 space-y-2">
+                            <p class="text-[11px] font-black uppercase tracking-wider text-storevo-400">Tipos de Filtros Disponibles</p>
+                            <p class="text-[11px] text-slate-500">Elige qué criterios podrán usar tus clientes. Solo se mostrarán valores que existan en tus productos.</p>
+
+                            <div class="space-y-2">
+                                <label class="flex items-start justify-between gap-2 p-2.5 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
+                                    <div>
+                                        <span class="block text-xs font-bold text-slate-200">Categorías y Subcategorías</span>
+                                        <span class="block text-[10px] text-slate-500">Navegación por colecciones de la tienda</span>
+                                    </div>
+                                    <input type="checkbox" id="style-filter-category" checked class="mt-0.5 w-4 h-4 rounded border-slate-700 text-storevo-500">
+                                </label>
+
+                                <label class="flex items-start justify-between gap-2 p-2.5 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
+                                    <div>
+                                        <span class="block text-xs font-bold text-slate-200">Rango de Precios ($)</span>
+                                        <span class="block text-[10px] text-slate-500">Mínimo, máximo y tramos automáticos</span>
+                                    </div>
+                                    <input type="checkbox" id="style-filter-price" checked class="mt-0.5 w-4 h-4 rounded border-slate-700 text-storevo-500">
+                                </label>
+
+                                <label class="flex items-start justify-between gap-2 p-2.5 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
+                                    <div>
+                                        <span class="block text-xs font-bold text-slate-200">Ofertas y Descuentos</span>
+                                        <span class="block text-[10px] text-slate-500">Filtro rápido para productos con precio de oferta</span>
+                                    </div>
+                                    <input type="checkbox" id="style-filter-offers" checked class="mt-0.5 w-4 h-4 rounded border-slate-700 text-storevo-500">
+                                </label>
+
+                                <label class="flex items-start justify-between gap-2 p-2.5 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
+                                    <div>
+                                        <span class="block text-xs font-bold text-slate-200">Disponibilidad y Stock</span>
+                                        <span class="block text-[10px] text-slate-500">En stock inmediato, bajo pedido u ocultar agotados</span>
+                                    </div>
+                                    <input type="checkbox" id="style-filter-availability" checked class="mt-0.5 w-4 h-4 rounded border-slate-700 text-storevo-500">
+                                </label>
+
+                                <label class="flex items-start justify-between gap-2 p-2.5 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
+                                    <div>
+                                        <span class="block text-xs font-bold text-slate-200">Marca del Producto</span>
+                                        <span class="block text-[10px] text-slate-500">Filtra por las marcas registradas en el catálogo</span>
+                                    </div>
+                                    <input type="checkbox" id="style-filter-brand" checked class="mt-0.5 w-4 h-4 rounded border-slate-700 text-storevo-500">
+                                </label>
+
+                                <label class="flex items-start justify-between gap-2 p-2.5 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
+                                    <div>
+                                        <span class="block text-xs font-bold text-slate-200">Opciones de Variantes (Talla, Color, etc.)</span>
+                                        <span class="block text-[10px] text-slate-500">Extrae automáticamente tallas, colores y presentaciones</span>
+                                    </div>
+                                    <input type="checkbox" id="style-filter-variants" checked class="mt-0.5 w-4 h-4 rounded border-slate-700 text-storevo-500">
+                                </label>
+
+                                <label class="flex items-start justify-between gap-2 p-2.5 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
+                                    <div>
+                                        <span class="block text-xs font-bold text-slate-200">Especificaciones de Ficha Técnica</span>
+                                        <span class="block text-[10px] text-slate-500">Material, género u otros atributos técnicos del producto</span>
+                                    </div>
+                                    <input type="checkbox" id="style-filter-specs" class="mt-0.5 w-4 h-4 rounded border-slate-700 text-storevo-500">
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </details>
             </div>
 
             <!-- VISTA 4: PLANTILLAS ESTRUCTURALES EN 1 CLIC + VISTA PREVIA SEGURA -->

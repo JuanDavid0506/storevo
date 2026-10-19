@@ -2075,6 +2075,101 @@ Storevo.ThemeEditor = {
                 this.scheduleAutoSave(false);
             };
         }
+        // =====================================================================
+        // 5. SISTEMA GLOBAL DE FILTROS Y BÚSQUEDA
+        // =====================================================================
+        const DEFAULT_GLOBAL_FILTER_STYLES = {
+            filterEnabled: true,
+            filterLayout: 'drawer',
+            filterShowSearch: true,
+            filterShowSort: true,
+            filterShowCount: true,
+            filterShowCategory: true,
+            filterShowPrice: true,
+            filterShowOffers: true,
+            filterShowAvailability: true,
+            filterShowBrand: true,
+            filterShowVariants: true,
+            filterShowSpecs: false
+        };
+
+        Object.entries(DEFAULT_GLOBAL_FILTER_STYLES).forEach(([k, defVal]) => {
+            if (gs[k] === undefined || gs[k] === null) {
+                gs[k] = defVal;
+            }
+        });
+
+        const filterLayoutWrap = document.getElementById('style-filter-layout');
+        const filterCheckboxMap = {
+            'style-filter-enabled': 'filterEnabled',
+            'style-filter-search': 'filterShowSearch',
+            'style-filter-sort': 'filterShowSort',
+            'style-filter-count': 'filterShowCount',
+            'style-filter-category': 'filterShowCategory',
+            'style-filter-price': 'filterShowPrice',
+            'style-filter-offers': 'filterShowOffers',
+            'style-filter-availability': 'filterShowAvailability',
+            'style-filter-brand': 'filterShowBrand',
+            'style-filter-variants': 'filterShowVariants',
+            'style-filter-specs': 'filterShowSpecs'
+        };
+
+        const syncGlobalFilterUI = () => {
+            const activeLayout = gs.filterLayout || 'drawer';
+            if (filterLayoutWrap) {
+                filterLayoutWrap.querySelectorAll('button[data-value]').forEach(btn => {
+                    btn.classList.toggle('is-selected', btn.getAttribute('data-value') === activeLayout);
+                });
+            }
+            Object.entries(filterCheckboxMap).forEach(([elId, propKey]) => {
+                const chk = document.getElementById(elId);
+                if (chk) {
+                    chk.checked = gs[propKey] !== undefined
+                        ? Boolean(gs[propKey])
+                        : DEFAULT_GLOBAL_FILTER_STYLES[propKey];
+                }
+            });
+        };
+
+        if (filterLayoutWrap && !filterLayoutWrap.dataset.bound) {
+            filterLayoutWrap.dataset.bound = 'true';
+            filterLayoutWrap.querySelectorAll('button[data-value]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    gs.filterLayout = btn.getAttribute('data-value') || 'drawer';
+                    syncGlobalFilterUI();
+                    this.pushLiveStylesToIframe();
+                    this.scheduleAutoSave(false);
+                });
+            });
+        }
+
+        Object.entries(filterCheckboxMap).forEach(([elId, propKey]) => {
+            const chk = document.getElementById(elId);
+            if (chk && !chk.dataset.bound) {
+                chk.dataset.bound = 'true';
+                chk.addEventListener('change', () => {
+                    gs[propKey] = chk.checked;
+                    this.pushLiveStylesToIframe();
+                    this.scheduleAutoSave(false);
+                });
+            }
+        });
+
+        const filterResetBtn = document.getElementById('style-filters-reset');
+        if (filterResetBtn && !filterResetBtn.dataset.bound) {
+            filterResetBtn.dataset.bound = 'true';
+            filterResetBtn.addEventListener('click', () => {
+                Object.assign(gs, DEFAULT_GLOBAL_FILTER_STYLES);
+                syncGlobalFilterUI();
+                this.pushLiveStylesToIframe();
+                this.scheduleAutoSave(false);
+                if (window.Storevo && Storevo.UI && Storevo.UI.Toast) {
+                    Storevo.UI.Toast.show('Configuración global de filtros restablecida', 'info');
+                }
+            });
+        }
+
+        syncGlobalFilterUI();
     },
 
     syncFontPairHighlight: function() {
