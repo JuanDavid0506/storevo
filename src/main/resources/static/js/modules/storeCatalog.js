@@ -1554,6 +1554,10 @@
                         tokenScore = 26;
                         const hitSpec = p.specValuesFlat.find(s => normalizeText(s).includes(tk));
                         if (hitSpec) matchedBadge = hitSpec;
+                    } else if (/^(oferta|ofertas|descuento|descuentos|promo|promocion|rebaja|rebajas)$/.test(tk) && p.hasOffer) {
+                        tokenScore = 65;
+                    } else if (/^(nuevo|nuevos|nueva|nuevas|novedad|novedades)$/.test(tk)) {
+                        tokenScore = 40;
                     }
 
                     if (tokenScore === 0) return;
@@ -1927,24 +1931,34 @@
           `;
         }
 
+        let modalOpenedAt = 0;
+
         function bindContainerPanelEvents(containerEl, inputEl, catSelect, stateRef, refreshCallback) {
             if (!containerEl) return;
 
+            // Seleccionar un término sugerido (reciente, popular o marca): ejecuta la búsqueda de inmediato
             containerEl.querySelectorAll('[data-search-term]').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.preventDefault();
-                    const term = btn.getAttribute('data-search-term') || '';
+                    e.stopPropagation();
+                    const term = (btn.getAttribute('data-search-term') || '').trim();
+                    if (!term) return;
                     inputEl.value = term;
-                    refreshCallback(true);
+                    saveRecentSearch(term);
+                    try { inputEl.focus({ preventScroll: true }); } catch (err) { inputEl.focus(); }
+                    refreshCallback(true, true);
                 });
             });
 
+            // Seleccionar una píldora de categoría: filtra y muestra los resultados de esa categoría de inmediato
             containerEl.querySelectorAll('[data-search-cat-pill]').forEach(pill => {
                 pill.addEventListener('click', (e) => {
                     e.preventDefault();
+                    e.stopPropagation();
                     stateRef.catId = pill.getAttribute('data-search-cat-pill') || '';
                     if (catSelect) catSelect.value = stateRef.catId;
-                    refreshCallback(true);
+                    try { inputEl.focus({ preventScroll: true }); } catch (err) {}
+                    refreshCallback(true, Boolean(stateRef.catId));
                 });
             });
 
@@ -1952,8 +1966,9 @@
             if (advToggle) {
                 advToggle.addEventListener('click', (e) => {
                     e.preventDefault();
+                    e.stopPropagation();
                     stateRef.adv.open = !stateRef.adv.open;
-                    refreshCallback(true);
+                    refreshCallback(true, false);
                 });
             }
 
@@ -1961,76 +1976,93 @@
             if (advReset) {
                 advReset.addEventListener('click', (e) => {
                     e.preventDefault();
+                    e.stopPropagation();
                     stateRef.adv = createEmptyAdvState();
                     stateRef.adv.open = true;
-                    refreshCallback(true);
+                    refreshCallback(true, false);
                 });
             }
 
             const advCat = containerEl.querySelector('select[data-adv-field="category"]');
             if (advCat) {
-                advCat.addEventListener('change', () => {
+                advCat.addEventListener('click', (e) => e.stopPropagation());
+                advCat.addEventListener('change', (e) => {
+                    e.stopPropagation();
                     stateRef.catId = advCat.value || '';
                     if (catSelect) catSelect.value = stateRef.catId;
-                    refreshCallback(true);
+                    refreshCallback(true, Boolean(stateRef.catId));
                 });
             }
 
             const advBrand = containerEl.querySelector('select[data-adv-field="brand"]');
             if (advBrand) {
-                advBrand.addEventListener('change', () => {
+                advBrand.addEventListener('click', (e) => e.stopPropagation());
+                advBrand.addEventListener('change', (e) => {
+                    e.stopPropagation();
                     stateRef.adv.brand = advBrand.value || '';
                     stateRef.adv.open = true;
-                    refreshCallback(true);
+                    refreshCallback(true, true);
                 });
             }
 
             const advAvail = containerEl.querySelector('select[data-adv-field="availability"]');
             if (advAvail) {
-                advAvail.addEventListener('change', () => {
+                advAvail.addEventListener('click', (e) => e.stopPropagation());
+                advAvail.addEventListener('change', (e) => {
+                    e.stopPropagation();
                     stateRef.adv.availability = advAvail.value || 'all';
                     stateRef.adv.open = true;
-                    refreshCallback(true);
+                    refreshCallback(true, true);
                 });
             }
 
             const advMin = containerEl.querySelector('input[data-adv-field="minPrice"]');
             const advMax = containerEl.querySelector('input[data-adv-field="maxPrice"]');
-            const onPriceChange = () => {
+            const onPriceChange = (e) => {
+                if (e) e.stopPropagation();
                 stateRef.adv.minPrice = (advMin && advMin.value !== '') ? Number(advMin.value) : null;
                 stateRef.adv.maxPrice = (advMax && advMax.value !== '') ? Number(advMax.value) : null;
                 stateRef.adv.open = true;
-                refreshCallback(true);
+                refreshCallback(true, true);
             };
-            if (advMin) advMin.addEventListener('change', onPriceChange);
-            if (advMax) advMax.addEventListener('change', onPriceChange);
+            if (advMin) {
+                advMin.addEventListener('click', (e) => e.stopPropagation());
+                advMin.addEventListener('change', onPriceChange);
+            }
+            if (advMax) {
+                advMax.addEventListener('click', (e) => e.stopPropagation());
+                advMax.addEventListener('change', onPriceChange);
+            }
 
             containerEl.querySelectorAll('[data-adv-variant]').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.preventDefault();
+                    e.stopPropagation();
                     const v = btn.getAttribute('data-adv-variant') || '';
                     stateRef.adv.variantVal = (stateRef.adv.variantVal === v) ? '' : v;
                     stateRef.adv.open = true;
-                    refreshCallback(true);
+                    refreshCallback(true, true);
                 });
             });
 
             containerEl.querySelectorAll('[data-adv-spec]').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.preventDefault();
+                    e.stopPropagation();
                     const s = btn.getAttribute('data-adv-spec') || '';
                     stateRef.adv.specVal = (stateRef.adv.specVal === s) ? '' : s;
                     stateRef.adv.open = true;
-                    refreshCallback(true);
+                    refreshCallback(true, true);
                 });
-            } );
+            });
 
             const clearRecentBtn = containerEl.querySelector('.sv-clear-recent-btn');
             if (clearRecentBtn) {
                 clearRecentBtn.addEventListener('click', (e) => {
                     e.preventDefault();
+                    e.stopPropagation();
                     clearRecentSearches();
-                    refreshCallback(true);
+                    refreshCallback(true, false);
                 });
             }
 
@@ -2038,16 +2070,27 @@
             if (viewAllBtn) {
                 viewAllBtn.addEventListener('click', (e) => {
                     e.preventDefault();
+                    e.stopPropagation();
                     navigateToCatalogExplicit(inputEl.value.trim(), stateRef.catId);
                 });
             }
 
-            containerEl.querySelectorAll('a.sv-search-item').forEach(link => {
-                link.addEventListener('click', () => {
+            // Enlaces a productos y categorías sugeridas: navegar sin destruir el nodo antes de que el router lo procese
+            containerEl.querySelectorAll('a[href]').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const href = link.getAttribute('href');
+                    if (!href) return;
                     if (inputEl.value.trim()) {
                         saveRecentSearch(inputEl.value.trim());
                     }
+                    e.preventDefault();
                     closeAllSearchPanels();
+                    if (window.Storevo && Storevo.Router && typeof Storevo.Router.navigate === 'function') {
+                        Storevo.Router.navigate(href);
+                    } else {
+                        window.location.href = href;
+                    }
                 });
             });
         }
@@ -2089,6 +2132,7 @@
           `;
             document.body.appendChild(searchModalBackdrop);
 
+            const modalDialog = searchModalBackdrop.querySelector('.sv-search-modal');
             const modalForm = searchModalBackdrop.querySelector('.sv-search-modal__form');
             const modalInput = modalForm.querySelector('input[name="q"]');
             const modalCatSelect = modalForm.querySelector('.sv-search-cat-select');
@@ -2096,10 +2140,14 @@
             const modalBody = searchModalBackdrop.querySelector('.sv-search-modal__body');
             const closeBtn = searchModalBackdrop.querySelector('.sv-search-modal__close');
 
+            if (modalDialog) {
+                modalDialog.addEventListener('click', (e) => e.stopPropagation());
+            }
+
             let modalDebounce = null;
             const modalState = { catId: '', adv: createEmptyAdvState() };
 
-            const updateModalContent = (immediate) => {
+            const updateModalContent = (immediate, forceExecute) => {
                 clearTimeout(modalDebounce);
                 const cfg = getGlobalSearchConfig();
                 const q = modalInput.value.trim();
@@ -2107,7 +2155,12 @@
 
                 const renderNow = () => {
                     ensureIndexHydrated().then(() => {
-                        if (q.length < cfg.minChars && !hasActiveAdvCriteria(modalState.adv)) {
+                        const shouldShowResults = forceExecute
+                            || q.length >= cfg.minChars
+                            || Boolean(modalState.catId)
+                            || hasActiveAdvCriteria(modalState.adv);
+
+                        if (!shouldShowResults) {
                             modalBody.innerHTML = renderInitialSuggestionsHtml(cfg, modalState.catId, modalState.adv, true);
                         } else {
                             const results = queryIndex(q, modalState.catId, cfg, modalState.adv);
@@ -2124,27 +2177,36 @@
                 }
             };
 
-            modalInput.addEventListener('input', () => updateModalContent(false));
+            modalInput.addEventListener('input', () => updateModalContent(false, false));
             modalCatSelect.addEventListener('change', () => {
                 modalState.catId = modalCatSelect.value || '';
-                updateModalContent(true);
+                updateModalContent(true, Boolean(modalState.catId));
             });
-            modalClearBtn.addEventListener('click', () => {
+            modalClearBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 modalInput.value = '';
                 modalInput.focus();
-                updateModalContent(true);
+                updateModalContent(true, false);
             });
             modalForm.addEventListener('submit', (e) => {
                 e.preventDefault();
                 clearTimeout(modalDebounce);
                 navigateToCatalogExplicit(modalInput.value.trim(), modalState.catId);
             });
-            closeBtn.addEventListener('click', closeAllSearchPanels);
+            closeBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                closeAllSearchPanels();
+            });
             searchModalBackdrop.addEventListener('click', (e) => {
-                if (e.target === searchModalBackdrop) closeAllSearchPanels();
+                if (e.target === searchModalBackdrop && (Date.now() - modalOpenedAt > 220)) {
+                    closeAllSearchPanels();
+                }
             });
 
             searchModalBackdrop._openWithQuery = (initialQ, initialCatId) => {
+                modalOpenedAt = Date.now();
                 populateCategorySelects();
                 const cfg = getGlobalSearchConfig();
                 modalInput.placeholder = cfg.placeholder || 'Buscar productos...';
@@ -2159,13 +2221,15 @@
                 }
                 searchModalBackdrop.classList.add('is-open');
                 document.body.classList.add('overflow-hidden');
-                updateModalContent(true);
-                setTimeout(() => modalInput.focus(), 40);
+                updateModalContent(true, Boolean(modalInput.value.trim()));
+                setTimeout(() => {
+                    try { modalInput.focus({ preventScroll: true }); } catch (err) { modalInput.focus(); }
+                }, 40);
             };
 
             searchModalBackdrop._refreshLive = () => {
                 if (searchModalBackdrop.classList.contains('is-open')) {
-                    updateModalContent(true);
+                    updateModalContent(true, Boolean(modalInput.value.trim()));
                 }
             };
 
@@ -2228,7 +2292,7 @@
                 }
             };
 
-            const runPanelQuery = (immediate) => {
+            const runPanelQuery = (immediate, forceExecute) => {
                 clearTimeout(debounceTimer);
                 const cfg = getGlobalSearchConfig();
                 updateClearVisibility();
@@ -2240,8 +2304,14 @@
                 }
 
                 const q = inputEl.value.trim();
-                if (q.length < cfg.minChars && !hasActiveAdvCriteria(formState.adv)) {
-                    if ((cfg.mode === 'predictive' || cfg.advancedEnabled) && document.activeElement === inputEl) {
+                const shouldShowResults = forceExecute
+                    || q.length >= cfg.minChars
+                    || Boolean(formState.catId)
+                    || hasActiveAdvCriteria(formState.adv);
+
+                if (!shouldShowResults) {
+                    const isPanelAlreadyOpen = hostEl.innerHTML.trim() !== '';
+                    if ((cfg.mode === 'predictive' || cfg.advancedEnabled) && (document.activeElement === inputEl || isPanelAlreadyOpen)) {
                         hostEl.innerHTML = renderInitialSuggestionsHtml(cfg, formState.catId, formState.adv, false);
                         bindContainerPanelEvents(hostEl, inputEl, catSelect, formState, runPanelQuery);
                     } else if (formState.adv.open) {
@@ -2268,37 +2338,24 @@
                 }
             };
 
-
-            const interceptForFullscreenModal = (e) => {
+            // Abrir el modal de pantalla completa en el evento click (después de mouseup) para que no se cierre al soltar el botón
+            inputEl.addEventListener('click', (e) => {
                 const cfg = getGlobalSearchConfig();
-                if (!cfg.enabled || !shouldUseFullscreenModal(cfg)) return false;
-                if (e.target && e.target.closest && e.target.closest('.sv-search-clear-btn, .sv-search-cat-select, .sv-search-expand-close')) {
-                    return false;
-                }
+                if (!cfg.enabled || !shouldUseFullscreenModal(cfg)) return;
                 e.preventDefault();
                 e.stopPropagation();
-                if (document.activeElement === inputEl) {
-                    inputEl.blur();
-                }
+                inputEl.blur();
                 openFullscreenModal(inputEl.value.trim(), formState.catId);
-                return true;
-            };
+            });
 
-            // Abrir al primer toque/clic sin esperar al ciclo focus -> mouseup -> click
-            inputEl.addEventListener('mousedown', interceptForFullscreenModal);
-            inputEl.addEventListener('click', interceptForFullscreenModal);
-
-            inputEl.addEventListener('focus', (e) => {
+            inputEl.addEventListener('focus', () => {
                 const cfg = getGlobalSearchConfig();
                 if (shouldUseFullscreenModal(cfg)) {
-                    e.preventDefault();
-                    inputEl.blur();
-                    openFullscreenModal(inputEl.value.trim(), formState.catId);
                     return;
                 }
                 ensureIndexHydrated().then(() => {
                     if (cfg.mode === 'predictive' || cfg.advancedEnabled || (cfg.mode === 'instant' && inputEl.value.trim().length >= cfg.minChars)) {
-                        runPanelQuery(true);
+                        runPanelQuery(true, false);
                     }
                 });
             });
@@ -2506,6 +2563,11 @@
         document.querySelectorAll('details.sv-topbar-popover[open]').forEach(det => {
             if (!det.contains(e.target)) det.removeAttribute('open');
         });
+        // Si el elemento clicado fue re-renderizado dentro del panel o el modal de pantalla completa está activo, no cerrar desde aquí
+        if (!e.target || !document.body.contains(e.target)) return;
+        const modalEl = document.getElementById('sv-search-fullscreen-backdrop');
+        if (modalEl && modalEl.classList.contains('is-open')) return;
+
         if (!e.target.closest('.sv-nav__search, .sv-nav__search-expand, .sv-nav__search-trigger, .sv-search-modal')) {
             SearchEngine.closeAll();
         }
