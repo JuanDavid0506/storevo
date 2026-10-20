@@ -64,6 +64,20 @@ public class StoreThemeService {
     private static final Set<String> ALLOWED_NAV_SPEEDS = Set.of("fast", "normal", "slow");
     private static final Set<String> ALLOWED_HEADING_TRANSFORMS = Set.of("none", "uppercase");
     private static final Set<String> ALLOWED_FONT_SCALES = Set.of("compact", "standard", "large");
+    private static final Set<String> ALLOWED_SEARCH_MODES = Set.of(
+            "traditional", "instant", "predictive", "fullscreen"
+    );
+    private static final Set<String> ALLOWED_SEARCH_NAV_VARIANTS = Set.of(
+            "auto", "inline_bar", "expandable_icon", "modal_trigger", "hidden"
+    );
+    private static final Set<String> ALLOWED_SEARCH_MOBILE_MODES = Set.of("fullscreen", "same");
+    private static final Set<String> ALLOWED_SEARCH_INPUT_STYLES = Set.of(
+            "sync", "pill", "rounded", "square", "underline"
+    );
+    private static final Set<String> ALLOWED_SEARCH_INPUT_SIZES = Set.of("compact", "normal", "large");
+    private static final Set<String> ALLOWED_SEARCH_BUTTON_MODES = Set.of("icon", "text", "icon_text", "none");
+    private static final Set<String> ALLOWED_SEARCH_ANIMS = Set.of("slide_up", "fade", "scale");
+    private static final Set<String> ALLOWED_SEARCH_CATEGORY_SCOPES = Set.of("none", "select_left", "pills_top");
     private static final Set<String> RESERVED_PAGE_SLUGS = Set.of(
             "home", "catalog", "product", "product-preview", "cart", "checkout", "wishlist", "order", "p", "page"
     );
@@ -193,6 +207,7 @@ public class StoreThemeService {
 
             Map<String, Object> root = new LinkedHashMap<>();
             Map<String, Map<String, Object>> productsMap = new LinkedHashMap<>();
+            long fingerprint = 1125899906842597L;
 
             if (products != null) {
                 for (Product p : products) {
@@ -204,30 +219,62 @@ public class StoreThemeService {
                     } catch (Exception ignored) {}
 
                     Map<String, Object> pMeta = new LinkedHashMap<>();
+                    String name = managed.getName() != null ? managed.getName().trim() : "";
+                    String brand = managed.getBrand() != null ? managed.getBrand().trim() : "";
+                    String sku = managed.getSku() != null ? managed.getSku().trim() : "";
                     boolean isMadeToOrder = Boolean.TRUE.equals(managed.getIsMadeToOrder());
-                    boolean inStock = isMadeToOrder || (managed.getStock() != null && managed.getStock() > 0);
-                    boolean hasDiscount = managed.getDiscountPrice() != null
-                            && managed.getDiscountPrice() > 0
-                            && managed.getPrice() != null
-                            && managed.getPrice() > managed.getDiscountPrice();
-                    double effectivePrice = hasDiscount ? managed.getDiscountPrice() : (managed.getPrice() != null ? managed.getPrice() : 0.0);
+                    int stockVal = managed.getStock() != null ? managed.getStock() : 0;
+                    boolean inStock = isMadeToOrder || stockVal > 0;
+                    double origPrice = managed.getPrice() != null ? managed.getPrice() : 0.0;
+                    double discPrice = managed.getDiscountPrice() != null ? managed.getDiscountPrice() : 0.0;
+                    boolean hasDiscount = discPrice > 0 && origPrice > discPrice;
+                    double effectivePrice = hasDiscount ? discPrice : origPrice;
+                    long discountPercent = (hasDiscount && origPrice > 0)
+                            ? Math.round(((origPrice - discPrice) * 100.0) / origPrice)
+                            : 0L;
+                    boolean hasVariants = Boolean.TRUE.equals(managed.getHasVariants());
+
+                    String imageUrl = "/img/placeholder.jpg";
+                    try {
+                        if (managed.getMainImageThumbnailUrl() != null && !managed.getMainImageThumbnailUrl().isBlank()) {
+                            imageUrl = managed.getMainImageThumbnailUrl();
+                        } else if (managed.getMainImageUrl() != null && !managed.getMainImageUrl().isBlank()) {
+                            imageUrl = managed.getMainImageUrl();
+                        }
+                    } catch (Exception ignored) {}
 
                     pMeta.put("id", managed.getId());
+                    pMeta.put("name", name);
+                    pMeta.put("brand", brand);
+                    pMeta.put("sku", sku);
                     pMeta.put("price", effectivePrice);
+                    pMeta.put("effectivePrice", effectivePrice);
+                    pMeta.put("originalPrice", origPrice);
+                    pMeta.put("discountPrice", discPrice);
+                    pMeta.put("discountPercent", discountPercent);
                     pMeta.put("inStock", inStock);
+                    pMeta.put("stock", stockVal);
                     pMeta.put("hasDiscount", hasDiscount);
+                    pMeta.put("hasOffer", hasDiscount);
                     pMeta.put("madeToOrder", isMadeToOrder);
+                    pMeta.put("isMadeToOrder", isMadeToOrder);
+                    pMeta.put("hasVariants", hasVariants);
+                    pMeta.put("imageUrl", imageUrl);
 
+                    String catIdStr = "";
+                    String catNameStr = "";
                     try {
                         if (managed.getCategory() != null) {
-                            pMeta.put("categoryId", String.valueOf(managed.getCategory().getId()));
-                            pMeta.put("categoryName", managed.getCategory().getName());
+                            catIdStr = String.valueOf(managed.getCategory().getId());
+                            catNameStr = managed.getCategory().getName() != null ? managed.getCategory().getName() : "";
+                            pMeta.put("categoryId", catIdStr);
+                            pMeta.put("categoryName", catNameStr);
                         }
                     } catch (Exception ignored) {}
 
                     Map<String, List<String>> attrs = new LinkedHashMap<>();
-                    if (managed.getBrand() != null && !managed.getBrand().isBlank()) {
-                        attrs.put("Marca", List.of(managed.getBrand().trim()));
+                    if (!brand.isEmpty()) {
+                        attrs.put("Marca", List.of(brand));
                     }
                     try {
                         if (managed.getAttributes() != null) {
@@ -248,7 +295,7 @@ public class StoreThemeService {
 
                     Map<String, List<String>> options = new LinkedHashMap<>();
                     try {
-                        if (Boolean.TRUE.equals(managed.getHasVariants()) && managed.getVariantsList() != null && !managed.getVariantsList().isEmpty()) {
+                        if (hasVariants && managed.getVariantsList() != null && !managed.getVariantsList().isEmpty()) {
                             for (ProductVariant v : managed.getVariantsList()) {
                                 if (v == null || !Boolean.TRUE.equals(v.getIsActive())) continue;
                                 boolean variantAvailable = isMadeToOrder || (v.getStock() != null && v.getStock() > 0);
@@ -265,7 +312,7 @@ public class StoreThemeService {
                                     }
                                 }
                             }
-                        } else if (Boolean.TRUE.equals(managed.getHasVariants()) && inStock && managed.getOptions() != null) {
+                        } else if (hasVariants && inStock && managed.getOptions() != null) {
                             for (ProductOption opt : managed.getOptions()) {
                                 if (opt == null || opt.getName() == null || opt.getValues() == null) continue;
                                 String optName = normalizeLabel(opt.getName());
@@ -282,6 +329,14 @@ public class StoreThemeService {
                         }
                     } catch (Exception ignored) {}
                     pMeta.put("options", options);
+
+                    String sig = managed.getId() + "|" + name + "|" + brand + "|" + sku + "|"
+                            + effectivePrice + "|" + origPrice + "|" + stockVal + "|" + inStock + "|"
+                            + isMadeToOrder + "|" + catIdStr + "|" + imageUrl + "|"
+                            + options.toString() + "|" + attrs.toString();
+                    for (int i = 0; i < sig.length(); i++) {
+                        fingerprint = (fingerprint * 31L) + sig.charAt(i);
+                    }
 
                     productsMap.put(String.valueOf(managed.getId()), pMeta);
                 }
@@ -309,11 +364,12 @@ public class StoreThemeService {
                 }
             }
 
+            root.put("catalogHash", Long.toHexString(fingerprint));
             root.put("products", productsMap);
             root.put("sections", sectionsMap);
             return objectMapper.writeValueAsString(root);
         } catch (Exception e) {
-            return "{\"products\":{},\"sections\":{}}";
+            return "{\"catalogHash\":\"0\",\"products\":{},\"sections\":{}}";
         }
     }
 
@@ -609,6 +665,84 @@ public class StoreThemeService {
         if (gs.getNavbarCompactOnScroll() == null) {
             gs.setNavbarCompactOnScroll(false);
         }
+
+        if (gs.getSearchEnabled() == null) {
+            gs.setSearchEnabled(true);
+        }
+        if (gs.getSearchMode() == null || !ALLOWED_SEARCH_MODES.contains(gs.getSearchMode())) {
+            gs.setSearchMode("predictive");
+        }
+        if (gs.getSearchNavbarVariant() == null || !ALLOWED_SEARCH_NAV_VARIANTS.contains(gs.getSearchNavbarVariant())) {
+            gs.setSearchNavbarVariant("auto");
+        }
+        if (gs.getSearchMobileMode() == null || !ALLOWED_SEARCH_MOBILE_MODES.contains(gs.getSearchMobileMode())) {
+            gs.setSearchMobileMode("fullscreen");
+        }
+        if (gs.getSearchInputStyle() == null || !ALLOWED_SEARCH_INPUT_STYLES.contains(gs.getSearchInputStyle())) {
+            gs.setSearchInputStyle("sync");
+        }
+        if (gs.getSearchInputSize() == null || !ALLOWED_SEARCH_INPUT_SIZES.contains(gs.getSearchInputSize())) {
+            gs.setSearchInputSize("normal");
+        }
+        if (gs.getSearchButtonMode() == null || !ALLOWED_SEARCH_BUTTON_MODES.contains(gs.getSearchButtonMode())) {
+            gs.setSearchButtonMode("icon");
+        }
+        if (gs.getSearchAnim() == null || !ALLOWED_SEARCH_ANIMS.contains(gs.getSearchAnim())) {
+            gs.setSearchAnim("slide_up");
+        }
+        if (gs.getSearchCategoryScope() == null || !ALLOWED_SEARCH_CATEGORY_SCOPES.contains(gs.getSearchCategoryScope())) {
+            gs.setSearchCategoryScope("none");
+        }
+        if (gs.getSearchPlaceholder() == null || gs.getSearchPlaceholder().isBlank()) {
+            gs.setSearchPlaceholder("Buscar productos...");
+        } else {
+            String ph = gs.getSearchPlaceholder().trim();
+            gs.setSearchPlaceholder(ph.length() > 120 ? ph.substring(0, 120) : ph);
+        }
+        if (gs.getSearchButtonLabel() == null || gs.getSearchButtonLabel().isBlank()) {
+            gs.setSearchButtonLabel("Buscar");
+        } else {
+            String bl = gs.getSearchButtonLabel().trim();
+            gs.setSearchButtonLabel(bl.length() > 40 ? bl.substring(0, 40) : bl);
+        }
+        if (gs.getSearchEmptyMessage() == null || gs.getSearchEmptyMessage().isBlank()) {
+            gs.setSearchEmptyMessage("No encontramos productos para tu búsqueda");
+        } else {
+            String em = gs.getSearchEmptyMessage().trim();
+            gs.setSearchEmptyMessage(em.length() > 160 ? em.substring(0, 160) : em);
+        }
+        if (gs.getSearchPopularTerms() == null) {
+            gs.setSearchPopularTerms("");
+        } else {
+            String pt = gs.getSearchPopularTerms().trim();
+            gs.setSearchPopularTerms(pt.length() > 240 ? pt.substring(0, 240) : pt);
+        }
+        if (gs.getSearchMinChars() == null || gs.getSearchMinChars() < 1 || gs.getSearchMinChars() > 5) {
+            gs.setSearchMinChars(2);
+        }
+        if (gs.getSearchDebounceMs() == null || gs.getSearchDebounceMs() < 0 || gs.getSearchDebounceMs() > 1000) {
+            gs.setSearchDebounceMs(250);
+        }
+        if (gs.getSearchMaxSuggestions() == null || gs.getSearchMaxSuggestions() < 2 || gs.getSearchMaxSuggestions() > 12) {
+            gs.setSearchMaxSuggestions(6);
+        }
+        if (gs.getSearchShowProductImg() == null) gs.setSearchShowProductImg(true);
+        if (gs.getSearchShowProductPrice() == null) gs.setSearchShowProductPrice(true);
+        if (gs.getSearchShowProductDiscount() == null) gs.setSearchShowProductDiscount(true);
+        if (gs.getSearchShowProductCategory() == null) gs.setSearchShowProductCategory(true);
+        if (gs.getSearchShowProductBrand() == null) gs.setSearchShowProductBrand(false);
+        if (gs.getSearchSuggestCategories() == null) gs.setSearchSuggestCategories(true);
+        if (gs.getSearchSuggestBrands() == null) gs.setSearchSuggestBrands(true);
+        if (gs.getSearchShowRecent() == null) gs.setSearchShowRecent(true);
+        if (gs.getSearchAdvancedEnabled() == null) gs.setSearchAdvancedEnabled(false);
+        if (gs.getSearchMatchVariants() == null) gs.setSearchMatchVariants(true);
+        if (gs.getSearchMatchSpecs() == null) gs.setSearchMatchSpecs(true);
+        if (gs.getSearchAdvCategory() == null) gs.setSearchAdvCategory(true);
+        if (gs.getSearchAdvBrand() == null) gs.setSearchAdvBrand(true);
+        if (gs.getSearchAdvPrice() == null) gs.setSearchAdvPrice(true);
+        if (gs.getSearchAdvAvailability() == null) gs.setSearchAdvAvailability(true);
+        if (gs.getSearchAdvVariants() == null) gs.setSearchAdvVariants(true);
+        if (gs.getSearchAdvSpecs() == null) gs.setSearchAdvSpecs(false);
 
         if (config.getPages() == null) {
             config.setPages(new LinkedHashMap<>());

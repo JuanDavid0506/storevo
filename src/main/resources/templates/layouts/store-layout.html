@@ -142,11 +142,49 @@
                data-sv-filter-offers=${gs == null or gs.filterShowOffers == null or gs.filterShowOffers},
                data-sv-filter-availability=${gs == null or gs.filterShowAvailability == null or gs.filterShowAvailability},
                data-sv-filter-brand=${gs == null or gs.filterShowBrand == null or gs.filterShowBrand},
-               data-sv-filter-variants=${gs == null or gs.filterShowVariants == null or gs.filterShowVariants},
-               data-sv-filter-specs=${gs != null and gs.filterShowSpecs != null ? gs.filterShowSpecs : false}">
+                data-sv-filter-variants=${gs == null or gs.filterShowVariants == null or gs.filterShowVariants},
+                data-sv-filter-specs=${gs != null and gs.filterShowSpecs != null ? gs.filterShowSpecs : false},
+                data-sv-search-enabled=${gs == null or gs.searchEnabled == null or gs.searchEnabled},
+                data-sv-search-mode=${gs != null and gs.searchMode != null ? gs.searchMode : 'predictive'},
+                data-sv-search-navbar-variant=${gs != null and gs.searchNavbarVariant != null ? gs.searchNavbarVariant : 'auto'},
+                data-sv-search-mobile-mode=${gs != null and gs.searchMobileMode != null ? gs.searchMobileMode : 'fullscreen'},
+                data-sv-search-input-style=${gs != null and gs.searchInputStyle != null ? gs.searchInputStyle : 'sync'},
+                data-sv-search-input-size=${gs != null and gs.searchInputSize != null ? gs.searchInputSize : 'normal'},
+                data-sv-search-button-mode=${gs != null and gs.searchButtonMode != null ? gs.searchButtonMode : 'icon'},
+                data-sv-search-anim=${gs != null and gs.searchAnim != null ? gs.searchAnim : 'slide_up'},
+                data-sv-search-placeholder=${gs != null and gs.searchPlaceholder != null ? gs.searchPlaceholder : 'Buscar productos...'},
+                data-sv-search-button-label=${gs != null and gs.searchButtonLabel != null ? gs.searchButtonLabel : 'Buscar'},
+                data-sv-search-empty-message=${gs != null and gs.searchEmptyMessage != null ? gs.searchEmptyMessage : 'No encontramos productos para tu búsqueda'},
+                data-sv-search-min-chars=${gs != null and gs.searchMinChars != null ? gs.searchMinChars : 2},
+                data-sv-search-debounce-ms=${gs != null and gs.searchDebounceMs != null ? gs.searchDebounceMs : 250},
+                data-sv-search-max-suggestions=${gs != null and gs.searchMaxSuggestions != null ? gs.searchMaxSuggestions : 6},
+                data-sv-search-show-product-img=${gs == null or gs.searchShowProductImg == null or gs.searchShowProductImg},
+                data-sv-search-show-product-price=${gs == null or gs.searchShowProductPrice == null or gs.searchShowProductPrice},
+                data-sv-search-show-product-discount=${gs == null or gs.searchShowProductDiscount == null or gs.searchShowProductDiscount},
+                data-sv-search-show-product-category=${gs == null or gs.searchShowProductCategory == null or gs.searchShowProductCategory},
+                data-sv-search-show-product-brand=${gs != null and gs.searchShowProductBrand != null ? gs.searchShowProductBrand : false},
+                data-sv-search-suggest-categories=${gs == null or gs.searchSuggestCategories == null or gs.searchSuggestCategories},
+                data-sv-search-suggest-brands=${gs == null or gs.searchSuggestBrands == null or gs.searchSuggestBrands},
+                data-sv-search-show-recent=${gs == null or gs.searchShowRecent == null or gs.searchShowRecent},
+                data-sv-search-popular-terms=${gs != null and gs.searchPopularTerms != null ? gs.searchPopularTerms : ''},
+                data-sv-search-category-scope=${gs != null and gs.searchCategoryScope != null ? gs.searchCategoryScope : 'none'},
+                data-sv-search-advanced-enabled=${gs != null and gs.searchAdvancedEnabled != null ? gs.searchAdvancedEnabled : false},
+                data-sv-search-match-variants=${gs == null or gs.searchMatchVariants == null or gs.searchMatchVariants},
+                data-sv-search-match-specs=${gs == null or gs.searchMatchSpecs == null or gs.searchMatchSpecs},
+                data-sv-search-adv-category=${gs == null or gs.searchAdvCategory == null or gs.searchAdvCategory},
+                data-sv-search-adv-brand=${gs == null or gs.searchAdvBrand == null or gs.searchAdvBrand},
+                data-sv-search-adv-price=${gs == null or gs.searchAdvPrice == null or gs.searchAdvPrice},
+                data-sv-search-adv-availability=${gs == null or gs.searchAdvAvailability == null or gs.searchAdvAvailability},
+                data-sv-search-adv-variants=${gs == null or gs.searchAdvVariants == null or gs.searchAdvVariants},
+                data-sv-search-adv-specs=${gs != null and gs.searchAdvSpecs != null ? gs.searchAdvSpecs : false}">
+
 <nav th:replace="~{components/store-navbar :: storeNavbar}"></nav>
 <script th:src="@{/js/ui/navbarStyle.js}"></script>
+
 <main id="storevoMainContent" class="flex-1 flex flex-col">
+    <script id="storevo-filter-data-json" type="application/json"
+            th:if="${catalogFilterDataJson != null}"
+            th:utext="${catalogFilterDataJson}"></script>
     <script>
         (function() {
             if (!window.__storevoLifecycleHookInstalled) {
@@ -1222,7 +1260,7 @@
         function isPureFormOrFilterControl(target) {
             if (!target || !target.closest) return false;
             return Boolean(
-                target.closest('input, select, textarea, [data-qty-step], .sv-filter-open-btn, .sv-filter-drawer-backdrop, .sv-global-filters-host, .sv-catalog-sidebar, .sv-active-filters-bar')
+                target.closest('input, select, textarea, [data-qty-step], .sv-filter-open-btn, .sv-filter-drawer-backdrop, .sv-global-filters-host, .sv-catalog-sidebar, .sv-active-filters-bar, .sv-nav__search, .sv-nav__search-expand, .sv-nav__search-trigger, .sv-search-panel, .sv-search-modal-backdrop, .sv-toolbar-search-box, .sv-search-cat-pills')
             );
         }
 
@@ -1373,10 +1411,57 @@
                 }
             });
 
+            const searchKeysMap = {
+                searchEnabled: 'svSearchEnabled',
+                searchMode: 'svSearchMode',
+                searchNavbarVariant: 'svSearchNavbarVariant',
+                searchMobileMode: 'svSearchMobileMode',
+                searchInputStyle: 'svSearchInputStyle',
+                searchInputSize: 'svSearchInputSize',
+                searchButtonMode: 'svSearchButtonMode',
+                searchAnim: 'svSearchAnim',
+                searchPlaceholder: 'svSearchPlaceholder',
+                searchButtonLabel: 'svSearchButtonLabel',
+                searchEmptyMessage: 'svSearchEmptyMessage',
+                searchMinChars: 'svSearchMinChars',
+                searchDebounceMs: 'svSearchDebounceMs',
+                searchMaxSuggestions: 'svSearchMaxSuggestions',
+                searchShowProductImg: 'svSearchShowProductImg',
+                searchShowProductPrice: 'svSearchShowProductPrice',
+                searchShowProductDiscount: 'svSearchShowProductDiscount',
+                searchShowProductCategory: 'svSearchShowProductCategory',
+                searchShowProductBrand: 'svSearchShowProductBrand',
+                searchSuggestCategories: 'svSearchSuggestCategories',
+                searchSuggestBrands: 'svSearchSuggestBrands',
+                searchShowRecent: 'svSearchShowRecent',
+                searchPopularTerms: 'svSearchPopularTerms',
+                searchCategoryScope: 'svSearchCategoryScope',
+                searchAdvancedEnabled: 'svSearchAdvancedEnabled',
+                searchMatchVariants: 'svSearchMatchVariants',
+                searchMatchSpecs: 'svSearchMatchSpecs',
+                searchAdvCategory: 'svSearchAdvCategory',
+                searchAdvBrand: 'svSearchAdvBrand',
+                searchAdvPrice: 'svSearchAdvPrice',
+                searchAdvAvailability: 'svSearchAdvAvailability',
+                searchAdvVariants: 'svSearchAdvVariants',
+                searchAdvSpecs: 'svSearchAdvSpecs'
+            };
+            let hasSearchPayload = false;
+            Object.keys(searchKeysMap).forEach(key => {
+                if (s[key] !== undefined && s[key] !== null) {
+                    const dataKey = searchKeysMap[key];
+                    document.body.dataset[dataKey] = String(s[key]);
+                    hasSearchPayload = true;
+                }
+            });
+
             syncLiveFilterToolbarDOM();
 
             if (hasFilterPayload) {
                 document.dispatchEvent(new CustomEvent('storevo:filter-config-updated', { detail: s }));
+            }
+            if (hasSearchPayload || hasFilterPayload) {
+                document.dispatchEvent(new CustomEvent('storevo:search-config-updated', { detail: s }));
             }
         };
 

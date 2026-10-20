@@ -183,3 +183,607 @@
         display: none !important;
     }
 }
+
+/* =========================================================================
+   STOREVO - SISTEMA GLOBAL DE BÚSQUEDA DE PRODUCTOS (Storevo.Search)
+   ========================================================================= */
+
+/* 1) Interruptor maestro cuando el buscador está desactivado */
+body[data-sv-search-enabled="false"] .sv-nav__search,
+body[data-sv-search-enabled="false"] .sv-nav__search-trigger,
+body[data-sv-search-enabled="false"] .sv-nav__search-expand,
+body[data-sv-search-enabled="false"] .sv-drawer__search-wrap,
+body[data-sv-search-enabled="false"] .sv-filter-search-wrap {
+    display: none !important;
+}
+
+/* 2) Estructura interna de la caja de búsqueda en Navbar y Catálogo */
+.sv-nav__search {
+    position: relative;
+    z-index: 65;
+}
+.sv-nav__search .sv-search-box,
+.sv-toolbar-search-box {
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+    position: relative;
+    background: var(--nav-field-bg, #f1f5f9);
+    color: var(--nav-field-fg, #0f172a);
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 9999px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+.sv-toolbar-search-box {
+    background: #f8fafc;
+    color: #0f172a;
+    border-color: #e2e8f0;
+}
+.sv-nav__search .sv-search-box:focus-within,
+.sv-toolbar-search-box:focus-within {
+    border-color: var(--brand-color, #6366f1);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-color, #6366f1) 16%, transparent);
+}
+.sv-toolbar-search-box:focus-within {
+    background: #ffffff;
+}
+
+/* Neutralizar regla genérica .sv-nav__search svg para iconos internos de botones y paneles */
+.sv-nav__search svg:not(.sv-search-lead-icon) {
+    position: static !important;
+    top: auto !important;
+    left: auto !important;
+    transform: none !important;
+    pointer-events: auto !important;
+}
+
+.sv-search-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex: 1 1 0%;
+    min-width: 0;
+}
+
+.sv-nav__search .sv-search-input-wrap input {
+    width: 100% !important;
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    padding: 0.45rem 0.5rem 0.45rem 2.25rem;
+    color: inherit !important;
+    font-size: 0.85rem;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+/* Ajustar ancho base de .sv-nav__search en escritorio */
+@media (min-width: 1024px) {
+    .sv-nav:not([data-nav-layout="marketplace"]) .sv-nav__search:not(.sv-nav__search--expanded) {
+        width: 15.5rem;
+    }
+}
+@media (min-width: 1280px) {
+    .sv-nav:not([data-nav-layout="marketplace"]) .sv-nav__search:not(.sv-nav__search--expanded) {
+        width: 18rem;
+    }
+}
+
+/* 3) Estilos de bordes del campo (sync | pill | rounded | square | underline) */
+body[data-sv-search-input-style="pill"] .sv-search-box,
+body[data-sv-search-input-style="pill"] .sv-toolbar-search-box,
+body[data-sv-search-input-style="pill"] .sv-drawer__search-input {
+    border-radius: 9999px !important;
+}
+body[data-sv-search-input-style="rounded"] .sv-search-box,
+body[data-sv-search-input-style="rounded"] .sv-toolbar-search-box,
+body[data-sv-search-input-style="rounded"] .sv-drawer__search-input {
+    border-radius: 0.75rem !important;
+}
+body[data-sv-search-input-style="square"] .sv-search-box,
+body[data-sv-search-input-style="square"] .sv-toolbar-search-box,
+body[data-sv-search-input-style="square"] .sv-drawer__search-input {
+    border-radius: 0px !important;
+}
+body[data-sv-search-input-style="sync"] .sv-search-box,
+body[data-sv-search-input-style="sync"] .sv-toolbar-search-box,
+body[data-sv-search-input-style="sync"] .sv-drawer__search-input {
+    border-radius: min(var(--store-radius, 0.875rem), 1.25rem) !important;
+}
+body[data-sv-search-input-style="underline"] .sv-search-box,
+body[data-sv-search-input-style="underline"] .sv-toolbar-search-box {
+    border-radius: 0 !important;
+    border-top: 0 !important;
+    border-left: 0 !important;
+    border-right: 0 !important;
+    border-bottom-width: 2px !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+/* 4) Tamaños del campo (compact | normal | large) */
+body[data-sv-search-input-size="compact"] .sv-nav__search .sv-search-input-wrap input,
+body[data-sv-search-input-size="compact"] .sv-toolbar-search-box input.sv-search-input {
+    padding-top: 0.32rem !important;
+    padding-bottom: 0.32rem !important;
+    font-size: 0.78rem !important;
+}
+body[data-sv-search-input-size="large"] .sv-nav__search .sv-search-input-wrap input,
+body[data-sv-search-input-size="large"] .sv-toolbar-search-box input.sv-search-input {
+    padding-top: 0.68rem !important;
+    padding-bottom: 0.68rem !important;
+    font-size: 0.94rem !important;
+}
+
+/* 5) Selector de categoría integrado a la izquierda (select_left) */
+.sv-search-cat-select {
+    appearance: none;
+    background-color: rgba(15, 23, 42, 0.05);
+    color: inherit;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0 1.4rem 0 0.75rem;
+    border: 0;
+    border-right: 1px solid rgba(148, 163, 184, 0.28);
+    border-top-left-radius: inherit;
+    border-bottom-left-radius: inherit;
+    max-width: 7.75rem;
+    cursor: pointer;
+    outline: none;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+/* 6) Botón limpiar (×) y botón de acción (icon | text | icon_text | none) */
+.sv-search-clear-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem;
+    margin-right: 0.25rem;
+    color: #94a3b8;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    border-radius: 9999px;
+    flex-shrink: 0;
+}
+.sv-search-clear-btn:hover {
+    color: #ef4444;
+}
+.sv-search-clear-btn svg {
+    width: 0.95rem;
+    height: 0.95rem;
+}
+
+.sv-search-submit-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    margin: 0.2rem;
+    padding: 0.32rem 0.65rem;
+    border-radius: inherit;
+    background-color: var(--brand-color, #6366f1);
+    color: #ffffff;
+    font-size: 0.75rem;
+    font-weight: 800;
+    border: 0;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: filter 0.15s ease, opacity 0.15s ease;
+}
+.sv-search-submit-btn:hover {
+    filter: brightness(0.93);
+}
+.sv-search-submit-btn svg.sv-search-submit-icon {
+    width: 0.9rem;
+    height: 0.9rem;
+}
+
+body[data-sv-search-button-mode="none"] .sv-search-submit-btn {
+    display: none !important;
+}
+body[data-sv-search-button-mode="icon"] .sv-search-submit-label {
+    display: none !important;
+}
+body[data-sv-search-button-mode="icon"] .sv-search-submit-btn {
+    padding: 0.35rem 0.5rem;
+}
+body[data-sv-search-button-mode="text"] .sv-search-submit-icon {
+    display: none !important;
+}
+
+/* 7) Variantes del buscador en el Navbar (auto | inline_bar | expandable_icon | modal_trigger | hidden) */
+.sv-nav__search-trigger {
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+.sv-nav__search-trigger-label {
+    display: none;
+    font-size: 0.78rem;
+    font-weight: 700;
+    max-width: 8.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* En modo auto, ocultar la lupa de acciones cuando la barra inline ya es visible en PC */
+@media (min-width: 768px) {
+    body:not([data-sv-search-navbar-variant]),
+    body[data-sv-search-navbar-variant="auto"] {
+        /* En centered y marketplace la barra ya se ve desde 768px */
+    }
+    body[data-sv-search-navbar-variant="auto"] .sv-nav[data-nav-layout="centered"] .sv-nav__search-trigger,
+    body[data-sv-search-navbar-variant="auto"] .sv-nav[data-nav-layout="marketplace"] .sv-nav__search-trigger {
+        display: none !important;
+    }
+}
+@media (min-width: 1024px) {
+    body[data-sv-search-navbar-variant="auto"] .sv-nav:not([data-nav-layout="minimal"]) .sv-nav__search-trigger {
+        display: none !important;
+    }
+    body[data-sv-search-navbar-variant="inline_bar"] .sv-nav .sv-nav__search-trigger {
+        display: none !important;
+    }
+    body[data-sv-search-navbar-variant="inline_bar"] .sv-nav[data-nav-layout="minimal"] .sv-nav__grid {
+        grid-template-columns: auto 1fr auto auto;
+        grid-template-areas: "burger logo search actions";
+    }
+    body[data-sv-search-navbar-variant="inline_bar"] .sv-nav[data-nav-layout="minimal"] .sv-nav__search {
+        display: flex !important;
+        justify-self: end;
+    }
+}
+
+/* Variante expandable_icon y modal_trigger: ocultar barra inline y usar el botón de acciones */
+body[data-sv-search-navbar-variant="expandable_icon"] .sv-nav__grid > .sv-nav__search,
+body[data-sv-search-navbar-variant="modal_trigger"] .sv-nav__grid > .sv-nav__search,
+body[data-sv-search-navbar-variant="hidden"] .sv-nav__grid > .sv-nav__search,
+body[data-sv-search-navbar-variant="hidden"] .sv-nav__search-trigger,
+body[data-sv-search-navbar-variant="hidden"] .sv-nav__search-expand {
+    display: none !important;
+}
+@media (min-width: 1024px) {
+    body[data-sv-search-navbar-variant="expandable_icon"] .sv-nav:not([data-nav-layout="centered"]):not([data-nav-layout="marketplace"]):not([data-nav-layout="minimal"]) .sv-nav__grid,
+    body[data-sv-search-navbar-variant="modal_trigger"] .sv-nav:not([data-nav-layout="centered"]):not([data-nav-layout="marketplace"]):not([data-nav-layout="minimal"]) .sv-nav__grid,
+    body[data-sv-search-navbar-variant="hidden"] .sv-nav:not([data-nav-layout="centered"]):not([data-nav-layout="marketplace"]):not([data-nav-layout="minimal"]) .sv-nav__grid {
+        grid-template-columns: auto minmax(0, 1fr) auto !important;
+        grid-template-areas: "logo menu actions" !important;
+    }
+}
+body[data-sv-search-navbar-variant="modal_trigger"] .sv-nav__search-trigger {
+    background: var(--nav-field-bg, rgba(15, 23, 42, 0.07));
+    color: var(--nav-field-fg, inherit);
+    padding: 0.38rem 0.85rem !important;
+    border-radius: 9999px !important;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+}
+@media (min-width: 640px) {
+    body[data-sv-search-navbar-variant="modal_trigger"] .sv-nav__search-trigger-label {
+        display: inline-block;
+    }
+}
+
+/* Barra desplegable inferior en el Navbar (expandable_icon) */
+.sv-nav__search-expand {
+    padding: 0.75rem 0 0.9rem;
+    border-top: 1px solid var(--nav-border, #e2e8f0);
+    animation: svSearchFadeSlide 0.18s ease-out;
+}
+.sv-nav__search--expanded {
+    display: flex !important;
+    width: 100% !important;
+    max-width: 44rem;
+    margin: 0 auto;
+}
+.sv-search-expand-close {
+    margin-left: 0.5rem;
+    padding: 0.4rem;
+    color: var(--nav-link, #475569);
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 8) Panel desplegable de sugerencias y resultados en vivo (Predictivo e Instantáneo) */
+.sv-search-panel-host {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    right: 0;
+    width: min(94vw, 38rem);
+    z-index: 85;
+    pointer-events: none;
+}
+.sv-nav[data-nav-layout="centered"] .sv-search-panel-host,
+.sv-nav[data-nav-layout="marketplace"] .sv-search-panel-host,
+.sv-nav__search--expanded .sv-search-panel-host,
+.sv-toolbar-search-wrap .sv-search-panel-host {
+    left: 0;
+    right: auto;
+    width: min(94vw, 42rem);
+}
+
+.sv-search-panel {
+    background: #ffffff;
+    color: #0f172a;
+    border-radius: min(var(--store-radius, 1rem), 1.25rem);
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 24px 48px -12px rgba(15, 23, 42, 0.22);
+    overflow: hidden;
+    pointer-events: auto;
+    max-height: min(76vh, 34rem);
+    display: flex;
+    flex-direction: column;
+    transform-origin: top center;
+}
+
+body[data-sv-search-anim="slide_up"] .sv-search-panel {
+    animation: svSearchFadeSlide 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+body[data-sv-search-anim="fade"] .sv-search-panel {
+    animation: svSearchFadeOnly 0.15s ease-out;
+}
+body[data-sv-search-anim="scale"] .sv-search-panel {
+    animation: svSearchScaleIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes svSearchFadeSlide {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+@keyframes svSearchFadeOnly {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+@keyframes svSearchScaleIn {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.sv-search-panel__body {
+    padding: 1rem;
+    overflow-y: auto;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+.sv-search-panel__section-title {
+    font-size: 0.68rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #64748b;
+    margin-bottom: 0.45rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.sv-search-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0.6rem;
+    border-radius: 0.75rem;
+    text-decoration: none;
+    color: #0f172a;
+    transition: background-color 0.15s ease;
+}
+.sv-search-item:hover,
+.sv-search-item.is-highlighted {
+    background-color: #f8fafc;
+}
+.sv-search-item__thumb {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 0.6rem;
+    object-fit: cover;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    flex-shrink: 0;
+}
+.sv-search-panel__footer {
+    padding: 0.7rem 1rem;
+    background: #f8fafc;
+    border-top: 1px solid #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+.sv-search-cat-pills {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+    scrollbar-width: none;
+}
+.sv-search-cat-pills::-webkit-scrollbar {
+    display: none;
+}
+.sv-search-cat-pill {
+    padding: 0.25rem 0.65rem;
+    border-radius: 9999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    white-space: nowrap;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.sv-search-cat-pill.is-active {
+    background: var(--brand-color, #6366f1);
+    border-color: var(--brand-color, #6366f1);
+    color: #ffffff;
+}
+
+/* 9) Modalidad 4: Overlay de Búsqueda de Pantalla Completa / Modal Amplio */
+.sv-search-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 95;
+    background: rgba(15, 23, 42, 0.68);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 0;
+    overflow-y: auto;
+}
+@media (min-width: 640px) {
+    .sv-search-modal-backdrop {
+        padding: 3.5vh 1.25rem;
+    }
+}
+.sv-search-modal-backdrop.is-open {
+    display: flex !important;
+}
+
+.sv-search-modal {
+    width: 100%;
+    max-width: 56rem;
+    min-height: 100vh;
+    background: #ffffff;
+    color: #0f172a;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 60px -15px rgba(2, 6, 23, 0.45);
+    overflow: hidden;
+}
+@media (min-width: 640px) {
+    .sv-search-modal {
+        min-height: auto;
+        max-height: 90vh;
+        border-radius: min(var(--store-radius, 1.25rem), 1.5rem);
+        border: 1px solid #e2e8f0;
+    }
+}
+
+body[data-sv-search-anim="slide_up"] .sv-search-modal {
+    animation: svSearchFadeSlide 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+body[data-sv-search-anim="fade"] .sv-search-modal {
+    animation: svSearchFadeOnly 0.18s ease-out;
+}
+body[data-sv-search-anim="scale"] .sv-search-modal {
+    animation: svSearchScaleIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sv-search-modal__header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+.sv-search-modal__close {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 9999px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    color: #475569;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+}
+.sv-search-modal__close:hover {
+    color: #0f172a;
+    border-color: #cbd5e1;
+    transform: scale(1.04);
+}
+.sv-search-modal__body {
+    padding: 1.25rem;
+    overflow-y: auto;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+.sv-search-modal__grid {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+@media (min-width: 640px) {
+    .sv-search-modal__grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+/* 10) Modalidades 6 y 7: Criterios de Búsqueda Avanzada, Variantes y Atributos */
+.sv-search-adv-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.85rem;
+    padding: 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+.sv-search-adv-grid {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 0.6rem;
+}
+@media (min-width: 640px) {
+    .sv-search-adv-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+.sv-search-adv-select,
+.sv-search-adv-input {
+    width: 100%;
+    padding: 0.42rem 0.65rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #1e293b;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.6rem;
+    outline: none;
+}
+.sv-search-adv-select:focus,
+.sv-search-adv-input:focus {
+    border-color: var(--brand-color, #6366f1);
+}
+.sv-search-adv-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+.sv-search-adv-pill {
+    padding: 0.22rem 0.6rem;
+    border-radius: 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #334155;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.sv-search-adv-pill.is-active {
+    background: var(--brand-color, #6366f1);
+    border-color: var(--brand-color, #6366f1);
+    color: #ffffff;
+}

@@ -238,5 +238,141 @@ public class ThemeGlobalStylesDto {
     @Builder.Default
     private Boolean filterShowSpecs = false;
 
+
+    // =========================================================
+    // CONFIGURACIÓN GLOBAL DEL BUSCADOR DE PRODUCTOS
+    // =========================================================
+
+    @Builder.Default
+    private Boolean searchEnabled = true;
+
+    /**
+     * Modalidad del buscador:
+     * traditional | instant | predictive | fullscreen
+     */
+    @Builder.Default
+    private String searchMode = "predictive";
+
+    /**
+     * Presentación del buscador en el Navbar:
+     * auto | inline_bar | expandable_icon | modal_trigger | hidden
+     */
+    @Builder.Default
+    private String searchNavbarVariant = "auto";
+
+    /**
+     * Comportamiento en dispositivos móviles:
+     * fullscreen | same
+     */
+    @Builder.Default
+    private String searchMobileMode = "fullscreen";
+
+    /**
+     * Estilo visual del campo de búsqueda:
+     * sync | pill | rounded | square | underline
+     */
+    @Builder.Default
+    private String searchInputStyle = "sync";
+
+    /**
+     * Tamaño del campo de búsqueda:
+     * compact | normal | large
+     */
+    @Builder.Default
+    private String searchInputSize = "normal";
+
+    /**
+     * Tipo de botón de acción en el buscador:
+     * icon | text | icon_text | none
+     */
+    @Builder.Default
+    private String searchButtonMode = "icon";
+
+    /**
+     * Animación de apertura del panel de búsqueda:
+     * slide_up | fade | scale
+     */
+    @Builder.Default
+    private String searchAnim = "slide_up";
+
+    @Builder.Default
+    private String searchPlaceholder = "Buscar productos...";
+
+    @Builder.Default
+    private String searchButtonLabel = "Buscar";
+
+    @Builder.Default
+    private String searchEmptyMessage = "No encontramos productos para tu búsqueda";
+
+    @Builder.Default
+    private Integer searchMinChars = 2;
+
+    @Builder.Default
+    private Integer searchDebounceMs = 250;
+
+    @Builder.Default
+    private Integer searchMaxSuggestions = 6;
+
+    @Builder.Default
+    private Boolean searchShowProductImg = true;
+
+    @Builder.Default
+    private Boolean searchShowProductPrice = true;
+
+    @Builder.Default
+    private Boolean searchShowProductDiscount = true;
+
+    @Builder.Default
+    private Boolean searchShowProductCategory = true;
+
+    @Builder.Default
+    private Boolean searchShowProductBrand = false;
+
+    @Builder.Default
+    private Boolean searchSuggestCategories = true;
+
+    @Builder.Default
+    private Boolean searchSuggestBrands = true;
+
+    @Builder.Default
+    private Boolean searchShowRecent = true;
+
+    @Builder.Default
+    private String searchPopularTerms = "";
+
+    /**
+     * Selector de categorías en el buscador:
+     * none | select_left | pills_top
+     */
+    @Builder.Default
+    private String searchCategoryScope = "none";
+
+    @Builder.Default
+    private Boolean searchAdvancedEnabled = false;
+
+    @Builder.Default
+    private Boolean searchMatchVariants = true;
+
+    @Builder.Default
+    private Boolean searchMatchSpecs = true;
+
+    @Builder.Default
+    private Boolean searchAdvCategory = true;
+
+    @Builder.Default
+    private Boolean searchAdvBrand = true;
+
+    @Builder.Default
+    private Boolean searchAdvPrice = true;
+
+    @Builder.Default
+    private Boolean searchAdvAvailability = true;
+
+    @Builder.Default
+    private Boolean searchAdvVariants = true;
+
+    @Builder.Default
+    private Boolean searchAdvSpecs = false;
+
 }
 

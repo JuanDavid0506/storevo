@@ -2227,6 +2227,220 @@ Storevo.ThemeEditor = {
         }
 
         syncGlobalFilterUI();
+
+        // =====================================================================
+        // 6. SISTEMA GLOBAL DEL BUSCADOR DE PRODUCTOS
+        // =====================================================================
+        const DEFAULT_GLOBAL_SEARCH_STYLES = {
+            searchEnabled: true,
+            searchMode: 'predictive',
+            searchNavbarVariant: 'auto',
+            searchMobileMode: 'fullscreen',
+            searchInputStyle: 'sync',
+            searchInputSize: 'normal',
+            searchButtonMode: 'icon',
+            searchAnim: 'slide_up',
+            searchPlaceholder: 'Buscar productos...',
+            searchButtonLabel: 'Buscar',
+            searchEmptyMessage: 'No encontramos productos para tu búsqueda',
+            searchMinChars: 2,
+            searchDebounceMs: 250,
+            searchMaxSuggestions: 6,
+            searchShowProductImg: true,
+            searchShowProductPrice: true,
+            searchShowProductDiscount: true,
+            searchShowProductCategory: true,
+            searchShowProductBrand: false,
+            searchSuggestCategories: true,
+            searchSuggestBrands: true,
+            searchShowRecent: true,
+            searchPopularTerms: '',
+            searchCategoryScope: 'none',
+            searchAdvancedEnabled: false,
+            searchMatchVariants: true,
+            searchMatchSpecs: true,
+            searchAdvCategory: true,
+            searchAdvBrand: true,
+            searchAdvPrice: true,
+            searchAdvAvailability: true,
+            searchAdvVariants: true,
+            searchAdvSpecs: false
+        };
+
+        Object.entries(DEFAULT_GLOBAL_SEARCH_STYLES).forEach(([k, defVal]) => {
+            if (gs[k] === undefined || gs[k] === null) {
+                gs[k] = defVal;
+            }
+        });
+
+        const searchModeWrap = document.getElementById('style-search-mode');
+        const searchLiveGroup = document.getElementById('style-search-live-group');
+        const searchPredictiveExtras = document.getElementById('style-search-predictive-extras');
+        const searchAdvCriteriaGroup = document.getElementById('style-search-adv-criteria-group');
+
+        const searchSelectMap = {
+            'style-search-navbar-variant': 'searchNavbarVariant',
+            'style-search-mobile-mode': 'searchMobileMode',
+            'style-search-category-scope': 'searchCategoryScope',
+            'style-search-input-style': 'searchInputStyle',
+            'style-search-input-size': 'searchInputSize',
+            'style-search-button-mode': 'searchButtonMode',
+            'style-search-anim': 'searchAnim',
+            'style-search-min-chars': 'searchMinChars',
+            'style-search-debounce-ms': 'searchDebounceMs',
+            'style-search-max-suggestions': 'searchMaxSuggestions'
+        };
+
+        const searchTextMap = {
+            'style-search-placeholder': 'searchPlaceholder',
+            'style-search-button-label': 'searchButtonLabel',
+            'style-search-empty-message': 'searchEmptyMessage',
+            'style-search-popular-terms': 'searchPopularTerms'
+        };
+
+        const searchCheckboxMap = {
+            'style-search-enabled': 'searchEnabled',
+            'style-search-show-img': 'searchShowProductImg',
+            'style-search-show-price': 'searchShowProductPrice',
+            'style-search-show-discount': 'searchShowProductDiscount',
+            'style-search-show-category': 'searchShowProductCategory',
+            'style-search-show-brand': 'searchShowProductBrand',
+            'style-search-show-recent': 'searchShowRecent',
+            'style-search-match-variants': 'searchMatchVariants',
+            'style-search-match-specs': 'searchMatchSpecs',
+            'style-search-advanced-enabled': 'searchAdvancedEnabled',
+            'style-search-adv-brand': 'searchAdvBrand',
+            'style-search-adv-price': 'searchAdvPrice',
+            'style-search-adv-availability': 'searchAdvAvailability',
+            'style-search-adv-variants': 'searchAdvVariants',
+            'style-search-adv-specs': 'searchAdvSpecs'
+        };
+
+        const syncGlobalSearchUI = () => {
+            const g = liveStyles();
+            const activeMode = g.searchMode || 'predictive';
+
+            if (searchModeWrap) {
+                searchModeWrap.querySelectorAll('button[data-value]').forEach(btn => {
+                    btn.classList.toggle('is-selected', btn.getAttribute('data-value') === activeMode);
+                });
+            }
+
+            // Mostrar únicamente las opciones pertinentes según la modalidad seleccionada
+            if (searchLiveGroup) {
+                searchLiveGroup.classList.toggle('hidden', activeMode === 'traditional');
+            }
+            if (searchPredictiveExtras) {
+                searchPredictiveExtras.classList.toggle('hidden', activeMode === 'instant');
+            }
+            if (searchAdvCriteriaGroup) {
+                searchAdvCriteriaGroup.classList.toggle('hidden', !g.searchAdvancedEnabled);
+            }
+
+            Object.entries(searchSelectMap).forEach(([elId, propKey]) => {
+                const el = document.getElementById(elId);
+                if (el) {
+                    el.value = g[propKey] !== undefined && g[propKey] !== null
+                        ? String(g[propKey])
+                        : String(DEFAULT_GLOBAL_SEARCH_STYLES[propKey]);
+                }
+            });
+
+            Object.entries(searchTextMap).forEach(([elId, propKey]) => {
+                const el = document.getElementById(elId);
+                if (el && document.activeElement !== el) {
+                    el.value = g[propKey] !== undefined && g[propKey] !== null
+                        ? String(g[propKey])
+                        : String(DEFAULT_GLOBAL_SEARCH_STYLES[propKey]);
+                }
+            });
+
+            Object.entries(searchCheckboxMap).forEach(([elId, propKey]) => {
+                const chk = document.getElementById(elId);
+                if (chk) {
+                    chk.checked = g[propKey] !== undefined && g[propKey] !== null
+                        ? Boolean(g[propKey])
+                        : Boolean(DEFAULT_GLOBAL_SEARCH_STYLES[propKey]);
+                }
+            });
+
+            const suggestCatsChk = document.getElementById('style-search-suggest-cats');
+            if (suggestCatsChk) {
+                suggestCatsChk.checked = g.searchSuggestCategories !== false;
+            }
+        };
+
+        if (searchModeWrap) {
+            searchModeWrap.querySelectorAll('button[data-value]').forEach(btn => {
+                btn.onclick = () => {
+                    liveStyles().searchMode = btn.getAttribute('data-value') || 'predictive';
+                    syncGlobalSearchUI();
+                    this.pushLiveStylesToIframe();
+                    this.scheduleAutoSave(false);
+                };
+            });
+        }
+
+        Object.entries(searchSelectMap).forEach(([elId, propKey]) => {
+            const el = document.getElementById(elId);
+            if (!el) return;
+            el.onchange = () => {
+                const isNumeric = propKey === 'searchMinChars' || propKey === 'searchDebounceMs' || propKey === 'searchMaxSuggestions';
+                liveStyles()[propKey] = isNumeric ? parseInt(el.value, 10) : el.value;
+                syncGlobalSearchUI();
+                this.pushLiveStylesToIframe();
+                this.scheduleAutoSave(false);
+            };
+        });
+
+        Object.entries(searchTextMap).forEach(([elId, propKey]) => {
+            const el = document.getElementById(elId);
+            if (!el) return;
+            el.oninput = () => {
+                liveStyles()[propKey] = el.value;
+                this.pushLiveStylesToIframe();
+                this.scheduleAutoSave(false);
+            };
+        });
+
+        Object.entries(searchCheckboxMap).forEach(([elId, propKey]) => {
+            const chk = document.getElementById(elId);
+            if (!chk) return;
+            chk.onchange = () => {
+                liveStyles()[propKey] = chk.checked;
+                if (propKey === 'searchAdvBrand') {
+                    liveStyles().searchAdvCategory = chk.checked;
+                }
+                syncGlobalSearchUI();
+                this.pushLiveStylesToIframe();
+                this.scheduleAutoSave(false);
+            };
+        });
+
+        const suggestCatsChk = document.getElementById('style-search-suggest-cats');
+        if (suggestCatsChk) {
+            suggestCatsChk.onchange = () => {
+                liveStyles().searchSuggestCategories = suggestCatsChk.checked;
+                liveStyles().searchSuggestBrands = suggestCatsChk.checked;
+                this.pushLiveStylesToIframe();
+                this.scheduleAutoSave(false);
+            };
+        }
+
+        const searchResetBtn = document.getElementById('style-search-reset');
+        if (searchResetBtn) {
+            searchResetBtn.onclick = () => {
+                Object.assign(liveStyles(), DEFAULT_GLOBAL_SEARCH_STYLES);
+                syncGlobalSearchUI();
+                this.pushLiveStylesToIframe();
+                this.scheduleAutoSave(false);
+                if (window.Storevo && Storevo.UI && Storevo.UI.Toast) {
+                    Storevo.UI.Toast.show('Configuración del buscador restablecida', 'info');
+                }
+            };
+        }
+
+        syncGlobalSearchUI();
     },
 
     syncFontPairHighlight: function() {
@@ -2944,11 +3158,13 @@ Storevo.ThemeEditor = {
             });
         }
 
-        // Los filtros son una configuración global independiente de la plantilla: se conservan
+        // Los filtros y el buscador son configuraciones globales independientes de la plantilla: se conservan
         const previousGlobal = this.theme.globalStyles || {};
         const preservedFilterStyles = {};
         Object.keys(previousGlobal).forEach(k => {
-            if (k.startsWith('filter')) preservedFilterStyles[k] = previousGlobal[k];
+            if (k.startsWith('filter') || k.startsWith('search')) {
+                preservedFilterStyles[k] = previousGlobal[k];
+            }
         });
 
         this.theme = nextTheme;

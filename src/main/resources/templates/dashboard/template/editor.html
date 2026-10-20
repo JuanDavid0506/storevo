@@ -836,7 +836,280 @@
                     </div>
                 </details>
 
-                <!-- ============ 5. SISTEMA GLOBAL DE FILTROS Y BÚSQUEDA ============ -->
+                <!-- ============ 5. BUSCADOR DE PRODUCTOS (PERSONALIZACIÓN GLOBAL) ============ -->
+                <details class="style-acc" data-acc="search">
+                    <summary>
+                        <span class="min-w-0">
+                            <span class="style-acc-title">Buscador de Productos</span>
+                            <span class="style-acc-hint">Modalidad, autocompletado, diseño en Navbar y búsqueda avanzada</span>
+                        </span>
+                        <svg class="style-acc-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </summary>
+                    <div class="style-acc-body" id="style-search-section">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-storevo-400 bg-storevo-500/10 border border-storevo-500/20 px-2 py-0.5 rounded-full">
+                                Navbar + Catálogo
+                            </span>
+                            <button type="button" id="style-search-reset"
+                                    class="text-[11px] font-bold text-slate-400 hover:text-white transition">
+                                Restablecer sección
+                            </button>
+                        </div>
+
+                        <!-- Interruptor Maestro del Buscador -->
+                        <label class="flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
+                            <div class="min-w-0">
+                                <span class="block text-xs font-bold text-white">Activar buscador en la tienda</span>
+                                <span class="block text-[11px] text-slate-400">Muestra el buscador en la cabecera y barras de catálogo</span>
+                            </div>
+                            <input type="checkbox" id="style-search-enabled" checked
+                                   class="w-4 h-4 rounded border-slate-700 text-storevo-500 focus:ring-storevo-500">
+                        </label>
+
+                        <!-- 1. Modalidad de Búsqueda -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 mb-1.5">Modalidad de búsqueda</label>
+                            <div id="style-search-mode" class="grid grid-cols-2 gap-2">
+                                <button type="button" data-value="predictive"
+                                        class="nav-layout-opt flex flex-col items-center gap-1 p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
+                                    <span class="text-[11px] font-bold">Predictiva (Autocompletar)</span>
+                                    <span class="text-[10px] text-slate-500 text-center leading-tight">Sugerencias con foto y precio</span>
+                                </button>
+                                <button type="button" data-value="instant"
+                                        class="nav-layout-opt flex flex-col items-center gap-1 p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
+                                    <span class="text-[11px] font-bold">Instantánea (Live Search)</span>
+                                    <span class="text-[10px] text-slate-500 text-center leading-tight">Resultados en vivo al escribir</span>
+                                </button>
+                                <button type="button" data-value="fullscreen"
+                                        class="nav-layout-opt flex flex-col items-center gap-1 p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
+                                    <span class="text-[11px] font-bold">Pantalla Completa</span>
+                                    <span class="text-[10px] text-slate-500 text-center leading-tight">Overlay amplio tipo modal</span>
+                                </button>
+                                <button type="button" data-value="traditional"
+                                        class="nav-layout-opt flex flex-col items-center gap-1 p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
+                                    <span class="text-[11px] font-bold">Tradicional (Enter)</span>
+                                    <span class="text-[10px] text-slate-500 text-center leading-tight">Busca al pulsar Enter o botón</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 2. Ubicación en Navbar y Móvil -->
+                        <div class="grid grid-cols-1 gap-3 pt-2 border-t border-slate-800/80">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-300 mb-1.5">Presentación en el Navbar</label>
+                                <select id="style-search-navbar-variant" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-bold text-white focus:border-storevo-500">
+                                    <option value="auto">Automático según el diseño del Navbar</option>
+                                    <option value="inline_bar">Barra de búsqueda siempre visible</option>
+                                    <option value="expandable_icon">Icono de lupa que despliega barra inferior</option>
+                                    <option value="modal_trigger">Botón / Lupa que abre buscador amplio</option>
+                                    <option value="hidden">Ocultar en el Navbar (solo en Catálogo)</option>
+                                </select>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-300 mb-1.5">En móviles</label>
+                                    <select id="style-search-mobile-mode" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-storevo-500">
+                                        <option value="fullscreen">Abrir pantalla completa</option>
+                                        <option value="same">Mantener desplegable normal</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-300 mb-1.5">Selector de Categoría</label>
+                                    <select id="style-search-category-scope" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-storevo-500">
+                                        <option value="none">Sin selector previo</option>
+                                        <option value="select_left">Lista integrada a la izquierda</option>
+                                        <option value="pills_top">Píldoras arriba de resultados</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 3. Apariencia y Textos del Buscador -->
+                        <div class="pt-2 border-t border-slate-800/80 space-y-3">
+                            <p class="text-[11px] font-black uppercase tracking-wider text-storevo-400">Apariencia y Textos</p>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-300 mb-1">Forma del campo</label>
+                                    <select id="style-search-input-style" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-storevo-500">
+                                        <option value="sync">Sincronizado con tienda</option>
+                                        <option value="pill">Píldora redonda</option>
+                                        <option value="rounded">Bordes suaves (12px)</option>
+                                        <option value="square">Recto editorial (0px)</option>
+                                        <option value="underline">Línea inferior mínima</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-300 mb-1">Tamaño del campo</label>
+                                    <select id="style-search-input-size" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-storevo-500">
+                                        <option value="compact">Compacto</option>
+                                        <option value="normal">Estándar</option>
+                                        <option value="large">Amplio</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-300 mb-1">Botón de acción</label>
+                                    <select id="style-search-button-mode" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-storevo-500">
+                                        <option value="icon">Solo icono de lupa</option>
+                                        <option value="text">Solo texto ("Buscar")</option>
+                                        <option value="icon_text">Icono + Texto</option>
+                                        <option value="none">Sin botón (Enter)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-300 mb-1">Animación del panel</label>
+                                    <select id="style-search-anim" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-storevo-500">
+                                        <option value="slide_up">Deslizar suave</option>
+                                        <option value="fade">Desvanecer (Fade)</option>
+                                        <option value="scale">Escala sutil (Zoom)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-300 mb-1">Texto dentro del campo (Placeholder)</label>
+                                <input type="text" id="style-search-placeholder" placeholder="Buscar productos..."
+                                       class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-storevo-500 focus:outline-none">
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-300 mb-1">Texto del botón</label>
+                                    <input type="text" id="style-search-button-label" placeholder="Buscar"
+                                           class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-storevo-500 focus:outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-300 mb-1">Mensaje sin resultados</label>
+                                    <input type="text" id="style-search-empty-message" placeholder="No encontramos productos..."
+                                           class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-storevo-500 focus:outline-none">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 4. Opciones de Tiempo Real y Autocompletado (Oculto en modo Tradicional) -->
+                        <div id="style-search-live-group" class="pt-2 border-t border-slate-800/80 space-y-3">
+                            <p class="text-[11px] font-black uppercase tracking-wider text-storevo-400">Respuesta y Sugerencias</p>
+                            <div class="grid grid-cols-3 gap-2">
+                                <div>
+                                    <label class="block text-[11px] font-bold text-slate-300 mb-1">Mín. letras</label>
+                                    <select id="style-search-min-chars" class="w-full px-2.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white">
+                                        <option value="1">1 letra</option>
+                                        <option value="2">2 letras</option>
+                                        <option value="3">3 letras</option>
+                                        <option value="4">4 letras</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-slate-300 mb-1">Espera</label>
+                                    <select id="style-search-debounce-ms" class="w-full px-2.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white">
+                                        <option value="0">0ms (Inmediato)</option>
+                                        <option value="150">150ms (Rápido)</option>
+                                        <option value="250">250ms (Ideal)</option>
+                                        <option value="450">450ms (Pausado)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-slate-300 mb-1">Máx. ítems</label>
+                                    <select id="style-search-max-suggestions" class="w-full px-2.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white">
+                                        <option value="4">4 prod.</option>
+                                        <option value="6">6 prod.</option>
+                                        <option value="8">8 prod.</option>
+                                        <option value="10">10 prod.</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="space-y-1.5">
+                                <label class="flex items-center justify-between p-2 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
+                                    <span class="text-xs text-slate-300">Mostrar miniatura de foto en sugerencias</span>
+                                    <input type="checkbox" id="style-search-show-img" checked class="w-4 h-4 rounded border-slate-700 text-storevo-500">
+                                </label>
+                                <label class="flex items-center justify-between p-2 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
+                                    <span class="text-xs text-slate-300">Mostrar precio y precio anterior tachado</span>
+                                    <input type="checkbox" id="style-search-show-price" checked class="w-4 h-4 rounded border-slate-700 text-storevo-500">
+                                </label>
+                                <label class="flex items-center justify-between p-2 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
+                                    <span class="text-xs text-slate-300">Mostrar insignia de oferta / porcentaje</span>
+                                    <input type="checkbox" id="style-search-show-discount" checked class="w-4 h-4 rounded border-slate-700 text-storevo-500">
+                                </label>
+                                <label class="flex items-center justify-between p-2 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
+                                    <span class="text-xs text-slate-300">Mostrar nombre de categoría en cada producto</span>
+                                    <input type="checkbox" id="style-search-show-category" checked class="w-4 h-4 rounded border-slate-700 text-storevo-500">
+                                </label>
+                                <label class="flex items-center justify-between p-2 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
+                                    <span class="text-xs text-slate-300">Mostrar marca en cada producto</span>
+                                    <input type="checkbox" id="style-search-show-brand" class="w-4 h-4 rounded border-slate-700 text-storevo-500">
+                                </label>
+                            </div>
+
+                            <div id="style-search-predictive-extras" class="space-y-2 pt-1">
+                                <label class="flex items-center justify-between p-2 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
+                                    <span class="text-xs text-slate-300">Sugerir categorías y marcas coincidentes</span>
+                                    <input type="checkbox" id="style-search-suggest-cats" checked class="w-4 h-4 rounded border-slate-700 text-storevo-500">
+                                </label>
+                                <label class="flex items-center justify-between p-2 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
+                                    <span class="text-xs text-slate-300">Recordar búsquedas recientes del comprador</span>
+                                    <input type="checkbox" id="style-search-show-recent" checked class="w-4 h-4 rounded border-slate-700 text-storevo-500">
+                                </label>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-300 mb-1">Búsquedas populares sugeridas (separadas por coma)</label>
+                                    <input type="text" id="style-search-popular-terms" placeholder="Ej: Ofertas, Nuevo, Camisetas (vacío = usa categorías)"
+                                           class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-storevo-500 focus:outline-none">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 5. Búsqueda por Variantes, Atributos y Criterios Avanzados -->
+                        <div class="pt-2 border-t border-slate-800/80 space-y-2.5">
+                            <p class="text-[11px] font-black uppercase tracking-wider text-storevo-400">Variantes, Atributos y Búsqueda Avanzada</p>
+                            <label class="flex items-center justify-between p-2.5 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
+                                <div>
+                                    <span class="block text-xs font-bold text-slate-200">Buscar por opciones de variantes</span>
+                                    <span class="block text-[10px] text-slate-500">Permite hallar productos escribiendo su talla, color o presentación</span>
+                                </div>
+                                <input type="checkbox" id="style-search-match-variants" checked class="w-4 h-4 rounded border-slate-700 text-storevo-500">
+                            </label>
+                            <label class="flex items-center justify-between p-2.5 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
+                                <div>
+                                    <span class="block text-xs font-bold text-slate-200">Buscar por atributos de ficha técnica</span>
+                                    <span class="block text-[10px] text-slate-500">Reconoce materiales, género u otras especificaciones</span>
+                                </div>
+                                <input type="checkbox" id="style-search-match-specs" checked class="w-4 h-4 rounded border-slate-700 text-storevo-500">
+                            </label>
+                            <label class="flex items-center justify-between p-2.5 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
+                                <div>
+                                    <span class="block text-xs font-bold text-white">Habilitar panel de Búsqueda Avanzada</span>
+                                    <span class="block text-[10px] text-slate-400">Permite combinar categoría, marca, precio, stock y variantes dentro del buscador</span>
+                                </div>
+                                <input type="checkbox" id="style-search-advanced-enabled" class="w-4 h-4 rounded border-slate-700 text-storevo-500">
+                            </label>
+
+                            <div id="style-search-adv-criteria-group" class="hidden pl-3 border-l-2 border-storevo-500/40 space-y-1.5">
+                                <label class="flex items-center justify-between p-2 rounded-lg bg-slate-950 border border-slate-800 cursor-pointer text-xs text-slate-300">
+                                    <span>Selector de Categoría y Marca</span>
+                                    <input type="checkbox" id="style-search-adv-brand" checked class="w-3.5 h-3.5 rounded border-slate-700 text-storevo-500">
+                                </label>
+                                <label class="flex items-center justify-between p-2 rounded-lg bg-slate-950 border border-slate-800 cursor-pointer text-xs text-slate-300">
+                                    <span>Rango de Precios (Mín. / Máx.)</span>
+                                    <input type="checkbox" id="style-search-adv-price" checked class="w-3.5 h-3.5 rounded border-slate-700 text-storevo-500">
+                                </label>
+                                <label class="flex items-center justify-between p-2 rounded-lg bg-slate-950 border border-slate-800 cursor-pointer text-xs text-slate-300">
+                                    <span>Disponibilidad y Ofertas</span>
+                                    <input type="checkbox" id="style-search-adv-availability" checked class="w-3.5 h-3.5 rounded border-slate-700 text-storevo-500">
+                                </label>
+                                <label class="flex items-center justify-between p-2 rounded-lg bg-slate-950 border border-slate-800 cursor-pointer text-xs text-slate-300">
+                                    <span>Píldoras de Variantes (Tallas, Colores)</span>
+                                    <input type="checkbox" id="style-search-adv-variants" checked class="w-3.5 h-3.5 rounded border-slate-700 text-storevo-500">
+                                </label>
+                                <label class="flex items-center justify-between p-2 rounded-lg bg-slate-950 border border-slate-800 cursor-pointer text-xs text-slate-300">
+                                    <span>Píldoras de Atributos Técnicos</span>
+                                    <input type="checkbox" id="style-search-adv-specs" class="w-3.5 h-3.5 rounded border-slate-700 text-storevo-500">
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </details>
+
+                <!-- ============ 6. SISTEMA GLOBAL DE FILTROS Y BÚSQUEDA ============ -->
                 <details class="style-acc" data-acc="filters">
                     <summary>
                         <span class="min-w-0">

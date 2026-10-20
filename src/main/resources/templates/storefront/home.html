@@ -7,10 +7,6 @@
 </head>
 <body>
 <div layout:fragment="content">
-    <script id="storevo-filter-data-json" type="application/json"
-            th:if="${catalogFilterDataJson != null}"
-            th:utext="${catalogFilterDataJson}"></script>
-
     <th:block th:if="${theme != null}" th:with="homeSections=${theme.getPageSections('home')}">
         <th:block th:each="sec : ${homeSections}" th:if="${sec.enabled}">
             <div th:replace="~{storefront/sections/theme-sections :: render-section(${sec})}"></div>

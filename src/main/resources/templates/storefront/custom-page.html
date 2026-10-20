@@ -7,10 +7,6 @@
 </head>
 <body>
 <div layout:fragment="content" class="min-h-[70vh]">
-    <script id="storevo-filter-data-json" type="application/json"
-            th:if="${catalogFilterDataJson != null}"
-            th:utext="${catalogFilterDataJson}"></script>
-
     <th:block th:if="${theme != null}"
               th:with="activeKey=${editorPageKey != null ? editorPageKey : ('page:' + customPage.slug)},
                        customSections=${theme.getPageSections(activeKey)}">
