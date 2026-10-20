@@ -7,14 +7,28 @@
     <meta name="_csrf" th:if="${_csrf != null}" th:content="${_csrf.token}"/>
     <meta name="_csrf_header" th:if="${_csrf != null}" th:content="${_csrf.headerName}"/>
     <title layout:title-pattern="$CONTENT_TITLE | Storevo">Dashboard</title>
+    <script>
+        (function() {
+            try {
+                var savedTheme = localStorage.getItem('storevo_admin_theme') || 'dark';
+                document.documentElement.setAttribute('data-admin-theme', savedTheme === 'light' ? 'light' : 'dark');
+                var savedCollapsed = localStorage.getItem('storevo_admin_sidebar_collapsed');
+                document.documentElement.setAttribute('data-sidebar-collapsed', savedCollapsed === 'true' ? 'true' : 'false');
+            } catch (e) {
+                document.documentElement.setAttribute('data-admin-theme', 'dark');
+                document.documentElement.setAttribute('data-sidebar-collapsed', 'false');
+            }
+        })();
+    </script>
     <link rel="stylesheet" th:href="@{/css/app.css}">
+    <link rel="stylesheet" th:href="@{/css/dashboard-theme.css}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body class="bg-slate-950 text-slate-300 font-sans antialiased flex h-screen overflow-hidden">
 
 <div th:replace="~{components/dashboard/sidebar :: sidebar}"></div>
 
-<div class="flex-1 flex flex-col md:ml-64 overflow-hidden">
+<div id="dashboard-main-wrapper" class="flex-1 flex flex-col md:ml-64 overflow-hidden">
 
     <!-- 1. CONTENEDOR FIJO (Topbar + Subheader) No hace scroll -->
     <div class="flex-shrink-0 z-20 bg-slate-950 border-b border-slate-800">

@@ -1,0 +1,548 @@
+/* ==========================================================================
+   Storevo Admin Dashboard - Sistema de Tema (Oscuro / Claro) y Sidebar Contraíble
+   Exclusivo para layouts/dashboard-layout.html (No afecta tiendas públicas)
+   ========================================================================== */
+
+:root {
+    --adm-sidebar-expanded-w: 16rem;   /* 256px */
+    --adm-sidebar-collapsed-w: 4.5rem; /* 72px  */
+    --adm-sidebar-current-w: var(--adm-sidebar-expanded-w);
+    --adm-transition-speed: 220ms;
+}
+
+html[data-sidebar-collapsed="true"] {
+    --adm-sidebar-current-w: var(--adm-sidebar-collapsed-w);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --adm-transition-speed: 0ms;
+    }
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* ==========================================================================
+   1. SIDEBAR CONTRAÍBLE Y PANEL DESLIZABLE MÓVIL
+   ========================================================================== */
+
+#dashboard-sidebar {
+    width: var(--adm-sidebar-expanded-w);
+    transition: width var(--adm-transition-speed) cubic-bezier(0.16, 1, 0.3, 1),
+    transform var(--adm-transition-speed) cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 150ms ease,
+    border-color 150ms ease;
+    z-index: 45;
+}
+
+/* En móvil (< 768px): funciona como Drawer deslizable sin ocupar espacio fijo */
+@media (max-width: 767.98px) {
+    #dashboard-sidebar {
+        display: flex !important;
+        width: 16rem !important;
+        transform: translateX(-102%);
+        box-shadow: none;
+    }
+    html[data-sidebar-mobile-open="true"] #dashboard-sidebar {
+        transform: translateX(0);
+        box-shadow: 0 25px 50px -12px rgba(2, 6, 23, 0.5);
+    }
+    #dashboard-sidebar-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 40;
+        background-color: rgba(2, 6, 23, 0.6);
+        backdrop-filter: blur(2px);
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transition: opacity var(--adm-transition-speed) ease,
+        visibility var(--adm-transition-speed) ease;
+    }
+    html[data-sidebar-mobile-open="true"] #dashboard-sidebar-backdrop {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+    }
+}
+
+/* En escritorio (>= 768px): adapta el ancho del sidebar y del área de trabajo */
+@media (min-width: 768px) {
+    #dashboard-sidebar {
+        display: flex !important;
+        transform: translateX(0) !important;
+        width: var(--adm-sidebar-current-w) !important;
+    }
+    #dashboard-sidebar-backdrop {
+        display: none !important;
+    }
+    #dashboard-main-wrapper {
+        margin-left: var(--adm-sidebar-current-w) !important;
+        transition: margin-left var(--adm-transition-speed) cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    /* Sincronizar barras inferiores fijas (ej. formulario de productos) con el ancho del sidebar */
+    #product-form > div.fixed.bottom-0.left-0.right-0 {
+        left: var(--adm-sidebar-current-w) !important;
+        transition: left var(--adm-transition-speed) cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Estado contraído en escritorio */
+    html[data-sidebar-collapsed="true"] #dashboard-sidebar .adm-brand-full {
+        display: none !important;
+    }
+    html[data-sidebar-collapsed="true"] #dashboard-sidebar .adm-brand-short {
+        display: inline-flex !important;
+    }
+    html[data-sidebar-collapsed="true"] #dashboard-sidebar .adm-sidebar-header {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        justify-content: center !important;
+    }
+    html[data-sidebar-collapsed="true"] #dashboard-sidebar .adm-nav-section-label {
+        display: none !important;
+    }
+    html[data-sidebar-collapsed="true"] #dashboard-sidebar .adm-nav-section {
+        padding-top: 0.55rem !important;
+        padding-bottom: 0.55rem !important;
+    }
+    html[data-sidebar-collapsed="true"] #dashboard-sidebar .adm-nav-section::after {
+        content: "";
+        display: block;
+        height: 1px;
+        margin: 0 0.5rem;
+        background-color: rgba(148, 163, 184, 0.2);
+    }
+    html[data-sidebar-collapsed="true"] #dashboard-sidebar .adm-nav-link {
+        justify-content: center !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        position: relative;
+    }
+    html[data-sidebar-collapsed="true"] #dashboard-sidebar .adm-nav-label {
+        display: none !important;
+    }
+    html[data-sidebar-collapsed="true"] #dashboard-sidebar .adm-collapse-icon {
+        transform: rotate(180deg);
+    }
+}
+
+/* Indicador lateral sutil para la sección activa cuando el menú está contraído */
+.adm-nav-link.is-active-nav {
+    position: relative;
+}
+@media (min-width: 768px) {
+    html[data-sidebar-collapsed="true"] #dashboard-sidebar .adm-nav-link.is-active-nav::before {
+        content: "";
+        position: absolute;
+        left: -0.35rem;
+        top: 22%;
+        bottom: 22%;
+        width: 3px;
+        border-radius: 9999px;
+        background-color: #6366f1;
+    }
+}
+
+/* Tooltip flotante accesible para el sidebar contraído */
+#adm-sidebar-tooltip {
+    position: fixed;
+    z-index: 150;
+    padding: 0.38rem 0.7rem;
+    border-radius: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1.2;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateX(-4px);
+    transition: opacity 140ms ease, transform 140ms ease;
+    background-color: #0f172a;
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 10px 25px -5px rgba(2, 6, 23, 0.35);
+}
+#adm-sidebar-tooltip.is-visible {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+/* Visibilidad de iconos Sol / Luna en el botón de tema */
+html:not([data-admin-theme="light"]) .adm-theme-icon-moon {
+    display: none !important;
+}
+html[data-admin-theme="light"] .adm-theme-icon-sun {
+    display: none !important;
+}
+
+html[data-admin-theme="light"] {
+    color-scheme: light;
+    --adm-bg-canvas: #dedede;        /* Fondo general elegido para resaltar las tarjetas blancas */
+    --adm-bg-surface: #FFFFFF;       /* Blanco puro para tarjetas, sidebar, topbar y tablas */
+    --adm-bg-subtle: #F4F6F9;        /* Contenedores anidados (ej. árbol desplegable de categorías) */
+    --adm-bg-input: #FAFBFC;         /* Fondo limpio de campos de formulario */
+    --adm-bg-muted: #EEF1F6;         /* Etiquetas/badges neutros (ej. documento en clientes) y botones secundarios */
+    --adm-bg-hover: #E5E9F0;         /* Estado hover sutil para controles y filas */
+    --adm-border: #DCE1E9;           /* Borde nítido para tarjetas, subcategorías y contenedores */
+    --adm-border-input: #CBD2DF;     /* Borde definido para inputs, selects y textareas */
+    --adm-border-strong: #BFC8D8;    /* Borde para líneas conectoras de árbol y botones secundarios */
+    --adm-text-heading: #0F172A;
+    --adm-text-body: #334155;
+    --adm-text-muted: #64748B;
+    --adm-text-subtle: #94A3B8;
+    --adm-shadow-card: 0 1px 3px 0 rgba(15, 23, 42, 0.05), 0 1px 2px -1px rgba(15, 23, 42, 0.03);
+}
+
+/* 2.1 Capturar TODAS las variantes de opacidad de bg-slate-950 (incluyendo desplegables de categorías /30, /40, /70, /80) */
+html[data-admin-theme="light"] [class*="bg-slate-950"]:not(body):not(main):not(.fixed) {
+    background-color: var(--adm-bg-subtle) !important;
+}
+
+/* Lienzo general de página (#dedede) */
+html[data-admin-theme="light"] body,
+html[data-admin-theme="light"] #dashboard-main-wrapper > main {
+    background-color: var(--adm-bg-canvas) !important;
+    color: var(--adm-text-body) !important;
+}
+
+html[data-admin-theme="light"] #dashboard-main-wrapper > div.flex-shrink-0 {
+    background-color: var(--adm-bg-surface) !important;
+    border-color: var(--adm-border) !important;
+}
+
+html[data-admin-theme="light"] #preview-viewport-wrapper {
+    background-color: #d4d7dd !important;
+}
+
+/* 2.2 Superficies principales en blanco puro (#FFFFFF): Tarjetas, subcategorías, Sidebar, Topbar y Modales */
+html[data-admin-theme="light"] [class*="bg-slate-900"]:not(.fixed) {
+    background-color: var(--adm-bg-surface) !important;
+    box-shadow: var(--adm-shadow-card);
+}
+
+/* Si un contenedor anidado de subcategorías usa bg-slate-900 con baja opacidad (/20 a /60), darle el gris suave #F4F6F9 */
+html[data-admin-theme="light"] .bg-slate-900\/20,
+html[data-admin-theme="light"] .bg-slate-900\/30,
+html[data-admin-theme="light"] .bg-slate-900\/40,
+html[data-admin-theme="light"] .bg-slate-900\/50,
+html[data-admin-theme="light"] .bg-slate-900\/60 {
+    background-color: var(--adm-bg-subtle) !important;
+    box-shadow: none !important;
+}
+
+html[data-admin-theme="light"] #dashboard-sidebar,
+html[data-admin-theme="light"] #dashboard-topbar {
+    background-color: var(--adm-bg-surface) !important;
+    box-shadow: none !important;
+}
+
+/* 2.3 Cajas de pestañas y conmutadores segmentados (Tabla/Tarjetas, Todas/Activas/Ocultas, etc.) */
+html[data-admin-theme="light"] .bg-slate-900.p-1.border-slate-800,
+html[data-admin-theme="light"] header .bg-slate-950.p-1,
+html[data-admin-theme="light"] #editor-main-tabs {
+    background-color: #EEF1F6 !important;
+    border-color: var(--adm-border) !important;
+    box-shadow: none !important;
+}
+
+html[data-admin-theme="light"] header .bg-slate-950.p-1 button.bg-slate-800,
+html[data-admin-theme="light"] #editor-main-tabs button.bg-slate-800,
+html[data-admin-theme="light"] .bg-slate-950 button.bg-slate-800,
+html[data-admin-theme="light"] .bg-slate-900 button.bg-slate-800 {
+    background-color: #FFFFFF !important;
+    color: var(--adm-text-heading) !important;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06) !important;
+}
+
+/* 2.4 Etiquetas/badges (como el documento en Clientes), botones secundarios y variantes de bg-slate-800 / bg-slate-700 */
+html[data-admin-theme="light"] [class*="bg-slate-800"],
+html[data-admin-theme="light"] [class*="bg-slate-700/"]:not(input):not(label) {
+    background-color: var(--adm-bg-muted) !important;
+    color: var(--adm-text-body) !important;
+}
+html[data-admin-theme="light"] .bg-slate-800\/20,
+html[data-admin-theme="light"] .bg-slate-800\/30,
+html[data-admin-theme="light"] .bg-slate-800\/40,
+html[data-admin-theme="light"] .bg-slate-800\/50 {
+    background-color: var(--adm-bg-subtle) !important;
+}
+html[data-admin-theme="light"] [class*="hover:bg-slate-800"]:hover,
+html[data-admin-theme="light"] [class*="hover:bg-slate-700"]:hover {
+    background-color: var(--adm-bg-hover) !important;
+}
+
+/* 2.5 Interruptores (Toggles) y líneas conectoras del árbol de categorías */
+html[data-admin-theme="light"] .bg-slate-700 {
+    background-color: #CBD5E1 !important;
+}
+html[data-admin-theme="light"] input.peer:checked + .bg-slate-700.peer-checked\:bg-storevo-500,
+html[data-admin-theme="light"] label.bg-slate-700.has-\[\:checked\]\:bg-storevo-500:has(:checked) {
+    background-color: #6366F1 !important;
+}
+html[data-admin-theme="light"] input.peer:checked + .bg-slate-700.peer-checked\:bg-indigo-500 {
+    background-color: #6366F1 !important;
+}
+html[data-admin-theme="light"] input.peer:checked + .bg-slate-700.peer-checked\:bg-sky-500 {
+    background-color: #0EA5E9 !important;
+}
+html[data-admin-theme="light"] label.bg-slate-700.has-\[\:checked\]\:bg-emerald-500:has(:checked) {
+    background-color: #10B981 !important;
+}
+
+/* 2.6 Bordes de tarjetas, contenedores, badges y líneas de árbol de subcategorías */
+html[data-admin-theme="light"] [class*="border-slate-800"] {
+    border-color: var(--adm-border) !important;
+}
+html[data-admin-theme="light"] [class*="border-slate-700"] {
+    border-color: var(--adm-border-strong) !important;
+}
+html[data-admin-theme="light"] .divide-slate-800 > :not([hidden]) ~ :not([hidden]),
+html[data-admin-theme="light"] .divide-slate-800\/60 > :not([hidden]) ~ :not([hidden]),
+html[data-admin-theme="light"] .divide-slate-800\/40 > :not([hidden]) ~ :not([hidden]) {
+    border-color: var(--adm-border) !important;
+}
+
+/* 2.7 Tipografía y jerarquía de colores de texto */
+html[data-admin-theme="light"] .text-white:not(.bg-storevo-500):not(.bg-storevo-600):not(.bg-indigo-500):not(.bg-indigo-600):not(.bg-emerald-500):not(.bg-emerald-600):not(.bg-green-500):not(.bg-green-600):not(.bg-red-500):not(.bg-red-600):not(.bg-orange-500):not(.bg-amber-500):not(.bg-sky-500):not(.bg-blue-500):not(.bg-purple-500):not(.bg-black\/60):not(.adm-keep-white) {
+    color: var(--adm-text-heading) !important;
+}
+
+/* Preservar texto blanco dentro de botones e insignias con fondo sólido de color */
+html[data-admin-theme="light"] :is(.bg-storevo-500, .bg-storevo-600, .bg-indigo-500, .bg-indigo-600, .bg-emerald-500, .bg-emerald-600, .bg-green-500, .bg-green-600, .bg-red-500, .bg-red-600, .bg-orange-500, .bg-amber-500, .bg-sky-500, .bg-blue-500, .bg-purple-500, .bg-black\/60, .adm-keep-white),
+html[data-admin-theme="light"] :is(.bg-storevo-500, .bg-storevo-600, .bg-indigo-500, .bg-indigo-600, .bg-emerald-500, .bg-emerald-600, .bg-green-500, .bg-green-600, .bg-red-500, .bg-red-600, .bg-orange-500, .bg-amber-500, .bg-sky-500, .bg-blue-500, .bg-purple-500, .bg-black\/60, .adm-keep-white) :is(span, svg, p, h3, h4) {
+    color: #FFFFFF !important;
+}
+
+html[data-admin-theme="light"] .hover\:bg-storevo-500:hover,
+html[data-admin-theme="light"] .hover\:bg-storevo-500:hover span,
+html[data-admin-theme="light"] .hover\:bg-storevo-500:hover svg,
+html[data-admin-theme="light"] .hover\:bg-red-500:hover,
+html[data-admin-theme="light"] .hover\:bg-red-500:hover svg {
+    color: #FFFFFF !important;
+}
+html[data-admin-theme="light"] .hover\:bg-storevo-500:hover {
+    background-color: #6366F1 !important;
+}
+
+html[data-admin-theme="light"] .text-slate-200,
+html[data-admin-theme="light"] .text-slate-300 {
+    color: var(--adm-text-body) !important;
+}
+html[data-admin-theme="light"] .text-slate-400 {
+    color: #475569 !important;
+}
+html[data-admin-theme="light"] .text-slate-500 {
+    color: var(--adm-text-muted) !important;
+}
+html[data-admin-theme="light"] .text-slate-600,
+html[data-admin-theme="light"] .text-slate-700 {
+    color: var(--adm-text-subtle) !important;
+}
+
+html[data-admin-theme="light"] .hover\:text-white:hover:not(.hover\:bg-storevo-500):not(.hover\:bg-red-500),
+html[data-admin-theme="light"] .hover\:text-slate-200:hover,
+html[data-admin-theme="light"] .hover\:text-slate-300:hover,
+html[data-admin-theme="light"] .group:hover .group-hover\:text-white {
+    color: var(--adm-text-heading) !important;
+}
+
+/* 2.8 Colores de acento y estados semánticos */
+html[data-admin-theme="light"] .text-storevo-400,
+html[data-admin-theme="light"] .text-storevo-300 {
+    color: #4F46E5 !important;
+}
+html[data-admin-theme="light"] .text-indigo-300,
+html[data-admin-theme="light"] .text-indigo-400 {
+    color: #4338CA !important;
+}
+html[data-admin-theme="light"] .text-emerald-400,
+html[data-admin-theme="light"] .text-emerald-300,
+html[data-admin-theme="light"] .text-green-400 {
+    color: #047857 !important;
+}
+html[data-admin-theme="light"] .text-amber-400,
+html[data-admin-theme="light"] .text-amber-300 {
+    color: #B45309 !important;
+}
+html[data-admin-theme="light"] .text-sky-400,
+html[data-admin-theme="light"] .text-sky-300,
+html[data-admin-theme="light"] .text-blue-400 {
+    color: #0369A1 !important;
+}
+html[data-admin-theme="light"] .text-rose-400,
+html[data-admin-theme="light"] .text-rose-300,
+html[data-admin-theme="light"] .text-red-400 {
+    color: #BE123C !important;
+}
+html[data-admin-theme="light"] .text-purple-400 {
+    color: #7E22CE !important;
+}
+
+/* 2.9 Formularios: Inputs, Selects y Textareas (con especificidad superior a .bg-slate-950 y .border-slate-800) */
+html[data-admin-theme="light"] body :is(input:not([type="checkbox"]):not([type="radio"]):not([type="color"]), select, textarea) {
+    color-scheme: light;
+    background-color: var(--adm-bg-input) !important;
+    border-color: var(--adm-border-input) !important;
+    color: var(--adm-text-heading) !important;
+    box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.02);
+}
+/* Si un input está dentro de un contenedor secundario (.bg-slate-950 / .bg-slate-800/50), su fondo pasa a #FFFFFF para resaltar */
+html[data-admin-theme="light"] body :is(.bg-slate-950, .bg-slate-800\/50, .style-acc-body) :is(input:not([type="checkbox"]):not([type="radio"]):not([type="color"]), select, textarea) {
+    background-color: #FFFFFF !important;
+}
+html[data-admin-theme="light"] body :is(input:not([type="checkbox"]):not([type="radio"]):not([type="color"]), select, textarea):hover:not(:focus):not(:disabled) {
+    border-color: #B9C2D0 !important;
+}
+html[data-admin-theme="light"] body :is(input:not([type="checkbox"]):not([type="radio"]):not([type="color"]), select, textarea):focus {
+    background-color: #FFFFFF !important;
+    border-color: #6366F1 !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12) !important;
+}
+html[data-admin-theme="light"] input::placeholder,
+html[data-admin-theme="light"] textarea::placeholder {
+    color: #94A3B8 !important;
+}
+html[data-admin-theme="light"] input:disabled,
+html[data-admin-theme="light"] select:disabled,
+html[data-admin-theme="light"] textarea:disabled,
+html[data-admin-theme="light"] button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+/* Zona de subida de imágenes (dropzone) con borde discontinuo más visible sobre fondo claro */
+html[data-admin-theme="light"] #image-dropzone {
+    background-color: #F8FAFC !important;
+    border-color: #CBD5E1 !important;
+}
+html[data-admin-theme="light"] #image-dropzone:hover {
+    background-color: #F1F5F9 !important;
+    border-color: #6366F1 !important;
+}
+
+/* Botón Siguiente del Wizard en modo claro */
+html[data-admin-theme="light"] #wizard-next {
+    background-color: #0F172A !important;
+    color: #FFFFFF !important;
+}
+
+/* 2.10 Modales, Fondos de Diálogo y Capas de Bloqueo (restringido a overlays .fixed) */
+html[data-admin-theme="light"] .fixed.bg-slate-950\/80,
+html[data-admin-theme="light"] .fixed.bg-slate-900\/80 {
+    background-color: rgba(15, 23, 42, 0.42) !important;
+}
+html[data-admin-theme="light"] #pricing-overlay {
+    background-color: rgba(255, 255, 255, 0.86) !important;
+}
+
+/* 2.11 Adaptación de Acordeones y Controles del Editor Visual (editor.html) */
+html[data-admin-theme="light"] .style-acc {
+    background: #FFFFFF !important;
+    border-color: var(--adm-border) !important;
+    box-shadow: var(--adm-shadow-card);
+}
+html[data-admin-theme="light"] .style-acc[open] {
+    border-color: rgba(99, 102, 241, 0.45) !important;
+}
+html[data-admin-theme="light"] .style-acc > summary:hover {
+    background: #dedede !important;
+}
+html[data-admin-theme="light"] .style-acc-title {
+    color: var(--adm-text-heading) !important;
+}
+html[data-admin-theme="light"] .style-acc-hint {
+    color: var(--adm-text-muted) !important;
+}
+html[data-admin-theme="light"] .style-acc-chevron {
+    color: var(--adm-text-muted) !important;
+}
+html[data-admin-theme="light"] .nav-layout-opt.is-selected,
+html[data-admin-theme="light"] .font-pair-opt.is-selected,
+html[data-admin-theme="light"] .card-style-opt.is-selected {
+    border-color: #6366F1 !important;
+    background: rgba(99, 102, 241, 0.1) !important;
+    color: #4F46E5 !important;
+}
+html[data-admin-theme="light"] #preview-viewport-wrapper[data-device="desktop"] #preview-frame-container {
+    border-color: var(--adm-border-input) !important;
+}
+
+/* 2.12 Tablas de listados (Productos, Categorías, Pedidos, Clientes y Variantes) */
+html[data-admin-theme="light"] table {
+    background-color: #FFFFFF;
+}
+html[data-admin-theme="light"] table thead,
+html[data-admin-theme="light"] table thead tr {
+    background-color: #F4F6F9 !important;
+    border-bottom: 1px solid var(--adm-border) !important;
+}
+html[data-admin-theme="light"] table thead th {
+    color: #475569 !important;
+}
+html[data-admin-theme="light"] table tbody tr {
+    background-color: #FFFFFF;
+    border-color: var(--adm-border) !important;
+    transition: background-color 120ms ease;
+}
+html[data-admin-theme="light"] table tbody tr:hover,
+html[data-admin-theme="light"] .hover\:bg-slate-900\/50:hover,
+html[data-admin-theme="light"] .hover\:bg-slate-800\/30:hover {
+    background-color: #dedede !important;
+}
+
+/* 2.13 Pestañas e interruptores dinámicos (settings.html y products/form.html) */
+html[data-admin-theme="light"] .tab-btn.bg-indigo-500\/15 {
+    background-color: #FFFFFF !important;
+    color: #4338CA !important;
+    border-color: var(--adm-border) !important;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+html[data-admin-theme="light"] .bg-indigo-500\/5 {
+    background-color: rgba(99, 102, 241, 0.06) !important;
+}
+html[data-admin-theme="light"] .bg-sky-500\/5 {
+    background-color: rgba(14, 165, 233, 0.06) !important;
+}
+html[data-admin-theme="light"] .bg-rose-500\/5 {
+    background-color: rgba(244, 63, 94, 0.06) !important;
+}
+html[data-admin-theme="light"] .bg-green-500\/10,
+html[data-admin-theme="light"] .bg-emerald-500\/10,
+html[data-admin-theme="light"] .bg-emerald-500\/15 {
+    background-color: rgba(16, 185, 129, 0.1) !important;
+}
+html[data-admin-theme="light"] .bg-amber-500\/10,
+html[data-admin-theme="light"] .bg-amber-500\/15 {
+    background-color: rgba(245, 158, 11, 0.1) !important;
+}
+html[data-admin-theme="light"] .bg-red-500\/10 {
+    background-color: rgba(239, 68, 68, 0.09) !important;
+}
+
+/* 2.14 Navegación sticky izquierda en formulario avanzado de productos */
+html[data-admin-theme="light"] #left-sidebar .nav-link:hover {
+    background-color: #EEF1F6 !important;
+    color: #0F172A !important;
+}
+
+/* 2.15 Scrollbars limpios y acordes al modo claro en el Dashboard */
+html[data-admin-theme="light"] ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+html[data-admin-theme="light"] ::-webkit-scrollbar-track {
+    background: #F4F6F9;
+}
+html[data-admin-theme="light"] ::-webkit-scrollbar-thumb {
+    background: #CBD5E1;
+    border-radius: 9999px;
+}
+html[data-admin-theme="light"] ::-webkit-scrollbar-thumb:hover {
+    background: #94A3B8;
+}

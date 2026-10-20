@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org" layout:decorate="~{layouts/store-layout}">
 <head>
-  <title th:text="'Mis Favoritos - ' + ${settings.storeName}">Mis Favoritos</title>
+  <title th:text="'Mis Favoritos - ' + ${settings != null and settings.storeName != null ? settings.storeName : 'Tienda'}">Mis Favoritos</title>
 </head>
 <body>
 <div layout:fragment="content" class="min-h-[70vh]">

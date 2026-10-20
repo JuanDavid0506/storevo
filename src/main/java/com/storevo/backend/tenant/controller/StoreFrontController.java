@@ -1,6 +1,9 @@
 package com.storevo.backend.tenant.controller;
 
 import com.storevo.backend.admin.model.Store;
+import com.storevo.backend.admin.model.StoreSettings;
+import com.storevo.backend.config.tenant.TenantContext;
+import com.storevo.backend.tenant.dto.StoreSettingsDto;
 import com.storevo.backend.tenant.dto.ThemeConfigDto;
 import com.storevo.backend.tenant.dto.ThemeCustomPageDto;
 import com.storevo.backend.tenant.model.Category;
@@ -38,7 +41,47 @@ public class StoreFrontController {
 
     private void hydratePageContext(HttpServletRequest request, Model model, List<Product> pageProducts) {
         Store store = (Store) request.getAttribute("currentStore");
+        String defaultStoreName = (store != null && store.getName() != null && !store.getName().isBlank())
+                ? store.getName() : "Mi Tienda";
+
+        Object rawSettings = model.getAttribute("settings");
+        if (rawSettings instanceof StoreSettingsDto settingsDto) {
+            if (settingsDto.getStoreName() == null || settingsDto.getStoreName().isBlank()) {
+                settingsDto.setStoreName(defaultStoreName);
+            }
+        } else if (rawSettings instanceof StoreSettings settingsEntity) {
+            if (settingsEntity.getStoreName() == null || settingsEntity.getStoreName().isBlank()) {
+                settingsEntity.setStoreName(defaultStoreName);
+            }
+        } else {
+            StoreSettings settings = null;
+            if (store != null && store.getId() != null) {
+                String currentSchema = store.getSchemaName();
+                try {
+                    TenantContext.clear();
+                    settings = storeThemeService.findSettingsInAdminDb(store.getId());
+                } catch (Exception ignored) {
+                } finally {
+                    if (currentSchema != null) {
+                        TenantContext.setCurrentTenant(currentSchema);
+                    }
+                }
+            }
+            if (settings == null) {
+                settings = new StoreSettings();
+            }
+            if (settings.getStoreName() == null || settings.getStoreName().isBlank()) {
+                settings.setStoreName(defaultStoreName);
+            }
+            model.addAttribute("settings", settings);
+        }
+
         ThemeConfigDto theme = (ThemeConfigDto) model.getAttribute("theme");
+        if (theme == null && store != null) {
+            boolean isDraft = "draft".equalsIgnoreCase(request.getParameter("preview"));
+            theme = storeThemeService.getRawThemeConfig(store, isDraft);
+            model.addAttribute("theme", theme);
+        }
         if (theme != null && store != null) {
             storeThemeService.hydrateThemeSections(store, theme);
         }

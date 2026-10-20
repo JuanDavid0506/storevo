@@ -1,19 +1,50 @@
-<header th:fragment="topbar" class="h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-6 sticky top-0 z-10">
-    <div class="flex items-center text-sm">
-        <span class="text-slate-400 font-medium">Dashboard</span>
-        <svg class="w-4 h-4 mx-2 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-        <span class="text-white font-medium" th:text="${pageTitle ?: 'Inicio'}">Inicio</span>
+<header th:fragment="topbar" id="dashboard-topbar" class="h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-4 sm:px-6 sticky top-0 z-10">
+    <div class="flex items-center text-sm min-w-0">
+        <!-- Botón para mostrar/ocultar el menú lateral (abre Drawer en móvil, contrae/expande en escritorio) -->
+        <button type="button"
+                id="topbar-sidebar-toggle"
+                onclick="Storevo.AdminUI && Storevo.AdminUI.handleTopbarSidebarBtn()"
+                title="Alternar menú lateral"
+                aria-label="Alternar menú lateral"
+                aria-expanded="true"
+                class="mr-3 p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition focus:outline-none focus:ring-2 focus:ring-storevo-500/40">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h10"></path>
+            </svg>
+        </button>
+
+        <span class="text-slate-400 font-medium hidden sm:inline">Dashboard</span>
+        <svg class="w-4 h-4 mx-2 text-slate-600 hidden sm:inline flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+        <span class="text-white font-semibold truncate" th:text="${pageTitle ?: 'Inicio'}">Inicio</span>
     </div>
 
-    <div class="flex items-center gap-4">
-        <a th:href="@{|/s/${slug}|}" target="_blank" title="Ver mi tienda pública" class="text-slate-400 hover:text-white transition">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+    <div class="flex items-center gap-2 sm:gap-3.5">
+        <!-- Conmutador de Tema: Modo Oscuro / Modo Claro -->
+        <button type="button"
+                id="admin-theme-toggle"
+                onclick="Storevo.AdminUI && Storevo.AdminUI.toggleTheme()"
+                title="Cambiar entre modo claro y oscuro"
+                aria-label="Cambiar entre modo claro y oscuro"
+                class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white text-xs font-semibold transition focus:outline-none focus:ring-2 focus:ring-storevo-500/40">
+            <!-- Icono Sol (visible en modo oscuro para pasar a claro) -->
+            <svg class="adm-theme-icon-sun w-4 h-4 text-amber-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+            </svg>
+            <!-- Icono Luna (visible en modo claro para pasar a oscuro) -->
+            <svg class="adm-theme-icon-moon w-4 h-4 text-storevo-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+            </svg>
+            <span id="admin-theme-label" class="hidden sm:inline">Modo claro</span>
+        </button>
+
+        <a th:href="@{|/s/${slug}|}" target="_blank" title="Ver mi tienda pública" class="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
         </a>
-        <div class="h-8 w-8 bg-storevo-600 rounded-full flex items-center justify-center font-bold text-white shadow-lg">
+        <div class="adm-keep-white h-8 w-8 bg-storevo-600 rounded-full flex items-center justify-center font-bold text-white shadow-lg flex-shrink-0">
             C
         </div>
         <form th:action="@{/auth/logout}" method="post" class="m-0">
-            <button type="submit" title="Cerrar sesión" class="text-slate-400 hover:text-red-400 transition ml-2">
+            <button type="submit" title="Cerrar sesión" aria-label="Cerrar sesión" class="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-800 transition">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
             </button>
         </form>

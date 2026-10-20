@@ -47,6 +47,175 @@ Storevo.Navigation = {
 document.addEventListener('DOMContentLoaded', Storevo.Navigation.syncReturnLinks);
 
 /**
+ * Storevo.AdminUI - Gestión de Modo Claro/Oscuro y Menú Lateral Contraíble del Dashboard
+ */
+Storevo.AdminUI = (function() {
+    const THEME_KEY = 'storevo_admin_theme';
+    const SIDEBAR_KEY = 'storevo_admin_sidebar_collapsed';
+    let tooltipEl = null;
+
+    function getTheme() {
+        return document.documentElement.getAttribute('data-admin-theme') === 'light' ? 'light' : 'dark';
+    }
+
+    function applyTheme(theme, persist = true) {
+        const normalized = theme === 'light' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-admin-theme', normalized);
+        if (persist) {
+            try { localStorage.setItem(THEME_KEY, normalized); } catch (e) {}
+        }
+        syncControlStates();
+    }
+
+    function toggleTheme() {
+        const next = getTheme() === 'light' ? 'dark' : 'light';
+        applyTheme(next, true);
+    }
+
+    function isCollapsed() {
+        return document.documentElement.getAttribute('data-sidebar-collapsed') === 'true';
+    }
+
+    function setSidebarCollapsed(collapsed, persist = true) {
+        const val = Boolean(collapsed);
+        document.documentElement.setAttribute('data-sidebar-collapsed', val ? 'true' : 'false');
+        if (persist) {
+            try { localStorage.setItem(SIDEBAR_KEY, val ? 'true' : 'false'); } catch (e) {}
+        }
+        hideTooltip();
+        syncControlStates();
+    }
+
+    function toggleSidebar() {
+        setSidebarCollapsed(!isCollapsed(), true);
+    }
+
+    function openMobileSidebar() {
+        document.documentElement.setAttribute('data-sidebar-mobile-open', 'true');
+        document.body.classList.add('overflow-hidden');
+        syncControlStates();
+    }
+
+    function closeMobileSidebar() {
+        document.documentElement.removeAttribute('data-sidebar-mobile-open');
+        document.body.classList.remove('overflow-hidden');
+        syncControlStates();
+    }
+
+    function handleTopbarSidebarBtn() {
+        if (window.innerWidth < 768) {
+            const isOpen = document.documentElement.getAttribute('data-sidebar-mobile-open') === 'true';
+            if (isOpen) closeMobileSidebar();
+            else openMobileSidebar();
+        } else {
+            toggleSidebar();
+        }
+    }
+
+    function syncControlStates() {
+        const currentTheme = getTheme();
+        const themeBtn = document.getElementById('admin-theme-toggle');
+        const themeLabel = document.getElementById('admin-theme-label');
+        if (themeBtn) {
+            const labelText = currentTheme === 'light' ? 'Modo oscuro' : 'Modo claro';
+            themeBtn.setAttribute('aria-pressed', currentTheme === 'light' ? 'true' : 'false');
+            themeBtn.setAttribute('title', `Cambiar a ${labelText.toLowerCase()}`);
+            if (themeLabel) themeLabel.textContent = labelText;
+        }
+
+        const collapsed = isCollapsed();
+        const collapseBtn = document.getElementById('sidebar-collapse-btn');
+        const topbarBtn = document.getElementById('topbar-sidebar-toggle');
+        if (collapseBtn) {
+            collapseBtn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+            collapseBtn.setAttribute('data-tooltip', collapsed ? 'Expandir menú' : 'Contraer menú');
+        }
+        if (topbarBtn) {
+            const isMobile = window.innerWidth < 768;
+            const expanded = isMobile
+                ? document.documentElement.getAttribute('data-sidebar-mobile-open') === 'true'
+                : !collapsed;
+            topbarBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        }
+    }
+
+    function ensureTooltip() {
+        if (tooltipEl && document.body.contains(tooltipEl)) return tooltipEl;
+        tooltipEl = document.createElement('div');
+        tooltipEl.id = 'adm-sidebar-tooltip';
+        tooltipEl.setAttribute('role', 'tooltip');
+        document.body.appendChild(tooltipEl);
+        return tooltipEl;
+    }
+
+    function showTooltipFor(targetEl) {
+        if (window.innerWidth < 768 || !isCollapsed()) return;
+        const text = targetEl.getAttribute('data-tooltip');
+        if (!text) return;
+
+        const tip = ensureTooltip();
+        tip.textContent = text;
+        const rect = targetEl.getBoundingClientRect();
+        const top = Math.round(rect.top + (rect.height / 2) - 14);
+        const left = Math.round(rect.right + 10);
+        tip.style.top = `${Math.max(8, top)}px`;
+        tip.style.left = `${left}px`;
+        tip.classList.add('is-visible');
+    }
+
+    function hideTooltip() {
+        if (tooltipEl) {
+            tooltipEl.classList.remove('is-visible');
+        }
+    }
+
+    function init() {
+        const sidebar = document.getElementById('dashboard-sidebar');
+        if (!sidebar) return;
+
+        syncControlStates();
+
+        sidebar.querySelectorAll('.adm-nav-link').forEach(link => {
+            link.addEventListener('mouseenter', () => showTooltipFor(link));
+            link.addEventListener('mouseleave', hideTooltip);
+            link.addEventListener('focus', () => showTooltipFor(link));
+            link.addEventListener('blur', hideTooltip);
+            link.addEventListener('click', () => {
+                hideTooltip();
+                if (window.innerWidth < 768 && link.tagName === 'A') {
+                    closeMobileSidebar();
+                }
+            });
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && document.documentElement.getAttribute('data-sidebar-mobile-open') === 'true') {
+                closeMobileSidebar();
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 768 && document.documentElement.hasAttribute('data-sidebar-mobile-open')) {
+                closeMobileSidebar();
+            }
+            hideTooltip();
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+
+    return {
+        toggleTheme,
+        applyTheme,
+        toggleSidebar,
+        setSidebarCollapsed,
+        openMobileSidebar,
+        closeMobileSidebar,
+        handleTopbarSidebarBtn
+    };
+})();
+
+/**
  * Storevo.Router - Motor SPA con Caché Persistente (Stale-While-Revalidate),
  * Pre-carga Proactiva de Navbar e Hidratación Síncrona en 1 solo frame (Cero Parpadeos).
  */

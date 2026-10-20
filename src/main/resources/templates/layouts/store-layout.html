@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title layout:title-pattern="$CONTENT_TITLE | [[${settings.storeName}]]">Tienda</title>
-    <meta name="description" th:content="'Explora el catálogo oficial de ' + ${settings.storeName} + ' y realiza tu pedido fácil y seguro.'">
-    <meta property="og:site_name" th:content="${settings.storeName}">
+    <title layout:title-pattern="$CONTENT_TITLE | [[${settings != null and settings.storeName != null ? settings.storeName : 'Tienda'}]]">Tienda</title>
+    <meta name="description" th:content="'Explora el catálogo oficial de ' + ${settings != null and settings.storeName != null ? settings.storeName : 'nuestra tienda'} + ' y realiza tu pedido fácil y seguro.'">
+    <meta property="og:site_name" th:content="${settings != null and settings.storeName != null ? settings.storeName : 'Tienda'}">
     <meta property="og:type" content="website">
     <th:block layout:fragment="head-meta">
-        <meta property="og:title" th:content="${(pageTitle != null ? pageTitle + ' | ' : '') + settings.storeName}">
-        <meta property="og:description" th:content="'Compra online en ' + ${settings.storeName} + '. Conoce nuestros productos disponibles.'">
+        <meta property="og:title" th:content="${(pageTitle != null ? pageTitle + ' | ' : '') + (settings != null and settings.storeName != null ? settings.storeName : 'Tienda')}">
+        <meta property="og:description" th:content="'Compra online en ' + ${settings != null and settings.storeName != null ? settings.storeName : 'nuestra tienda'} + '. Conoce nuestros productos disponibles.'">
     </th:block>
     <link rel="stylesheet" th:href="@{/css/app.css}">
     <link rel="stylesheet" th:href="@{/css/store-navbar.css}">
@@ -246,12 +246,13 @@
 <footer class="bg-secondary text-white py-12 mt-auto border-t border-white/10">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-8">
         <div>
-            <h3 class="text-xl font-bold mb-3" th:text="${settings.storeName}">Tienda</h3>
+            <h3 class="text-xl font-bold mb-3" th:text="${settings != null and settings.storeName != null ? settings.storeName : 'Tienda'}">Tienda</h3>
             <p class="text-sm opacity-90 leading-relaxed">Bienvenido a nuestra tienda online. Descubre nuestro catálogo con los mejores productos.</p>
+
             <div class="flex items-center gap-3 mt-5"
-                 th:if="${(settings.instagram != null and !settings.instagram.isBlank())
+                 th:if="${settings != null and ((settings.instagram != null and !settings.instagram.isBlank())
                        or (settings.facebook != null and !settings.facebook.isBlank())
-                       or (settings.tiktok != null and !settings.tiktok.isBlank())}">
+                       or (settings.tiktok != null and !settings.tiktok.isBlank()))}">
                 <!-- Instagram -->
                 <a th:if="${settings.instagram != null and !settings.instagram.isBlank()}"
                    th:with="igClean=${#strings.replace(#strings.trim(settings.instagram), '@', '')},
@@ -283,7 +284,7 @@
         </div>
         <div>
             <h4 class="font-bold mb-4 uppercase text-sm tracking-wider">Contacto</h4>
-            <ul class="space-y-2.5 text-sm opacity-90">
+            <ul class="space-y-2.5 text-sm opacity-90" th:if="${settings != null}">
                 <li th:if="${settings.whatsapp != null && !settings.whatsapp.isBlank()}"
                     th:with="waDigits=${#strings.replace(#strings.replace(#strings.replace(settings.whatsapp, ' ', ''), '+', ''), '-', '')},
                              waNormalized=${#strings.length(waDigits) == 10 ? '57' + waDigits : waDigits}">

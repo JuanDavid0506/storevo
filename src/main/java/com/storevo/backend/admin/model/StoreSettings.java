@@ -24,6 +24,9 @@ public class StoreSettings {
     @JoinColumn(name = "store_id", nullable = false, unique = true)
     private Store store;
 
+    @Transient
+    private String storeName;
+
     // NUEVOS CAMPOS PARA EL ONBOARDING MÁGICO
     @Column(name = "business_type", length = 50)
     private String businessType;

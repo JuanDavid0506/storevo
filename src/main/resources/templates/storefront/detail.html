@@ -3,7 +3,7 @@
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layouts/store-layout}">
 <head>
-  <title th:text="${product.name} + ' - ' + ${settings.storeName}">Detalle</title>
+  <title th:text="${product.name} + ' - ' + ${settings != null and settings.storeName != null ? settings.storeName : 'Tienda'}">Detalle</title>
 </head>
 <body>
 <div layout:fragment="content">
