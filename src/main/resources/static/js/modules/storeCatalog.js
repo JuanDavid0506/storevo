@@ -7,6 +7,12 @@
 
     window.Storevo = window.Storevo || {};
 
+    // Este archivo se carga en el layout y en home.html / custom-page.html.
+    // Una segunda copia crearía instancias duplicadas sobre las mismas barras.
+    if (window.Storevo.Catalog) {
+        return;
+    }
+
     function normalizeText(str) {
         return String(str || '')
             .toLowerCase()
@@ -1071,7 +1077,6 @@
     });
 
     document.addEventListener('DOMContentLoaded', initAllCatalogs);
-    document.addEventListener('storevo:page-load', initAllCatalogs);
     document.addEventListener('storevo:filter-config-updated', () => {
         activeInstances.forEach(inst => inst.refreshConfig(true));
     });

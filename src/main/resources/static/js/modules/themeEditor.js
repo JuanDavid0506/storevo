@@ -2092,6 +2092,9 @@ Storevo.ThemeEditor = {
         }
         // =====================================================================
         // 5. SISTEMA GLOBAL DE FILTROS Y BÚSQUEDA
+        // Los handlers leen this.theme.globalStyles EN EL MOMENTO del evento
+        // (no un `gs` capturado) y se reasignan con onclick/onchange, así que
+        // sobreviven al reemplazo del tema (presets, descartar, restablecer).
         // =====================================================================
         const DEFAULT_GLOBAL_FILTER_STYLES = {
             filterEnabled: true,
@@ -2107,6 +2110,7 @@ Storevo.ThemeEditor = {
             filterShowVariants: true,
             filterShowSpecs: false
         };
+        const liveStyles = () => this.theme.globalStyles;
 
         Object.entries(DEFAULT_GLOBAL_FILTER_STYLES).forEach(([k, defVal]) => {
             if (gs[k] === undefined || gs[k] === null) {
@@ -2130,7 +2134,8 @@ Storevo.ThemeEditor = {
         };
 
         const syncGlobalFilterUI = () => {
-            const activeLayout = gs.filterLayout || 'drawer';
+            const g = liveStyles();
+            const activeLayout = g.filterLayout || 'drawer';
             if (filterLayoutWrap) {
                 filterLayoutWrap.querySelectorAll('button[data-value]').forEach(btn => {
                     btn.classList.toggle('is-selected', btn.getAttribute('data-value') === activeLayout);
@@ -2139,49 +2144,46 @@ Storevo.ThemeEditor = {
             Object.entries(filterCheckboxMap).forEach(([elId, propKey]) => {
                 const chk = document.getElementById(elId);
                 if (chk) {
-                    chk.checked = gs[propKey] !== undefined
-                        ? Boolean(gs[propKey])
+                    chk.checked = g[propKey] !== undefined && g[propKey] !== null
+                        ? Boolean(g[propKey])
                         : DEFAULT_GLOBAL_FILTER_STYLES[propKey];
                 }
             });
         };
 
-        if (filterLayoutWrap && !filterLayoutWrap.dataset.bound) {
-            filterLayoutWrap.dataset.bound = 'true';
+        if (filterLayoutWrap) {
             filterLayoutWrap.querySelectorAll('button[data-value]').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    gs.filterLayout = btn.getAttribute('data-value') || 'drawer';
+                btn.onclick = () => {
+                    liveStyles().filterLayout = btn.getAttribute('data-value') || 'drawer';
                     syncGlobalFilterUI();
                     this.pushLiveStylesToIframe();
                     this.scheduleAutoSave(false);
-                });
+                };
             });
         }
 
         Object.entries(filterCheckboxMap).forEach(([elId, propKey]) => {
             const chk = document.getElementById(elId);
-            if (chk && !chk.dataset.bound) {
-                chk.dataset.bound = 'true';
-                chk.addEventListener('change', () => {
-                    gs[propKey] = chk.checked;
+            if (chk) {
+                chk.onchange = () => {
+                    liveStyles()[propKey] = chk.checked;
                     this.pushLiveStylesToIframe();
                     this.scheduleAutoSave(false);
-                });
+                };
             }
         });
 
         const filterResetBtn = document.getElementById('style-filters-reset');
-        if (filterResetBtn && !filterResetBtn.dataset.bound) {
-            filterResetBtn.dataset.bound = 'true';
-            filterResetBtn.addEventListener('click', () => {
-                Object.assign(gs, DEFAULT_GLOBAL_FILTER_STYLES);
+        if (filterResetBtn) {
+            filterResetBtn.onclick = () => {
+                Object.assign(liveStyles(), DEFAULT_GLOBAL_FILTER_STYLES);
                 syncGlobalFilterUI();
                 this.pushLiveStylesToIframe();
                 this.scheduleAutoSave(false);
                 if (window.Storevo && Storevo.UI && Storevo.UI.Toast) {
                     Storevo.UI.Toast.show('Configuración global de filtros restablecida', 'info');
                 }
-            });
+            };
         }
 
         syncGlobalFilterUI();
@@ -2902,8 +2904,16 @@ Storevo.ThemeEditor = {
             });
         }
 
+        // Los filtros son una configuración global independiente de la plantilla: se conservan
+        const previousGlobal = this.theme.globalStyles || {};
+        const preservedFilterStyles = {};
+        Object.keys(previousGlobal).forEach(k => {
+            if (k.startsWith('filter')) preservedFilterStyles[k] = previousGlobal[k];
+        });
+
         this.theme = nextTheme;
         this.theme.customPages = currentCustomPages;
+        this.theme.globalStyles = Object.assign({}, this.theme.globalStyles, preservedFilterStyles);
         this.ensurePagesStructure();
 
         this.activePresetId = preset.id;
@@ -3022,6 +3032,7 @@ Storevo.ThemeEditor = {
         this.setSyncStatus('pending', 'Guardando borrador...');
         clearTimeout(this.autoSaveTimer);
         this.autoSaveTimer = setTimeout(() => {
+            this.autoSaveTimer = null; // switchPage usa este valor para saber si hay un guardado pendiente
             this.saveDraft(false, reloadIframe);
         }, 650);
     },

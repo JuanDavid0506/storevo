@@ -326,12 +326,12 @@
 <script th:src="@{/js/modules/gallery.js}"></script>
 <script th:src="@{/js/modules/cart.js}"></script>
 <script th:src="@{/js/modules/wishlist.js}"></script>
-<script th:src="@{/js/modules/storeCatalog.js}"></script>
+<script th:src="@{/js/modules/storeCatalog.js}" data-sv-persistent="true"></script>
 <script th:src="@{/js/modules/productDetail.js}"></script>
 <script th:src="@{/js/ui/modal.js}"></script>
 
 <!-- Motor Interactivo Unificado: Misma arquitectura de submenú y animación para Catálogo y Categorías del Navbar -->
-<script>
+<script data-sv-persistent="true">
     (function() {
         const bridge = document.getElementById('storevo-navbar-advanced-bridge');
         if (!bridge) return;
@@ -1117,7 +1117,7 @@
 </script>
 
 <!-- Puente interactivo cuando la tienda está dentro del Editor Visual (preview=draft) -->
-<script th:if="${isDraftPreview}">
+<script th:if="${isDraftPreview}" data-sv-persistent="true">
     (function() {
         function detectCurrentEditorPageKey() {
             const path = window.location.pathname || '';

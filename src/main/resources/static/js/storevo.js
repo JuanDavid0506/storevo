@@ -227,6 +227,13 @@ Storevo.Router = (function() {
             }, 180);
         }, 100);
     }
+    // Scripts del layout que viven toda la sesión (puente del editor, motor del navbar,
+    // storeCatalog.js) se marcan con data-sv-persistent. Sus listeners NO deben ser
+    // recolectados como "recursos de página", o se borran en la primera navegación SPA.
+    function isPersistentScriptRunning() {
+        const cs = document.currentScript;
+        return Boolean(cs && cs.hasAttribute && cs.hasAttribute('data-sv-persistent'));
+    }
 
     function installResourceSandbox() {
         if (sandboxInstalled) return;
@@ -263,14 +270,14 @@ Storevo.Router = (function() {
                 }
                 return;
             }
-            if (isCollectingPageResources && typeof listener === 'function') {
+            if (isCollectingPageResources && typeof listener === 'function' && !isPersistentScriptRunning()) {
                 pageListeners.push({ target: 'document', type, listener, options });
             }
             return nativeDocAddEvent(type, listener, options);
         };
 
         window.addEventListener = function(type, listener, options) {
-            if (isCollectingPageResources && typeof listener === 'function') {
+            if (isCollectingPageResources && typeof listener === 'function' && !isPersistentScriptRunning()) {
                 pageListeners.push({ target: 'window', type, listener, options });
             }
             return nativeWinAddEvent(type, listener, options);
