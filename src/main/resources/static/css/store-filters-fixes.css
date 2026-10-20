@@ -335,7 +335,24 @@ body[data-sv-search-input-size="large"] .sv-toolbar-search-box input.sv-search-i
     overflow: hidden;
 }
 
-/* 6) Botón limpiar (×) y botón de acción (icon | text | icon_text | none) */
+/* 6) Botón limpiar (×) único (desactiva X nativa del navegador y respeta .hidden) y botón de acción */
+.sv-nav__search input[type="search"]::-webkit-search-decoration,
+.sv-nav__search input[type="search"]::-webkit-search-cancel-button,
+.sv-nav__search input[type="search"]::-webkit-search-results-button,
+.sv-nav__search input[type="search"]::-webkit-search-results-decoration,
+.sv-search-modal input[type="search"]::-webkit-search-decoration,
+.sv-search-modal input[type="search"]::-webkit-search-cancel-button,
+.sv-search-modal input[type="search"]::-webkit-search-results-button,
+.sv-search-modal input[type="search"]::-webkit-search-results-decoration,
+.sv-drawer__search-input::-webkit-search-decoration,
+.sv-drawer__search-input::-webkit-search-cancel-button,
+.sv-search-input::-webkit-search-decoration,
+.sv-search-input::-webkit-search-cancel-button {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    display: none !important;
+}
+
 .sv-search-clear-btn {
     display: inline-flex;
     align-items: center;
@@ -348,6 +365,10 @@ body[data-sv-search-input-size="large"] .sv-toolbar-search-box input.sv-search-i
     cursor: pointer;
     border-radius: 9999px;
     flex-shrink: 0;
+}
+.sv-search-clear-btn.hidden,
+.sv-search-clear.hidden {
+    display: none !important;
 }
 .sv-search-clear-btn:hover {
     color: #ef4444;

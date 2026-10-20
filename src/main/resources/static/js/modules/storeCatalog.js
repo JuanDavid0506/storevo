@@ -1282,6 +1282,8 @@
         let fetchIndexController = null;
         let latestSearchReqId = 0;
         let searchModalBackdrop = null;
+        let lastSearchMode = null;
+        let lastNavbarVariant = null;
 
         function createEmptyAdvState() {
             return {
@@ -2266,6 +2268,26 @@
                 }
             };
 
+
+            const interceptForFullscreenModal = (e) => {
+                const cfg = getGlobalSearchConfig();
+                if (!cfg.enabled || !shouldUseFullscreenModal(cfg)) return false;
+                if (e.target && e.target.closest && e.target.closest('.sv-search-clear-btn, .sv-search-cat-select, .sv-search-expand-close')) {
+                    return false;
+                }
+                e.preventDefault();
+                e.stopPropagation();
+                if (document.activeElement === inputEl) {
+                    inputEl.blur();
+                }
+                openFullscreenModal(inputEl.value.trim(), formState.catId);
+                return true;
+            };
+
+            // Abrir al primer toque/clic sin esperar al ciclo focus -> mouseup -> click
+            inputEl.addEventListener('mousedown', interceptForFullscreenModal);
+            inputEl.addEventListener('click', interceptForFullscreenModal);
+
             inputEl.addEventListener('focus', (e) => {
                 const cfg = getGlobalSearchConfig();
                 if (shouldUseFullscreenModal(cfg)) {
@@ -2296,17 +2318,26 @@
             }
 
             if (clearBtn) {
-                clearBtn.addEventListener('click', () => {
+                clearBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
                     inputEl.value = '';
                     updateClearVisibility();
-                    inputEl.focus();
-                    runPanelQuery(true);
+                    if (!shouldUseFullscreenModal(getGlobalSearchConfig())) {
+                        inputEl.focus();
+                        runPanelQuery(true);
+                    }
                 });
             }
 
             formEl.addEventListener('submit', (e) => {
                 e.preventDefault();
                 clearTimeout(debounceTimer);
+                const cfg = getGlobalSearchConfig();
+                if (shouldUseFullscreenModal(cfg) && !inputEl.value.trim()) {
+                    openFullscreenModal('', formState.catId);
+                    return;
+                }
                 navigateToCatalogExplicit(inputEl.value.trim(), formState.catId);
             });
 
@@ -2330,7 +2361,22 @@
                 if (catSelect) {
                     catSelect.classList.toggle('hidden', cfg.categoryScope !== 'select_left');
                 }
+                const clearBtn = form.querySelector('.sv-search-clear-btn');
+                if (clearBtn && input) {
+                    clearBtn.classList.toggle('hidden', !input.value.trim());
+                }
             });
+
+            if (searchModalBackdrop) {
+                const modalInput = searchModalBackdrop.querySelector('input[name="q"]');
+                const modalClear = searchModalBackdrop.querySelector('.sv-search-clear-btn');
+                const modalCat = searchModalBackdrop.querySelector('.sv-search-cat-select');
+                const modalBtnLbl = searchModalBackdrop.querySelector('.sv-search-submit-label');
+                if (modalInput) modalInput.placeholder = cfg.placeholder || 'Buscar productos...';
+                if (modalBtnLbl) modalBtnLbl.textContent = cfg.buttonLabel || 'Buscar';
+                if (modalCat) modalCat.classList.toggle('hidden', cfg.categoryScope !== 'select_left');
+                if (modalClear && modalInput) modalClear.classList.toggle('hidden', !modalInput.value.trim());
+            }
 
             const triggerLabel = document.querySelector('#sv-nav-search-trigger .sv-nav__search-trigger-label');
             if (triggerLabel) {
@@ -2375,6 +2421,10 @@
         function init(metadata) {
             currentMetadata = metadata || loadCatalogMetadata();
             indexedProducts = buildIndexedProducts(currentMetadata);
+            const cfg = getGlobalSearchConfig();
+            lastSearchMode = cfg.mode;
+            lastNavbarVariant = cfg.navbarVariant;
+
             ensureFullscreenModalMounted();
             syncAllSearchFormsConfig();
             initNavbarSearchTriggers();
@@ -2384,11 +2434,29 @@
 
         function refreshFromEditor() {
             const cfg = getGlobalSearchConfig();
+            const modeJustChanged = lastSearchMode !== null && lastSearchMode !== cfg.mode;
+            const variantJustChanged = lastNavbarVariant !== null && lastNavbarVariant !== cfg.navbarVariant;
+            lastSearchMode = cfg.mode;
+            lastNavbarVariant = cfg.navbarVariant;
+
             syncAllSearchFormsConfig();
 
             if (!cfg.enabled) {
                 closeAllSearchPanels();
                 return;
+            }
+
+            // Si el vendedor acaba de elegir "Pantalla Completa" o "Botón / Lupa que abre buscador amplio" en el editor,
+            // mostrar inmediatamente el overlay para que vea y personalice el resultado sin tener que forzarlo
+            if ((modeJustChanged && cfg.mode === 'fullscreen') || (variantJustChanged && cfg.navbarVariant === 'modal_trigger')) {
+                document.querySelectorAll('.sv-search-panel-host').forEach(h => { h.innerHTML = ''; });
+                openFullscreenModal('', '');
+                return;
+            }
+
+            // Si cambió desde Pantalla Completa hacia otra modalidad, cerrar el modal de pantalla completa
+            if (modeJustChanged && cfg.mode !== 'fullscreen' && searchModalBackdrop && searchModalBackdrop.classList.contains('is-open')) {
+                closeAllSearchPanels();
             }
 
             if (searchModalBackdrop && searchModalBackdrop.classList.contains('is-open')) {
@@ -2438,7 +2506,7 @@
         document.querySelectorAll('details.sv-topbar-popover[open]').forEach(det => {
             if (!det.contains(e.target)) det.removeAttribute('open');
         });
-        if (!e.target.closest('.sv-nav__search, .sv-nav__search-expand, .sv-nav__search-trigger')) {
+        if (!e.target.closest('.sv-nav__search, .sv-nav__search-expand, .sv-nav__search-trigger, .sv-search-modal')) {
             SearchEngine.closeAll();
         }
     });
