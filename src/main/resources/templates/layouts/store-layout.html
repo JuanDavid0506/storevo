@@ -14,8 +14,8 @@
     <link rel="stylesheet" th:href="@{/css/app.css}">
     <link rel="stylesheet" th:href="@{/css/store-navbar.css}">
     <link rel="stylesheet" th:href="@{/css/store-navbar-fixes.css}">
-    <link rel="stylesheet" th:href="@{/css/store-filters-fixes.css}">
     <link rel="stylesheet" th:href="@{/css/store-components.css}">
+    <link rel="stylesheet" th:href="@{/css/store-filters-fixes.css}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <!-- Google Fonts: solo las fuentes activas de la tienda (todas en la vista previa del editor) -->
@@ -86,7 +86,6 @@
         .storevo-theme-section {
             position: relative;
             transition: outline 0.15s ease, box-shadow 0.15s ease;
-            cursor: pointer;
         }
         .storevo-theme-section:hover {
             outline: 2px dashed #6366f1;
@@ -97,7 +96,7 @@
             outline-offset: -2px;
         }
         .storevo-theme-section::after {
-            content: attr(data-section-label) " • Clic para editar";
+            content: attr(data-section-label) " · Doble clic para editar";
             position: absolute;
             top: 10px;
             right: 12px;
@@ -1206,16 +1205,29 @@
                 }
             });
 
-            document.querySelectorAll('.sv-filter-trigger-btn, .sv-filter-topbar, .sv-filter-sidebar, .sv-filter-inline-panel, .sv-active-filters-bar').forEach(el => {
-                if (!filterEnabled) {
+            if (!filterEnabled) {
+                document.querySelectorAll('.sv-filter-open-btn, .sv-global-filters-host, .sv-active-filters-bar').forEach(el => {
                     el.classList.add('hidden');
-                } else {
-                    el.classList.remove('hidden');
-                }
-            });
+                });
+                document.querySelectorAll('.sv-filter-drawer-backdrop').forEach(el => {
+                    el.classList.remove('is-open');
+                    el.classList.add('hidden');
+                });
+                document.body.classList.remove('overflow-hidden');
+            }
+        }
+
+        let pendingSingleClickTimer = null;
+
+        function isPureFormOrFilterControl(target) {
+            if (!target || !target.closest) return false;
+            return Boolean(
+                target.closest('input, select, textarea, [data-qty-step], .sv-filter-open-btn, .sv-filter-drawer-backdrop, .sv-global-filters-host, .sv-catalog-sidebar, .sv-active-filters-bar')
+            );
         }
 
         // Interceptar en fase de captura cualquier clic en enlaces internos para que jamás se pierda ?preview=draft
+        // y desambiguar clic simple (navegación/prueba) frente a doble clic (abrir sección en el editor)
         document.addEventListener('click', function(e) {
             const anchor = e.target && e.target.closest ? e.target.closest('a[href^="/s/"]') : null;
             if (anchor) {
@@ -1227,21 +1239,91 @@
                     }
                 } catch (err) {}
             }
+
+            const sectionEl = e.target && e.target.closest ? e.target.closest('.storevo-theme-section[data-section-id]') : null;
+            if (!sectionEl || isPureFormOrFilterControl(e.target)) return;
+
+            // Si es el 2do clic de un doble clic sobre un enlace, botón o acordeón dentro de una sección,
+            // cancelar la navegación pendiente del 1er clic y evitar ejecuciones duplicadas
+            if (e.detail >= 2) {
+                if (pendingSingleClickTimer) {
+                    clearTimeout(pendingSingleClickTimer);
+                    pendingSingleClickTimer = null;
+                }
+                const interactiveEl = e.target.closest('a[href], button, summary, label, [role="button"]');
+                if (interactiveEl) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+                return;
+            }
+
+            // En el 1er clic sobre un enlace dentro de una sección editable, dar margen breve (220ms)
+            // por si el usuario está haciendo doble clic para editar la sección; si es un solo clic, navegar normalmente
+            const anyAnchor = e.target.closest('a[href]');
+            if (anyAnchor && e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+                const rawHref = anyAnchor.getAttribute('href') || '';
+                if (rawHref && !rawHref.startsWith('#') && !rawHref.startsWith('javascript:')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (pendingSingleClickTimer) clearTimeout(pendingSingleClickTimer);
+                    pendingSingleClickTimer = setTimeout(function() {
+                        pendingSingleClickTimer = null;
+                        const targetAttr = anyAnchor.getAttribute('target');
+                        if (targetAttr && targetAttr !== '_self') {
+                            window.open(anyAnchor.href, targetAttr);
+                        } else if (
+                            !anyAnchor.hasAttribute('data-no-spa') &&
+                            window.Storevo &&
+                            Storevo.Router &&
+                            typeof Storevo.Router.navigate === 'function'
+                        ) {
+                            Storevo.Router.navigate(anyAnchor.href);
+                        } else {
+                            window.location.href = anyAnchor.href;
+                        }
+                    }, 220);
+                }
+            }
         }, true);
 
-        document.addEventListener('click', function(e) {
-            const sectionEl = e.target.closest('.storevo-theme-section[data-section-id]');
+        // Doble clic sobre cualquier sección en cualquier página del iframe para abrir su configuración
+        document.addEventListener('dblclick', function(e) {
+            if (pendingSingleClickTimer) {
+                clearTimeout(pendingSingleClickTimer);
+                pendingSingleClickTimer = null;
+            }
+            if (isPureFormOrFilterControl(e.target)) return;
+
+            const sectionEl = e.target && e.target.closest ? e.target.closest('.storevo-theme-section[data-section-id]') : null;
             if (!sectionEl) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+            if (window.getSelection) {
+                try { window.getSelection().removeAllRanges(); } catch (err) {}
+            }
+
             if (window.parent && window.parent !== window) {
                 const sectionId = sectionEl.getAttribute('data-section-id');
+                const sectionType = sectionEl.getAttribute('data-section-type') || '';
+                const allSections = Array.from(document.querySelectorAll('main .storevo-theme-section[data-section-id]'));
+                const sectionIndex = allSections.indexOf(sectionEl);
+                const detectedPageKey = detectCurrentEditorPageKey();
+
                 document.querySelectorAll('.storevo-theme-section').forEach(el => el.classList.remove('editor-selected-section'));
                 sectionEl.classList.add('editor-selected-section');
+
                 window.parent.postMessage({
                     type: 'storevo:select-section',
-                    sectionId: sectionId
+                    sectionId: sectionId,
+                    sectionType: sectionType,
+                    sectionIndex: sectionIndex,
+                    pageKey: detectedPageKey,
+                    url: window.location.pathname + window.location.search
                 }, window.location.origin);
             }
-        });
+        }, true);
 
         window.__storevoApplyLiveStyles = function(s) {
             if (!s) return;
@@ -1305,8 +1387,15 @@
                 window.__storevoApplyLiveStyles(e.data.styles);
             }
             if (e.data.type === 'storevo:highlight-section') {
+                const targetId = e.data.sectionId || '';
                 document.querySelectorAll('.storevo-theme-section').forEach(el => {
-                    const isMatch = el.getAttribute('data-section-id') === e.data.sectionId;
+                    const domId = el.getAttribute('data-section-id') || '';
+                    const domType = el.getAttribute('data-section-type') || '';
+                    const isMatch = Boolean(targetId) && (
+                        domId === targetId ||
+                        (targetId.startsWith('sec_catalog_results_') && domType === 'catalog_results') ||
+                        (domId && targetId.startsWith(domId + '_cat_'))
+                    );
                     el.classList.toggle('editor-selected-section', isMatch);
                     if (isMatch) {
                         el.scrollIntoView({ behavior: 'smooth', block: 'center' });

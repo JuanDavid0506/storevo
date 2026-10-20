@@ -649,7 +649,7 @@
                 }
             }
 
-            if (cfg.showCategory && facets.categories.size > 1) {
+            if (cfg.showCategory && facets.categories.size >= 1) {
                 const catHtml = Array.from(facets.categories.entries()).map(([catName, cnt]) => `
                     <label class="flex items-center gap-2.5 py-1.5 cursor-pointer select-none text-sm text-slate-700 hover:text-slate-900">
                         <input type="checkbox" data-filter-type="category" value="${escapeHtml(catName)}" ${state.categories.has(catName) ? 'checked' : ''} class="w-4 h-4 rounded border-slate-300 text-brand focus:ring-brand">
@@ -856,15 +856,35 @@
             });
         }
 
+        let lastRenderedLayout = null;
+
+        function openDrawer() {
+            drawerBackdrop.classList.remove('hidden');
+            drawerBackdrop.classList.add('is-open');
+            document.body.classList.add('overflow-hidden');
+        }
+
+        function closeDrawer() {
+            drawerBackdrop.classList.remove('is-open');
+            drawerBackdrop.classList.add('hidden');
+            if (!document.querySelector('.sv-filter-drawer-backdrop.is-open')) {
+                document.body.classList.remove('overflow-hidden');
+            }
+        }
+
         function renderFilterUI(fromLiveEditorUpdate) {
             const cfg = getGlobalFilterConfig();
             const effectiveEnabled = cfg.enabled && isSectionFilterAllowed();
+            const layoutChangedInLiveEditor = Boolean(
+                fromLiveEditorUpdate && lastRenderedLayout !== null && lastRenderedLayout !== cfg.layout
+            );
+            lastRenderedLayout = cfg.layout;
 
             toolbarEl.classList.toggle('hidden', !effectiveEnabled);
-            dynamicHost.classList.toggle('hidden', !effectiveEnabled);
             if (!effectiveEnabled) {
+                dynamicHost.classList.add('hidden');
                 activeChipsBar.classList.add('hidden');
-                drawerBackdrop.classList.add('hidden');
+                closeDrawer();
                 resetSidebarWrapper();
                 return;
             }
@@ -888,63 +908,84 @@
             const hasAnyFacetEnabled = cfg.showCategory || cfg.showPrice || cfg.showOffers || cfg.showAvailability || cfg.showBrand || cfg.showVariants || cfg.showSpecs;
             filterTriggerBtn.classList.toggle('hidden', !hasAnyFacetEnabled || cfg.layout === 'topbar');
 
-            drawerBackdrop.innerHTML = `
-                <aside class="sv-filter-drawer ml-auto w-full max-w-sm h-full bg-white text-slate-900 shadow-2xl flex flex-col">
-                    <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-                        <div>
-                            <h3 class="text-base font-black text-slate-900">Filtrar Productos</h3>
-                            <p class="text-xs text-slate-500">Refina tu búsqueda en segundos</p>
+            if (!drawerBackdrop.querySelector('.sv-filter-drawer')) {
+                drawerBackdrop.innerHTML = `
+                    <aside class="sv-filter-drawer ml-auto w-full max-w-sm h-full bg-white text-slate-900 shadow-2xl flex flex-col">
+                        <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                            <div>
+                                <h3 class="text-base font-black text-slate-900">Filtrar Productos</h3>
+                                <p class="text-xs text-slate-500">Refina tu búsqueda en segundos</p>
+                            </div>
+                            <button type="button" class="sv-drawer-close p-2 rounded-full bg-white border border-slate-200 text-slate-600 hover:text-slate-900">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                            </button>
                         </div>
-                        <button type="button" class="sv-drawer-close p-2 rounded-full bg-white border border-slate-200 text-slate-600 hover:text-slate-900">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                        </button>
-                    </div>
-                    <div class="p-5 overflow-y-auto flex-1">
-                        ${buildFacetsSectionsHtml(cfg, false)}
-                    </div>
-                    <div class="p-4 border-t border-slate-100 bg-slate-50 flex items-center gap-3">
-                        <button type="button" class="sv-drawer-reset px-4 py-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 hover:bg-slate-100 transition">
-                            Limpiar
-                        </button>
-                        <button type="button" class="sv-drawer-apply sv-drawer-apply-count flex-1 py-2.5 px-4 rounded-xl bg-brand text-white text-xs font-bold shadow-md hover-bg-brand transition">
-                            Ver productos
-                        </button>
-                    </div>
-                </aside>
-            `;
-            bindFacetEvents(drawerBackdrop);
-            drawerBackdrop.querySelector('.sv-drawer-close')?.addEventListener('click', () => drawerBackdrop.classList.add('hidden'));
-            drawerBackdrop.querySelector('.sv-drawer-apply')?.addEventListener('click', () => drawerBackdrop.classList.add('hidden'));
-            drawerBackdrop.querySelector('.sv-drawer-reset')?.addEventListener('click', resetAllFilters);
-            drawerBackdrop.addEventListener('click', (e) => {
-                if (e.target === drawerBackdrop) drawerBackdrop.classList.add('hidden');
-            });
+                        <div class="sv-filter-drawer-body p-5 overflow-y-auto flex-1"></div>
+                        <div class="p-4 border-t border-slate-100 bg-slate-50 flex items-center gap-3">
+                            <button type="button" class="sv-drawer-reset px-4 py-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 hover:bg-slate-100 transition">
+                                Limpiar
+                            </button>
+                            <button type="button" class="sv-drawer-apply sv-drawer-apply-count flex-1 py-2.5 px-4 rounded-xl bg-brand text-white text-xs font-bold shadow-md hover-bg-brand transition">
+                                Ver productos
+                            </button>
+                        </div>
+                    </aside>
+                `;
+                drawerBackdrop.querySelector('.sv-drawer-close')?.addEventListener('click', closeDrawer);
+                drawerBackdrop.querySelector('.sv-drawer-apply')?.addEventListener('click', closeDrawer);
+                drawerBackdrop.querySelector('.sv-drawer-reset')?.addEventListener('click', resetAllFilters);
+                drawerBackdrop.addEventListener('click', (e) => {
+                    if (e.target === drawerBackdrop) closeDrawer();
+                });
+            }
+
+            const drawerBodyEl = drawerBackdrop.querySelector('.sv-filter-drawer-body');
+            if (drawerBodyEl) {
+                const prevScrollTop = drawerBodyEl.scrollTop;
+                drawerBodyEl.innerHTML = buildFacetsSectionsHtml(cfg, false);
+                bindFacetEvents(drawerBodyEl);
+                drawerBodyEl.scrollTop = prevScrollTop;
+            }
+
+            if (!hasAnyFacetEnabled) {
+                closeDrawer();
+                resetSidebarWrapper();
+                dynamicHost.innerHTML = '';
+                dynamicHost.classList.add('hidden');
+                return;
+            }
 
             if (cfg.layout !== 'drawer') {
-                drawerBackdrop.classList.add('hidden');
+                closeDrawer();
+            } else if (layoutChangedInLiveEditor && instanceIdx === 0) {
+                openDrawer();
             }
 
             resetSidebarWrapper();
             dynamicHost.innerHTML = '';
 
-            if (!hasAnyFacetEnabled) return;
-
             if (cfg.layout === 'topbar') {
+                dynamicHost.classList.remove('hidden');
                 dynamicHost.innerHTML = buildFacetsSectionsHtml(cfg, true);
                 bindFacetEvents(dynamicHost);
             } else if (cfg.layout === 'inline') {
-                if (fromLiveEditorUpdate && dynamicHost.dataset.inlineOpen === undefined) {
+                dynamicHost.classList.remove('hidden');
+                if (layoutChangedInLiveEditor || (fromLiveEditorUpdate && dynamicHost.dataset.inlineOpen === undefined)) {
                     dynamicHost.dataset.inlineOpen = 'true';
                 }
                 const isOpen = dynamicHost.dataset.inlineOpen === 'true';
-                dynamicHost.innerHTML = `
-                    <div class="${isOpen ? 'block' : 'hidden'} sv-inline-filter-panel bg-white text-slate-900 p-5 store-radius border border-slate-200/80 shadow-xs grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                dynamicHost.innerHTML = isOpen ? `
+                    <div class="block sv-inline-filter-panel bg-white text-slate-900 p-5 store-radius border border-slate-200/80 shadow-xs grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         ${buildFacetsSectionsHtml(cfg, false)}
                     </div>
-                `;
+                ` : '';
+                if (!isOpen) dynamicHost.classList.add('hidden');
                 bindFacetEvents(dynamicHost);
             } else if (cfg.layout === 'sidebar') {
+                dynamicHost.classList.add('hidden');
                 mountDesktopSidebar(cfg);
+            } else {
+                dynamicHost.classList.add('hidden');
             }
 
             updateTriggerBadge(cfg);
@@ -995,7 +1036,11 @@
                 dynamicHost.dataset.inlineOpen = isOpen ? 'false' : 'true';
                 renderFilterUI(false);
             } else {
-                drawerBackdrop.classList.remove('hidden');
+                if (drawerBackdrop.classList.contains('is-open')) {
+                    closeDrawer();
+                } else {
+                    openDrawer();
+                }
             }
         };
 
@@ -1074,6 +1119,16 @@
         document.querySelectorAll('details.sv-topbar-popover[open]').forEach(det => {
             if (!det.contains(e.target)) det.removeAttribute('open');
         });
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            document.querySelectorAll('.sv-filter-drawer-backdrop.is-open').forEach(el => {
+                el.classList.remove('is-open');
+                el.classList.add('hidden');
+            });
+            document.body.classList.remove('overflow-hidden');
+        }
     });
 
     document.addEventListener('DOMContentLoaded', initAllCatalogs);

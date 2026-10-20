@@ -391,28 +391,33 @@ Storevo.Router = (function() {
     function notifyVisualEditorPageLoaded() {
         if (!isPreviewMode() || !window.parent || window.parent === window) return;
 
-        const explicitKey = document.body.getAttribute('data-editor-page-key');
-        const path = window.location.pathname;
+        const path = window.location.pathname || '';
         const params = new URLSearchParams(window.location.search);
-        let detectedPage = explicitKey && explicitKey.trim() ? explicitKey.trim() : 'home';
+        const explicitKey = document.body.getAttribute('data-editor-page-key');
+        let detectedPage = 'home';
 
-        if (!explicitKey || !explicitKey.trim()) {
-            const pageMatch = path.match(/\/page\/([^/?#]+)/);
-            if (pageMatch && pageMatch[1]) {
-                detectedPage = 'page:' + decodeURIComponent(pageMatch[1]);
-            } else if (path.includes('/catalog')) {
-                const catParam = params.get('category');
-                detectedPage = (catParam && /^\d+$/.test(catParam.trim()))
-                    ? ('category:' + catParam.trim())
-                    : 'catalog';
-            } else if (path.includes('/p/') || path.includes('/product-preview')) {
-                detectedPage = 'product';
-            }
+        const pageMatch = path.match(/\/page\/([^/?#]+)/);
+        if (pageMatch && pageMatch[1]) {
+            detectedPage = 'page:' + decodeURIComponent(pageMatch[1]);
+        } else if (path.includes('/catalog')) {
+            const catParam = params.get('category');
+            detectedPage = (catParam && /^\d+$/.test(catParam.trim()))
+                ? ('category:' + catParam.trim())
+                : 'catalog';
+        } else if (path.includes('/p/') || path.includes('/product-preview')) {
+            detectedPage = 'product';
+        } else if (/\/s\/[^/]+\/?$/.test(path)) {
+            detectedPage = 'home';
+        } else if (explicitKey && explicitKey.trim()) {
+            detectedPage = explicitKey.trim();
         }
+
+        document.body.setAttribute('data-editor-page-key', detectedPage);
 
         window.parent.postMessage({
             type: 'storevo:page-loaded',
-            pageKey: detectedPage
+            pageKey: detectedPage,
+            url: window.location.pathname + window.location.search
         }, window.location.origin);
     }
 

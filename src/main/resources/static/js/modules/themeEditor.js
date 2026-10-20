@@ -996,23 +996,29 @@ Storevo.ThemeEditor = {
                 if (e.data.pageKey !== this.activePage) {
                     this.switchPage(e.data.pageKey, false);
                 }
+                if (e.data.url && e.data.url.startsWith(`/s/${this.slug}`)) {
+                    this.previewUrl = e.data.url;
+                }
                 if (typeof this.syncProductsFromIframe === 'function') {
                     this.syncProductsFromIframe();
                 }
                 if (typeof this.pushLiveStylesToIframe === 'function') {
                     this.pushLiveStylesToIframe();
                 }
-                if (this.activeSectionId && this.iframe && this.iframe.contentWindow) {
-                    this.iframe.contentWindow.postMessage({
-                        type: 'storevo:highlight-section',
-                        sectionId: this.activeSectionId
-                    }, window.location.origin);
+                if (this.activeSectionId) {
+                    this.highlightSectionInIframe(this.activeSectionId);
                 }
             }
             if (e.data.type === 'storevo:select-section' && e.data.sectionId) {
+                if (e.data.pageKey && e.data.pageKey !== this.activePage) {
+                    this.switchPage(e.data.pageKey, false);
+                }
+                if (e.data.url && e.data.url.startsWith(`/s/${this.slug}`)) {
+                    this.previewUrl = e.data.url;
+                }
                 this.syncProductsFromIframe();
                 this.setMobilePane('editor');
-                this.openInspector(e.data.sectionId);
+                this.openInspector(e.data.sectionId, e.data.sectionType, e.data.sectionIndex);
             }
         });
     },
@@ -1274,16 +1280,49 @@ Storevo.ThemeEditor = {
         return mutableList.find(s => s.id === sectionId) || mutableList.find(s => s.type === 'catalog_results') || null;
     },
 
-    openInspector: function(sectionId) {
+    openInspector: function(sectionId, sectionType, sectionIndex) {
         this.syncProductsFromIframe();
         let activeList = this.getActivePageSections(false);
         let sec = activeList.find(s => s.id === sectionId);
 
-        // Si el clic viene del iframe sobre la sección heredada 'sec_catalog_results' de una categoría
-        if (!sec && this.activePage && this.activePage.startsWith('category:') && sectionId === 'sec_catalog_results') {
-            sec = activeList.find(s => s.type === 'catalog_results');
+        // Si el doble clic viene del iframe sobre una sección heredada en una página de Categoría
+        if (!sec && this.activePage && this.activePage.startsWith('category:')) {
+            const catId = this.activePage.substring(9);
+            if (sectionId === 'sec_catalog_results' || sectionType === 'catalog_results') {
+                sec = activeList.find(s => s.type === 'catalog_results');
+            }
+            if (!sec) {
+                sec = activeList.find(s =>
+                    s.id === `${sectionId}_cat_${catId}_${sectionIndex}` ||
+                    s.id.startsWith(`${sectionId}_cat_${catId}_`)
+                );
+            }
         }
 
+        // Respaldo por índice y tipo dentro de la página activa actual
+        if (!sec && typeof sectionIndex === 'number' && sectionIndex >= 0 && activeList[sectionIndex]) {
+            const candidate = activeList[sectionIndex];
+            if (!sectionType || candidate.type === sectionType) {
+                sec = candidate;
+            }
+        }
+
+        // Buscar en páginas personalizadas si aún no se encontró
+        if (!sec && Array.isArray(this.theme.customPages)) {
+            for (const cp of this.theme.customPages) {
+                const found = (cp && Array.isArray(cp.sections) ? cp.sections : []).find(s => s.id === sectionId);
+                if (found) {
+                    this.activePage = 'page:' + cp.slug;
+                    this.renderPageSelector();
+                    this.syncPageContextBars();
+                    this.renderSectionsList();
+                    sec = found;
+                    break;
+                }
+            }
+        }
+
+        // Buscar en el mapa de páginas del tema como último recurso
         if (!sec && this.theme.pages) {
             for (const [pageKey, list] of Object.entries(this.theme.pages)) {
                 const found = (list || []).find(s => s.id === sectionId);
@@ -1291,6 +1330,7 @@ Storevo.ThemeEditor = {
                     this.activePage = pageKey;
                     this.renderPageSelector();
                     this.syncPageContextBars();
+                    this.renderSectionsList();
                     sec = found;
                     break;
                 }
