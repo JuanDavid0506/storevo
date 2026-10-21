@@ -3335,288 +3335,1040 @@ Storevo.ThemeEditor = {
                 }
             },
             {
-                id: 'urban_streetwear',
+                id: 'distrito_urbano',
                 category: 'moda_calzado',
-                name: 'Urbano & Streetwear Drop',
-                tag: 'Streetwear & Sneakers',
-                layoutSummary: 'Navbar Transparente Hero • Tarjetas Contorno • Contador Drop',
-                colors: ['#4f46e5', '#09090b', '#f4f4f5'],
-                description: 'Diseño audaz con navbar transparente sobre portada, tarjetas con borde marcado, lanzamiento estrella, contador regresivo y galería lateral.',
+                name: 'Distrito Urbano',
+                tag: 'Gorras, Streetwear y Urbano',
+                layoutSummary: 'Navbar Transparente Hero • Tarjeta Brutalista 2px • Galería Cascada',
+                colors: ['#e11d48', '#09090b', '#f4f4f5'],
+                description: 'Estética streetwear audaz con tipografía Syne en mayúsculas, tarjetas de contorno negro 2px, contador de drops, filtro por marcas y galería en cascada.',
                 config: {
                     globalStyles: {
-                        primaryColor: '#4f46e5',
+                        primaryColor: '#e11d48',
                         secondaryColor: '#09090b',
                         backgroundColor: '#f4f4f5',
                         textColor: '#09090b',
-                        headingFont: 'Space Grotesk',
-                        bodyFont: 'Inter',
+                        headingFont: 'Syne',
+                        bodyFont: 'Space Grotesk',
                         headingTransform: 'uppercase',
-                        fontScale: 'standard',
-                        borderRadius: '0.75rem',
-                        buttonRadius: 'sync',
-                        cardStyle: 'outlined',
-                        navbarLayout: 'hero_overlay',
-                        navbarStyle: 'secondary',
-                        navbarLinkFormat: 'bold',
-                        navbarLinkHover: 'slide_bg',
-                        navbarSticky: true,
-                        navbarDropdownStyle: 'mega',
-                        navbarDropdownAnim: 'scale',
-                        navbarTrigger: 'hover',
-                        navbarSpeed: 'fast',
-                        navbarCompactOnScroll: true
-                    },
-                    sections: [
-                        {
-                            id: 'sec_hero_us', type: 'hero_banner', enabled: true,
-                            settings: { heroLayout: 'classic', badgeText: 'NEW DROP 2026', title: 'ESTILO URBANO SIN LÍMITES EN ' + name, subtitle: 'Referencias exclusivas con unidades limitadas y envío inmediato a todo el país.', buttonText: 'VER EL DROP', buttonUrl: '/catalog', secondaryButtonText: 'WHATSAPP DIRECTO', secondaryButtonUrl: '__whatsapp__', imageUrl: '', overlayOpacity: 55, bgColor: '#09090b', textColor: '#ffffff', alignment: 'left' }
-                        },
-                        {
-                            id: 'sec_cd_us', type: 'countdown_promo', enabled: true,
-                            settings: { badgeText: '⚡ FLASH SALE ACTIVO', title: '¡Aprovecha precios de lanzamiento antes de que se agoten!', subtitle: 'Unidades numeradas en referencias seleccionadas.', endDate: '', buttonText: 'Comprar Ofertas', buttonUrl: '/catalog', bgColor: '#4f46e5', textColor: '#ffffff' }
-                        },
-                        {
-                            id: 'sec_spot_us', type: 'spotlight_product', enabled: true,
-                            settings: { productId: '', badgeText: '🔥 GRAIL DE LA SEMANA', customTitle: '', customSubtitle: '', imageSide: 'left' }
-                        },
-                        {
-                            id: 'sec_grid_us', type: 'product_grid', enabled: true,
-                            settings: { title: 'Últimos Lanzamientos', subtitle: 'Filtra tu talla disponible en tiempo real', source: 'NEWEST', categoryId: '', limit: 8, showFilters: true, showViewAll: true }
-                        },
-                        {
-                            id: 'sec_multi_us', type: 'multi_banners', enabled: true,
-                            settings: { card1Badge: 'Hype', card1Title: 'Nuevos Ingresos', card1Subtitle: 'Lo último que llegó a bodega', card1ButtonText: 'Explorar', card1ButtonUrl: '/catalog', card1ImageUrl: '', card1BgColor: '#09090b', card2Badge: 'Sale', card2Title: 'Últimas Tallas', card2Subtitle: 'Descuentos especiales hoy', card2ButtonText: 'Ver rebajas', card2ButtonUrl: '/catalog', card2ImageUrl: '', card2BgColor: '#4f46e5' }
-                        }
-                    ],
-                    pages: {
-                        catalog: [{
-                            id: 'sec_catalog_results', type: 'catalog_results', enabled: true, locked: true,
-                            settings: { showHeader: true, headerBadge: 'DROP OFICIAL', headerTitle: 'Todo el Catálogo', headerSubtitle: 'Filtra por talla, color o disponibilidad inmediata.', showCategoryPills: true, showSearchAndSort: true, filterLayout: 'sidebar', showFilterPrice: true, showFilterAvailability: true, showFilterCategory: true, showFilterVariants: true, showFilterAttributes: true, columnsDesktop: '4', showDiscountPercent: true }
-                        }],
-                        product: [{
-                            id: 'sec_product_main', type: 'product_main', enabled: true, locked: true,
-                            settings: { galleryLayout: 'left', showBreadcrumbs: true, showSku: true, showStockCounter: true, showSpecs: true, showPolicies: true, showRelatedProducts: true, relatedTitle: 'Combínalo con', relatedSubtitle: 'Más referencias del drop actual' }
-                        }]
-                    }
-                }
-            },
-            {
-                id: 'whatsapp_express',
-                category: 'multitienda',
-                name: 'Catálogo Express WhatsApp',
-                tag: 'Venta Ágil por WhatsApp & Redes',
-                layoutSummary: 'Navbar Compacto • Vitrina Directa con Filtros • Botones Píldora',
-                colors: ['#059669', '#0f172a', '#f8fafc'],
-                description: 'Va directo al grano para clientes que vienen de Instagram o WhatsApp: categorías en píldoras y productos con buscador desde el primer pantallazo.',
-                config: {
-                    globalStyles: {
-                        primaryColor: '#059669',
-                        secondaryColor: '#0f172a',
-                        backgroundColor: '#f8fafc',
-                        textColor: '#0f172a',
-                        headingFont: 'Outfit',
-                        bodyFont: 'Inter',
-                        headingTransform: 'none',
-                        fontScale: 'standard',
-                        borderRadius: '1rem',
-                        buttonRadius: 'pill',
-                        cardStyle: 'elevated',
-                        navbarLayout: 'compact',
-                        navbarStyle: 'primary',
-                        navbarLinkFormat: 'bold',
-                        navbarLinkHover: 'underline_slide',
-                        navbarSticky: true,
-                        navbarDropdownStyle: 'cascade',
-                        navbarDropdownAnim: 'slide_up',
-                        navbarTrigger: 'hover',
-                        navbarSpeed: 'fast',
-                        navbarCompactOnScroll: false
-                    },
-                    sections: [
-                        {
-                            id: 'sec_ann_wa', type: 'announcement_bar', enabled: true,
-                            settings: { text: '📲 ¡Haz tu pedido en segundos! Elige tus productos y envíalo directo a nuestro WhatsApp', text2: '🚚 Despachos rápidos a toda Colombia', text3: '', bgColor: '#0f172a', textColor: '#ffffff', linkUrl: '__whatsapp__' }
-                        },
-                        {
-                            id: 'sec_cats_wa', type: 'featured_categories', enabled: true,
-                            settings: { title: 'Explora por Categoría', subtitle: 'Toca una categoría para ver sus referencias', cardLayout: 'pills', columns: '4' }
-                        },
-                        {
-                            id: 'sec_grid_wa', type: 'product_grid', enabled: true,
-                            settings: { title: 'Catálogo Disponible en ' + name, subtitle: 'Busca por nombre, talla o color y agrega a tu bolsa', source: 'NEWEST', categoryId: '', limit: 12, showFilters: true, showViewAll: true }
-                        },
-                        {
-                            id: 'sec_steps_wa', type: 'how_to_buy', enabled: true,
-                            settings: { title: '¿Cómo pedir en ' + name + '?', subtitle: 'Fácil, sin registros complicados y en menos de 2 minutos', step1Title: 'Agrega a tu bolsa', step1Text: 'Elige tus productos y opciones favoritas en el catálogo.', step2Title: 'Completa tus datos de envío', step2Text: 'Escribe tu nombre, ciudad y dirección de entrega.', step3Title: 'Paga en línea o envía por WhatsApp', step3Text: 'El sistema arma tu pedido listo para confirmar con nosotros.', showPaymentBadges: true }
-                        },
-                        {
-                            id: 'sec_cta_wa', type: 'whatsapp_cta', enabled: true,
-                            settings: { title: '¿Quieres atención inmediata por WhatsApp?', subtitle: 'Escríbenos ahora mismo y te ayudamos con precios al por mayor, tallas o tiempos de entrega.', buttonText: 'Abrir Chat de WhatsApp' }
-                        }
-                    ],
-                    pages: {
-                        catalog: [{
-                            id: 'sec_catalog_results', type: 'catalog_results', enabled: true, locked: true,
-                            settings: { showHeader: true, headerBadge: 'PEDIDO RÁPIDO', headerTitle: 'Catálogo Disponible', headerSubtitle: 'Agrega tus productos a la bolsa para enviar tu pedido.', showCategoryPills: true, showSearchAndSort: true, filterLayout: 'topbar', showFilterPrice: true, showFilterAvailability: true, showFilterCategory: true, showFilterVariants: true, showFilterAttributes: true, columnsDesktop: '4', showDiscountPercent: true }
-                        }],
-                        product: [{
-                            id: 'sec_product_main', type: 'product_main', enabled: true, locked: true,
-                            settings: { galleryLayout: 'bottom', showBreadcrumbs: true, showSku: true, showStockCounter: true, showSpecs: true, showPolicies: true, showRelatedProducts: true, relatedTitle: 'Más productos disponibles', relatedSubtitle: 'Aprovecha el mismo envío agregando más referencias' }
-                        }]
-                    }
-                }
-            },
-            {
-                id: 'jewelry_boutique',
-                category: 'accesorios_joyas',
-                name: 'Joyería & Boutique Dorada',
-                tag: 'Joyería, Relojería & Perfumería',
-                layoutSummary: 'Navbar Boutique Centrado • Fuente Cinzel • Galería Lateral',
-                colors: ['#a16207', '#1c1917', '#fafaf9'],
-                description: 'Estética de lujo silencioso con tipografía Cinzel y Lora, tonos crema y dorado viejo, menú centrado con efecto de foco y vitrina delicada.',
-                config: {
-                    globalStyles: {
-                        primaryColor: '#a16207',
-                        secondaryColor: '#1c1917',
-                        backgroundColor: '#fafaf9',
-                        textColor: '#1c1917',
-                        headingFont: 'Cinzel',
-                        bodyFont: 'Lora',
-                        headingTransform: 'none',
                         fontScale: 'standard',
                         borderRadius: '0.375rem',
                         buttonRadius: 'square',
-                        cardStyle: 'clean',
-                        navbarLayout: 'centered',
-                        navbarStyle: 'light',
+                        navbarLayout: 'hero_overlay',
+                        navbarStyle: 'secondary',
                         navbarLinkFormat: 'uppercase',
-                        navbarLinkHover: 'opacity',
+                        navbarLinkHover: 'pill',
                         navbarSticky: true,
-                        navbarDropdownStyle: 'mega',
-                        navbarDropdownAnim: 'fade',
+                        navbarDropdownStyle: 'strip',
+                        navbarDropdownAnim: 'slide_down',
                         navbarTrigger: 'hover',
-                        navbarSpeed: 'slow',
-                        navbarCompactOnScroll: true
+                        navbarSpeed: 'fast',
+                        navbarCompactOnScroll: true,
+                        cardPreset: 'compact',
+                        cardStyle: 'outlined',
+                        cardRadius: '0px',
+                        cardShadow: 'none',
+                        cardImageAspect: 'square',
+                        cardImageFit: 'cover',
+                        cardImagePadding: 'flush',
+                        cardContentAlign: 'left',
+                        cardMetaMode: 'brand',
+                        cardDiscountBadge: 'percent',
+                        cardShowStatusBadges: true,
+                        cardShowOldPrice: true,
+                        cardPriceSize: 'large',
+                        cardButtonStyle: 'dark',
+                        cardActionMode: 'always',
+                        cardWishlistMode: 'always',
+                        cardImageHover: 'carousel',
+                        cardHoverLift: 'border',
+                        detailPreset: 'urban_drop',
+                        detailInfoStyle: 'outlined',
+                        detailStickyMode: 'sticky_info',
+                        detailGalleryPosition: 'left',
+                        detailLayoutRatio: '50_50',
+                        detailGalleryLayout: 'stack',
+                        detailGalleryArrows: true,
+                        detailImageAspect: 'square',
+                        detailImageFit: 'cover',
+                        detailImageZoom: true,
+                        detailBuyLayout: 'standard',
+                        detailVariantStyle: 'square',
+                        detailShowBreadcrumbs: true,
+                        detailShowMeta: true,
+                        detailShowSku: true,
+                        detailShowSavingsBadge: true,
+                        detailShowStock: true,
+                        detailShowTrustStrip: true,
+                        detailShowShare: true,
+                        detailShowSpecs: true,
+                        detailSpecsOpen: 'expanded',
+                        detailShowPolicies: true,
+                        detailShowRelated: true,
+                        detailRelatedCols: '4',
+                        filterEnabled: true,
+                        filterLayout: 'drawer',
+                        filterShowSearch: true,
+                        filterShowSort: true,
+                        filterShowCount: true,
+                        filterShowCategory: true,
+                        filterShowPrice: true,
+                        filterShowOffers: true,
+                        filterShowAvailability: true,
+                        filterShowBrand: true,
+                        filterShowVariants: true,
+                        filterShowSpecs: false,
+                        searchEnabled: true,
+                        searchMode: 'predictive',
+                        searchNavbarVariant: 'modal_trigger',
+                        searchMobileMode: 'fullscreen',
+                        searchInputStyle: 'square',
+                        searchInputSize: 'normal',
+                        searchButtonMode: 'icon',
+                        searchAnim: 'scale',
+                        searchPlaceholder: 'Buscar gorras, oversize, marcas o tallas...',
+                        searchButtonLabel: 'Buscar',
+                        searchEmptyMessage: 'No encontramos referencias para tu búsqueda',
+                        searchMinChars: 2,
+                        searchDebounceMs: 150,
+                        searchMaxSuggestions: 6,
+                        searchShowProductImg: true,
+                        searchShowProductPrice: true,
+                        searchShowProductDiscount: true,
+                        searchShowProductCategory: true,
+                        searchShowProductBrand: true,
+                        searchSuggestCategories: true,
+                        searchSuggestBrands: true,
+                        searchShowRecent: true,
+                        searchPopularTerms: 'Gorras, Oversize, Hoodies, Camisetas, Drops',
+                        searchCategoryScope: 'pills_top',
+                        searchAdvancedEnabled: false,
+                        searchMatchVariants: true,
+                        searchMatchSpecs: true,
+                        searchAdvCategory: true,
+                        searchAdvBrand: true,
+                        searchAdvPrice: true,
+                        searchAdvAvailability: true,
+                        searchAdvVariants: true,
+                        searchAdvSpecs: false
                     },
                     sections: [
                         {
-                            id: 'sec_ann_jb', type: 'announcement_bar', enabled: true,
-                            settings: { text: '✨ Empaque de regalo incluido en todos los pedidos • Envíos asegurados', text2: '', text3: '', bgColor: '#1c1917', textColor: '#ffffff', linkUrl: '/catalog' }
+                            id: 'sec_hero_du', type: 'hero_banner', enabled: true,
+                            settings: { heroLayout: 'classic', badgeText: 'NUEVO DROP DISPONIBLE', title: 'CULTURA URBANA Y EXCLUSIVIDAD EN ' + name, subtitle: 'Gorras originales, siluetas oversize y accesorios con unidades limitadas. Despachos rápidos a toda Colombia.', buttonText: 'EXPLORAR EL DROP', buttonUrl: '/catalog', secondaryButtonText: 'WHATSAPP DIRECTO', secondaryButtonUrl: '__whatsapp__', imageUrl: '', overlayOpacity: 55, bgColor: '#09090b', textColor: '#ffffff', alignment: 'left' }
                         },
                         {
-                            id: 'sec_hero_jb', type: 'hero_banner', enabled: true,
-                            settings: { heroLayout: 'classic', badgeText: 'COLECCIÓN EXCLUSIVA', title: name, subtitle: 'Detalles eternos elaborados para acompañar tus momentos más especiales.', buttonText: 'Descubrir Joyas', buttonUrl: '/catalog', secondaryButtonText: '', secondaryButtonUrl: '/catalog', imageUrl: '', overlayOpacity: 45, bgColor: '#1c1917', textColor: '#ffffff', alignment: 'center' }
+                            id: 'sec_ann_du', type: 'announcement_bar', enabled: true,
+                            settings: { text: '🔥 UNIDADES LIMITADAS POR REFERENCIA • ENVÍOS A TODA COLOMBIA', text2: '💳 PAGA FÁCIL CON NEQUI, DAVIPLATA, PSE O TARJETAS', text3: '🧢 100% CALIDAD GARANTIZADA EN CADA PRENDA Y GORRA', bgColor: '#e11d48', textColor: '#ffffff', linkUrl: '/catalog' }
                         },
                         {
-                            id: 'sec_spot_jb', type: 'spotlight_product', enabled: true,
-                            settings: { productId: '', badgeText: '✨ PIEZA INSIGNIA', customTitle: '', customSubtitle: '', imageSide: 'left' }
+                            id: 'sec_cats_du', type: 'featured_categories', enabled: true,
+                            settings: { title: 'Categorías del Drop', subtitle: 'Filtra rápido por línea de producto', cardLayout: 'pills', columns: '4' }
                         },
                         {
-                            id: 'sec_grid_jb', type: 'product_grid', enabled: true,
-                            settings: { title: 'Piezas Seleccionadas', subtitle: 'Brillo, elegancia y garantía de autenticidad', source: 'NEWEST', categoryId: '', limit: 8, showFilters: false, showViewAll: true }
+                            id: 'sec_spot_du', type: 'spotlight_product', enabled: true,
+                            settings: { productId: '', badgeText: '🔥 DROP EXCLUSIVO', customTitle: '', customSubtitle: '', imageSide: 'right' }
                         },
                         {
-                            id: 'sec_test_jb', type: 'testimonials', enabled: true,
-                            settings: { title: 'Experiencias Reales', subtitle: 'Lo que opinan quienes ya recibieron sus piezas' }
+                            id: 'sec_grid_du', type: 'product_grid', enabled: true,
+                            settings: { title: 'Recién Llegados', subtitle: 'Filtra por marca, talla o disponibilidad inmediata', source: 'NEWEST', categoryId: '', limit: 8, showFilters: true, showViewAll: true }
                         },
                         {
-                            id: 'sec_trust_jb', type: 'trust_badges', enabled: true,
-                            settings: { badgeStyle: 'minimal', item1Icon: 'gift', item1Title: 'Estuche de Regalo', item1Text: 'Cada pedido se entrega en empaque especial listo para obsequiar.', item2Icon: 'star', item2Title: 'Calidad Certificada', item2Text: 'Materiales seleccionados con garantía de acabado.', item3Icon: 'truck', item3Title: 'Entrega Segura', item3Text: 'Seguimiento completo hasta tus manos.' }
+                            id: 'sec_cd_du', type: 'countdown_promo', enabled: true,
+                            settings: { badgeText: '⚡ FLASH SALE 24H', title: 'PRECIOS ESPECIALES ANTES DE AGOTAR EXISTENCIAS', subtitle: 'Aprovecha descuentos en referencias seleccionadas del catálogo.', endDate: '', buttonText: 'Ver Rebajas', buttonUrl: '/catalog', bgColor: '#09090b', textColor: '#ffffff' }
+                        },
+                        {
+                            id: 'sec_multi_du', type: 'multi_banners', enabled: true,
+                            settings: { card1Badge: 'Headwear', card1Title: 'Colección de Gorras', card1Subtitle: 'Fitted, Snapback y Trucker', card1ButtonText: 'Ver Gorras', card1ButtonUrl: '/catalog', card1ImageUrl: '', card1BgColor: '#09090b', card2Badge: 'Streetwear', card2Title: 'Prendas Oversize', card2Subtitle: 'Camisetas de alto gramaje y hoodies', card2ButtonText: 'Ver Prendas', card2ButtonUrl: '/catalog', card2ImageUrl: '', card2BgColor: '#e11d48' }
+                        },
+                        {
+                            id: 'sec_trust_du', type: 'trust_badges', enabled: true,
+                            settings: { badgeStyle: 'secondary', item1Icon: 'star', item1Title: 'Calidad Premium', item1Text: 'Bordados, telas de alto gramaje y acabados impecables.', item2Icon: 'truck', item2Title: 'Envíos en Caja Protegida', item2Text: 'Tus gorras viajan protegidas sin deformarse.', item3Icon: 'chat', item3Title: 'Atención Directa', item3Text: 'Confirmación y soporte rápido por WhatsApp.' }
+                        },
+                        {
+                            id: 'sec_faq_du', type: 'faq_accordion', enabled: true,
+                            settings: { title: 'Preguntas Frecuentes', subtitle: 'Todo sobre envíos, tallas y pagos', q1: '¿Cómo envían las gorras para que no se dañen?', a1: 'Todas nuestras gorras se despachan en caja rígida protectora para garantizar que lleguen intactas a tu ciudad.', q2: '¿Cómo sé qué talla elegir?', a2: 'En cada producto encuentras las tallas disponibles. Si tienes dudas con tu medida en centímetros, escríbenos por WhatsApp.', q3: '¿Qué medios de pago reciben?', a3: 'Aceptamos Nequi, Daviplata, PSE, tarjetas débito/crédito y coordinación directa por WhatsApp.' }
                         }
                     ],
                     pages: {
                         catalog: [{
                             id: 'sec_catalog_results', type: 'catalog_results', enabled: true, locked: true,
-                            settings: { showHeader: true, headerBadge: 'BOUTIQUE', headerTitle: 'Nuestras Colecciones', headerSubtitle: 'Explora cada pieza con acabados de lujo.', showCategoryPills: true, showSearchAndSort: true, filterLayout: 'topbar', showFilterPrice: true, showFilterAvailability: true, showFilterCategory: true, showFilterVariants: true, showFilterAttributes: true, columnsDesktop: '3', showDiscountPercent: false }
+                            settings: { showHeader: true, headerBadge: 'STREETWEAR & CAPS', headerTitle: 'Catálogo Urbano', headerSubtitle: 'Filtra por marca, talla o disponibilidad en tiempo real.', showCategoryPills: true, showSearchAndSort: true, filterLayout: 'drawer', showFilterPrice: true, showFilterAvailability: true, showFilterCategory: true, showFilterVariants: true, showFilterAttributes: true, columnsDesktop: '4', showDiscountPercent: true }
                         }],
                         product: [{
                             id: 'sec_product_main', type: 'product_main', enabled: true, locked: true,
-                            settings: { galleryLayout: 'left', showBreadcrumbs: true, showSku: true, showStockCounter: false, showSpecs: true, showPolicies: true, showRelatedProducts: true, relatedTitle: 'Piezas Complementarias', relatedSubtitle: 'Combina tu elección con nuestra colección' }
+                            settings: { galleryLayout: 'stack', showBreadcrumbs: true, showSku: true, showStockCounter: true, showSpecs: true, showPolicies: true, showRelatedProducts: true, relatedTitle: 'Completa el Outfit', relatedSubtitle: 'Otras referencias del drop actual' }
                         }]
                     }
                 }
             },
             {
-                id: 'natural_artisan',
-                category: 'regalos_artesanias',
-                name: 'Artesanal, Natural & Orgánico',
-                tag: 'Cosmética Natural, Hogar & Artesanía',
-                layoutSummary: 'Bordes Orgánicos 24px • Tonos Tierra/Oliva • Historia de Marca',
-                colors: ['#3f6212', '#292524', '#fafaf9'],
-                description: 'Tonos verde oliva y piedra cálida, esquinas suaves orgánicas (24px), portada dividida e historia artesanal que conecta emocionalmente.',
+                id: 'paso_firme',
+                category: 'moda_calzado',
+                name: 'Paso Firme',
+                tag: 'Zapatos, Tenis y Calzado',
+                layoutSummary: 'Navbar Clásico Maestro-Detalle • Carrusel de Ángulos • Filtro de Tallas',
+                colors: ['#ea580c', '#0f172a', '#f8fafc'],
+                description: 'Especializada en tiendas de calzado y sneakers: facilita filtrar por número de talla (35 al 44), revisar múltiples ángulos del zapato y consultar políticas de cambio.',
                 config: {
                     globalStyles: {
-                        primaryColor: '#3f6212',
-                        secondaryColor: '#292524',
-                        backgroundColor: '#fafaf9',
-                        textColor: '#292524',
-                        headingFont: 'Lora',
-                        bodyFont: 'Nunito',
+                        primaryColor: '#ea580c',
+                        secondaryColor: '#0f172a',
+                        backgroundColor: '#f8fafc',
+                        textColor: '#0f172a',
+                        headingFont: 'Montserrat',
+                        bodyFont: 'DM Sans',
+                        headingTransform: 'uppercase',
+                        fontScale: 'standard',
+                        borderRadius: '0.75rem',
+                        buttonRadius: 'classic',
+                        navbarLayout: 'classic',
+                        navbarStyle: 'light',
+                        navbarLinkFormat: 'bold',
+                        navbarLinkHover: 'underline_slide',
+                        navbarSticky: true,
+                        navbarDropdownStyle: 'split',
+                        navbarDropdownAnim: 'slide_up',
+                        navbarTrigger: 'hover',
+                        navbarSpeed: 'normal',
+                        navbarCompactOnScroll: true,
+                        cardPreset: 'commercial',
+                        cardStyle: 'elevated',
+                        cardRadius: '0.5rem',
+                        cardShadow: 'sm',
+                        cardImageAspect: 'square',
+                        cardImageFit: 'cover',
+                        cardImagePadding: 'flush',
+                        cardContentAlign: 'left',
+                        cardMetaMode: 'both',
+                        cardDiscountBadge: 'percent',
+                        cardShowStatusBadges: true,
+                        cardShowOldPrice: true,
+                        cardPriceSize: 'large',
+                        cardButtonStyle: 'solid',
+                        cardActionMode: 'always',
+                        cardWishlistMode: 'always',
+                        cardImageHover: 'carousel',
+                        cardHoverLift: 'lift',
+                        detailPreset: 'conversion',
+                        detailInfoStyle: 'buybox',
+                        detailStickyMode: 'sticky_info',
+                        detailGalleryPosition: 'left',
+                        detailLayoutRatio: '50_50',
+                        detailGalleryLayout: 'left',
+                        detailGalleryArrows: true,
+                        detailImageAspect: 'square',
+                        detailImageFit: 'cover',
+                        detailImageZoom: true,
+                        detailBuyLayout: 'standard',
+                        detailVariantStyle: 'rounded',
+                        detailShowBreadcrumbs: true,
+                        detailShowMeta: true,
+                        detailShowSku: true,
+                        detailShowSavingsBadge: true,
+                        detailShowStock: true,
+                        detailShowTrustStrip: true,
+                        detailShowShare: true,
+                        detailShowSpecs: true,
+                        detailSpecsOpen: 'expanded',
+                        detailShowPolicies: true,
+                        detailShowRelated: true,
+                        detailRelatedCols: '4',
+                        filterEnabled: true,
+                        filterLayout: 'sidebar',
+                        filterShowSearch: true,
+                        filterShowSort: true,
+                        filterShowCount: true,
+                        filterShowCategory: true,
+                        filterShowPrice: true,
+                        filterShowOffers: true,
+                        filterShowAvailability: true,
+                        filterShowBrand: true,
+                        filterShowVariants: true,
+                        filterShowSpecs: true,
+                        searchEnabled: true,
+                        searchMode: 'predictive',
+                        searchNavbarVariant: 'auto',
+                        searchMobileMode: 'fullscreen',
+                        searchInputStyle: 'rounded',
+                        searchInputSize: 'normal',
+                        searchButtonMode: 'icon',
+                        searchAnim: 'slide_up',
+                        searchPlaceholder: 'Buscar por modelo, talla (ej. 37, 40) o color...',
+                        searchButtonLabel: 'Buscar',
+                        searchEmptyMessage: 'No encontramos calzado con ese criterio',
+                        searchMinChars: 2,
+                        searchDebounceMs: 200,
+                        searchMaxSuggestions: 6,
+                        searchShowProductImg: true,
+                        searchShowProductPrice: true,
+                        searchShowProductDiscount: true,
+                        searchShowProductCategory: true,
+                        searchShowProductBrand: true,
+                        searchSuggestCategories: true,
+                        searchSuggestBrands: true,
+                        searchShowRecent: true,
+                        searchPopularTerms: 'Tenis, Botas, Cuero, Talla 38, Talla 40, Ofertas',
+                        searchCategoryScope: 'pills_top',
+                        searchAdvancedEnabled: true,
+                        searchMatchVariants: true,
+                        searchMatchSpecs: true,
+                        searchAdvCategory: true,
+                        searchAdvBrand: true,
+                        searchAdvPrice: true,
+                        searchAdvAvailability: true,
+                        searchAdvVariants: true,
+                        searchAdvSpecs: true
+                    },
+                    sections: [
+                        {
+                            id: 'sec_ann_pf', type: 'announcement_bar', enabled: true,
+                            settings: { text: '👟 Cambios de talla fáciles y garantizados • Envíos a toda Colombia', text2: '💳 Paga con PSE, Nequi, Tarjetas o coordina tu pedido por WhatsApp', text3: '', bgColor: '#0f172a', textColor: '#ffffff', linkUrl: '/catalog' }
+                        },
+                        {
+                            id: 'sec_hero_pf', type: 'hero_banner', enabled: true,
+                            settings: { heroLayout: 'split', badgeText: 'CONFORT Y DISEÑO EN CADA PASO', title: 'Encuentra tu par ideal en ' + name, subtitle: 'Calzado elaborado con materiales resistentes, suelas de alto confort y hormas pensadas para tu día a día.', buttonText: 'Ver Catálogo de Calzado', buttonUrl: '/catalog', secondaryButtonText: 'Consultar mi Talla', secondaryButtonUrl: '__whatsapp__', imageUrl: '', overlayOpacity: 45, bgColor: '#0f172a', textColor: '#ffffff', alignment: 'left' }
+                        },
+                        {
+                            id: 'sec_trust_pf', type: 'trust_badges', enabled: true,
+                            settings: { badgeStyle: 'cards', item1Icon: 'refresh', item1Title: 'Cambio de Talla Seguro', item1Text: 'Si no te queda como esperabas, gestionamos el cambio rápido.', item2Icon: 'shield', item2Title: 'Garantía de Calidad', item2Text: 'Costuras, pegues y materiales con respaldo directo.', item3Icon: 'truck', item3Title: 'Despacho Nacional', item3Text: 'Enviamos en caja original hasta la puerta de tu casa.' }
+                        },
+                        {
+                            id: 'sec_cats_pf', type: 'featured_categories', enabled: true,
+                            settings: { title: 'Explora por Línea de Calzado', subtitle: 'Para dama, caballero y todos los estilos', cardLayout: 'visual', columns: '4' }
+                        },
+                        {
+                            id: 'sec_grid_pf', type: 'product_grid', enabled: true,
+                            settings: { title: 'Nuevos Modelos Disponibles', subtitle: 'Filtra tu número de talla para ver los pares con entrega inmediata', source: 'NEWEST', categoryId: '', limit: 12, showFilters: true, showViewAll: true }
+                        },
+                        {
+                            id: 'sec_spot_pf', type: 'spotlight_product', enabled: true,
+                            settings: { productId: '', badgeText: '👟 EL MÁS VENDIDO', customTitle: '', customSubtitle: '', imageSide: 'left' }
+                        },
+                        {
+                            id: 'sec_promo_pf', type: 'promo_banner', enabled: true,
+                            settings: { badgeText: 'CALIDAD COLOMBIANA', title: 'Materiales pensados para durar', subtitle: 'Seleccionamos suelas antideslizantes, plantillas anatómicas y acabados de primera calidad.', buttonText: 'Descubrir Modelos', buttonUrl: '/catalog', imageUrl: '', bgColor: '#0f172a', textColor: '#ffffff' }
+                        },
+                        {
+                            id: 'sec_steps_pf', type: 'how_to_buy', enabled: true,
+                            settings: { title: '¿Cómo pedir tus zapatos en ' + name + '?', subtitle: 'Recibe tu par favorito sin salir de casa', step1Title: 'Elige modelo y talla', step1Text: 'Selecciona tu número habitual y agrégalo a la bolsa.', step2Title: 'Completa tu dirección', step2Text: 'Ingresa tus datos de entrega en cualquier ciudad o municipio.', step3Title: 'Paga o confirma por WhatsApp', step3Text: 'Realiza tu pago seguro en línea o coordina con un asesor.', showPaymentBadges: true }
+                        },
+                        {
+                            id: 'sec_faq_pf', type: 'faq_accordion', enabled: true,
+                            settings: { title: 'Preguntas Frecuentes sobre Tallas y Envíos', subtitle: 'Compra con total seguridad', q1: '¿El tallaje es normal o debo pedir una talla más?', a1: 'Nuestras referencias manejan horma nacional estándar. En la ficha técnica de cada zapato indicamos el material y ajuste.', q2: '¿Qué pasa si necesito cambiar la talla cuando me llegue?', a2: 'Puedes solicitar el cambio de talla escribiéndonos a nuestro WhatsApp dentro de los plazos de nuestra política de cambios.', q3: '¿Cuánto demora la entrega?', a3: 'Entre 2 y 5 días hábiles según tu ciudad en Colombia.' }
+                        },
+                        {
+                            id: 'sec_wa_pf', type: 'whatsapp_cta', enabled: true,
+                            settings: { title: '¿No estás seguro de tu talla en centímetros?', subtitle: 'Mide tu pie del talón a la punta y escríbenos por WhatsApp para confirmarte tu talla exacta.', buttonText: 'Confirmar mi talla por WhatsApp' }
+                        }
+                    ],
+                    pages: {
+                        catalog: [{
+                            id: 'sec_catalog_results', type: 'catalog_results', enabled: true, locked: true,
+                            settings: { showHeader: true, headerBadge: 'COLECCIÓN DE CALZADO', headerTitle: 'Todos los Modelos', headerSubtitle: 'Selecciona tu talla en los filtros para ver los pares disponibles hoy.', showCategoryPills: true, showSearchAndSort: true, filterLayout: 'sidebar', showFilterPrice: true, showFilterAvailability: true, showFilterCategory: true, showFilterVariants: true, showFilterAttributes: true, columnsDesktop: '4', showDiscountPercent: true }
+                        }],
+                        product: [{
+                            id: 'sec_product_main', type: 'product_main', enabled: true, locked: true,
+                            settings: { galleryLayout: 'left', showBreadcrumbs: true, showSku: true, showStockCounter: true, showSpecs: true, showPolicies: true, showRelatedProducts: true, relatedTitle: 'Otros modelos que te pueden gustar', relatedSubtitle: 'Disponibles en nuestro catálogo de calzado' }
+                        }]
+                    }
+                }
+            },
+            {
+                id: 'aura_botanica',
+                category: 'belleza_bienestar',
+                name: 'Aura Botánica',
+                tag: 'Belleza, Maquillaje y Skincare',
+                layoutSummary: 'Navbar Cristal Editorial • Tarjetas Suaves 24px • Tonos Malva',
+                colors: ['#c06c84', '#2d232e', '#fff9fb'],
+                description: 'Diseño delicado y luminoso para cosmética, cuidado facial y capilar. Bordes orgánicos de 24px, botones píldora, tarjetas centradas y especificaciones de ingredientes abiertas.',
+                config: {
+                    globalStyles: {
+                        primaryColor: '#c06c84',
+                        secondaryColor: '#2d232e',
+                        backgroundColor: '#fff9fb',
+                        textColor: '#2d232e',
+                        headingFont: 'Playfair Display',
+                        bodyFont: 'Plus Jakarta Sans',
                         headingTransform: 'none',
                         fontScale: 'standard',
                         borderRadius: '1.5rem',
                         buttonRadius: 'pill',
-                        cardStyle: 'elevated',
-                        navbarLayout: 'centered',
-                        navbarStyle: 'page',
+                        navbarLayout: 'editorial',
+                        navbarStyle: 'glass',
                         navbarLinkFormat: 'normal',
-                        navbarLinkHover: 'underline_center',
+                        navbarLinkHover: 'color',
                         navbarSticky: true,
-                        navbarDropdownStyle: 'cascade',
+                        navbarDropdownStyle: 'mega',
                         navbarDropdownAnim: 'slide_up',
                         navbarTrigger: 'hover',
                         navbarSpeed: 'normal',
-                        navbarCompactOnScroll: false
+                        navbarCompactOnScroll: true,
+                        cardPreset: 'gallery',
+                        cardStyle: 'soft',
+                        cardRadius: '1.5rem',
+                        cardShadow: 'sm',
+                        cardImageAspect: 'square',
+                        cardImageFit: 'cover',
+                        cardImagePadding: 'inset',
+                        cardContentAlign: 'center',
+                        cardMetaMode: 'brand',
+                        cardDiscountBadge: 'percent',
+                        cardShowStatusBadges: true,
+                        cardShowOldPrice: true,
+                        cardPriceSize: 'normal',
+                        cardButtonStyle: 'outline',
+                        cardActionMode: 'always',
+                        cardWishlistMode: 'always',
+                        cardImageHover: 'carousel',
+                        cardHoverLift: 'glow',
+                        detailPreset: 'conversion',
+                        detailInfoStyle: 'clean',
+                        detailStickyMode: 'sticky_info',
+                        detailGalleryPosition: 'left',
+                        detailLayoutRatio: '50_50',
+                        detailGalleryLayout: 'bottom',
+                        detailGalleryArrows: true,
+                        detailImageAspect: 'square',
+                        detailImageFit: 'cover',
+                        detailImageZoom: true,
+                        detailBuyLayout: 'standard',
+                        detailVariantStyle: 'pills',
+                        detailShowBreadcrumbs: true,
+                        detailShowMeta: true,
+                        detailShowSku: false,
+                        detailShowSavingsBadge: true,
+                        detailShowStock: true,
+                        detailShowTrustStrip: true,
+                        detailShowShare: true,
+                        detailShowSpecs: true,
+                        detailSpecsOpen: 'expanded',
+                        detailShowPolicies: true,
+                        detailShowRelated: true,
+                        detailRelatedCols: '4',
+                        filterEnabled: true,
+                        filterLayout: 'drawer',
+                        filterShowSearch: true,
+                        filterShowSort: true,
+                        filterShowCount: true,
+                        filterShowCategory: true,
+                        filterShowPrice: true,
+                        filterShowOffers: true,
+                        filterShowAvailability: true,
+                        filterShowBrand: true,
+                        filterShowVariants: true,
+                        filterShowSpecs: true,
+                        searchEnabled: true,
+                        searchMode: 'predictive',
+                        searchNavbarVariant: 'expandable_icon',
+                        searchMobileMode: 'fullscreen',
+                        searchInputStyle: 'pill',
+                        searchInputSize: 'normal',
+                        searchButtonMode: 'icon',
+                        searchAnim: 'fade',
+                        searchPlaceholder: 'Buscar sérum, protector solar, labial, marca...',
+                        searchButtonLabel: 'Buscar',
+                        searchEmptyMessage: 'No encontramos productos de belleza para tu búsqueda',
+                        searchMinChars: 2,
+                        searchDebounceMs: 200,
+                        searchMaxSuggestions: 6,
+                        searchShowProductImg: true,
+                        searchShowProductPrice: true,
+                        searchShowProductDiscount: true,
+                        searchShowProductCategory: true,
+                        searchShowProductBrand: true,
+                        searchSuggestCategories: true,
+                        searchSuggestBrands: true,
+                        searchShowRecent: true,
+                        searchPopularTerms: 'Protector solar, Sérum, Hidratante, Capilar, Kit',
+                        searchCategoryScope: 'pills_top',
+                        searchAdvancedEnabled: false,
+                        searchMatchVariants: true,
+                        searchMatchSpecs: true,
+                        searchAdvCategory: true,
+                        searchAdvBrand: true,
+                        searchAdvPrice: true,
+                        searchAdvAvailability: true,
+                        searchAdvVariants: true,
+                        searchAdvSpecs: true
                     },
                     sections: [
                         {
-                            id: 'sec_hero_na', type: 'hero_banner', enabled: true,
-                            settings: { heroLayout: 'split', badgeText: 'HECHO CON DEDICACIÓN', title: 'Bienestar y esencia natural en ' + name, subtitle: 'Productos creados de forma consciente para cuidar de ti y de tu espacio.', buttonText: 'Conocer Productos', buttonUrl: '/catalog', secondaryButtonText: 'Hablar con Nosotros', secondaryButtonUrl: '__whatsapp__', imageUrl: '', overlayOpacity: 40, bgColor: '#3f6212', textColor: '#ffffff', alignment: 'left' }
+                            id: 'sec_ann_ab', type: 'announcement_bar', enabled: true,
+                            settings: { text: '🌸 Productos 100% originales • Asesoría de rutina gratis por WhatsApp', text2: '🚚 Envíos cuidadosos a toda Colombia • Pago seguro con PSE y Nequi', text3: '', bgColor: '#2d232e', textColor: '#ffffff', linkUrl: '/catalog' }
                         },
                         {
-                            id: 'sec_cats_na', type: 'featured_categories', enabled: true,
-                            settings: { title: 'Nuestras Líneas', subtitle: 'Ingredientes y materiales seleccionados con amor', cardLayout: 'pills', columns: '4' }
+                            id: 'sec_hero_ab', type: 'hero_banner', enabled: true,
+                            settings: { heroLayout: 'split', badgeText: 'CUIDADO FACIAL, CAPILAR Y MAQUILLAJE', title: 'Realza tu brillo natural con ' + name, subtitle: 'Fórmulas seleccionadas para hidratar, proteger y transformar tu rutina diaria de cuidado personal.', buttonText: 'Explorar Productos', buttonUrl: '/catalog', secondaryButtonText: 'Asesoría de Piel', secondaryButtonUrl: '__whatsapp__', imageUrl: '', overlayOpacity: 35, bgColor: '#c06c84', textColor: '#ffffff', alignment: 'left' }
                         },
                         {
-                            id: 'sec_grid_na', type: 'product_grid', enabled: true,
-                            settings: { title: 'Favoritos de la Comunidad', subtitle: 'Los más pedidos de nuestra tienda', source: 'NEWEST', categoryId: '', limit: 8, showFilters: false, showViewAll: true }
+                            id: 'sec_cats_ab', type: 'featured_categories', enabled: true,
+                            settings: { title: 'Explora por Necesidad', subtitle: 'Encuentra el paso ideal para tu rutina', cardLayout: 'pills', columns: '4' }
                         },
                         {
-                            id: 'sec_rich_na', type: 'rich_text', enabled: true,
-                            settings: { title: 'Nuestro Propósito', content: 'En ' + name + ' creemos en el valor de lo auténtico. Cada pedido es preparado cuidadosamente para llevarte calidad y calidez.' }
+                            id: 'sec_grid_ab', type: 'product_grid', enabled: true,
+                            settings: { title: 'Favoritos de Temporada', subtitle: 'Los más amados para el cuidado diario', source: 'NEWEST', categoryId: '', limit: 8, showFilters: false, showViewAll: true }
                         },
                         {
-                            id: 'sec_test_na', type: 'testimonials', enabled: true,
-                            settings: { title: 'Palabras de Nuestros Clientes', subtitle: 'Reseñas verificadas de compradores reales' }
+                            id: 'sec_spot_ab', type: 'spotlight_product', enabled: true,
+                            settings: { productId: '', badgeText: '🌸 FAVORITO DE LA RUTINA', customTitle: '', customSubtitle: '', imageSide: 'right' }
                         },
                         {
-                            id: 'sec_cta_na', type: 'whatsapp_cta', enabled: true,
-                            settings: { title: '¿Deseas una recomendación personalizada?', subtitle: 'Cuéntanos qué buscas por WhatsApp y te guiamos paso a paso.', buttonText: 'Recibir asesoría en WhatsApp' }
+                            id: 'sec_multi_ab', type: 'multi_banners', enabled: true,
+                            settings: { card1Badge: 'Skincare', card1Title: 'Cuidado Facial', card1Subtitle: 'Limpieza, hidratación y protección solar', card1ButtonText: 'Ver Skincare', card1ButtonUrl: '/catalog', card1ImageUrl: '', card1BgColor: '#c06c84', card2Badge: 'Haircare & Makeup', card2Title: 'Capilar y Maquillaje', card2Subtitle: 'Nutrición profunda y tonos en tendencia', card2ButtonText: 'Descubrir', card2ButtonUrl: '/catalog', card2ImageUrl: '', card2BgColor: '#2d232e' }
+                        },
+                        {
+                            id: 'sec_test_ab', type: 'testimonials', enabled: true,
+                            settings: { title: 'Resultados que Hablan por Sí Mismos', subtitle: 'Opiniones verificadas de clientas reales' }
+                        },
+                        {
+                            id: 'sec_faq_ab', type: 'faq_accordion', enabled: true,
+                            settings: { title: 'Dudas Frecuentes sobre tu Rutina', subtitle: 'Compra con confianza y respaldo', q1: '¿Todos los productos son originales?', a1: 'Sí, garantizamos productos 100% originales, sellados y con fecha de vencimiento vigente.', q2: '¿Me ayudan a armar mi rutina según mi tipo de piel?', a2: '¡Claro que sí! Escríbenos por WhatsApp si tienes piel grasa, mixta, seca o sensible y te recomendamos las mejores opciones.', q3: '¿Cómo empacan los envíos?', a3: 'Protegemos cada frasco y envase con material amortiguador para que lleguen en perfecto estado.' }
+                        },
+                        {
+                            id: 'sec_wa_ab', type: 'whatsapp_cta', enabled: true,
+                            settings: { title: '¿No sabes qué elegir para tu tipo de piel o cabello?', subtitle: 'Recibe asesoría personalizada sin costo por WhatsApp antes de hacer tu pedido.', buttonText: 'Recibir asesoría en WhatsApp' }
+                        },
+                        {
+                            id: 'sec_trust_ab', type: 'trust_badges', enabled: true,
+                            settings: { badgeStyle: 'cards', item1Icon: 'star', item1Title: 'Originalidad Garantizada', item1Text: 'Marcas y fórmulas auténticas para tu tranquilidad.', item2Icon: 'gift', item2Title: 'Empaque Especial', item2Text: 'Cada pedido se prepara con dedicación y cuidado.', item3Icon: 'truck', item3Title: 'Envíos Nacionales', item3Text: 'Llegamos rápido a todas las ciudades del país.' }
                         }
                     ],
                     pages: {
                         catalog: [{
                             id: 'sec_catalog_results', type: 'catalog_results', enabled: true, locked: true,
-                            settings: { showHeader: true, headerBadge: 'CATÁLOGO ARTESANAL', headerTitle: 'Todos Nuestros Productos', headerSubtitle: 'Explora nuestras creaciones disponibles.', showCategoryPills: true, showSearchAndSort: true, filterLayout: 'sidebar', showFilterPrice: true, showFilterAvailability: true, showFilterCategory: true, showFilterVariants: true, showFilterAttributes: true, columnsDesktop: '3', showDiscountPercent: true }
+                            settings: { showHeader: true, headerBadge: 'BELLEZA & BIENESTAR', headerTitle: 'Catálogo de Cuidado Personal', headerSubtitle: 'Filtra por marca, categoría, tono o presentación.', showCategoryPills: true, showSearchAndSort: true, filterLayout: 'drawer', showFilterPrice: true, showFilterAvailability: true, showFilterCategory: true, showFilterVariants: true, showFilterAttributes: true, columnsDesktop: '4', showDiscountPercent: true }
                         }],
                         product: [{
                             id: 'sec_product_main', type: 'product_main', enabled: true, locked: true,
-                            settings: { galleryLayout: 'bottom', showBreadcrumbs: true, showSku: false, showStockCounter: true, showSpecs: true, showPolicies: true, showRelatedProducts: true, relatedTitle: 'También te encantará', relatedSubtitle: 'Armoniza tu pedido con estas opciones' }
+                            settings: { galleryLayout: 'bottom', showBreadcrumbs: true, showSku: false, showStockCounter: true, showSpecs: true, showPolicies: true, showRelatedProducts: true, relatedTitle: 'Complementa tu Rutina', relatedSubtitle: 'Productos que potencian tus resultados' }
                         }]
                     }
                 }
             },
             {
-                id: 'sport_fitness',
-                category: 'deportes',
-                name: 'Deportivo & Alto Rendimiento',
-                tag: 'Fitness, Suplementos & Ropa Deportiva',
-                layoutSummary: 'Tipografía Oswald Impacto • Contorno Firme • Velocidad Rápida',
-                colors: ['#dc2626', '#0f172a', '#f8fafc'],
-                description: 'Máxima energía visual con tipografía condensada Oswald en mayúsculas, contraste rojo/negro, contador de oferta y navegación ultra rápida.',
+                id: 'vitalidad_pro',
+                category: 'belleza_bienestar',
+                name: 'Vitalidad Pro',
+                tag: 'Suplementos, Fitness y Salud',
+                layoutSummary: 'Navbar Buscador Activo • Tarjetas Bento Contain • Tabla Técnica Abierta',
+                colors: ['#0d9488', '#111827', '#f0fdfa'],
+                description: 'Diseñada para tiendas de proteínas, suplementos, vitaminas y mercados saludables. Muestra tarros y empaques sin recorte, marcas visibles y filtro por sabor o peso.',
                 config: {
                     globalStyles: {
-                        primaryColor: '#dc2626',
+                        primaryColor: '#0d9488',
+                        secondaryColor: '#111827',
+                        backgroundColor: '#f0fdfa',
+                        textColor: '#111827',
+                        headingFont: 'Montserrat',
+                        bodyFont: 'Plus Jakarta Sans',
+                        headingTransform: 'none',
+                        fontScale: 'standard',
+                        borderRadius: '1rem',
+                        buttonRadius: 'classic',
+                        navbarLayout: 'marketplace',
+                        navbarStyle: 'light',
+                        navbarLinkFormat: 'bold',
+                        navbarLinkHover: 'pill',
+                        navbarSticky: true,
+                        navbarDropdownStyle: 'split',
+                        navbarDropdownAnim: 'slide_up',
+                        navbarTrigger: 'hover',
+                        navbarSpeed: 'fast',
+                        navbarCompactOnScroll: true,
+                        cardPreset: 'bento',
+                        cardStyle: 'bento',
+                        cardRadius: '1rem',
+                        cardShadow: 'sm',
+                        cardImageAspect: 'square',
+                        cardImageFit: 'contain',
+                        cardImagePadding: 'inset',
+                        cardContentAlign: 'left',
+                        cardMetaMode: 'brand',
+                        cardDiscountBadge: 'percent',
+                        cardShowStatusBadges: true,
+                        cardShowOldPrice: true,
+                        cardPriceSize: 'normal',
+                        cardButtonStyle: 'solid',
+                        cardActionMode: 'always',
+                        cardWishlistMode: 'always',
+                        cardImageHover: 'carousel',
+                        cardHoverLift: 'lift',
+                        detailPreset: 'tech_specs',
+                        detailInfoStyle: 'card',
+                        detailStickyMode: 'sticky_info',
+                        detailGalleryPosition: 'left',
+                        detailLayoutRatio: '50_50',
+                        detailGalleryLayout: 'left',
+                        detailGalleryArrows: true,
+                        detailImageAspect: 'square',
+                        detailImageFit: 'contain',
+                        detailImageZoom: true,
+                        detailBuyLayout: 'standard',
+                        detailVariantStyle: 'pills',
+                        detailShowBreadcrumbs: true,
+                        detailShowMeta: true,
+                        detailShowSku: true,
+                        detailShowSavingsBadge: true,
+                        detailShowStock: true,
+                        detailShowTrustStrip: true,
+                        detailShowShare: true,
+                        detailShowSpecs: true,
+                        detailSpecsOpen: 'expanded',
+                        detailShowPolicies: true,
+                        detailShowRelated: true,
+                        detailRelatedCols: '4',
+                        filterEnabled: true,
+                        filterLayout: 'sidebar',
+                        filterShowSearch: true,
+                        filterShowSort: true,
+                        filterShowCount: true,
+                        filterShowCategory: true,
+                        filterShowPrice: true,
+                        filterShowOffers: true,
+                        filterShowAvailability: true,
+                        filterShowBrand: true,
+                        filterShowVariants: true,
+                        filterShowSpecs: true,
+                        searchEnabled: true,
+                        searchMode: 'predictive',
+                        searchNavbarVariant: 'inline_bar',
+                        searchMobileMode: 'fullscreen',
+                        searchInputStyle: 'rounded',
+                        searchInputSize: 'normal',
+                        searchButtonMode: 'icon_text',
+                        searchAnim: 'slide_up',
+                        searchPlaceholder: 'Buscar proteína, creatina, vitaminas, marca o sabor...',
+                        searchButtonLabel: 'Buscar',
+                        searchEmptyMessage: 'No encontramos suplementos para tu búsqueda',
+                        searchMinChars: 2,
+                        searchDebounceMs: 150,
+                        searchMaxSuggestions: 6,
+                        searchShowProductImg: true,
+                        searchShowProductPrice: true,
+                        searchShowProductDiscount: true,
+                        searchShowProductCategory: true,
+                        searchShowProductBrand: true,
+                        searchSuggestCategories: true,
+                        searchSuggestBrands: true,
+                        searchShowRecent: true,
+                        searchPopularTerms: 'Proteína, Creatina, Pre-entreno, Vitaminas, Colágeno',
+                        searchCategoryScope: 'pills_top',
+                        searchAdvancedEnabled: true,
+                        searchMatchVariants: true,
+                        searchMatchSpecs: true,
+                        searchAdvCategory: true,
+                        searchAdvBrand: true,
+                        searchAdvPrice: true,
+                        searchAdvAvailability: true,
+                        searchAdvVariants: true,
+                        searchAdvSpecs: true
+                    },
+                    sections: [
+                        {
+                            id: 'sec_ann_vp', type: 'announcement_bar', enabled: true,
+                            settings: { text: '💪 Suplementos 100% originales y sellados • Despacho rápido a toda Colombia', text2: '💳 Paga con PSE, Nequi, Tarjetas o pide asesoría por WhatsApp', text3: '', bgColor: '#111827', textColor: '#ffffff', linkUrl: '/catalog' }
+                        },
+                        {
+                            id: 'sec_hero_vp', type: 'hero_banner', enabled: true,
+                            settings: { heroLayout: 'split', badgeText: 'NUTRICIÓN Y BIENESTAR REAL', title: 'Alcanza tus metas físicas y de salud con ' + name, subtitle: 'Proteínas, creatinas, vitaminas y alimentación saludable de marcas certificadas.', buttonText: 'Ver Suplementos', buttonUrl: '/catalog', secondaryButtonText: 'Asesoría de Objetivos', secondaryButtonUrl: '__whatsapp__', imageUrl: '', overlayOpacity: 45, bgColor: '#0d9488', textColor: '#ffffff', alignment: 'left' }
+                        },
+                        {
+                            id: 'sec_cats_vp', type: 'featured_categories', enabled: true,
+                            settings: { title: 'Explora por Objetivo', subtitle: 'Nutrición deportiva y bienestar diario', cardLayout: 'icon', columns: '4' }
+                        },
+                        {
+                            id: 'sec_grid_vp', type: 'product_grid', enabled: true,
+                            settings: { title: 'Catálogo de Suplementos', subtitle: 'Filtra por marca, sabor o presentación en libras/servicios', source: 'NEWEST', categoryId: '', limit: 8, showFilters: true, showViewAll: true }
+                        },
+                        {
+                            id: 'sec_spot_vp', type: 'spotlight_product', enabled: true,
+                            settings: { productId: '', badgeText: '💪 TOP VENTAS FITNESS', customTitle: '', customSubtitle: '', imageSide: 'left' }
+                        },
+                        {
+                            id: 'sec_trust_vp', type: 'trust_badges', enabled: true,
+                            settings: { badgeStyle: 'secondary', item1Icon: 'shield', item1Title: 'Sellos de Autenticidad', item1Text: 'Productos originales de distribuidores autorizados.', item2Icon: 'clock', item2Title: 'Despacho Ágil', item2Text: 'Para que nunca interrumpas tu suplementación.', item3Icon: 'chat', item3Title: 'Guía Personalizada', item3Text: 'Te orientamos según tu etapa de entrenamiento.' }
+                        },
+                        {
+                            id: 'sec_test_vp', type: 'testimonials', enabled: true,
+                            settings: { title: 'Clientes Entrenando con Nosotros', subtitle: 'Reseñas verificadas de compradores reales' }
+                        },
+                        {
+                            id: 'sec_faq_vp', type: 'faq_accordion', enabled: true,
+                            settings: { title: 'Preguntas Frecuentes', subtitle: 'Transparencia y respaldo en tu nutrición', q1: '¿Los suplementos cuentan con sello de seguridad?', a1: 'Sí, todos los productos se entregan completamente sellados de fábrica y con lote verificable.', q2: '¿Cómo elijo el sabor o tamaño del producto?', a2: 'Dentro de cada producto puedes seleccionar el sabor (Vainilla, Chocolate, Fresa, etc.) y presentación antes de agregar a la bolsa.', q3: '¿Hacen envíos a toda Colombia?', a3: 'Sí, despachamos a todas las ciudades y municipios del país.' }
+                        },
+                        {
+                            id: 'sec_wa_vp', type: 'whatsapp_cta', enabled: true,
+                            settings: { title: '¿Buscas volumen, definición o bienestar general?', subtitle: 'Escríbenos por WhatsApp y te recomendamos el suplemento exacto para tu meta.', buttonText: 'Hablar con un asesor en WhatsApp' }
+                        }
+                    ],
+                    pages: {
+                        catalog: [{
+                            id: 'sec_catalog_results', type: 'catalog_results', enabled: true, locked: true,
+                            settings: { showHeader: true, headerBadge: 'CATÁLOGO NUTRICIONAL', headerTitle: 'Todos los Suplementos', headerSubtitle: 'Filtra por marca, sabor, tamaño o disponibilidad.', showCategoryPills: true, showSearchAndSort: true, filterLayout: 'sidebar', showFilterPrice: true, showFilterAvailability: true, showFilterCategory: true, showFilterVariants: true, showFilterAttributes: true, columnsDesktop: '4', showDiscountPercent: true }
+                        }],
+                        product: [{
+                            id: 'sec_product_main', type: 'product_main', enabled: true, locked: true,
+                            settings: { galleryLayout: 'left', showBreadcrumbs: true, showSku: true, showStockCounter: true, showSpecs: true, showPolicies: true, showRelatedProducts: true, relatedTitle: 'Combínalo en tu Stack', relatedSubtitle: 'Suplementos complementarios recomendados' }
+                        }]
+                    }
+                }
+            },
+            {
+                id: 'oro_y_bruma',
+                category: 'accesorios_joyas',
+                name: 'Oro y Bruma',
+                tag: 'Joyas, Bisutería Fina y Relojería',
+                layoutSummary: 'Navbar Transparente Hero • Fuente Cinzel • Esquinas Rectas 0px',
+                colors: ['#b48327', '#141413', '#fcfbf9'],
+                description: 'Minimalismo de alta joyería en tonos dorado champaña, ónix y alabastro. Tipografía clásica Cinzel + Lora, bordes rectos de 0px, tarjetas centradas y galería de acercamiento.',
+                config: {
+                    globalStyles: {
+                        primaryColor: '#b48327',
+                        secondaryColor: '#141413',
+                        backgroundColor: '#fcfbf9',
+                        textColor: '#141413',
+                        headingFont: 'Cinzel',
+                        bodyFont: 'Lora',
+                        headingTransform: 'uppercase',
+                        fontScale: 'standard',
+                        borderRadius: '0px',
+                        buttonRadius: 'square',
+                        navbarLayout: 'hero_overlay',
+                        navbarStyle: 'secondary',
+                        navbarLinkFormat: 'uppercase',
+                        navbarLinkHover: 'opacity',
+                        navbarSticky: true,
+                        navbarDropdownStyle: 'strip',
+                        navbarDropdownAnim: 'fade',
+                        navbarTrigger: 'hover',
+                        navbarSpeed: 'slow',
+                        navbarCompactOnScroll: true,
+                        cardPreset: 'commercial',
+                        cardStyle: 'clean',
+                        cardRadius: '0px',
+                        cardShadow: 'none',
+                        cardImageAspect: 'square',
+                        cardImageFit: 'cover',
+                        cardImagePadding: 'flush',
+                        cardContentAlign: 'center',
+                        cardMetaMode: 'category',
+                        cardDiscountBadge: 'label',
+                        cardShowStatusBadges: true,
+                        cardShowOldPrice: true,
+                        cardPriceSize: 'normal',
+                        cardButtonStyle: 'dark',
+                        cardActionMode: 'always',
+                        cardWishlistMode: 'always',
+                        cardImageHover: 'carousel',
+                        cardHoverLift: 'none',
+                        detailPreset: 'luxury_boutique',
+                        detailInfoStyle: 'clean',
+                        detailStickyMode: 'sticky_info',
+                        detailGalleryPosition: 'left',
+                        detailLayoutRatio: '50_50',
+                        detailGalleryLayout: 'stack',
+                        detailGalleryArrows: true,
+                        detailImageAspect: 'square',
+                        detailImageFit: 'cover',
+                        detailImageZoom: true,
+                        detailBuyLayout: 'stacked',
+                        detailVariantStyle: 'square',
+                        detailShowBreadcrumbs: true,
+                        detailShowMeta: true,
+                        detailShowSku: true,
+                        detailShowSavingsBadge: false,
+                        detailShowStock: false,
+                        detailShowTrustStrip: true,
+                        detailShowShare: true,
+                        detailShowSpecs: true,
+                        detailSpecsOpen: 'expanded',
+                        detailShowPolicies: true,
+                        detailShowRelated: true,
+                        detailRelatedCols: '4',
+                        filterEnabled: true,
+                        filterLayout: 'drawer',
+                        filterShowSearch: true,
+                        filterShowSort: true,
+                        filterShowCount: true,
+                        filterShowCategory: true,
+                        filterShowPrice: true,
+                        filterShowOffers: true,
+                        filterShowAvailability: true,
+                        filterShowBrand: false,
+                        filterShowVariants: true,
+                        filterShowSpecs: true,
+                        searchEnabled: true,
+                        searchMode: 'predictive',
+                        searchNavbarVariant: 'expandable_icon',
+                        searchMobileMode: 'fullscreen',
+                        searchInputStyle: 'underline',
+                        searchInputSize: 'normal',
+                        searchButtonMode: 'icon',
+                        searchAnim: 'fade',
+                        searchPlaceholder: 'Buscar anillos, cadenas, aretes, oro laminado...',
+                        searchButtonLabel: 'Buscar',
+                        searchEmptyMessage: 'No encontramos joyas para tu búsqueda',
+                        searchMinChars: 2,
+                        searchDebounceMs: 250,
+                        searchMaxSuggestions: 6,
+                        searchShowProductImg: true,
+                        searchShowProductPrice: true,
+                        searchShowProductDiscount: false,
+                        searchShowProductCategory: true,
+                        searchShowProductBrand: false,
+                        searchSuggestCategories: true,
+                        searchSuggestBrands: false,
+                        searchShowRecent: true,
+                        searchPopularTerms: 'Anillos, Cadenas, Aretes, Pulseras, Regalos',
+                        searchCategoryScope: 'none',
+                        searchAdvancedEnabled: false,
+                        searchMatchVariants: true,
+                        searchMatchSpecs: true,
+                        searchAdvCategory: true,
+                        searchAdvBrand: false,
+                        searchAdvPrice: true,
+                        searchAdvAvailability: true,
+                        searchAdvVariants: true,
+                        searchAdvSpecs: true
+                    },
+                    sections: [
+                        {
+                            id: 'sec_hero_ob', type: 'hero_banner', enabled: true,
+                            settings: { heroLayout: 'classic', badgeText: 'ALTA JOYERÍA Y DETALLES ETERNOS', title: name, subtitle: 'Piezas con brillo propio, acabados certificados y estuche de lujo incluido en cada pedido.', buttonText: 'EXPLORAR COLECCIÓN', buttonUrl: '/catalog', secondaryButtonText: 'ASESORÍA EXCLUSIVA', secondaryButtonUrl: '__whatsapp__', imageUrl: '', overlayOpacity: 55, bgColor: '#141413', textColor: '#ffffff', alignment: 'center' }
+                        },
+                        {
+                            id: 'sec_ann_ob', type: 'announcement_bar', enabled: true,
+                            settings: { text: '💎 Incluye estuche de regalo y certificado de garantía • Envíos asegurados en Colombia', text2: '✨ Paga en línea con PSE, Nequi, Tarjetas o coordina por WhatsApp', text3: '', bgColor: '#141413', textColor: '#ffffff', linkUrl: '/catalog' }
+                        },
+                        {
+                            id: 'sec_cats_ob', type: 'featured_categories', enabled: true,
+                            settings: { title: 'Colecciones de Joyería', subtitle: 'Descubre cada línea de nuestra marca', cardLayout: 'visual', columns: '4' }
+                        },
+                        {
+                            id: 'sec_grid_ob', type: 'product_grid', enabled: true,
+                            settings: { title: 'Piezas Destacadas', subtitle: 'Acabados delicados y materiales seleccionados', source: 'NEWEST', categoryId: '', limit: 8, showFilters: false, showViewAll: true }
+                        },
+                        {
+                            id: 'sec_spot_ob', type: 'spotlight_product', enabled: true,
+                            settings: { productId: '', badgeText: '💎 PIEZA INSIGNIA', customTitle: '', customSubtitle: '', imageSide: 'right' }
+                        },
+                        {
+                            id: 'sec_multi_ob', type: 'multi_banners', enabled: true,
+                            settings: { card1Badge: 'Para Ella', card1Title: 'Sutileza y Brillo', card1Subtitle: 'Collares, dijes, topos y anillos', card1ButtonText: 'Ver Colección', card1ButtonUrl: '/catalog', card1ImageUrl: '', card1BgColor: '#141413', card2Badge: 'Para Él', card2Title: 'Carácter y Presencia', card2Subtitle: 'Cadenas, tejidos, pulsos y relojería', card2ButtonText: 'Explorar', card2ButtonUrl: '/catalog', card2ImageUrl: '', card2BgColor: '#b48327' }
+                        },
+                        {
+                            id: 'sec_trust_ob', type: 'trust_badges', enabled: true,
+                            settings: { badgeStyle: 'secondary', item1Icon: 'gift', item1Title: 'Estuche de Lujo Incluido', item1Text: 'Listo para entregar como un regalo inolvidable.', item2Icon: 'shield', item2Title: 'Garantía Certificada', item2Text: 'Respaldo sobre el material y el baño de tu joya.', item3Icon: 'truck', item3Title: 'Envío Asegurado', item3Text: 'Despacho protegido a cualquier ciudad del país.' }
+                        },
+                        {
+                            id: 'sec_test_ob', type: 'testimonials', enabled: true,
+                            settings: { title: 'Clientes que Brillan con ' + name, subtitle: 'Calificaciones reales verificadas por pedido' }
+                        },
+                        {
+                            id: 'sec_faq_ob', type: 'faq_accordion', enabled: true,
+                            settings: { title: 'Cuidado y Garantía de tus Joyas', subtitle: 'Resolvemos tus inquietudes', q1: '¿Cómo sé mi talla de anillo o el largo de cadena?', a1: 'En las especificaciones de cada joya detallamos las medidas en milímetros y centímetros. También te asesoramos por WhatsApp.', q2: '¿Viene empacado para regalo?', a2: 'Sí, todos nuestros pedidos incluyen estuche de presentación sin costo adicional.', q3: '¿Qué cuidados debo tener con mis piezas?', a3: 'Recomendamos evitar el contacto directo con perfumes o cremas y guardarlas en su estuche individual.' }
+                        },
+                        {
+                            id: 'sec_wa_ob', type: 'whatsapp_cta', enabled: true,
+                            settings: { title: '¿Buscas un regalo especial o necesitas ayuda con la medida?', subtitle: 'Escríbenos a nuestro WhatsApp y te enviamos videos detallados de las piezas.', buttonText: 'Hablar con un asesor de joyería' }
+                        }
+                    ],
+                    pages: {
+                        catalog: [{
+                            id: 'sec_catalog_results', type: 'catalog_results', enabled: true, locked: true,
+                            settings: { showHeader: true, headerBadge: 'JOYERÍA EXCLUSIVA', headerTitle: 'Todas las Colecciones', headerSubtitle: 'Filtra por material, medida o categoría.', showCategoryPills: true, showSearchAndSort: true, filterLayout: 'drawer', showFilterPrice: true, showFilterAvailability: true, showFilterCategory: true, showFilterVariants: true, showFilterAttributes: true, columnsDesktop: '3', showDiscountPercent: false }
+                        }],
+                        product: [{
+                            id: 'sec_product_main', type: 'product_main', enabled: true, locked: true,
+                            settings: { galleryLayout: 'stack', showBreadcrumbs: true, showSku: true, showStockCounter: false, showSpecs: true, showPolicies: true, showRelatedProducts: true, relatedTitle: 'Combínalo con estas Piezas', relatedSubtitle: 'Armoniza tu selección con nuestra colección' }
+                        }]
+                    }
+                }
+            },
+            {
+                id: 'veta_de_cuero',
+                category: 'accesorios_joyas',
+                name: 'Veta de Cuero',
+                tag: 'Bolsos, Morrales y Marroquinería',
+                layoutSummary: 'Navbar Editorial • Tonos Coñac y Espresso • Ficha de Dimensiones',
+                colors: ['#7c2d12', '#1c1917', '#faf7f2'],
+                description: 'Inspirada en la tradición marroquinera colombiana. Tonos cuero coñac y pergamino, tipografía Playfair Display + Manrope, zoom de herrajes y medidas detalladas.',
+                config: {
+                    globalStyles: {
+                        primaryColor: '#7c2d12',
+                        secondaryColor: '#1c1917',
+                        backgroundColor: '#faf7f2',
+                        textColor: '#1c1917',
+                        headingFont: 'Playfair Display',
+                        bodyFont: 'Manrope',
+                        headingTransform: 'none',
+                        fontScale: 'standard',
+                        borderRadius: '0.75rem',
+                        buttonRadius: 'classic',
+                        navbarLayout: 'editorial',
+                        navbarStyle: 'light',
+                        navbarLinkFormat: 'uppercase',
+                        navbarLinkHover: 'underline',
+                        navbarSticky: true,
+                        navbarDropdownStyle: 'mega',
+                        navbarDropdownAnim: 'slide_up',
+                        navbarTrigger: 'hover',
+                        navbarSpeed: 'normal',
+                        navbarCompactOnScroll: true,
+                        cardPreset: 'commercial',
+                        cardStyle: 'elevated',
+                        cardRadius: '0.5rem',
+                        cardShadow: 'sm',
+                        cardImageAspect: 'square',
+                        cardImageFit: 'cover',
+                        cardImagePadding: 'flush',
+                        cardContentAlign: 'left',
+                        cardMetaMode: 'category',
+                        cardDiscountBadge: 'percent',
+                        cardShowStatusBadges: true,
+                        cardShowOldPrice: true,
+                        cardPriceSize: 'normal',
+                        cardButtonStyle: 'dark',
+                        cardActionMode: 'always',
+                        cardWishlistMode: 'always',
+                        cardImageHover: 'carousel',
+                        cardHoverLift: 'lift',
+                        detailPreset: 'conversion',
+                        detailInfoStyle: 'clean',
+                        detailStickyMode: 'sticky_info',
+                        detailGalleryPosition: 'left',
+                        detailLayoutRatio: '50_50',
+                        detailGalleryLayout: 'left',
+                        detailGalleryArrows: true,
+                        detailImageAspect: 'square',
+                        detailImageFit: 'cover',
+                        detailImageZoom: true,
+                        detailBuyLayout: 'standard',
+                        detailVariantStyle: 'rounded',
+                        detailShowBreadcrumbs: true,
+                        detailShowMeta: true,
+                        detailShowSku: true,
+                        detailShowSavingsBadge: true,
+                        detailShowStock: true,
+                        detailShowTrustStrip: true,
+                        detailShowShare: true,
+                        detailShowSpecs: true,
+                        detailSpecsOpen: 'expanded',
+                        detailShowPolicies: true,
+                        detailShowRelated: true,
+                        detailRelatedCols: '4',
+                        filterEnabled: true,
+                        filterLayout: 'drawer',
+                        filterShowSearch: true,
+                        filterShowSort: true,
+                        filterShowCount: true,
+                        filterShowCategory: true,
+                        filterShowPrice: true,
+                        filterShowOffers: true,
+                        filterShowAvailability: true,
+                        filterShowBrand: false,
+                        filterShowVariants: true,
+                        filterShowSpecs: true,
+                        searchEnabled: true,
+                        searchMode: 'predictive',
+                        searchNavbarVariant: 'auto',
+                        searchMobileMode: 'fullscreen',
+                        searchInputStyle: 'rounded',
+                        searchInputSize: 'normal',
+                        searchButtonMode: 'icon',
+                        searchAnim: 'slide_up',
+                        searchPlaceholder: 'Buscar bolsos, morrales, billeteras, correas...',
+                        searchButtonLabel: 'Buscar',
+                        searchEmptyMessage: 'No encontramos artículos de marroquinería para tu búsqueda',
+                        searchMinChars: 2,
+                        searchDebounceMs: 200,
+                        searchMaxSuggestions: 6,
+                        searchShowProductImg: true,
+                        searchShowProductPrice: true,
+                        searchShowProductDiscount: true,
+                        searchShowProductCategory: true,
+                        searchShowProductBrand: false,
+                        searchSuggestCategories: true,
+                        searchSuggestBrands: false,
+                        searchShowRecent: true,
+                        searchPopularTerms: 'Bolsos, Morrales, Billeteras, Manos libres, Correas',
+                        searchCategoryScope: 'pills_top',
+                        searchAdvancedEnabled: false,
+                        searchMatchVariants: true,
+                        searchMatchSpecs: true,
+                        searchAdvCategory: true,
+                        searchAdvBrand: false,
+                        searchAdvPrice: true,
+                        searchAdvAvailability: true,
+                        searchAdvVariants: true,
+                        searchAdvSpecs: true
+                    },
+                    sections: [
+                        {
+                            id: 'sec_ann_vc', type: 'announcement_bar', enabled: true,
+                            settings: { text: '👜 Marroquinería con garantía en costuras y herrajes • Envíos a toda Colombia', text2: '💳 Paga seguro con PSE, Nequi, Tarjetas o pide por WhatsApp', text3: '', bgColor: '#1c1917', textColor: '#ffffff', linkUrl: '/catalog' }
+                        },
+                        {
+                            id: 'sec_hero_vc', type: 'hero_banner', enabled: true,
+                            settings: { heroLayout: 'split', badgeText: 'TRADICIÓN Y DISEÑO EN MARROQUINERÍA', title: 'Piezas hechas para acompañarte por años en ' + name, subtitle: 'Bolsos, morrales, manos libres y billeteras con acabados de primera calidad, compartimentos funcionales y estilo atemporal.', buttonText: 'Ver Colección', buttonUrl: '/catalog', secondaryButtonText: 'Hablar por WhatsApp', secondaryButtonUrl: '__whatsapp__', imageUrl: '', overlayOpacity: 45, bgColor: '#1c1917', textColor: '#ffffff', alignment: 'left' }
+                        },
+                        {
+                            id: 'sec_cats_vc', type: 'featured_categories', enabled: true,
+                            settings: { title: 'Nuestras Líneas de Marroquinería', subtitle: 'Funcionalidad y elegancia en cada detalle', cardLayout: 'visual', columns: '4' }
+                        },
+                        {
+                            id: 'sec_grid_vc', type: 'product_grid', enabled: true,
+                            settings: { title: 'Nuevos Diseños', subtitle: 'Desliza las fotos de cada producto para ver su interior y acabados', source: 'NEWEST', categoryId: '', limit: 8, showFilters: false, showViewAll: true }
+                        },
+                        {
+                            id: 'sec_spot_vc', type: 'spotlight_product', enabled: true,
+                            settings: { productId: '', badgeText: '👜 HECHO EN COLOMBIA', customTitle: '', customSubtitle: '', imageSide: 'left' }
+                        },
+                        {
+                            id: 'sec_promo_vc', type: 'promo_banner', enabled: true,
+                            settings: { badgeText: 'ARTESANÍA Y DURABILIDAD', title: 'Herrajes resistentes y costuras reforzadas', subtitle: 'Cada pieza pasa por un control riguroso para garantizarte comodidad, capacidad y resistencia diaria.', buttonText: 'Explorar Catálogo', buttonUrl: '/catalog', imageUrl: '', bgColor: '#7c2d12', textColor: '#ffffff' }
+                        },
+                        {
+                            id: 'sec_multi_vc', type: 'multi_banners', enabled: true,
+                            settings: { card1Badge: 'Bolsos & Cartera', card1Title: 'Línea Femenina', card1Subtitle: 'Manos libres, shopping bags y clutches', card1ButtonText: 'Ver Bolsos', card1ButtonUrl: '/catalog', card1ImageUrl: '', card1BgColor: '#7c2d12', card2Badge: 'Viaje & Oficina', card2Title: 'Morrales y Billeteras', card2Subtitle: 'Compartimentos porta-PC y organizadores', card2ButtonText: 'Ver Morrales', card2ButtonUrl: '/catalog', card2ImageUrl: '', card2BgColor: '#1c1917' }
+                        },
+                        {
+                            id: 'sec_test_vc', type: 'testimonials', enabled: true,
+                            settings: { title: 'Lo que Opinan Nuestros Clientes', subtitle: 'Calificaciones reales de compradores en Colombia' }
+                        },
+                        {
+                            id: 'sec_faq_vc', type: 'faq_accordion', enabled: true,
+                            settings: { title: 'Preguntas Frecuentes', subtitle: 'Dimensiones, materiales y garantía', q1: '¿Dónde puedo ver las medidas exactas del bolso o morral?', a1: 'En cada producto encontrarás la sección de Especificaciones Técnicas desplegada con el alto, ancho, fondo y material.', q2: '¿Qué cubre la garantía?', a2: 'Todos nuestros productos tienen garantía directa sobre costuras, cierres, cremalleras y herrajes.', q3: '¿Cómo limpiar y cuidar mi bolso?', a3: 'Límpialo con un paño suave ligeramente húmedo y utiliza cremas humectantes neutras para marroquinería.' }
+                        },
+                        {
+                            id: 'sec_trust_vc', type: 'trust_badges', enabled: true,
+                            settings: { badgeStyle: 'secondary', item1Icon: 'shield', item1Title: 'Garantía de Taller', item1Text: 'Respaldo directo en herrajes, cierres y costuras.', item2Icon: 'truck', item2Title: 'Envíos a Todo el País', item2Text: 'Empaque protegido para conservar la horma del bolso.', item3Icon: 'card', item3Title: 'Pago 100% Seguro', item3Text: 'PSE, Nequi, tarjetas o coordinación por WhatsApp.' }
+                        }
+                    ],
+                    pages: {
+                        catalog: [{
+                            id: 'sec_catalog_results', type: 'catalog_results', enabled: true, locked: true,
+                            settings: { showHeader: true, headerBadge: 'MARROQUINERÍA', headerTitle: 'Catálogo de Bolsos y Accesorios', headerSubtitle: 'Filtra por color, categoría, material o rango de precio.', showCategoryPills: true, showSearchAndSort: true, filterLayout: 'drawer', showFilterPrice: true, showFilterAvailability: true, showFilterCategory: true, showFilterVariants: true, showFilterAttributes: true, columnsDesktop: '4', showDiscountPercent: true }
+                        }],
+                        product: [{
+                            id: 'sec_product_main', type: 'product_main', enabled: true, locked: true,
+                            settings: { galleryLayout: 'left', showBreadcrumbs: true, showSku: true, showStockCounter: true, showSpecs: true, showPolicies: true, showRelatedProducts: true, relatedTitle: 'Combínalo con estas Billeteras y Correas', relatedSubtitle: 'Otras piezas de nuestra colección marroquinera' }
+                        }]
+                    }
+                }
+            },
+            {
+                id: 'pulso_activo',
+                category: 'deportes',
+                name: 'Pulso Activo',
+                tag: 'Deportes, Ciclismo y Ropa Deportiva',
+                layoutSummary: 'Navbar Compacto Rápido • Fuente Oswald Impacto • Galería Carrusel',
+                colors: ['#16a34a', '#0f172a', '#f8fafc'],
+                description: 'Energía atlética para tiendas de ropa deportiva, activewear, ciclismo, running e implementos de gimnasio. Títulos condensados Oswald y transiciones de 140ms.',
+                config: {
+                    globalStyles: {
+                        primaryColor: '#16a34a',
                         secondaryColor: '#0f172a',
                         backgroundColor: '#f8fafc',
                         textColor: '#0f172a',
@@ -3624,124 +4376,1184 @@ Storevo.ThemeEditor = {
                         bodyFont: 'DM Sans',
                         headingTransform: 'uppercase',
                         fontScale: 'standard',
-                        borderRadius: '0.375rem',
-                        buttonRadius: 'square',
-                        cardStyle: 'outlined',
-                        navbarLayout: 'classic',
+                        borderRadius: '0.75rem',
+                        buttonRadius: 'classic',
+                        navbarLayout: 'compact',
                         navbarStyle: 'secondary',
                         navbarLinkFormat: 'uppercase',
                         navbarLinkHover: 'underline_slide',
                         navbarSticky: true,
-                        navbarDropdownStyle: 'mega',
+                        navbarDropdownStyle: 'flyout',
                         navbarDropdownAnim: 'slide_up',
                         navbarTrigger: 'hover',
                         navbarSpeed: 'fast',
-                        navbarCompactOnScroll: true
+                        navbarCompactOnScroll: true,
+                        cardPreset: 'commercial',
+                        cardStyle: 'elevated',
+                        cardRadius: '0.5rem',
+                        cardShadow: 'md',
+                        cardImageAspect: 'portrait',
+                        cardImageFit: 'cover',
+                        cardImagePadding: 'flush',
+                        cardContentAlign: 'left',
+                        cardMetaMode: 'category',
+                        cardDiscountBadge: 'percent',
+                        cardShowStatusBadges: true,
+                        cardShowOldPrice: true,
+                        cardPriceSize: 'large',
+                        cardButtonStyle: 'solid',
+                        cardActionMode: 'always',
+                        cardWishlistMode: 'always',
+                        cardImageHover: 'carousel',
+                        cardHoverLift: 'lift',
+                        detailPreset: 'express_sale',
+                        detailInfoStyle: 'card',
+                        detailStickyMode: 'sticky_info',
+                        detailGalleryPosition: 'left',
+                        detailLayoutRatio: '50_50',
+                        detailGalleryLayout: 'carousel',
+                        detailGalleryArrows: true,
+                        detailImageAspect: 'square',
+                        detailImageFit: 'cover',
+                        detailImageZoom: true,
+                        detailBuyLayout: 'standard',
+                        detailVariantStyle: 'rounded',
+                        detailShowBreadcrumbs: true,
+                        detailShowMeta: true,
+                        detailShowSku: false,
+                        detailShowSavingsBadge: true,
+                        detailShowStock: true,
+                        detailShowTrustStrip: true,
+                        detailShowShare: true,
+                        detailShowSpecs: true,
+                        detailSpecsOpen: 'expanded',
+                        detailShowPolicies: true,
+                        detailShowRelated: true,
+                        detailRelatedCols: '4',
+                        filterEnabled: true,
+                        filterLayout: 'drawer',
+                        filterShowSearch: true,
+                        filterShowSort: true,
+                        filterShowCount: true,
+                        filterShowCategory: true,
+                        filterShowPrice: true,
+                        filterShowOffers: true,
+                        filterShowAvailability: true,
+                        filterShowBrand: true,
+                        filterShowVariants: true,
+                        filterShowSpecs: true,
+                        searchEnabled: true,
+                        searchMode: 'predictive',
+                        searchNavbarVariant: 'auto',
+                        searchMobileMode: 'fullscreen',
+                        searchInputStyle: 'rounded',
+                        searchInputSize: 'normal',
+                        searchButtonMode: 'icon',
+                        searchAnim: 'slide_up',
+                        searchPlaceholder: 'Buscar licras, conjuntos, ciclismo, pesas, tallas...',
+                        searchButtonLabel: 'Buscar',
+                        searchEmptyMessage: 'No encontramos artículos deportivos para tu búsqueda',
+                        searchMinChars: 2,
+                        searchDebounceMs: 150,
+                        searchMaxSuggestions: 6,
+                        searchShowProductImg: true,
+                        searchShowProductPrice: true,
+                        searchShowProductDiscount: true,
+                        searchShowProductCategory: true,
+                        searchShowProductBrand: true,
+                        searchSuggestCategories: true,
+                        searchSuggestBrands: true,
+                        searchShowRecent: true,
+                        searchPopularTerms: 'Conjuntos, Licras, Camisetas, Ciclismo, Accesorios, Ofertas',
+                        searchCategoryScope: 'pills_top',
+                        searchAdvancedEnabled: false,
+                        searchMatchVariants: true,
+                        searchMatchSpecs: true,
+                        searchAdvCategory: true,
+                        searchAdvBrand: true,
+                        searchAdvPrice: true,
+                        searchAdvAvailability: true,
+                        searchAdvVariants: true,
+                        searchAdvSpecs: true
                     },
                     sections: [
                         {
-                            id: 'sec_ann_sf', type: 'announcement_bar', enabled: true,
-                            settings: { text: '🔥 ENTRENA AL MÁXIMO NIVEL • ENVÍOS RÁPIDOS A TODO EL PAÍS', text2: '', text3: '', bgColor: '#dc2626', textColor: '#ffffff', linkUrl: '/catalog' }
+                            id: 'sec_ann_pa', type: 'announcement_bar', enabled: true,
+                            settings: { text: '⚡ ENTRENA SIN LÍMITES • TELAS DE ALTO RENDIMIENTO Y SECADO RÁPIDO', text2: '🚚 Despachos ágiles a toda Colombia • Cambios de talla garantizados', text3: '', bgColor: '#16a34a', textColor: '#ffffff', linkUrl: '/catalog' }
                         },
                         {
-                            id: 'sec_hero_sf', type: 'hero_banner', enabled: true,
-                            settings: { heroLayout: 'classic', badgeText: 'ALTO RENDIMIENTO', title: 'SUPERA TUS LÍMITES CON ' + name, subtitle: 'Equipamiento, prendas y suplementación diseñada para resultados reales.', buttonText: 'COMPRAR AHORA', buttonUrl: '/catalog', secondaryButtonText: 'VER OFERTAS', secondaryButtonUrl: '/catalog', imageUrl: '', overlayOpacity: 55, bgColor: '#0f172a', textColor: '#ffffff', alignment: 'left' }
+                            id: 'sec_hero_pa', type: 'hero_banner', enabled: true,
+                            settings: { heroLayout: 'classic', badgeText: 'COLECCIÓN DEPORTIVA', title: 'SUPERA CADA ENTRENAMIENTO CON ' + name, subtitle: 'Prendas deportivas de alta compresión, transpirabilidad y ajuste ergonómico para gimnasio, running y ciclismo.', buttonText: 'VER EQUIPAMIENTO', buttonUrl: '/catalog', secondaryButtonText: 'OFERTAS DEPORTIVAS', secondaryButtonUrl: '/catalog', imageUrl: '', overlayOpacity: 50, bgColor: '#0f172a', textColor: '#ffffff', alignment: 'left' }
                         },
                         {
-                            id: 'sec_cats_sf', type: 'featured_categories', enabled: true,
-                            settings: { title: 'Categorías de Entrenamiento', subtitle: 'Elige tu disciplina o línea de producto', cardLayout: 'visual', columns: '4' }
+                            id: 'sec_cats_pa', type: 'featured_categories', enabled: true,
+                            settings: { title: 'Elige tu Disciplina', subtitle: 'Indumentaria y accesorios diseñados para rendir', cardLayout: 'visual', columns: '4' }
                         },
                         {
-                            id: 'sec_cd_sf', type: 'countdown_promo', enabled: true,
-                            settings: { badgeText: '⚡ PROMO DE TEMPORADA', title: 'DESCUENTOS ESPECIALES POR TIEMPO LIMITADO', subtitle: 'Equípate hoy antes de que finalice la oferta.', endDate: '', buttonText: 'Ver Descuentos', buttonUrl: '/catalog', bgColor: '#0f172a', textColor: '#ffffff' }
+                            id: 'sec_grid_pa', type: 'product_grid', enabled: true,
+                            settings: { title: 'Equipamiento y Ropa Deportiva', subtitle: 'Filtra por talla, color o línea de entrenamiento', source: 'NEWEST', categoryId: '', limit: 8, showFilters: true, showViewAll: true }
                         },
                         {
-                            id: 'sec_grid_sf', type: 'product_grid', enabled: true,
-                            settings: { title: 'Los Más Vendidos', subtitle: 'Rendimiento comprobado por nuestros clientes', source: 'NEWEST', categoryId: '', limit: 8, showFilters: false, showViewAll: true }
+                            id: 'sec_cd_pa', type: 'countdown_promo', enabled: true,
+                            settings: { badgeText: '⚡ SEMANA DEL DEPORTE', title: 'DESCUENTOS ESPECIALES EN REFERENCIAS SELECCIONADAS', subtitle: 'Renueva tu ropa de entrenamiento antes de que termine la promoción.', endDate: '', buttonText: 'Aprovechar Ofertas', buttonUrl: '/catalog', bgColor: '#0f172a', textColor: '#ffffff' }
                         },
                         {
-                            id: 'sec_trust_sf', type: 'trust_badges', enabled: true,
-                            settings: { badgeStyle: 'cards', item1Icon: 'clock', item1Title: 'Despacho Express', item1Text: 'Procesamos tu pedido en tiempo récord.', item2Icon: 'shield', item2Title: '100% Original', item2Text: 'Calidad y autenticidad garantizada.', item3Icon: 'card', item3Title: 'Todos los Pagos', item3Text: 'PSE, Nequi, tarjetas o WhatsApp.' }
+                            id: 'sec_multi_pa', type: 'multi_banners', enabled: true,
+                            settings: { card1Badge: 'Activewear', card1Title: 'Línea Gym & Running', card1Subtitle: 'Conjuntos, leggins, shorts y tops de soporte', card1ButtonText: 'Ver Ropa', card1ButtonUrl: '/catalog', card1ImageUrl: '', card1BgColor: '#0f172a', card2Badge: 'Accesorios', card2Title: 'Implementos y Ciclismo', card2Subtitle: 'Termos, bandas, guantes y uniformes', card2ButtonText: 'Ver Implementos', card2ButtonUrl: '/catalog', card2ImageUrl: '', card2BgColor: '#16a34a' }
+                        },
+                        {
+                            id: 'sec_trust_pa', type: 'trust_badges', enabled: true,
+                            settings: { badgeStyle: 'secondary', item1Icon: 'clock', item1Title: 'Despacho Rápido', item1Text: 'Alistamos tu pedido con agilidad para toda Colombia.', item2Icon: 'refresh', item2Title: 'Cambios de Talla', item2Text: 'Respaldo directo si necesitas otra talla.', item3Icon: 'shield', item3Title: 'Telas de Alto Desempeño', item3Text: 'Costuras reforzadas que no transparentan.' }
+                        },
+                        {
+                            id: 'sec_test_pa', type: 'testimonials', enabled: true,
+                            settings: { title: 'Deportistas que Entrenan con ' + name, subtitle: 'Opiniones reales verificadas en cada compra' }
+                        },
+                        {
+                            id: 'sec_steps_pa', type: 'how_to_buy', enabled: true,
+                            settings: { title: '¿Cómo hacer tu pedido?', subtitle: 'Compra en minutos desde tu celular o computador', step1Title: 'Selecciona talla y color', step1Text: 'Elige tus prendas e implementos deportivos.', step2Title: 'Datos de entrega', step2Text: 'Ingresa tu dirección y ciudad en Colombia.', step3Title: 'Pago en línea o WhatsApp', step3Text: 'Paga con PSE, Nequi, tarjetas o confirma por WhatsApp.', showPaymentBadges: true }
                         }
                     ],
                     pages: {
                         catalog: [{
                             id: 'sec_catalog_results', type: 'catalog_results', enabled: true, locked: true,
-                            settings: { showHeader: true, headerBadge: 'CATÁLOGO PRO', headerTitle: 'Todo el Equipamiento', headerSubtitle: 'Filtra por talla, sabor, peso o categoría.', showCategoryPills: true, showSearchAndSort: true, filterLayout: 'sidebar', showFilterPrice: true, showFilterAvailability: true, showFilterCategory: true, showFilterVariants: true, showFilterAttributes: true, columnsDesktop: '4', showDiscountPercent: true }
+                            settings: { showHeader: true, headerBadge: 'ALTO RENDIMIENTO', headerTitle: 'Catálogo Deportivo', headerSubtitle: 'Filtra por talla, disciplina o rango de precio.', showCategoryPills: true, showSearchAndSort: true, filterLayout: 'drawer', showFilterPrice: true, showFilterAvailability: true, showFilterCategory: true, showFilterVariants: true, showFilterAttributes: true, columnsDesktop: '4', showDiscountPercent: true }
                         }],
                         product: [{
                             id: 'sec_product_main', type: 'product_main', enabled: true, locked: true,
-                            settings: { galleryLayout: 'left', showBreadcrumbs: true, showSku: true, showStockCounter: true, showSpecs: true, showPolicies: true, showRelatedProducts: true, relatedTitle: 'Potencia tu Compra', relatedSubtitle: 'Productos recomendados para tu rutina' }
+                            settings: { galleryLayout: 'carousel', showBreadcrumbs: true, showSku: false, showStockCounter: true, showSpecs: true, showPolicies: true, showRelatedProducts: true, relatedTitle: 'Complementa tu Entrenamiento', relatedSubtitle: 'Otros productos recomendados para ti' }
                         }]
                     }
                 }
             },
             {
-                id: 'commercial_megastore',
-                category: 'multitienda',
-                name: 'Comercial Multitienda & Hogar',
-                tag: 'Multicategoría, Variedades & Distribuidoras',
-                layoutSummary: 'Doble Barra Comercial • Mega Menú • Vitrina 12 Productos',
-                colors: ['#0284c7', '#0f172a', '#f8fafc'],
-                description: 'Pensada para tiendas con amplio surtido: navbar de doble barra con accesos rápidos, mosaico promocional, filtros laterales y pasos de compra claros.',
+                id: 'casa_serena',
+                category: 'hogar_mascotas',
+                name: 'Casa Serena',
+                tag: 'Hogar, Muebles y Decoración',
+                layoutSummary: 'Navbar Boutique • Tarjetas Poster Ambientales • Catálogo 3 Columnas',
+                colors: ['#5f6f52', '#283618', '#f9f8f3'],
+                description: 'Estética cálida y arquitectónica en tonos verde salvia y lino natural. Ideal para tiendas de decoración, muebles, iluminación, lencería de hogar y artículos bajo pedido.',
                 config: {
                     globalStyles: {
-                        primaryColor: '#0284c7',
-                        secondaryColor: '#0f172a',
-                        backgroundColor: '#f8fafc',
-                        textColor: '#0f172a',
-                        headingFont: 'Poppins',
-                        bodyFont: 'Inter',
+                        primaryColor: '#5f6f52',
+                        secondaryColor: '#283618',
+                        backgroundColor: '#f9f8f3',
+                        textColor: '#1e2418',
+                        headingFont: 'Lora',
+                        bodyFont: 'Outfit',
                         headingTransform: 'none',
-                        fontScale: 'standard',
-                        borderRadius: '0.75rem',
+                        fontScale: 'large',
+                        borderRadius: '1rem',
                         buttonRadius: 'classic',
-                        cardStyle: 'elevated',
-                        navbarLayout: 'double_bar',
+                        navbarLayout: 'centered',
                         navbarStyle: 'light',
-                        navbarLinkFormat: 'bold',
-                        navbarLinkHover: 'pill',
+                        navbarLinkFormat: 'normal',
+                        navbarLinkHover: 'underline',
                         navbarSticky: true,
                         navbarDropdownStyle: 'mega',
-                        navbarDropdownAnim: 'slide_up',
+                        navbarDropdownAnim: 'fade',
                         navbarTrigger: 'hover',
-                        navbarSpeed: 'normal',
-                        navbarCompactOnScroll: true
+                        navbarSpeed: 'slow',
+                        navbarCompactOnScroll: true,
+                        cardPreset: 'poster',
+                        cardStyle: 'poster',
+                        cardRadius: '1rem',
+                        cardShadow: 'md',
+                        cardImageAspect: 'portrait',
+                        cardImageFit: 'cover',
+                        cardImagePadding: 'flush',
+                        cardContentAlign: 'left',
+                        cardMetaMode: 'category',
+                        cardDiscountBadge: 'percent',
+                        cardShowStatusBadges: true,
+                        cardShowOldPrice: true,
+                        cardPriceSize: 'normal',
+                        cardButtonStyle: 'solid',
+                        cardActionMode: 'always',
+                        cardWishlistMode: 'always',
+                        cardImageHover: 'carousel',
+                        cardHoverLift: 'scale',
+                        detailPreset: 'fashion_lookbook',
+                        detailInfoStyle: 'clean',
+                        detailStickyMode: 'sticky_info',
+                        detailGalleryPosition: 'left',
+                        detailLayoutRatio: '60_40',
+                        detailGalleryLayout: 'grid',
+                        detailGalleryArrows: true,
+                        detailImageAspect: 'square',
+                        detailImageFit: 'cover',
+                        detailImageZoom: true,
+                        detailBuyLayout: 'standard',
+                        detailVariantStyle: 'rounded',
+                        detailShowBreadcrumbs: true,
+                        detailShowMeta: true,
+                        detailShowSku: true,
+                        detailShowSavingsBadge: true,
+                        detailShowStock: true,
+                        detailShowTrustStrip: true,
+                        detailShowShare: true,
+                        detailShowSpecs: true,
+                        detailSpecsOpen: 'expanded',
+                        detailShowPolicies: true,
+                        detailShowRelated: true,
+                        detailRelatedCols: '3',
+                        filterEnabled: true,
+                        filterLayout: 'drawer',
+                        filterShowSearch: true,
+                        filterShowSort: true,
+                        filterShowCount: true,
+                        filterShowCategory: true,
+                        filterShowPrice: true,
+                        filterShowOffers: true,
+                        filterShowAvailability: true,
+                        filterShowBrand: false,
+                        filterShowVariants: true,
+                        filterShowSpecs: true,
+                        searchEnabled: true,
+                        searchMode: 'predictive',
+                        searchNavbarVariant: 'expandable_icon',
+                        searchMobileMode: 'fullscreen',
+                        searchInputStyle: 'rounded',
+                        searchInputSize: 'normal',
+                        searchButtonMode: 'icon',
+                        searchAnim: 'fade',
+                        searchPlaceholder: 'Buscar lámparas, cojines, muebles, ropa de cama...',
+                        searchButtonLabel: 'Buscar',
+                        searchEmptyMessage: 'No encontramos artículos de hogar para tu búsqueda',
+                        searchMinChars: 2,
+                        searchDebounceMs: 250,
+                        searchMaxSuggestions: 6,
+                        searchShowProductImg: true,
+                        searchShowProductPrice: true,
+                        searchShowProductDiscount: true,
+                        searchShowProductCategory: true,
+                        searchShowProductBrand: false,
+                        searchSuggestCategories: true,
+                        searchSuggestBrands: false,
+                        searchShowRecent: true,
+                        searchPopularTerms: 'Lámparas, Cojines, Espejos, Mesas, Ropa de cama',
+                        searchCategoryScope: 'none',
+                        searchAdvancedEnabled: false,
+                        searchMatchVariants: true,
+                        searchMatchSpecs: true,
+                        searchAdvCategory: true,
+                        searchAdvBrand: false,
+                        searchAdvPrice: true,
+                        searchAdvAvailability: true,
+                        searchAdvVariants: true,
+                        searchAdvSpecs: true
                     },
                     sections: [
                         {
-                            id: 'sec_hero_cm', type: 'hero_banner', enabled: true,
-                            settings: { heroLayout: 'compact', badgeText: 'BIENVENIDO A ' + name.toUpperCase(), title: 'Todo lo que buscas en un solo lugar con precios increíbles', subtitle: 'Compra fácil desde casa con envíos seguros a todo el país.', buttonText: 'Ver Todo el Catálogo', buttonUrl: '/catalog', secondaryButtonText: 'Ofertas del Día', secondaryButtonUrl: '/catalog?offers=1', imageUrl: '', overlayOpacity: 50, bgColor: '#0284c7', textColor: '#ffffff', alignment: 'center' }
+                            id: 'sec_ann_cs', type: 'announcement_bar', enabled: true,
+                            settings: { text: '🏡 Diseño y calidez para tu hogar • Envíos cuidadosos a toda Colombia', text2: '💬 Asesoría personalizada de medidas y acabados por WhatsApp', text3: '', bgColor: '#283618', textColor: '#ffffff', linkUrl: '/catalog' }
                         },
                         {
-                            id: 'sec_cats_cm', type: 'featured_categories', enabled: true,
-                            settings: { title: 'Departamentos y Categorías', subtitle: 'Navega por nuestras secciones principales', cardLayout: 'visual', columns: '4' }
+                            id: 'sec_hero_cs', type: 'hero_banner', enabled: true,
+                            settings: { heroLayout: 'classic', badgeText: 'INTERIORISMO & BIENESTAR', title: 'Transforma cada rincón de tu casa con ' + name, subtitle: 'Mobiliario, decoración y textiles seleccionados para crear espacios acogedores, funcionales y llenos de armonía.', buttonText: 'Explorar Espacios', buttonUrl: '/catalog', secondaryButtonText: 'Cotizar por WhatsApp', secondaryButtonUrl: '__whatsapp__', imageUrl: '', overlayOpacity: 40, bgColor: '#283618', textColor: '#ffffff', alignment: 'center' }
                         },
                         {
-                            id: 'sec_multi_cm', type: 'multi_banners', enabled: true,
-                            settings: { card1Badge: 'Recomendado', card1Title: 'Novedades de la Semana', card1Subtitle: 'Conoce los productos recién llegados', card1ButtonText: 'Ver novedades', card1ButtonUrl: '/catalog', card1ImageUrl: '', card1BgColor: '#0f172a', card2Badge: 'Ahorro', card2Title: 'Precios Especiales', card2Subtitle: 'Descuentos en referencias seleccionadas', card2ButtonText: 'Ver ofertas', card2ButtonUrl: '/catalog?offers=1', card2ImageUrl: '', card2BgColor: '#0284c7' }
+                            id: 'sec_cats_cs', type: 'featured_categories', enabled: true,
+                            settings: { title: 'Explora por Ambiente', subtitle: 'Piezas pensadas para cada espacio de tu hogar', cardLayout: 'visual', columns: '3' }
                         },
                         {
-                            id: 'sec_grid_cm', type: 'product_grid', enabled: true,
-                            settings: { title: 'Catálogo Principal', subtitle: 'Busca y filtra entre nuestras referencias disponibles', source: 'NEWEST', categoryId: '', limit: 12, showFilters: true, showViewAll: true }
+                            id: 'sec_grid_cs', type: 'product_grid', enabled: true,
+                            settings: { title: 'Nuevas Piezas de Colección', subtitle: 'Entrega inmediata y referencias fabricadas bajo pedido', source: 'NEWEST', categoryId: '', limit: 8, showFilters: false, showViewAll: true }
                         },
                         {
-                            id: 'sec_steps_cm', type: 'how_to_buy', enabled: true,
-                            settings: { title: 'Compra Fácil y Rápido', subtitle: 'Recibe tu pedido sin salir de casa', step1Title: 'Elige tus productos', step1Text: 'Usa el buscador o los filtros para agregar lo que necesitas a tu bolsa.', step2Title: 'Datos de entrega', step2Text: 'Indícanos tu ciudad y dirección exacta.', step3Title: 'Pago seguro o WhatsApp', step3Text: 'Paga con Wompi o coordina directamente con un asesor.', showPaymentBadges: true }
+                            id: 'sec_promo_cs', type: 'promo_banner', enabled: true,
+                            settings: { badgeText: 'CURADURÍA PARA EL HOGAR', title: 'Materiales nobles que perduran en el tiempo', subtitle: 'Maderas, fibras naturales, cerámica e iluminación que elevan la calidez de tu sala, comedor o habitación.', buttonText: 'Ver Catálogo', buttonUrl: '/catalog', imageUrl: '', bgColor: '#5f6f52', textColor: '#ffffff' }
                         },
                         {
-                            id: 'sec_trust_cm', type: 'trust_badges', enabled: true,
-                            settings: { badgeStyle: 'cards', item1Icon: 'shield', item1Title: 'Compra Garantizada', item1Text: 'Respaldo total en cada pedido.', item2Icon: 'truck', item2Title: 'Cobertura Nacional', item2Text: 'Llegamos a todos los municipios del país.', item3Icon: 'chat', item3Title: 'Soporte por WhatsApp', item3Text: 'Atención humana y rápida.' }
+                            id: 'sec_spot_cs', type: 'spotlight_product', enabled: true,
+                            settings: { productId: '', badgeText: '🏡 PIEZA PROTAGONISTA', customTitle: '', customSubtitle: '', imageSide: 'left' }
+                        },
+                        {
+                            id: 'sec_rich_cs', type: 'rich_text', enabled: true,
+                            settings: { title: 'Hogares con Identidad Propia', content: 'En ' + name + ' acompañamos la creación de tus espacios con objetos y muebles seleccionados por su estética, proporción y durabilidad.' }
+                        },
+                        {
+                            id: 'sec_test_cs', type: 'testimonials', enabled: true,
+                            settings: { title: 'Hogares Felices en Colombia', subtitle: 'Experiencias reales de nuestros compradores' }
+                        },
+                        {
+                            id: 'sec_wa_cs', type: 'whatsapp_cta', enabled: true,
+                            settings: { title: '¿Necesitas confirmar dimensiones o acabados para tu espacio?', subtitle: 'Escríbenos por WhatsApp y te asesoramos con fotos reales, medidas y tiempos de entrega.', buttonText: 'Hablar con un asesor de hogar' }
+                        },
+                        {
+                            id: 'sec_trust_cs', type: 'trust_badges', enabled: true,
+                            settings: { badgeStyle: 'cards', item1Icon: 'truck', item1Title: 'Embalaje de Alta Protección', item1Text: 'Cuidamos cada pieza durante todo el trayecto hasta tu hogar.', item2Icon: 'shield', item2Title: 'Garantía de Calidad', item2Text: 'Materiales y acabados respaldados directamente.', item3Icon: 'chat', item3Title: 'Atención Personalizada', item3Text: 'Acompañamiento antes, durante y después de tu compra.' }
                         }
                     ],
                     pages: {
                         catalog: [{
                             id: 'sec_catalog_results', type: 'catalog_results', enabled: true, locked: true,
-                            settings: { showHeader: true, headerBadge: 'DEPARTAMENTOS', headerTitle: 'Catálogo General', headerSubtitle: 'Filtra por categoría, precio, marca o disponibilidad.', showCategoryPills: true, showSearchAndSort: true, filterLayout: 'sidebar', showFilterPrice: true, showFilterAvailability: true, showFilterCategory: true, showFilterVariants: true, showFilterAttributes: true, columnsDesktop: '4', showDiscountPercent: true }
+                            settings: { showHeader: true, headerBadge: 'COLECCIÓN HOGAR', headerTitle: 'Todos los Artículos y Muebles', headerSubtitle: 'Filtra por ambiente, dimensiones, disponibilidad o rango de precio.', showCategoryPills: true, showSearchAndSort: true, filterLayout: 'drawer', showFilterPrice: true, showFilterAvailability: true, showFilterCategory: true, showFilterVariants: true, showFilterAttributes: true, columnsDesktop: '3', showDiscountPercent: true }
                         }],
                         product: [{
                             id: 'sec_product_main', type: 'product_main', enabled: true, locked: true,
-                            settings: { galleryLayout: 'bottom', showBreadcrumbs: true, showSku: true, showStockCounter: true, showSpecs: true, showPolicies: true, showRelatedProducts: true, relatedTitle: 'Productos Relacionados', relatedSubtitle: 'Clientes también vieron estas referencias' }
+                            settings: { galleryLayout: 'grid', showBreadcrumbs: true, showSku: true, showStockCounter: true, showSpecs: true, showPolicies: true, showRelatedProducts: true, relatedTitle: 'Armoniza tu Espacio con estas Piezas', relatedSubtitle: 'Complementos de nuestra colección de hogar' }
+                        }]
+                    }
+                }
+            },
+            {
+                id: 'huella_feliz',
+                category: 'hogar_mascotas',
+                name: 'Huella Feliz',
+                tag: 'Mascotas, Concentrados y Pet Shop',
+                layoutSummary: 'Navbar Buscador Amigable • Fuentes Quicksand + Nunito • Bordes 24px',
+                colors: ['#f97316', '#1e293b', '#fffdf9'],
+                description: 'Alegre, cercana y muy fácil de usar para tiendas de mascotas. Fuentes redondeadas, buscador visible para recompra rápida de alimento y filtros por marca o peso en kg.',
+                config: {
+                    globalStyles: {
+                        primaryColor: '#f97316',
+                        secondaryColor: '#1e293b',
+                        backgroundColor: '#fffdf9',
+                        textColor: '#1e293b',
+                        headingFont: 'Quicksand',
+                        bodyFont: 'Nunito',
+                        headingTransform: 'none',
+                        fontScale: 'large',
+                        borderRadius: '1.5rem',
+                        buttonRadius: 'pill',
+                        navbarLayout: 'marketplace',
+                        navbarStyle: 'light',
+                        navbarLinkFormat: 'bold',
+                        navbarLinkHover: 'pill',
+                        navbarSticky: true,
+                        navbarDropdownStyle: 'mega',
+                        navbarDropdownAnim: 'scale',
+                        navbarTrigger: 'hover',
+                        navbarSpeed: 'fast',
+                        navbarCompactOnScroll: true,
+                        cardPreset: 'commercial',
+                        cardStyle: 'elevated',
+                        cardRadius: '1.5rem',
+                        cardShadow: 'sm',
+                        cardImageAspect: 'square',
+                        cardImageFit: 'contain',
+                        cardImagePadding: 'inset',
+                        cardContentAlign: 'left',
+                        cardMetaMode: 'brand',
+                        cardDiscountBadge: 'percent',
+                        cardShowStatusBadges: true,
+                        cardShowOldPrice: true,
+                        cardPriceSize: 'normal',
+                        cardButtonStyle: 'solid',
+                        cardActionMode: 'always',
+                        cardWishlistMode: 'always',
+                        cardImageHover: 'carousel',
+                        cardHoverLift: 'lift',
+                        detailPreset: 'conversion',
+                        detailInfoStyle: 'card',
+                        detailStickyMode: 'sticky_info',
+                        detailGalleryPosition: 'left',
+                        detailLayoutRatio: '50_50',
+                        detailGalleryLayout: 'bottom',
+                        detailGalleryArrows: true,
+                        detailImageAspect: 'square',
+                        detailImageFit: 'contain',
+                        detailImageZoom: true,
+                        detailBuyLayout: 'standard',
+                        detailVariantStyle: 'pills',
+                        detailShowBreadcrumbs: true,
+                        detailShowMeta: true,
+                        detailShowSku: false,
+                        detailShowSavingsBadge: true,
+                        detailShowStock: true,
+                        detailShowTrustStrip: true,
+                        detailShowShare: true,
+                        detailShowSpecs: true,
+                        detailSpecsOpen: 'expanded',
+                        detailShowPolicies: true,
+                        detailShowRelated: true,
+                        detailRelatedCols: '4',
+                        filterEnabled: true,
+                        filterLayout: 'drawer',
+                        filterShowSearch: true,
+                        filterShowSort: true,
+                        filterShowCount: true,
+                        filterShowCategory: true,
+                        filterShowPrice: true,
+                        filterShowOffers: true,
+                        filterShowAvailability: true,
+                        filterShowBrand: true,
+                        filterShowVariants: true,
+                        filterShowSpecs: true,
+                        searchEnabled: true,
+                        searchMode: 'predictive',
+                        searchNavbarVariant: 'inline_bar',
+                        searchMobileMode: 'fullscreen',
+                        searchInputStyle: 'pill',
+                        searchInputSize: 'normal',
+                        searchButtonMode: 'icon_text',
+                        searchAnim: 'scale',
+                        searchPlaceholder: 'Buscar concentrado, arena, juguetes, marca o peso...',
+                        searchButtonLabel: 'Buscar',
+                        searchEmptyMessage: 'No encontramos productos para tu mascota con esa búsqueda',
+                        searchMinChars: 2,
+                        searchDebounceMs: 150,
+                        searchMaxSuggestions: 6,
+                        searchShowProductImg: true,
+                        searchShowProductPrice: true,
+                        searchShowProductDiscount: true,
+                        searchShowProductCategory: true,
+                        searchShowProductBrand: true,
+                        searchSuggestCategories: true,
+                        searchSuggestBrands: true,
+                        searchShowRecent: true,
+                        searchPopularTerms: 'Perros, Gatos, Concentrado, Arena, Snacks, Camas',
+                        searchCategoryScope: 'pills_top',
+                        searchAdvancedEnabled: false,
+                        searchMatchVariants: true,
+                        searchMatchSpecs: true,
+                        searchAdvCategory: true,
+                        searchAdvBrand: true,
+                        searchAdvPrice: true,
+                        searchAdvAvailability: true,
+                        searchAdvVariants: true,
+                        searchAdvSpecs: true
+                    },
+                    sections: [
+                        {
+                            id: 'sec_ann_hf', type: 'announcement_bar', enabled: true,
+                            settings: { text: '🐾 Todo para consentir a tu peludo • Entrega rápida en tu ciudad y a toda Colombia', text2: '💳 Paga fácil con Nequi, Daviplata, PSE o pide por WhatsApp', text3: '', bgColor: '#1e293b', textColor: '#ffffff', linkUrl: '/catalog' }
+                        },
+                        {
+                            id: 'sec_hero_hf', type: 'hero_banner', enabled: true,
+                            settings: { heroLayout: 'split', badgeText: 'BIENESTAR Y ALEGRÍA PARA TU MASCOTA', title: 'Nutrición, juegos y cuidado con amor en ' + name, subtitle: 'Encuentra el alimento concentrado, snacks, camas, juguetes y accesorios favoritos de tu perro o gato.', buttonText: 'Ver Todo para Mascotas', buttonUrl: '/catalog', secondaryButtonText: 'Pedir por WhatsApp', secondaryButtonUrl: '__whatsapp__', imageUrl: '', overlayOpacity: 40, bgColor: '#f97316', textColor: '#ffffff', alignment: 'left' }
+                        },
+                        {
+                            id: 'sec_cats_hf', type: 'featured_categories', enabled: true,
+                            settings: { title: '¿Para quién compras hoy?', subtitle: 'Toca una categoría para ver sus productos', cardLayout: 'pills', columns: '4' }
+                        },
+                        {
+                            id: 'sec_grid_hf', type: 'product_grid', enabled: true,
+                            settings: { title: 'Favoritos de los Peludos', subtitle: 'Busca por marca de alimento, talla de accesorio o presentación en kilos', source: 'NEWEST', categoryId: '', limit: 8, showFilters: true, showViewAll: true }
+                        },
+                        {
+                            id: 'sec_multi_hf', type: 'multi_banners', enabled: true,
+                            settings: { card1Badge: 'Perros', card1Title: 'Mundo Canino', card1Subtitle: 'Alimento, correas, camas y juguetes', card1ButtonText: 'Ver Perros', card1ButtonUrl: '/catalog', card1ImageUrl: '', card1BgColor: '#f97316', card2Badge: 'Gatos', card2Title: 'Mundo Felino', card2Subtitle: 'Arenas, rascadores, húmedos y snacks', card2ButtonText: 'Ver Gatos', card2ButtonUrl: '/catalog', card2ImageUrl: '', card2BgColor: '#1e293b' }
+                        },
+                        {
+                            id: 'sec_spot_hf', type: 'spotlight_product', enabled: true,
+                            settings: { productId: '', badgeText: '🐾 EL RECOMENDADO DE LA SEMANA', customTitle: '', customSubtitle: '', imageSide: 'left' }
+                        },
+                        {
+                            id: 'sec_steps_hf', type: 'how_to_buy', enabled: true,
+                            settings: { title: '¿Cómo pedir el alimento o accesorios de tu mascota?', subtitle: 'Rápido y sin quedarte sin concentrado', step1Title: 'Elige presentación o talla', step1Text: 'Selecciona el peso en kilos o la talla del accesorio.', step2Title: 'Indica tu dirección', step2Text: 'Escribe tus datos para enviarlo hasta tu puerta.', step3Title: 'Paga en línea o por WhatsApp', step3Text: 'Recibimos PSE, Nequi, tarjetas o confirmación directa.', showPaymentBadges: true }
+                        },
+                        {
+                            id: 'sec_test_hf', type: 'testimonials', enabled: true,
+                            settings: { title: 'Familias Peludas Felices', subtitle: 'Calificaciones reales de nuestros clientes' }
+                        },
+                        {
+                            id: 'sec_wa_hf', type: 'whatsapp_cta', enabled: true,
+                            settings: { title: '¿Dudas con la talla del arnés o el alimento para su edad?', subtitle: 'Escríbenos por WhatsApp y te ayudamos a elegir la mejor opción para tu perro o gato.', buttonText: 'Consultar por WhatsApp' }
+                        },
+                        {
+                            id: 'sec_trust_hf', type: 'trust_badges', enabled: true,
+                            settings: { badgeStyle: 'cards', item1Icon: 'clock', item1Title: 'Despacho Oportuno', item1Text: 'Sabemos que el alimento de tu mascota no puede esperar.', item2Icon: 'shield', item2Title: 'Alimento Fresco', item2Text: 'Lotes con amplia fecha de vencimiento y buen almacenamiento.', item3Icon: 'chat', item3Title: 'Atención Cercana', item3Text: 'Amamos a los animales tanto como tú.' }
+                        }
+                    ],
+                    pages: {
+                        catalog: [{
+                            id: 'sec_catalog_results', type: 'catalog_results', enabled: true, locked: true,
+                            settings: { showHeader: true, headerBadge: 'PET SHOP', headerTitle: 'Todo para tu Mascota', headerSubtitle: 'Filtra por marca, peso en kilos, etapa de vida o categoría.', showCategoryPills: true, showSearchAndSort: true, filterLayout: 'drawer', showFilterPrice: true, showFilterAvailability: true, showFilterCategory: true, showFilterVariants: true, showFilterAttributes: true, columnsDesktop: '4', showDiscountPercent: true }
+                        }],
+                        product: [{
+                            id: 'sec_product_main', type: 'product_main', enabled: true, locked: true,
+                            settings: { galleryLayout: 'bottom', showBreadcrumbs: true, showSku: false, showStockCounter: true, showSpecs: true, showPolicies: true, showRelatedProducts: true, relatedTitle: 'Para Consentirlo aún Más', relatedSubtitle: 'Snacks, juguetes y complementos recomendados' }
+                        }]
+                    }
+                }
+            },
+            {
+                id: 'detalle_magico',
+                category: 'regalos_artesanias',
+                name: 'Detalle Mágico',
+                tag: 'Regalos, Flores y Desayunos Sorpresa',
+                layoutSummary: 'Doble Barra Comercial • Etiquetas Bajo Pedido • Pasos de Dedicatoria',
+                colors: ['#db2777', '#3b0764', '#fdf8fa'],
+                description: 'Pensada para floristerías, desayunos sorpresa, anchetas y tiendas de detalles. Resalta productos bajo pedido, ocasiones especiales y coordinación por WhatsApp.',
+                config: {
+                    globalStyles: {
+                        primaryColor: '#db2777',
+                        secondaryColor: '#3b0764',
+                        backgroundColor: '#fdf8fa',
+                        textColor: '#1f122b',
+                        headingFont: 'Poppins',
+                        bodyFont: 'Nunito',
+                        headingTransform: 'none',
+                        fontScale: 'standard',
+                        borderRadius: '1.5rem',
+                        buttonRadius: 'pill',
+                        navbarLayout: 'double_bar',
+                        navbarStyle: 'light',
+                        navbarLinkFormat: 'bold',
+                        navbarLinkHover: 'pill',
+                        navbarSticky: true,
+                        navbarDropdownStyle: 'flyout',
+                        navbarDropdownAnim: 'scale',
+                        navbarTrigger: 'hover',
+                        navbarSpeed: 'normal',
+                        navbarCompactOnScroll: true,
+                        cardPreset: 'commercial',
+                        cardStyle: 'elevated',
+                        cardRadius: '1.5rem',
+                        cardShadow: 'md',
+                        cardImageAspect: 'square',
+                        cardImageFit: 'cover',
+                        cardImagePadding: 'flush',
+                        cardContentAlign: 'center',
+                        cardMetaMode: 'category',
+                        cardDiscountBadge: 'percent',
+                        cardShowStatusBadges: true,
+                        cardShowOldPrice: true,
+                        cardPriceSize: 'normal',
+                        cardButtonStyle: 'solid',
+                        cardActionMode: 'always',
+                        cardWishlistMode: 'always',
+                        cardImageHover: 'carousel',
+                        cardHoverLift: 'lift',
+                        detailPreset: 'conversion',
+                        detailInfoStyle: 'card',
+                        detailStickyMode: 'sticky_info',
+                        detailGalleryPosition: 'left',
+                        detailLayoutRatio: '50_50',
+                        detailGalleryLayout: 'bottom',
+                        detailGalleryArrows: true,
+                        detailImageAspect: 'square',
+                        detailImageFit: 'cover',
+                        detailImageZoom: true,
+                        detailBuyLayout: 'standard',
+                        detailVariantStyle: 'pills',
+                        detailShowBreadcrumbs: true,
+                        detailShowMeta: true,
+                        detailShowSku: false,
+                        detailShowSavingsBadge: true,
+                        detailShowStock: true,
+                        detailShowTrustStrip: true,
+                        detailShowShare: true,
+                        detailShowSpecs: true,
+                        detailSpecsOpen: 'expanded',
+                        detailShowPolicies: true,
+                        detailShowRelated: true,
+                        detailRelatedCols: '4',
+                        filterEnabled: true,
+                        filterLayout: 'drawer',
+                        filterShowSearch: true,
+                        filterShowSort: true,
+                        filterShowCount: true,
+                        filterShowCategory: true,
+                        filterShowPrice: true,
+                        filterShowOffers: true,
+                        filterShowAvailability: true,
+                        filterShowBrand: false,
+                        filterShowVariants: true,
+                        filterShowSpecs: false,
+                        searchEnabled: true,
+                        searchMode: 'predictive',
+                        searchNavbarVariant: 'auto',
+                        searchMobileMode: 'fullscreen',
+                        searchInputStyle: 'pill',
+                        searchInputSize: 'normal',
+                        searchButtonMode: 'icon',
+                        searchAnim: 'scale',
+                        searchPlaceholder: 'Buscar desayunos, rosas, cumpleaños, aniversario...',
+                        searchButtonLabel: 'Buscar',
+                        searchEmptyMessage: 'No encontramos detalles para esa búsqueda',
+                        searchMinChars: 2,
+                        searchDebounceMs: 200,
+                        searchMaxSuggestions: 6,
+                        searchShowProductImg: true,
+                        searchShowProductPrice: true,
+                        searchShowProductDiscount: true,
+                        searchShowProductCategory: true,
+                        searchShowProductBrand: false,
+                        searchSuggestCategories: true,
+                        searchSuggestBrands: false,
+                        searchShowRecent: true,
+                        searchPopularTerms: 'Desayunos, Rosas, Cumpleaños, Aniversario, Chocolates',
+                        searchCategoryScope: 'pills_top',
+                        searchAdvancedEnabled: false,
+                        searchMatchVariants: true,
+                        searchMatchSpecs: true,
+                        searchAdvCategory: true,
+                        searchAdvBrand: false,
+                        searchAdvPrice: true,
+                        searchAdvAvailability: true,
+                        searchAdvVariants: true,
+                        searchAdvSpecs: false
+                    },
+                    sections: [
+                        {
+                            id: 'sec_ann_dm', type: 'announcement_bar', enabled: true,
+                            settings: { text: '🎁 Entregas sorpresa a domicilio • Incluye tarjeta con tu mensaje personalizado', text2: '💳 Paga desde cualquier lugar con PSE, Nequi, Tarjetas o por WhatsApp', text3: '', bgColor: '#3b0764', textColor: '#ffffff', linkUrl: '/catalog' }
+                        },
+                        {
+                            id: 'sec_hero_dm', type: 'hero_banner', enabled: true,
+                            settings: { heroLayout: 'split', badgeText: 'DETALLES QUE EMOCIONAN', title: 'Celebra momentos inolvidables con ' + name, subtitle: 'Desayunos sorpresa, arreglos florales, cajas de regalo y detalles hechos al instante para sorprender a quien más quieres.', buttonText: 'Ver Catálogo de Regalos', buttonUrl: '/catalog', secondaryButtonText: 'Personalizar por WhatsApp', secondaryButtonUrl: '__whatsapp__', imageUrl: '', overlayOpacity: 40, bgColor: '#3b0764', textColor: '#ffffff', alignment: 'left' }
+                        },
+                        {
+                            id: 'sec_cats_dm', type: 'featured_categories', enabled: true,
+                            settings: { title: 'Explora por Ocasión Especial', subtitle: 'Encuentra el regalo perfecto según el momento', cardLayout: 'visual', columns: '4' }
+                        },
+                        {
+                            id: 'sec_grid_dm', type: 'product_grid', enabled: true,
+                            settings: { title: 'Sorpresas Más Pedidas', subtitle: 'Filtra por tu presupuesto o tipo de detalle', source: 'NEWEST', categoryId: '', limit: 8, showFilters: true, showViewAll: true }
+                        },
+                        {
+                            id: 'sec_steps_dm', type: 'how_to_buy', enabled: true,
+                            settings: { title: '¿Cómo enviar tu sorpresa con ' + name + '?', subtitle: 'Nosotros nos encargamos de que todo salga perfecto', step1Title: 'Elige tu detalle favorito', step1Text: 'Selecciona el arreglo, desayuno o caja de regalo.', step2Title: 'Dirección y dedicatoria', step2Text: 'Ingresa los datos de quien recibe y escribe el mensaje de la tarjeta en Notas.', step3Title: 'Paga o coordina por WhatsApp', step3Text: 'Realiza tu pago en línea o confirma los detalles de entrega con nosotros.', showPaymentBadges: true }
+                        },
+                        {
+                            id: 'sec_spot_dm', type: 'spotlight_product', enabled: true,
+                            settings: { productId: '', badgeText: '🎁 EL REGALO PERFECTO', customTitle: '', customSubtitle: '', imageSide: 'right' }
+                        },
+                        {
+                            id: 'sec_test_dm', type: 'testimonials', enabled: true,
+                            settings: { title: 'Sonrisas Entregadas', subtitle: 'Calificaciones reales de clientes que sorprendieron a sus seres queridos' }
+                        },
+                        {
+                            id: 'sec_faq_dm', type: 'faq_accordion', enabled: true,
+                            settings: { title: 'Preguntas Frecuentes', subtitle: 'Todo sobre entregas, mensajes y pagos', q1: '¿Dónde escribo el mensaje para la tarjeta de regalo?', a1: 'Al finalizar tu pedido verás el campo de Notas adicionales donde puedes escribir la dedicatoria y la fecha de entrega deseada.', q2: '¿Puedo comprar desde otra ciudad o desde el exterior?', a2: 'Sí, puedes pagar en línea o coordinar con nosotros por WhatsApp y nosotros entregamos la sorpresa en la dirección que nos indiques.', q3: '¿Con cuánta anticipación debo hacer mi pedido?', a3: 'Recomendamos programar con al menos 1 día de anticipación o consultarnos disponibilidad para entregas el mismo día por WhatsApp.' }
+                        },
+                        {
+                            id: 'sec_wa_dm', type: 'whatsapp_cta', enabled: true,
+                            settings: { title: '¿Quieres armar un detalle personalizado a tu gusto?', subtitle: 'Escríbenos por WhatsApp y te ayudamos a combinar flores, chocolates, globos o productos especiales.', buttonText: 'Personalizar regalo en WhatsApp' }
+                        },
+                        {
+                            id: 'sec_trust_dm', type: 'trust_badges', enabled: true,
+                            settings: { badgeStyle: 'cards', item1Icon: 'gift', item1Title: 'Presentación Impecable', item1Text: 'Cuidamos cada moño, empaque, tarjeta y producto fresco.', item2Icon: 'clock', item2Title: 'Entregas Puntuales', item2Text: 'Coordinamos cada entrega con total compromiso.', item3Icon: 'chat', item3Title: 'Acompañamiento por WhatsApp', item3Text: 'Te confirmamos cuando tu sorpresa sea entregada.' }
+                        }
+                    ],
+                    pages: {
+                        catalog: [{
+                            id: 'sec_catalog_results', type: 'catalog_results', enabled: true, locked: true,
+                            settings: { showHeader: true, headerBadge: 'CATÁLOGO DE REGALOS', headerTitle: 'Todos Nuestros Detalles', headerSubtitle: 'Filtra por rango de presupuesto u ocasión especial.', showCategoryPills: true, showSearchAndSort: true, filterLayout: 'drawer', showFilterPrice: true, showFilterAvailability: true, showFilterCategory: true, showFilterVariants: true, showFilterAttributes: false, columnsDesktop: '4', showDiscountPercent: true }
+                        }],
+                        product: [{
+                            id: 'sec_product_main', type: 'product_main', enabled: true, locked: true,
+                            settings: { galleryLayout: 'bottom', showBreadcrumbs: true, showSku: false, showStockCounter: true, showSpecs: true, showPolicies: true, showRelatedProducts: true, relatedTitle: 'Otros Detalles que te Encantarán', relatedSubtitle: 'Opciones ideales para sorprender' }
+                        }]
+                    }
+                }
+            },
+            {
+                id: 'manos_de_origen',
+                category: 'regalos_artesanias',
+                name: 'Manos de Origen',
+                tag: 'Artesanías, Tejidos y Hecho a Mano',
+                layoutSummary: 'Navbar Minimalista Drawer • Tarjetas Poster • Historia Artesanal',
+                colors: ['#b45309', '#292524', '#faf6f0'],
+                description: 'Para emprendimientos artesanales, mochilas tejidas, cerámica, cestería y arte manual colombiano. Tonos arcilla y algodón crudo con galería mosaico 2x2.',
+                config: {
+                    globalStyles: {
+                        primaryColor: '#b45309',
+                        secondaryColor: '#292524',
+                        backgroundColor: '#faf6f0',
+                        textColor: '#292524',
+                        headingFont: 'Lora',
+                        bodyFont: 'Plus Jakarta Sans',
+                        headingTransform: 'none',
+                        fontScale: 'large',
+                        borderRadius: '1rem',
+                        buttonRadius: 'classic',
+                        navbarLayout: 'minimal',
+                        navbarStyle: 'page',
+                        navbarLinkFormat: 'normal',
+                        navbarLinkHover: 'underline_center',
+                        navbarSticky: true,
+                        navbarDropdownStyle: 'drawer',
+                        navbarDropdownAnim: 'fade',
+                        navbarTrigger: 'hover',
+                        navbarSpeed: 'slow',
+                        navbarCompactOnScroll: false,
+                        cardPreset: 'poster',
+                        cardStyle: 'poster',
+                        cardRadius: '1rem',
+                        cardShadow: 'md',
+                        cardImageAspect: 'portrait',
+                        cardImageFit: 'cover',
+                        cardImagePadding: 'flush',
+                        cardContentAlign: 'left',
+                        cardMetaMode: 'category',
+                        cardDiscountBadge: 'label',
+                        cardShowStatusBadges: true,
+                        cardShowOldPrice: true,
+                        cardPriceSize: 'normal',
+                        cardButtonStyle: 'solid',
+                        cardActionMode: 'always',
+                        cardWishlistMode: 'always',
+                        cardImageHover: 'carousel',
+                        cardHoverLift: 'scale',
+                        detailPreset: 'fashion_lookbook',
+                        detailInfoStyle: 'clean',
+                        detailStickyMode: 'sticky_info',
+                        detailGalleryPosition: 'left',
+                        detailLayoutRatio: '60_40',
+                        detailGalleryLayout: 'grid',
+                        detailGalleryArrows: true,
+                        detailImageAspect: 'square',
+                        detailImageFit: 'cover',
+                        detailImageZoom: true,
+                        detailBuyLayout: 'standard',
+                        detailVariantStyle: 'pills',
+                        detailShowBreadcrumbs: true,
+                        detailShowMeta: true,
+                        detailShowSku: false,
+                        detailShowSavingsBadge: true,
+                        detailShowStock: true,
+                        detailShowTrustStrip: true,
+                        detailShowShare: true,
+                        detailShowSpecs: true,
+                        detailSpecsOpen: 'expanded',
+                        detailShowPolicies: true,
+                        detailShowRelated: true,
+                        detailRelatedCols: '3',
+                        filterEnabled: true,
+                        filterLayout: 'drawer',
+                        filterShowSearch: true,
+                        filterShowSort: true,
+                        filterShowCount: true,
+                        filterShowCategory: true,
+                        filterShowPrice: true,
+                        filterShowOffers: true,
+                        filterShowAvailability: true,
+                        filterShowBrand: false,
+                        filterShowVariants: true,
+                        filterShowSpecs: true,
+                        searchEnabled: true,
+                        searchMode: 'predictive',
+                        searchNavbarVariant: 'expandable_icon',
+                        searchMobileMode: 'fullscreen',
+                        searchInputStyle: 'rounded',
+                        searchInputSize: 'normal',
+                        searchButtonMode: 'icon',
+                        searchAnim: 'fade',
+                        searchPlaceholder: 'Buscar mochilas, tejidos, cerámica, sombreros...',
+                        searchButtonLabel: 'Buscar',
+                        searchEmptyMessage: 'No encontramos piezas artesanales para tu búsqueda',
+                        searchMinChars: 2,
+                        searchDebounceMs: 250,
+                        searchMaxSuggestions: 6,
+                        searchShowProductImg: true,
+                        searchShowProductPrice: true,
+                        searchShowProductDiscount: true,
+                        searchShowProductCategory: true,
+                        searchShowProductBrand: false,
+                        searchSuggestCategories: true,
+                        searchSuggestBrands: false,
+                        searchShowRecent: true,
+                        searchPopularTerms: 'Mochilas, Tejidos, Cerámica, Sombreros, Hecho a mano',
+                        searchCategoryScope: 'none',
+                        searchAdvancedEnabled: false,
+                        searchMatchVariants: true,
+                        searchMatchSpecs: true,
+                        searchAdvCategory: true,
+                        searchAdvBrand: false,
+                        searchAdvPrice: true,
+                        searchAdvAvailability: true,
+                        searchAdvVariants: true,
+                        searchAdvSpecs: true
+                    },
+                    sections: [
+                        {
+                            id: 'sec_ann_mo', type: 'announcement_bar', enabled: true,
+                            settings: { text: '🧶 Piezas hechas a mano con identidad colombiana • Envíos a todo el país', text2: '💬 Encargos personalizados y atención directa por WhatsApp', text3: '', bgColor: '#292524', textColor: '#ffffff', linkUrl: '/catalog' }
+                        },
+                        {
+                            id: 'sec_hero_mo', type: 'hero_banner', enabled: true,
+                            settings: { heroLayout: 'classic', badgeText: 'ARTE Y TRADICIÓN HECHA A MANO', title: 'El valor del trabajo artesanal en ' + name, subtitle: 'Cada creación lleva horas de dedicación, fibras seleccionadas y el saber de manos artesanas.', buttonText: 'Descubrir Creaciones', buttonUrl: '/catalog', secondaryButtonText: 'Encargar por WhatsApp', secondaryButtonUrl: '__whatsapp__', imageUrl: '', overlayOpacity: 45, bgColor: '#292524', textColor: '#ffffff', alignment: 'center' }
+                        },
+                        {
+                            id: 'sec_rich_mo', type: 'rich_text', enabled: true,
+                            settings: { title: 'Nuestra Historia y Origen', content: 'En ' + name + ' honramos el oficio hecho a mano. Ninguna pieza es idéntica a otra: cada tejido, moldeado y acabado cuenta una historia auténtica.' }
+                        },
+                        {
+                            id: 'sec_cats_mo', type: 'featured_categories', enabled: true,
+                            settings: { title: 'Líneas Artesanales', subtitle: 'Explora nuestras técnicas y colecciones', cardLayout: 'visual', columns: '3' }
+                        },
+                        {
+                            id: 'sec_grid_mo', type: 'product_grid', enabled: true,
+                            settings: { title: 'Piezas Disponibles y Bajo Pedido', subtitle: 'Creaciones listas para envío o elaboradas especialmente para ti', source: 'NEWEST', categoryId: '', limit: 8, showFilters: false, showViewAll: true }
+                        },
+                        {
+                            id: 'sec_spot_mo', type: 'spotlight_product', enabled: true,
+                            settings: { productId: '', badgeText: '🧶 100% HECHO A MANO', customTitle: '', customSubtitle: '', imageSide: 'left' }
+                        },
+                        {
+                            id: 'sec_promo_mo', type: 'promo_banner', enabled: true,
+                            settings: { badgeText: 'TRABAJO BAJO PEDIDO', title: '¿Deseas una combinación de colores o medida especial?', subtitle: 'Elaboramos piezas personalizadas por encargo. Coordina los detalles directamente con nuestro taller.', buttonText: 'Escribir al Taller', buttonUrl: '__whatsapp__', imageUrl: '', bgColor: '#b45309', textColor: '#ffffff' }
+                        },
+                        {
+                            id: 'sec_test_mo', type: 'testimonials', enabled: true,
+                            settings: { title: 'Quienes Valoran lo Hecho a Mano', subtitle: 'Calificaciones reales de nuestros compradores' }
+                        },
+                        {
+                            id: 'sec_faq_mo', type: 'faq_accordion', enabled: true,
+                            settings: { title: 'Preguntas Frecuentes', subtitle: 'Tiempos de elaboración, envíos y cuidados', q1: '¿Cuál es la diferencia entre una pieza en stock y una bajo pedido?', a1: 'Las piezas en stock están listas para despacho inmediato. Las piezas marcadas como Bajo pedido se elaboran especialmente para ti tras confirmar tu orden.', q2: '¿Cuánto tarda una pieza elaborada bajo pedido?', a2: 'El tiempo depende de la complejidad de la técnica artesanal; al hacer clic en Pedir por WhatsApp te confirmamos la fecha exacta de entrega.', q3: '¿Realizan envíos a toda Colombia?', a3: 'Sí, enviamos a cualquier municipio o ciudad del país con transportadoras aliadas.' }
+                        },
+                        {
+                            id: 'sec_wa_mo', type: 'whatsapp_cta', enabled: true,
+                            settings: { title: 'Conecta directamente con nuestras manos artesanas', subtitle: 'Escríbenos por WhatsApp para conocer más detalles de cada pieza o realizar un encargo especial.', buttonText: 'Hablar por WhatsApp' }
+                        }
+                    ],
+                    pages: {
+                        catalog: [{
+                            id: 'sec_catalog_results', type: 'catalog_results', enabled: true, locked: true,
+                            settings: { showHeader: true, headerBadge: 'CATÁLOGO ARTESANAL', headerTitle: 'Todas Nuestras Creaciones', headerSubtitle: 'Filtra por técnica, disponibilidad inmediata o bajo pedido.', showCategoryPills: true, showSearchAndSort: true, filterLayout: 'drawer', showFilterPrice: true, showFilterAvailability: true, showFilterCategory: true, showFilterVariants: true, showFilterAttributes: true, columnsDesktop: '3', showDiscountPercent: true }
+                        }],
+                        product: [{
+                            id: 'sec_product_main', type: 'product_main', enabled: true, locked: true,
+                            settings: { galleryLayout: 'grid', showBreadcrumbs: true, showSku: false, showStockCounter: true, showSpecs: true, showPolicies: true, showRelatedProducts: true, relatedTitle: 'Otras Creaciones de Nuestro Taller', relatedSubtitle: 'Piezas elaboradas a mano con dedicación' }
+                        }]
+                    }
+                }
+            },
+            {
+                id: 'cosecha_y_horno',
+                category: 'regalos_artesanias',
+                name: 'Cosecha y Horno',
+                tag: 'Café Especial, Pastelería y Gourmet',
+                layoutSummary: 'Navbar Boutique • Tonos Café y Caramelo • Variantes en Píldoras',
+                colors: ['#854d0e', '#1c1917', '#fefce8'],
+                description: 'Cálida y apetitosa para marcas de café de origen colombiano, repostería artesanal, chocolatería y productos gourmet. Destaca notas de cata, gramajes y frescura.',
+                config: {
+                    globalStyles: {
+                        primaryColor: '#854d0e',
+                        secondaryColor: '#1c1917',
+                        backgroundColor: '#fefce8',
+                        textColor: '#1c1917',
+                        headingFont: 'Playfair Display',
+                        bodyFont: 'DM Sans',
+                        headingTransform: 'none',
+                        fontScale: 'standard',
+                        borderRadius: '1rem',
+                        buttonRadius: 'pill',
+                        navbarLayout: 'centered',
+                        navbarStyle: 'secondary',
+                        navbarLinkFormat: 'normal',
+                        navbarLinkHover: 'underline_center',
+                        navbarSticky: true,
+                        navbarDropdownStyle: 'strip',
+                        navbarDropdownAnim: 'fade',
+                        navbarTrigger: 'hover',
+                        navbarSpeed: 'normal',
+                        navbarCompactOnScroll: true,
+                        cardPreset: 'commercial',
+                        cardStyle: 'elevated',
+                        cardRadius: '1rem',
+                        cardShadow: 'sm',
+                        cardImageAspect: 'square',
+                        cardImageFit: 'cover',
+                        cardImagePadding: 'flush',
+                        cardContentAlign: 'left',
+                        cardMetaMode: 'category',
+                        cardDiscountBadge: 'percent',
+                        cardShowStatusBadges: true,
+                        cardShowOldPrice: true,
+                        cardPriceSize: 'normal',
+                        cardButtonStyle: 'solid',
+                        cardActionMode: 'always',
+                        cardWishlistMode: 'always',
+                        cardImageHover: 'carousel',
+                        cardHoverLift: 'lift',
+                        detailPreset: 'conversion',
+                        detailInfoStyle: 'card',
+                        detailStickyMode: 'sticky_info',
+                        detailGalleryPosition: 'left',
+                        detailLayoutRatio: '50_50',
+                        detailGalleryLayout: 'carousel',
+                        detailGalleryArrows: true,
+                        detailImageAspect: 'square',
+                        detailImageFit: 'cover',
+                        detailImageZoom: true,
+                        detailBuyLayout: 'standard',
+                        detailVariantStyle: 'pills',
+                        detailShowBreadcrumbs: true,
+                        detailShowMeta: true,
+                        detailShowSku: false,
+                        detailShowSavingsBadge: true,
+                        detailShowStock: true,
+                        detailShowTrustStrip: true,
+                        detailShowShare: true,
+                        detailShowSpecs: true,
+                        detailSpecsOpen: 'expanded',
+                        detailShowPolicies: true,
+                        detailShowRelated: true,
+                        detailRelatedCols: '4',
+                        filterEnabled: true,
+                        filterLayout: 'drawer',
+                        filterShowSearch: true,
+                        filterShowSort: true,
+                        filterShowCount: true,
+                        filterShowCategory: true,
+                        filterShowPrice: true,
+                        filterShowOffers: true,
+                        filterShowAvailability: true,
+                        filterShowBrand: false,
+                        filterShowVariants: true,
+                        filterShowSpecs: true,
+                        searchEnabled: true,
+                        searchMode: 'predictive',
+                        searchNavbarVariant: 'expandable_icon',
+                        searchMobileMode: 'fullscreen',
+                        searchInputStyle: 'pill',
+                        searchInputSize: 'normal',
+                        searchButtonMode: 'icon',
+                        searchAnim: 'fade',
+                        searchPlaceholder: 'Buscar café en grano, tortas, postres, chocolates...',
+                        searchButtonLabel: 'Buscar',
+                        searchEmptyMessage: 'No encontramos productos gourmet para tu búsqueda',
+                        searchMinChars: 2,
+                        searchDebounceMs: 200,
+                        searchMaxSuggestions: 6,
+                        searchShowProductImg: true,
+                        searchShowProductPrice: true,
+                        searchShowProductDiscount: true,
+                        searchShowProductCategory: true,
+                        searchShowProductBrand: false,
+                        searchSuggestCategories: true,
+                        searchSuggestBrands: false,
+                        searchShowRecent: true,
+                        searchPopularTerms: 'Café en grano, Café molido, Tortas, Postres, Chocolates',
+                        searchCategoryScope: 'pills_top',
+                        searchAdvancedEnabled: false,
+                        searchMatchVariants: true,
+                        searchMatchSpecs: true,
+                        searchAdvCategory: true,
+                        searchAdvBrand: false,
+                        searchAdvPrice: true,
+                        searchAdvAvailability: true,
+                        searchAdvVariants: true,
+                        searchAdvSpecs: true
+                    },
+                    sections: [
+                        {
+                            id: 'sec_ann_ch', type: 'announcement_bar', enabled: true,
+                            settings: { text: '☕ Frescura y sabor artesanal garantizado • Pedidos en línea o por WhatsApp', text2: '💳 Aceptamos Nequi, Daviplata, PSE y Tarjetas', text3: '', bgColor: '#854d0e', textColor: '#ffffff', linkUrl: '/catalog' }
+                        },
+                        {
+                            id: 'sec_hero_ch', type: 'hero_banner', enabled: true,
+                            settings: { heroLayout: 'classic', badgeText: 'SABOR DE ORIGEN COLOMBIANO', title: 'Aromas y sabores que despiertan los sentidos en ' + name, subtitle: 'Ingredientes seleccionados, tueste y horneado fresco para llevar a tu mesa una experiencia gastronómica auténtica.', buttonText: 'Ver Menú y Catálogo', buttonUrl: '/catalog', secondaryButtonText: 'Encargos por WhatsApp', secondaryButtonUrl: '__whatsapp__', imageUrl: '', overlayOpacity: 50, bgColor: '#1c1917', textColor: '#ffffff', alignment: 'center' }
+                        },
+                        {
+                            id: 'sec_cats_ch', type: 'featured_categories', enabled: true,
+                            settings: { title: 'Nuestras Especialidades', subtitle: 'Elige tu línea favorita', cardLayout: 'pills', columns: '4' }
+                        },
+                        {
+                            id: 'sec_grid_ch', type: 'product_grid', enabled: true,
+                            settings: { title: 'Selección de la Casa', subtitle: 'Elige gramaje, tipo de molienda o número de porciones', source: 'NEWEST', categoryId: '', limit: 8, showFilters: true, showViewAll: true }
+                        },
+                        {
+                            id: 'sec_spot_ch', type: 'spotlight_product', enabled: true,
+                            settings: { productId: '', badgeText: '☕ ESPECIALIDAD DE LA CASA', customTitle: '', customSubtitle: '', imageSide: 'left' }
+                        },
+                        {
+                            id: 'sec_rich_ch', type: 'rich_text', enabled: true,
+                            settings: { title: 'Del Origen a tu Mesa', content: 'En ' + name + ' cuidamos cada etapa del proceso artesanal para asegurar frescura, aroma y calidad superior en cada pedido.' }
+                        },
+                        {
+                            id: 'sec_steps_ch', type: 'how_to_buy', enabled: true,
+                            settings: { title: '¿Cómo hacer tu pedido?', subtitle: 'Disfruta nuestros productos frescos en casa', step1Title: 'Elige presentación', step1Text: 'Selecciona tus productos, peso, molienda o porciones.', step2Title: 'Datos de entrega', step2Text: 'Indica tu dirección y notas especiales para la entrega.', step3Title: 'Pago seguro o WhatsApp', step3Text: 'Paga en línea o coordina directamente con nosotros.', showPaymentBadges: true }
+                        },
+                        {
+                            id: 'sec_test_ch', type: 'testimonials', enabled: true,
+                            settings: { title: 'Lo que Dicen Nuestros Clientes', subtitle: 'Reseñas reales verificadas en cada pedido' }
+                        },
+                        {
+                            id: 'sec_wa_ch', type: 'whatsapp_cta', enabled: true,
+                            settings: { title: '¿Tienes un evento especial o pedido corporativo?', subtitle: 'Escríbenos por WhatsApp para cotizar pedidos por cantidad o celebraciones.', buttonText: 'Cotizar en WhatsApp' }
+                        }
+                    ],
+                    pages: {
+                        catalog: [{
+                            id: 'sec_catalog_results', type: 'catalog_results', enabled: true, locked: true,
+                            settings: { showHeader: true, headerBadge: 'MENÚ & CATÁLOGO', headerTitle: 'Todos Nuestros Productos', headerSubtitle: 'Filtra por presentación, categoría o disponibilidad.', showCategoryPills: true, showSearchAndSort: true, filterLayout: 'drawer', showFilterPrice: true, showFilterAvailability: true, showFilterCategory: true, showFilterVariants: true, showFilterAttributes: true, columnsDesktop: '4', showDiscountPercent: true }
+                        }],
+                        product: [{
+                            id: 'sec_product_main', type: 'product_main', enabled: true, locked: true,
+                            settings: { galleryLayout: 'carousel', showBreadcrumbs: true, showSku: false, showStockCounter: true, showSpecs: true, showPolicies: true, showRelatedProducts: true, relatedTitle: 'Acompáñalo con estas Opciones', relatedSubtitle: 'Otros sabores de nuestra casa' }
+                        }]
+                    }
+                }
+            },
+            {
+                id: 'todomercado',
+                category: 'multitienda',
+                name: 'TodoMercado',
+                tag: 'Multitiendas, Variedades e Importadores',
+                layoutSummary: 'Doble Barra + Acordeón • Vitrina Ofertas + General • Buscador Total',
+                colors: ['#4f46e5', '#0f172a', '#f8fafc'],
+                description: 'Diseñada para tiendas de productos variados, distribuidoras y comercios multicategoría. Doble barra superior, contador de ofertas, doble vitrina en inicio y filtros completos.',
+                config: {
+                    globalStyles: {
+                        primaryColor: '#4f46e5',
+                        secondaryColor: '#0f172a',
+                        backgroundColor: '#f8fafc',
+                        textColor: '#0f172a',
+                        headingFont: 'Outfit',
+                        bodyFont: 'Inter',
+                        headingTransform: 'none',
+                        fontScale: 'standard',
+                        borderRadius: '0.75rem',
+                        buttonRadius: 'classic',
+                        navbarLayout: 'double_bar',
+                        navbarStyle: 'secondary',
+                        navbarLinkFormat: 'bold',
+                        navbarLinkHover: 'pill',
+                        navbarSticky: true,
+                        navbarDropdownStyle: 'accordion',
+                        navbarDropdownAnim: 'slide_up',
+                        navbarTrigger: 'hover',
+                        navbarSpeed: 'fast',
+                        navbarCompactOnScroll: true,
+                        cardPreset: 'bento',
+                        cardStyle: 'elevated',
+                        cardRadius: '0.5rem',
+                        cardShadow: 'sm',
+                        cardImageAspect: 'square',
+                        cardImageFit: 'contain',
+                        cardImagePadding: 'inset',
+                        cardContentAlign: 'left',
+                        cardMetaMode: 'both',
+                        cardDiscountBadge: 'percent',
+                        cardShowStatusBadges: true,
+                        cardShowOldPrice: true,
+                        cardPriceSize: 'normal',
+                        cardButtonStyle: 'solid',
+                        cardActionMode: 'always',
+                        cardWishlistMode: 'always',
+                        cardImageHover: 'carousel',
+                        cardHoverLift: 'lift',
+                        detailPreset: 'conversion',
+                        detailInfoStyle: 'buybox',
+                        detailStickyMode: 'sticky_info',
+                        detailGalleryPosition: 'left',
+                        detailLayoutRatio: '50_50',
+                        detailGalleryLayout: 'bottom',
+                        detailGalleryArrows: true,
+                        detailImageAspect: 'square',
+                        detailImageFit: 'contain',
+                        detailImageZoom: true,
+                        detailBuyLayout: 'standard',
+                        detailVariantStyle: 'rounded',
+                        detailShowBreadcrumbs: true,
+                        detailShowMeta: true,
+                        detailShowSku: true,
+                        detailShowSavingsBadge: true,
+                        detailShowStock: true,
+                        detailShowTrustStrip: true,
+                        detailShowShare: true,
+                        detailShowSpecs: true,
+                        detailSpecsOpen: 'collapsed',
+                        detailShowPolicies: true,
+                        detailShowRelated: true,
+                        detailRelatedCols: '4',
+                        filterEnabled: true,
+                        filterLayout: 'sidebar',
+                        filterShowSearch: true,
+                        filterShowSort: true,
+                        filterShowCount: true,
+                        filterShowCategory: true,
+                        filterShowPrice: true,
+                        filterShowOffers: true,
+                        filterShowAvailability: true,
+                        filterShowBrand: true,
+                        filterShowVariants: true,
+                        filterShowSpecs: true,
+                        searchEnabled: true,
+                        searchMode: 'predictive',
+                        searchNavbarVariant: 'inline_bar',
+                        searchMobileMode: 'fullscreen',
+                        searchInputStyle: 'rounded',
+                        searchInputSize: 'normal',
+                        searchButtonMode: 'icon_text',
+                        searchAnim: 'slide_up',
+                        searchPlaceholder: 'Buscar entre cientos de productos, categorías o marcas...',
+                        searchButtonLabel: 'Buscar',
+                        searchEmptyMessage: 'No encontramos productos para tu búsqueda',
+                        searchMinChars: 2,
+                        searchDebounceMs: 150,
+                        searchMaxSuggestions: 8,
+                        searchShowProductImg: true,
+                        searchShowProductPrice: true,
+                        searchShowProductDiscount: true,
+                        searchShowProductCategory: true,
+                        searchShowProductBrand: true,
+                        searchSuggestCategories: true,
+                        searchSuggestBrands: true,
+                        searchShowRecent: true,
+                        searchPopularTerms: 'Ofertas, Hogar, Tecnología, Belleza, Novedades',
+                        searchCategoryScope: 'pills_top',
+                        searchAdvancedEnabled: true,
+                        searchMatchVariants: true,
+                        searchMatchSpecs: true,
+                        searchAdvCategory: true,
+                        searchAdvBrand: true,
+                        searchAdvPrice: true,
+                        searchAdvAvailability: true,
+                        searchAdvVariants: true,
+                        searchAdvSpecs: true
+                    },
+                    sections: [
+                        {
+                            id: 'sec_ann_tm', type: 'announcement_bar', enabled: true,
+                            settings: { text: '🚚 Envíos a todos los municipios de Colombia • Compra 100% protegida', text2: '💳 Paga en línea con PSE, Nequi, Daviplata y Tarjetas', text3: '📲 ¿Dudas o compras al por mayor? Escríbenos por WhatsApp', bgColor: '#4f46e5', textColor: '#ffffff', linkUrl: '/catalog' }
+                        },
+                        {
+                            id: 'sec_hero_tm', type: 'hero_banner', enabled: true,
+                            settings: { heroLayout: 'compact', badgeText: 'BIENVENIDO A ' + name.toUpperCase(), title: 'Todo lo que necesitas en un solo lugar y al mejor precio', subtitle: 'Explora nuestros departamentos, aprovecha las ofertas del día y recibe tu pedido sin salir de casa.', buttonText: 'Ver Todo el Catálogo', buttonUrl: '/catalog', secondaryButtonText: 'Pedir por WhatsApp', secondaryButtonUrl: '__whatsapp__', imageUrl: '', overlayOpacity: 45, bgColor: '#0f172a', textColor: '#ffffff', alignment: 'left' }
+                        },
+                        {
+                            id: 'sec_cats_tm', type: 'featured_categories', enabled: true,
+                            settings: { title: 'Explora por Departamento', subtitle: 'Navega rápidamente entre nuestras secciones', cardLayout: 'pills', columns: '4' }
+                        },
+                        {
+                            id: 'sec_cd_tm', type: 'countdown_promo', enabled: true,
+                            settings: { badgeText: '🔥 OFERTAS RELÁMPAGO', title: '¡Precios de oportunidad por tiempo limitado!', subtitle: 'Referencias seleccionadas con descuento especial hasta agotar inventario.', endDate: '', buttonText: 'Ver Ofertas', buttonUrl: '/catalog', bgColor: '#0f172a', textColor: '#ffffff' }
+                        },
+                        {
+                            id: 'sec_grid_off_tm', type: 'product_grid', enabled: true,
+                            settings: { title: 'Super Ofertas Destacadas', subtitle: 'Productos con descuento activo hoy', source: 'OFFERS', categoryId: '', limit: 8, showFilters: false, showViewAll: true }
+                        },
+                        {
+                            id: 'sec_multi_tm', type: 'multi_banners', enabled: true,
+                            settings: { card1Badge: 'Tendencia', card1Title: 'Nuevos Ingresos', card1Subtitle: 'Lo último que llegó a nuestro inventario', card1ButtonText: 'Ver Novedades', card1ButtonUrl: '/catalog', card1ImageUrl: '', card1BgColor: '#0f172a', card2Badge: 'Atención Directa', card2Title: 'Pedidos por WhatsApp', card2Subtitle: 'Te asesoramos en vivo con tu compra', card2ButtonText: 'Abrir WhatsApp', card2ButtonUrl: '__whatsapp__', card2ImageUrl: '', card2BgColor: '#4f46e5' }
+                        },
+                        {
+                            id: 'sec_grid_all_tm', type: 'product_grid', enabled: true,
+                            settings: { title: 'Catálogo General Disponible', subtitle: 'Busca por palabra clave o ordena por precio', source: 'NEWEST', categoryId: '', limit: 12, showFilters: true, showViewAll: true }
+                        },
+                        {
+                            id: 'sec_steps_tm', type: 'how_to_buy', enabled: true,
+                            settings: { title: '¿Cómo comprar en ' + name + '?', subtitle: 'Fácil, rápido y seguro en 3 pasos', step1Title: 'Agrega a tu bolsa', step1Text: 'Usa el buscador o explora las categorías para elegir tus productos.', step2Title: 'Datos de entrega', step2Text: 'Ingresa tu nombre, teléfono, ciudad y dirección.', step3Title: 'Paga o confirma por WhatsApp', step3Text: 'Paga en línea con Wompi o envía tu pedido directo a nuestro WhatsApp.', showPaymentBadges: true }
+                        },
+                        {
+                            id: 'sec_trust_tm', type: 'trust_badges', enabled: true,
+                            settings: { badgeStyle: 'cards', item1Icon: 'shield', item1Title: 'Compra Protegida', item1Text: 'Respaldo y garantía en todas tus compras.', item2Icon: 'truck', item2Title: 'Cobertura Nacional', item2Text: 'Despachos rápidos a toda Colombia.', item3Icon: 'chat', item3Title: 'Soporte por WhatsApp', item3Text: 'Atención humana y rápida para ayudarte.' }
+                        },
+                        {
+                            id: 'sec_test_tm', type: 'testimonials', enabled: true,
+                            settings: { title: 'Opiniones de Nuestros Compradores', subtitle: 'Calificaciones verificadas por pedido' }
+                        },
+                        {
+                            id: 'sec_faq_tm', type: 'faq_accordion', enabled: true,
+                            settings: { title: 'Preguntas Frecuentes', subtitle: 'Todo lo que necesitas saber antes de pedir', q1: '¿Cómo puedo pagar mi pedido?', a1: 'Aceptamos PSE, Nequi, Daviplata, tarjetas débito y crédito en línea, o coordinación de pedido por WhatsApp.', q2: '¿Cuánto demora en llegar a mi ciudad?', a2: 'El tiempo de entrega estimado es de 2 a 5 días hábiles dependiendo de tu ciudad o municipio.', q3: '¿Los productos tienen garantía?', a3: 'Sí, todos los artículos de nuestro catálogo cuentan con respaldo y garantía directa.' }
+                        }
+                    ],
+                    pages: {
+                        catalog: [{
+                            id: 'sec_catalog_results', type: 'catalog_results', enabled: true, locked: true,
+                            settings: { showHeader: true, headerBadge: 'MULTITIENDA', headerTitle: 'Todo Nuestro Catálogo', headerSubtitle: 'Filtra por departamento, precio, marca, ofertas o disponibilidad.', showCategoryPills: true, showSearchAndSort: true, filterLayout: 'sidebar', showFilterPrice: true, showFilterAvailability: true, showFilterCategory: true, showFilterVariants: true, showFilterAttributes: true, columnsDesktop: '4', showDiscountPercent: true }
+                        }],
+                        product: [{
+                            id: 'sec_product_main', type: 'product_main', enabled: true, locked: true,
+                            settings: { galleryLayout: 'bottom', showBreadcrumbs: true, showSku: true, showStockCounter: true, showSpecs: true, showPolicies: true, showRelatedProducts: true, relatedTitle: 'Clientes También Vieron', relatedSubtitle: 'Otros productos disponibles en nuestra tienda' }
                         }]
                     }
                 }

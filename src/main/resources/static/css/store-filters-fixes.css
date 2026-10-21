@@ -543,10 +543,27 @@ body[data-sv-search-navbar-variant="modal_trigger"] .sv-nav__search-trigger {
     box-shadow: 0 24px 48px -12px rgba(15, 23, 42, 0.22);
     overflow: hidden;
     pointer-events: auto;
-    max-height: min(76vh, 34rem);
+    max-height: min(82vh, 40rem);
     display: flex;
     flex-direction: column;
     transform-origin: top center;
+}
+
+.sv-search-panel__body {
+    padding: 1rem;
+    overflow-y: auto;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    max-height: calc(82vh - 4.5rem);
+}
+
+.sv-search-adv-input,
+.sv-search-adv-select {
+    color: #0f172a !important;
+    background-color: #ffffff !important;
+    border-color: #cbd5e1 !important;
 }
 
 body[data-sv-search-anim="slide_up"] .sv-search-panel {
