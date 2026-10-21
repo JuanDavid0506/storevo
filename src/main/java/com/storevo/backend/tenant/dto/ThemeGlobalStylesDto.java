@@ -374,5 +374,137 @@ public class ThemeGlobalStylesDto {
     @Builder.Default
     private Boolean searchAdvSpecs = false;
 
-}
 
+    // =========================================================
+    // CONFIGURACIÓN GLOBAL DE TARJETAS DE PRODUCTOS
+    // =========================================================
+
+    @Builder.Default
+    private String cardPreset = "commercial";
+
+    @Builder.Default
+    private String cardImageAspect = "square";
+
+    @Builder.Default
+    private String cardImageFit = "cover";
+
+    @Builder.Default
+    private String cardImagePadding = "flush";
+
+    @Builder.Default
+    private String cardRadius = "sync";
+
+    @Builder.Default
+    private String cardShadow = "sm";
+
+    @Builder.Default
+    private String cardContentAlign = "left";
+
+    @Builder.Default
+    private String cardMetaMode = "category";
+
+    @Builder.Default
+    private String cardDiscountBadge = "percent";
+
+    @Builder.Default
+    private Boolean cardShowStatusBadges = true;
+
+    @Builder.Default
+    private Boolean cardShowOldPrice = true;
+
+    @Builder.Default
+    private String cardPriceSize = "normal";
+
+    @Builder.Default
+    private String cardActionMode = "always";
+
+    @Builder.Default
+    private String cardWishlistMode = "always";
+
+    @Builder.Default
+    private String cardButtonStyle = "solid";
+
+    @Builder.Default
+    private String cardImageHover = "carousel";
+
+    @Builder.Default
+    private String cardHoverLift = "lift";
+
+
+    // =========================================================
+    // CONFIGURACIÓN GLOBAL DE LA PÁGINA DE DETALLE DEL PRODUCTO
+    // =========================================================
+
+    @Builder.Default
+    private String detailPreset = "conversion";
+
+    @Builder.Default
+    private String detailInfoStyle = "clean";
+
+    @Builder.Default
+    private String detailStickyMode = "sticky_info";
+
+    @Builder.Default
+    private String detailGalleryPosition = "left";
+
+    @Builder.Default
+    private String detailLayoutRatio = "50_50";
+
+    @Builder.Default
+    private String detailGalleryLayout = "bottom";
+
+    @Builder.Default
+    private Boolean detailGalleryArrows = true;
+
+    @Builder.Default
+    private String detailImageAspect = "square";
+
+    @Builder.Default
+    private String detailImageFit = "cover";
+
+    @Builder.Default
+    private Boolean detailImageZoom = true;
+
+    @Builder.Default
+    private String detailBuyLayout = "standard";
+
+    @Builder.Default
+    private String detailVariantStyle = "rounded";
+
+    @Builder.Default
+    private Boolean detailShowBreadcrumbs = true;
+
+    @Builder.Default
+    private Boolean detailShowMeta = true;
+
+    @Builder.Default
+    private Boolean detailShowSku = true;
+
+    @Builder.Default
+    private Boolean detailShowSavingsBadge = true;
+
+    @Builder.Default
+    private Boolean detailShowStock = true;
+
+    @Builder.Default
+    private Boolean detailShowTrustStrip = true;
+
+    @Builder.Default
+    private Boolean detailShowShare = true;
+
+    @Builder.Default
+    private Boolean detailShowSpecs = true;
+
+    @Builder.Default
+    private String detailSpecsOpen = "collapsed";
+
+    @Builder.Default
+    private Boolean detailShowPolicies = true;
+
+    @Builder.Default
+    private Boolean detailShowRelated = true;
+
+    @Builder.Default
+    private String detailRelatedCols = "4";
+
+}

@@ -43,7 +43,34 @@ public class StoreThemeService {
             "0px", "0.375rem", "0.75rem", "1rem", "1.5rem", "2rem"
     );
     private static final Set<String> ALLOWED_BUTTON_RADII = Set.of("classic", "sync", "square", "pill");
-    private static final Set<String> ALLOWED_CARD_STYLES = Set.of("elevated", "clean", "outlined");
+    private static final Set<String> ALLOWED_CARD_STYLES = Set.of("elevated", "clean", "boutique", "poster", "bento", "outlined", "soft");
+    private static final Set<String> ALLOWED_CARD_PRESETS = Set.of("commercial", "boutique", "poster", "bento", "compact", "gallery");
+    private static final Set<String> ALLOWED_CARD_IMG_ASPECTS = Set.of("square", "portrait", "tall", "landscape");
+    private static final Set<String> ALLOWED_IMG_FITS = Set.of("cover", "contain");
+    private static final Set<String> ALLOWED_CARD_IMG_PADDINGS = Set.of("flush", "inset");
+    private static final Set<String> ALLOWED_CARD_RADII = Set.of("sync", "0px", "0.5rem", "1rem", "1.5rem");
+    private static final Set<String> ALLOWED_CARD_SHADOWS = Set.of("none", "sm", "md", "lg");
+    private static final Set<String> ALLOWED_CARD_ALIGNS = Set.of("left", "center");
+    private static final Set<String> ALLOWED_CARD_META_MODES = Set.of("category", "brand", "both", "none");
+    private static final Set<String> ALLOWED_CARD_DISCOUNT_BADGES = Set.of("percent", "label", "hidden");
+    private static final Set<String> ALLOWED_CARD_PRICE_SIZES = Set.of("compact", "normal", "large");
+    private static final Set<String> ALLOWED_CARD_VISIBILITY_MODES = Set.of("always", "hover", "hidden");
+    private static final Set<String> ALLOWED_CARD_BTN_STYLES = Set.of("solid", "outline", "dark", "split");
+    private static final Set<String> ALLOWED_CARD_IMG_HOVERS = Set.of("carousel", "second_image", "zoom", "none");
+    private static final Set<String> ALLOWED_CARD_HOVER_LIFTS = Set.of("lift", "glow", "scale", "border", "none");
+    private static final Set<String> ALLOWED_DETAIL_PRESETS = Set.of(
+            "conversion", "fashion_lookbook", "tech_specs", "luxury_boutique", "express_sale", "urban_drop"
+    );
+    private static final Set<String> ALLOWED_DETAIL_INFO_STYLES = Set.of("clean", "card", "buybox", "outlined");
+    private static final Set<String> ALLOWED_DETAIL_STICKY_MODES = Set.of("sticky_info", "sticky_gallery", "none");
+    private static final Set<String> ALLOWED_DETAIL_GALLERY_POS = Set.of("left", "right");
+    private static final Set<String> ALLOWED_DETAIL_LAYOUT_RATIOS = Set.of("50_50", "60_40", "45_55");
+    private static final Set<String> ALLOWED_DETAIL_GALLERY_LAYOUTS = Set.of("bottom", "left", "grid", "stack", "carousel");
+    private static final Set<String> ALLOWED_DETAIL_IMG_ASPECTS = Set.of("square", "portrait", "tall", "landscape");
+    private static final Set<String> ALLOWED_DETAIL_BUY_LAYOUTS = Set.of("standard", "stacked", "side_by_side");
+    private static final Set<String> ALLOWED_DETAIL_VARIANT_STYLES = Set.of("rounded", "pills", "square", "underline");
+    private static final Set<String> ALLOWED_DETAIL_SPECS_OPEN = Set.of("collapsed", "expanded");
+    private static final Set<String> ALLOWED_DETAIL_RELATED_COLS = Set.of("3", "4");
     private static final Set<String> ALLOWED_NAV_LAYOUTS = Set.of(
             "classic", "centered", "marketplace", "minimal",
             "editorial", "compact", "double_bar", "hero_overlay"
@@ -215,7 +242,12 @@ public class StoreThemeService {
                     Product managed = p;
                     try {
                         Product found = entityManager.find(Product.class, p.getId());
-                        if (found != null) managed = found;
+                        if (found != null) {
+                            managed = found;
+                            if (found.getImages() != null) {
+                                p.setImages(new ArrayList<>(found.getImages()));
+                            }
+                        }
                     } catch (Exception ignored) {}
 
                     Map<String, Object> pMeta = new LinkedHashMap<>();
@@ -743,6 +775,133 @@ public class StoreThemeService {
         if (gs.getSearchAdvAvailability() == null) gs.setSearchAdvAvailability(true);
         if (gs.getSearchAdvVariants() == null) gs.setSearchAdvVariants(true);
         if (gs.getSearchAdvSpecs() == null) gs.setSearchAdvSpecs(false);
+
+        // Sanitización de estilos globales de Tarjetas de Productos
+        if (gs.getCardPreset() == null || !ALLOWED_CARD_PRESETS.contains(gs.getCardPreset())) {
+            gs.setCardPreset("commercial");
+        }
+        if (gs.getCardImageAspect() == null || !ALLOWED_CARD_IMG_ASPECTS.contains(gs.getCardImageAspect())) {
+            gs.setCardImageAspect("square");
+        }
+        if (gs.getCardImageFit() == null || !ALLOWED_IMG_FITS.contains(gs.getCardImageFit())) {
+            gs.setCardImageFit("cover");
+        }
+        if (gs.getCardImagePadding() == null || !ALLOWED_CARD_IMG_PADDINGS.contains(gs.getCardImagePadding())) {
+            gs.setCardImagePadding("flush");
+        }
+        if (gs.getCardRadius() == null || !ALLOWED_CARD_RADII.contains(gs.getCardRadius())) {
+            gs.setCardRadius("sync");
+        }
+        if (gs.getCardShadow() == null || !ALLOWED_CARD_SHADOWS.contains(gs.getCardShadow())) {
+            gs.setCardShadow("sm");
+        }
+        if (gs.getCardContentAlign() == null || !ALLOWED_CARD_ALIGNS.contains(gs.getCardContentAlign())) {
+            gs.setCardContentAlign("left");
+        }
+        if (gs.getCardMetaMode() == null || !ALLOWED_CARD_META_MODES.contains(gs.getCardMetaMode())) {
+            gs.setCardMetaMode("category");
+        }
+        if (gs.getCardDiscountBadge() == null || !ALLOWED_CARD_DISCOUNT_BADGES.contains(gs.getCardDiscountBadge())) {
+            gs.setCardDiscountBadge("percent");
+        }
+        if (gs.getCardShowStatusBadges() == null) {
+            gs.setCardShowStatusBadges(true);
+        }
+        if (gs.getCardShowOldPrice() == null) {
+            gs.setCardShowOldPrice(true);
+        }
+        if (gs.getCardPriceSize() == null || !ALLOWED_CARD_PRICE_SIZES.contains(gs.getCardPriceSize())) {
+            gs.setCardPriceSize("normal");
+        }
+        if (gs.getCardActionMode() == null || !ALLOWED_CARD_VISIBILITY_MODES.contains(gs.getCardActionMode())) {
+            gs.setCardActionMode("always");
+        }
+        if (gs.getCardWishlistMode() == null || !ALLOWED_CARD_VISIBILITY_MODES.contains(gs.getCardWishlistMode())) {
+            gs.setCardWishlistMode("always");
+        }
+        if (gs.getCardButtonStyle() == null || !ALLOWED_CARD_BTN_STYLES.contains(gs.getCardButtonStyle())) {
+            gs.setCardButtonStyle("solid");
+        }
+        if (gs.getCardImageHover() == null || !ALLOWED_CARD_IMG_HOVERS.contains(gs.getCardImageHover())) {
+            gs.setCardImageHover("carousel");
+        }
+        if (gs.getCardHoverLift() == null || !ALLOWED_CARD_HOVER_LIFTS.contains(gs.getCardHoverLift())) {
+            gs.setCardHoverLift("lift");
+        }
+
+        // Sanitización de estilos globales de Página de Detalle del Producto
+        if (gs.getDetailPreset() == null || !ALLOWED_DETAIL_PRESETS.contains(gs.getDetailPreset())) {
+            gs.setDetailPreset("conversion");
+        }
+        if (gs.getDetailInfoStyle() == null || !ALLOWED_DETAIL_INFO_STYLES.contains(gs.getDetailInfoStyle())) {
+            gs.setDetailInfoStyle("clean");
+        }
+        if (gs.getDetailStickyMode() == null || !ALLOWED_DETAIL_STICKY_MODES.contains(gs.getDetailStickyMode())) {
+            gs.setDetailStickyMode("sticky_info");
+        }
+        if (gs.getDetailGalleryPosition() == null || !ALLOWED_DETAIL_GALLERY_POS.contains(gs.getDetailGalleryPosition())) {
+            gs.setDetailGalleryPosition("left");
+        }
+        if (gs.getDetailLayoutRatio() == null || !ALLOWED_DETAIL_LAYOUT_RATIOS.contains(gs.getDetailLayoutRatio())) {
+            gs.setDetailLayoutRatio("50_50");
+        }
+        if (gs.getDetailGalleryLayout() == null || !ALLOWED_DETAIL_GALLERY_LAYOUTS.contains(gs.getDetailGalleryLayout())) {
+            gs.setDetailGalleryLayout("bottom");
+        }
+        if (gs.getDetailGalleryArrows() == null) {
+            gs.setDetailGalleryArrows(true);
+        }
+        if (gs.getDetailImageAspect() == null || !ALLOWED_DETAIL_IMG_ASPECTS.contains(gs.getDetailImageAspect())) {
+            gs.setDetailImageAspect("square");
+        }
+        if (gs.getDetailImageFit() == null || !ALLOWED_IMG_FITS.contains(gs.getDetailImageFit())) {
+            gs.setDetailImageFit("cover");
+        }
+        if (gs.getDetailImageZoom() == null) {
+            gs.setDetailImageZoom(true);
+        }
+        if (gs.getDetailBuyLayout() == null || !ALLOWED_DETAIL_BUY_LAYOUTS.contains(gs.getDetailBuyLayout())) {
+            gs.setDetailBuyLayout("standard");
+        }
+        if (gs.getDetailVariantStyle() == null || !ALLOWED_DETAIL_VARIANT_STYLES.contains(gs.getDetailVariantStyle())) {
+            gs.setDetailVariantStyle("rounded");
+        }
+        if (gs.getDetailShowBreadcrumbs() == null) {
+            gs.setDetailShowBreadcrumbs(true);
+        }
+        if (gs.getDetailShowMeta() == null) {
+            gs.setDetailShowMeta(true);
+        }
+        if (gs.getDetailShowSku() == null) {
+            gs.setDetailShowSku(true);
+        }
+        if (gs.getDetailShowSavingsBadge() == null) {
+            gs.setDetailShowSavingsBadge(true);
+        }
+        if (gs.getDetailShowStock() == null) {
+            gs.setDetailShowStock(true);
+        }
+        if (gs.getDetailShowTrustStrip() == null) {
+            gs.setDetailShowTrustStrip(true);
+        }
+        if (gs.getDetailShowShare() == null) {
+            gs.setDetailShowShare(true);
+        }
+        if (gs.getDetailShowSpecs() == null) {
+            gs.setDetailShowSpecs(true);
+        }
+        if (gs.getDetailSpecsOpen() == null || !ALLOWED_DETAIL_SPECS_OPEN.contains(gs.getDetailSpecsOpen())) {
+            gs.setDetailSpecsOpen("collapsed");
+        }
+        if (gs.getDetailShowPolicies() == null) {
+            gs.setDetailShowPolicies(true);
+        }
+        if (gs.getDetailShowRelated() == null) {
+            gs.setDetailShowRelated(true);
+        }
+        if (gs.getDetailRelatedCols() == null || !ALLOWED_DETAIL_RELATED_COLS.contains(gs.getDetailRelatedCols())) {
+            gs.setDetailRelatedCols("4");
+        }
 
         if (config.getPages() == null) {
             config.setPages(new LinkedHashMap<>());

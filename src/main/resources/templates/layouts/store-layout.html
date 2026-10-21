@@ -31,6 +31,8 @@
                     hSerif=${hFont == 'Playfair Display' or hFont == 'Lora' or hFont == 'Cormorant Garamond' or hFont == 'Cinzel'},
                     bSerif=${bFont == 'Lora'},
                     bRadius=${theme != null and theme.globalStyles != null and theme.globalStyles.borderRadius != null ? theme.globalStyles.borderRadius : '1rem'},
+                    cRadiusRaw=${theme != null and theme.globalStyles != null and theme.globalStyles.cardRadius != null ? theme.globalStyles.cardRadius : 'sync'},
+                    cRadius=${cRadiusRaw == 'sync' ? bRadius : cRadiusRaw},
                     fScale=${theme != null and theme.globalStyles != null and theme.globalStyles.fontScale == 'compact' ? '95%' : (theme != null and theme.globalStyles != null and theme.globalStyles.fontScale == 'large' ? '106%' : '100%')}">
         :root {
             --brand-color: [[${pColor}]];
@@ -40,6 +42,7 @@
             --font-heading: '[[${hFont}]]', [[${hSerif ? 'serif' : 'sans-serif'}]];
             --font-body: '[[${bFont}]]', [[${bSerif ? 'serif' : 'sans-serif'}]];
             --store-radius: [[${bRadius}]];
+            --sv-card-radius: [[${cRadius}]];
             --store-font-scale: [[${fScale}]];
         }
         html {
@@ -75,7 +78,11 @@
         .bg-brand { background-color: var(--brand-color) !important; }
         .text-brand { color: var(--brand-color) !important; }
         .border-brand { border-color: var(--brand-color) !important; }
-        .hover-bg-brand:hover { filter: brightness(0.92); background-color: var(--brand-color) !important; }
+        .hover-bg-brand:hover,
+        .hover\:bg-brand:hover { filter: brightness(0.92); background-color: var(--brand-color) !important; }
+        .hover\:text-brand:hover { color: var(--brand-color) !important; }
+        .hover\:border-brand:hover { border-color: var(--brand-color) !important; }
+        .ring-brand\/20 { --tw-ring-color: color-mix(in srgb, var(--brand-color) 25%, transparent) !important; }
         .bg-secondary { background-color: var(--brand-secondary) !important; }
         .text-secondary { color: var(--brand-secondary) !important; }
         .border-secondary { border-color: var(--brand-secondary) !important; }
@@ -125,8 +132,48 @@
                data-heading-case=${gs != null and gs.headingTransform != null ? gs.headingTransform : 'none'},
                data-button-radius=${gs != null and gs.buttonRadius != null ? gs.buttonRadius : 'classic'},
                data-card-style=${gs != null and gs.cardStyle != null ? gs.cardStyle : 'elevated'},
-               data-sv-nav-layout=${gs != null and gs.navbarLayout != null ? gs.navbarLayout : 'classic'},
-               data-sv-nav-hover=${gs != null and gs.navbarLinkHover != null ? gs.navbarLinkHover : 'color'},
+               data-sv-card-preset=${gs != null and gs.cardPreset != null ? gs.cardPreset : 'commercial'},
+               data-sv-card-img-aspect=${gs != null and gs.cardImageAspect != null ? gs.cardImageAspect : 'square'},
+               data-sv-card-img-fit=${gs != null and gs.cardImageFit != null ? gs.cardImageFit : 'cover'},
+               data-sv-card-img-padding=${gs != null and gs.cardImagePadding != null ? gs.cardImagePadding : 'flush'},
+               data-sv-card-radius=${gs != null and gs.cardRadius != null ? gs.cardRadius : 'sync'},
+               data-sv-card-shadow=${gs != null and gs.cardShadow != null ? gs.cardShadow : 'sm'},
+               data-sv-card-align=${gs != null and gs.cardContentAlign != null ? gs.cardContentAlign : 'left'},
+               data-sv-card-meta=${gs != null and gs.cardMetaMode != null ? gs.cardMetaMode : 'category'},
+               data-sv-card-discount-badge=${gs != null and gs.cardDiscountBadge != null ? gs.cardDiscountBadge : 'percent'},
+               data-sv-card-status-badges=${gs == null or gs.cardShowStatusBadges == null or gs.cardShowStatusBadges},
+               data-sv-card-old-price=${gs == null or gs.cardShowOldPrice == null or gs.cardShowOldPrice},
+               data-sv-card-price-size=${gs != null and gs.cardPriceSize != null ? gs.cardPriceSize : 'normal'},
+               data-sv-card-action-mode=${gs != null and gs.cardActionMode != null ? gs.cardActionMode : 'always'},
+               data-sv-card-wishlist-mode=${gs != null and gs.cardWishlistMode != null ? gs.cardWishlistMode : 'always'},
+               data-sv-card-btn-style=${gs != null and gs.cardButtonStyle != null ? gs.cardButtonStyle : 'solid'},
+               data-sv-card-img-hover=${gs != null and gs.cardImageHover != null ? gs.cardImageHover : 'carousel'},
+               data-sv-card-hover-lift=${gs != null and gs.cardHoverLift != null ? gs.cardHoverLift : 'lift'},
+               data-sv-detail-preset=${gs != null and gs.detailPreset != null ? gs.detailPreset : 'conversion'},
+               data-sv-detail-info-style=${gs != null and gs.detailInfoStyle != null ? gs.detailInfoStyle : 'clean'},
+               data-sv-detail-sticky=${gs != null and gs.detailStickyMode != null ? gs.detailStickyMode : 'sticky_info'},
+               data-sv-detail-gallery-pos=${gs != null and gs.detailGalleryPosition != null ? gs.detailGalleryPosition : 'left'},
+               data-sv-detail-layout-ratio=${gs != null and gs.detailLayoutRatio != null ? gs.detailLayoutRatio : '50_50'},
+               data-sv-detail-gallery-layout=${gs != null and gs.detailGalleryLayout != null ? gs.detailGalleryLayout : 'bottom'},
+               data-sv-detail-gallery-arrows=${gs == null or gs.detailGalleryArrows == null or gs.detailGalleryArrows},
+               data-sv-detail-img-aspect=${gs != null and gs.detailImageAspect != null ? gs.detailImageAspect : 'square'},
+               data-sv-detail-img-fit=${gs != null and gs.detailImageFit != null ? gs.detailImageFit : 'cover'},
+               data-sv-detail-img-zoom=${gs == null or gs.detailImageZoom == null or gs.detailImageZoom},
+               data-sv-detail-buy-layout=${gs != null and gs.detailBuyLayout != null ? gs.detailBuyLayout : 'standard'},
+               data-sv-detail-variant-style=${gs != null and gs.detailVariantStyle != null ? gs.detailVariantStyle : 'rounded'},
+               data-sv-detail-breadcrumbs=${gs == null or gs.detailShowBreadcrumbs == null or gs.detailShowBreadcrumbs},
+               data-sv-detail-meta=${gs == null or gs.detailShowMeta == null or gs.detailShowMeta},
+               data-sv-detail-sku=${gs == null or gs.detailShowSku == null or gs.detailShowSku},
+               data-sv-detail-savings=${gs == null or gs.detailShowSavingsBadge == null or gs.detailShowSavingsBadge},
+               data-sv-detail-stock=${gs == null or gs.detailShowStock == null or gs.detailShowStock},
+               data-sv-detail-trust=${gs == null or gs.detailShowTrustStrip == null or gs.detailShowTrustStrip},
+               data-sv-detail-share=${gs == null or gs.detailShowShare == null or gs.detailShowShare},
+               data-sv-detail-specs=${gs == null or gs.detailShowSpecs == null or gs.detailShowSpecs},
+               data-sv-detail-specs-open=${gs != null and gs.detailSpecsOpen != null ? gs.detailSpecsOpen : 'collapsed'},
+               data-sv-detail-policies=${gs == null or gs.detailShowPolicies == null or gs.detailShowPolicies},
+               data-sv-detail-related=${gs == null or gs.detailShowRelated == null or gs.detailShowRelated},
+               data-sv-detail-related-cols=${gs != null and gs.detailRelatedCols != null ? gs.detailRelatedCols : '4'},
+               data-sv-nav-layout=${gs != null and gs.navbarLayout != null ? gs.navbarLayout : 'classic'},data-sv-nav-hover=${gs != null and gs.navbarLinkHover != null ? gs.navbarLinkHover : 'color'},
                data-sv-dropdown-style=${gs != null and gs.navbarDropdownStyle != null ? gs.navbarDropdownStyle : 'mega'},
                data-sv-dropdown-anim=${gs != null and gs.navbarDropdownAnim != null ? gs.navbarDropdownAnim : 'slide_up'},
                data-sv-nav-trigger=${gs != null and gs.navbarTrigger != null ? gs.navbarTrigger : 'hover'},
@@ -367,6 +414,209 @@
 <script th:src="@{/js/modules/storeCatalog.js}" data-sv-persistent="true"></script>
 <script th:src="@{/js/modules/productDetail.js}"></script>
 <script th:src="@{/js/ui/modal.js}"></script>
+<script data-sv-persistent="true">
+    (function() {
+        if (window.StorevoCardCarousel) return;
+
+        function updateDotsFromScroll(track) {
+            if (!track) return;
+            const media = track.closest('.sv-card__media');
+            if (!media) return;
+            const width = track.clientWidth || 1;
+            const idx = Math.round(track.scrollLeft / width);
+            const dots = media.querySelectorAll('.sv-card__dot');
+            dots.forEach((d, i) => d.classList.toggle('is-active', i === idx));
+        }
+
+        window.StorevoCardCarousel = {
+            step: function(btn, dir, event) {
+                if (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                const media = btn ? btn.closest('.sv-card__media') : null;
+                const track = media ? media.querySelector('.sv-card__track') : null;
+                if (!track) return;
+                const slides = track.querySelectorAll('.sv-card__slide');
+                if (slides.length <= 1) return;
+                const width = track.clientWidth || 1;
+                const current = Math.round(track.scrollLeft / width);
+                const next = (current + dir + slides.length) % slides.length;
+                track.scrollTo({ left: next * width, behavior: 'smooth' });
+            },
+            goTo: function(dotBtn, index, event) {
+                if (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                const media = dotBtn ? dotBtn.closest('.sv-card__media') : null;
+                const track = media ? media.querySelector('.sv-card__track') : null;
+                if (!track) return;
+                const width = track.clientWidth || 1;
+                track.scrollTo({ left: index * width, behavior: 'smooth' });
+            }
+        };
+
+        document.addEventListener('scroll', function(e) {
+            if (e.target && e.target.classList && e.target.classList.contains('sv-card__track')) {
+                updateDotsFromScroll(e.target);
+            }
+        }, true);
+
+        window.StorevoDetailGallery = {
+            isExpanded: false,
+
+            getMaxSlotsForLayout: function(layout) {
+                const isMobile = window.innerWidth < 640;
+                if (layout === 'stack') return 3;
+                if (layout === 'grid') return 4;
+                if (layout === 'left') return isMobile ? 5 : 5;
+                return isMobile ? 5 : 6; // 'bottom' (1 sola fila limpia: 5 en móvil, 6 en PC)
+            },
+
+            refreshThumbs: function() {
+                const gallery = document.querySelector('.sv-product-gallery');
+                if (!gallery) return;
+                const thumbsWrap = gallery.querySelector('.sv-product-gallery__thumbs');
+                if (!thumbsWrap) return;
+
+                const thumbs = Array.from(thumbsWrap.querySelectorAll('.product-thumbnail'));
+                const total = thumbs.length;
+                const counterEl = document.getElementById('sv-detail-img-counter');
+                const mainImg = document.getElementById('main-product-image');
+                const currentSrc = mainImg ? mainImg.getAttribute('src') : '';
+                let activeIdx = thumbs.findIndex(btn => btn.getAttribute('data-src') === currentSrc || btn.classList.contains('border-brand'));
+                if (activeIdx < 0) activeIdx = 0;
+
+                if (counterEl && total > 0) {
+                    counterEl.textContent = (activeIdx + 1) + ' / ' + total;
+                }
+
+                const layout = gallery.getAttribute('data-gallery-layout') || document.body.getAttribute('data-sv-detail-gallery-layout') || 'bottom';
+                const maxSlots = this.getMaxSlotsForLayout(layout);
+                const collapseBtn = document.getElementById('sv-detail-thumbs-collapse-btn');
+                const hasOverflow = total > maxSlots;
+
+                if (!hasOverflow) {
+                    this.isExpanded = false;
+                }
+
+                thumbs.forEach((btn, idx) => {
+                    const overlay = btn.querySelector('.sv-thumb-more-overlay');
+                    btn.classList.remove('is-hidden-thumb', 'is-more-trigger');
+                    if (overlay) {
+                        overlay.classList.add('hidden');
+                        overlay.textContent = '';
+                    }
+
+                    if (hasOverflow && !this.isExpanded) {
+                        if (idx === maxSlots - 1) {
+                            const hiddenCount = total - (maxSlots - 1);
+                            btn.classList.add('is-more-trigger');
+                            if (overlay) {
+                                overlay.textContent = (layout === 'grid' || layout === 'stack')
+                                    ? ('+' + hiddenCount + ' fotos')
+                                    : ('+' + hiddenCount);
+                                overlay.classList.remove('hidden');
+                            }
+                        } else if (idx >= maxSlots) {
+                            btn.classList.add('is-hidden-thumb');
+                        }
+                    }
+                });
+
+                if (collapseBtn) {
+                    collapseBtn.classList.toggle('hidden', !(hasOverflow && this.isExpanded));
+                }
+            },
+
+            onThumbClick: function(btn, event) {
+                if (btn && btn.classList.contains('is-more-trigger') && !this.isExpanded) {
+                    if (event) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    }
+                    this.isExpanded = true;
+                    this.refreshThumbs();
+                    if (window.Storevo && Storevo.ProductDetail && typeof Storevo.ProductDetail.changeImage === 'function') {
+                        Storevo.ProductDetail.changeImage(btn);
+                    }
+                    this.refreshThumbs();
+                    return;
+                }
+                if (window.Storevo && Storevo.ProductDetail && typeof Storevo.ProductDetail.changeImage === 'function') {
+                    Storevo.ProductDetail.changeImage(btn);
+                }
+                this.refreshThumbs();
+            },
+
+            toggleExpand: function(expand, event) {
+                if (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                this.isExpanded = Boolean(expand);
+                this.refreshThumbs();
+            },
+
+            step: function(dir, event) {
+                if (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                const thumbs = Array.from(document.querySelectorAll('.sv-product-gallery__thumbs .product-thumbnail'));
+                if (thumbs.length <= 1) return;
+                const mainImg = document.getElementById('main-product-image');
+                const currentSrc = mainImg ? mainImg.getAttribute('src') : '';
+                let activeIdx = thumbs.findIndex(btn => btn.getAttribute('data-src') === currentSrc || btn.classList.contains('border-brand'));
+                if (activeIdx < 0) activeIdx = 0;
+                const nextIdx = (activeIdx + dir + thumbs.length) % thumbs.length;
+                const targetBtn = thumbs[nextIdx];
+                if (targetBtn && window.Storevo && Storevo.ProductDetail && typeof Storevo.ProductDetail.changeImage === 'function') {
+                    Storevo.ProductDetail.changeImage(targetBtn);
+                } else if (targetBtn && mainImg) {
+                    mainImg.src = targetBtn.getAttribute('data-src') || '';
+                }
+                this.refreshThumbs();
+            },
+
+            share: function(event) {
+                if (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                const cleanUrl = window.location.origin + window.location.pathname;
+                if (navigator.share) {
+                    navigator.share({ title: document.title, url: cleanUrl }).catch(() => {});
+                    return;
+                }
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(cleanUrl).then(() => {
+                        if (window.Storevo && Storevo.UI && Storevo.UI.Toast) {
+                            Storevo.UI.Toast.show('Enlace del producto copiado al portapapeles', 'success');
+                        }
+                    });
+                }
+            }
+        };
+
+        window.addEventListener('resize', function() {
+            if (window.StorevoDetailGallery) window.StorevoDetailGallery.refreshThumbs();
+        });
+        document.addEventListener('DOMContentLoaded', function() {
+            if (window.StorevoDetailGallery) window.StorevoDetailGallery.refreshThumbs();
+        });
+        document.addEventListener('storevo:page-load', function() {
+            if (window.StorevoDetailGallery) {
+                window.StorevoDetailGallery.isExpanded = false;
+                window.StorevoDetailGallery.refreshThumbs();
+            }
+        });
+        setTimeout(function() {
+            if (window.StorevoDetailGallery) window.StorevoDetailGallery.refreshThumbs();
+        }, 50);
+    })();
+</script>
 
 <!-- Motor Interactivo Unificado: Misma arquitectura de submenú y animación para Catálogo y Categorías del Navbar -->
 <script data-sv-persistent="true">
@@ -1261,7 +1511,7 @@
         function isPureFormOrFilterControl(target) {
             if (!target || !target.closest) return false;
             return Boolean(
-                target.closest('input, select, textarea, [data-qty-step], .sv-filter-open-btn, .sv-filter-drawer-backdrop, .sv-global-filters-host, .sv-catalog-sidebar, .sv-active-filters-bar, .sv-nav__search, .sv-nav__search-expand, .sv-nav__search-trigger, .sv-search-panel, .sv-search-modal-backdrop, .sv-toolbar-search-box, .sv-search-cat-pills')
+                target.closest('input, select, textarea, [data-qty-step], .sv-card__arrow, .sv-card__dot, .sv-card__dots, .sv-detail-gallery-arrow, .sv-detail-share-btn, .product-thumbnail, .opt-btn, .sv-filter-open-btn, .sv-filter-drawer-backdrop, .sv-global-filters-host, .sv-catalog-sidebar, .sv-active-filters-bar, .sv-nav__search, .sv-nav__search-expand, .sv-nav__search-trigger, .sv-search-panel, .sv-search-modal-backdrop, .sv-toolbar-search-box, .sv-search-cat-pills')
             );
         }
 
@@ -1383,8 +1633,91 @@
             }
             if (s.buttonRadius) document.body.dataset.buttonRadius = s.buttonRadius;
             if (s.cardStyle) document.body.dataset.cardStyle = s.cardStyle;
-            if (s.borderRadius) root.style.setProperty('--store-radius', s.borderRadius);
-
+            if (s.borderRadius) {
+                root.style.setProperty('--store-radius', s.borderRadius);
+                const activeCardRadius = s.cardRadius || document.body.dataset.svCardRadius || 'sync';
+                if (activeCardRadius === 'sync') {
+                    root.style.setProperty('--sv-card-radius', s.borderRadius);
+                }
+            }
+            if (s.cardRadius) {
+                document.body.dataset.svCardRadius = s.cardRadius;
+                const baseRadius = s.borderRadius || getComputedStyle(root).getPropertyValue('--store-radius').trim() || '1rem';
+                root.style.setProperty('--sv-card-radius', s.cardRadius === 'sync' ? baseRadius : s.cardRadius);
+            }
+            const productAndDetailKeysMap = {
+                cardPreset: 'svCardPreset',
+                cardImageAspect: 'svCardImgAspect',
+                cardImageFit: 'svCardImgFit',
+                cardImagePadding: 'svCardImgPadding',
+                cardRadius: 'svCardRadius',
+                cardShadow: 'svCardShadow',
+                cardContentAlign: 'svCardAlign',
+                cardMetaMode: 'svCardMeta',
+                cardDiscountBadge: 'svCardDiscountBadge',
+                cardShowStatusBadges: 'svCardStatusBadges',
+                cardShowOldPrice: 'svCardOldPrice',
+                cardPriceSize: 'svCardPriceSize',
+                cardActionMode: 'svCardActionMode',
+                cardWishlistMode: 'svCardWishlistMode',
+                cardButtonStyle: 'svCardBtnStyle',
+                cardImageHover: 'svCardImgHover',
+                cardHoverLift: 'svCardHoverLift',
+                detailPreset: 'svDetailPreset',
+                detailInfoStyle: 'svDetailInfoStyle',
+                detailStickyMode: 'svDetailSticky',
+                detailGalleryPosition: 'svDetailGalleryPos',
+                detailLayoutRatio: 'svDetailLayoutRatio',
+                detailGalleryLayout: 'svDetailGalleryLayout',
+                detailGalleryArrows: 'svDetailGalleryArrows',
+                detailImageAspect: 'svDetailImgAspect',
+                detailImageFit: 'svDetailImgFit',
+                detailImageZoom: 'svDetailImgZoom',
+                detailBuyLayout: 'svDetailBuyLayout',
+                detailVariantStyle: 'svDetailVariantStyle',
+                detailShowBreadcrumbs: 'svDetailBreadcrumbs',
+                detailShowMeta: 'svDetailMeta',
+                detailShowSku: 'svDetailSku',
+                detailShowSavingsBadge: 'svDetailSavings',
+                detailShowStock: 'svDetailStock',
+                detailShowTrustStrip: 'svDetailTrust',
+                detailShowShare: 'svDetailShare',
+                detailShowSpecs: 'svDetailSpecs',
+                detailSpecsOpen: 'svDetailSpecsOpen',
+                detailShowPolicies: 'svDetailPolicies',
+                detailShowRelated: 'svDetailRelated',
+                detailRelatedCols: 'svDetailRelatedCols'
+            };
+            Object.keys(productAndDetailKeysMap).forEach(key => {
+                if (s[key] !== undefined && s[key] !== null) {
+                    const dataKey = productAndDetailKeysMap[key];
+                    document.body.dataset[dataKey] = String(s[key]);
+                }
+            });
+            if (s.detailGalleryLayout) {
+                document.querySelectorAll('.sv-product-gallery').forEach(gal => {
+                    gal.setAttribute('data-gallery-layout', s.detailGalleryLayout);
+                });
+                if (window.StorevoDetailGallery && typeof window.StorevoDetailGallery.refreshThumbs === 'function') {
+                    window.StorevoDetailGallery.isExpanded = false;
+                    window.StorevoDetailGallery.refreshThumbs();
+                }
+            }
+            if (s.detailRelatedCols) {
+                const relGrid = document.getElementById('sv-detail-related-grid');
+                if (relGrid) {
+                    relGrid.setAttribute('data-cols', s.detailRelatedCols === '3' ? '3' : '4');
+                }
+            }
+            if (s.detailSpecsOpen !== undefined) {
+                const specsContent = document.getElementById('specs-content');
+                const specsIcon = document.getElementById('specs-icon');
+                if (specsContent) {
+                    const expand = String(s.detailSpecsOpen) === 'expanded';
+                    specsContent.classList.toggle('hidden', !expand);
+                    if (specsIcon) specsIcon.classList.toggle('rotate-180', expand);
+                }
+            }
             if (window.Storevo && Storevo.UI && Storevo.UI.NavbarStyle) {
                 Storevo.UI.NavbarStyle.apply(s);
             }

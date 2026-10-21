@@ -262,6 +262,22 @@ Storevo.ThemeEditor = {
                 settings: JSON.parse(JSON.stringify(this.catalogDefinitions.product_main.defaultSettings))
             }];
         }
+        // Migrar ajustes visuales previos de product_main / catalog_results hacia globalStyles si aún no están definidos
+        const gs = this.theme.globalStyles;
+        const prodSec = this.theme.pages.product.find(s => s && s.type === 'product_main');
+        if (prodSec && prodSec.settings) {
+            if (gs.detailGalleryLayout === undefined && prodSec.settings.galleryLayout) gs.detailGalleryLayout = prodSec.settings.galleryLayout;
+            if (gs.detailShowBreadcrumbs === undefined && prodSec.settings.showBreadcrumbs !== undefined) gs.detailShowBreadcrumbs = Boolean(prodSec.settings.showBreadcrumbs);
+            if (gs.detailShowSku === undefined && prodSec.settings.showSku !== undefined) gs.detailShowSku = Boolean(prodSec.settings.showSku);
+            if (gs.detailShowStock === undefined && prodSec.settings.showStockCounter !== undefined) gs.detailShowStock = Boolean(prodSec.settings.showStockCounter);
+            if (gs.detailShowSpecs === undefined && prodSec.settings.showSpecs !== undefined) gs.detailShowSpecs = Boolean(prodSec.settings.showSpecs);
+            if (gs.detailShowPolicies === undefined && prodSec.settings.showPolicies !== undefined) gs.detailShowPolicies = Boolean(prodSec.settings.showPolicies);
+            if (gs.detailShowRelated === undefined && prodSec.settings.showRelatedProducts !== undefined) gs.detailShowRelated = Boolean(prodSec.settings.showRelatedProducts);
+        }
+        const catSec = this.theme.pages.catalog.find(s => s && s.type === 'catalog_results');
+        if (catSec && catSec.settings && gs.cardDiscountBadge === undefined && catSec.settings.showDiscountPercent === false) {
+            gs.cardDiscountBadge = 'label';
+        }
         this.theme.sections = this.theme.pages.home;
     },
 
@@ -1941,22 +1957,10 @@ Storevo.ThemeEditor = {
                     { key: 'columnsDesktop', label: 'Columnas de productos en PC', type: 'select', defaultVal: '4', options: [
                             { value: '4', label: '4 productos por fila (Estándar)' },
                             { value: '3', label: '3 productos grandes por fila (Editorial)' }
-                        ]},
-                    { key: 'showDiscountPercent', label: 'Etiqueta de ahorro en ofertas', type: 'checkbox', placeholder: 'Mostrar porcentaje de descuento (Ej: -20% Oferta)', defaultVal: true }
+                        ]}
                 ];
             case 'product_main':
                 return [
-                    { key: 'galleryLayout', label: 'Diseño de la Galería en PC', type: 'select', defaultVal: 'bottom', options: [
-                            { value: 'bottom', label: 'Clásico (Imagen principal + Miniaturas abajo)' },
-                            { value: 'left', label: 'Editorial Lateral (Miniaturas verticales a la izquierda)' },
-                            { value: 'grid', label: 'Mosaico Lookbook (Miniaturas grandes en 2 columnas)' }
-                        ]},
-                    { key: 'showBreadcrumbs', label: 'Miga de pan (Ruta superior)', type: 'checkbox', placeholder: 'Mostrar ruta Inicio / Catálogo / Categoría', defaultVal: true },
-                    { key: 'showSku', label: 'Código SKU', type: 'checkbox', placeholder: 'Mostrar insignia con el SKU del producto', defaultVal: true },
-                    { key: 'showStockCounter', label: 'Indicador de unidades disponibles', type: 'checkbox', placeholder: 'Mostrar texto de Stock disponible bajo la cantidad', defaultVal: true },
-                    { key: 'showSpecs', label: 'Ficha Técnica (Especificaciones)', type: 'checkbox', placeholder: 'Mostrar acordeón de especificaciones técnicas', defaultVal: true },
-                    { key: 'showPolicies', label: 'Políticas de Envío y Devolución', type: 'checkbox', placeholder: 'Mostrar acordeones de políticas configuradas', defaultVal: true },
-                    { key: 'showRelatedProducts', label: 'Productos Relacionados', type: 'checkbox', placeholder: 'Mostrar sugerencias de productos al final de la ficha', defaultVal: true },
                     { key: 'relatedTitle', label: 'Título de Productos Relacionados', type: 'text', defaultVal: 'También te puede interesar' },
                     { key: 'relatedSubtitle', label: 'Subtítulo de Productos Relacionados', type: 'text', defaultVal: 'Otros productos de nuestro catálogo' }
                 ];
@@ -2124,12 +2128,539 @@ Storevo.ThemeEditor = {
             shapeReset.onclick = () => {
                 gs.borderRadius = '1rem';
                 gs.buttonRadius = 'classic';
-                gs.cardStyle = 'elevated';
                 this.initGlobalStylesInputs();
                 this.pushLiveStylesToIframe();
                 this.scheduleAutoSave(false);
             };
         }
+
+        // =====================================================================
+        // 4.B SISTEMA GLOBAL DE TARJETAS DE PRODUCTOS
+        // =====================================================================
+        const CARD_STYLE_PRESETS = {
+            commercial: {
+                cardPreset: 'commercial',
+                cardStyle: 'elevated',
+                cardRadius: 'sync',
+                cardShadow: 'sm',
+                cardImageAspect: 'square',
+                cardImageFit: 'cover',
+                cardImagePadding: 'flush',
+                cardContentAlign: 'left',
+                cardMetaMode: 'category',
+                cardDiscountBadge: 'percent',
+                cardShowStatusBadges: true,
+                cardShowOldPrice: true,
+                cardPriceSize: 'normal',
+                cardButtonStyle: 'solid',
+                cardActionMode: 'always',
+                cardWishlistMode: 'always',
+                cardImageHover: 'carousel',
+                cardHoverLift: 'lift'
+            },
+            boutique: {
+                cardPreset: 'boutique',
+                cardStyle: 'boutique',
+                cardRadius: '0px',
+                cardShadow: 'none',
+                cardImageAspect: 'portrait',
+                cardImageFit: 'cover',
+                cardImagePadding: 'flush',
+                cardContentAlign: 'center',
+                cardMetaMode: 'brand',
+                cardDiscountBadge: 'label',
+                cardShowStatusBadges: true,
+                cardShowOldPrice: true,
+                cardPriceSize: 'normal',
+                cardButtonStyle: 'dark',
+                cardActionMode: 'hover',
+                cardWishlistMode: 'hover',
+                cardImageHover: 'carousel',
+                cardHoverLift: 'none'
+            },
+            poster: {
+                cardPreset: 'poster',
+                cardStyle: 'poster',
+                cardRadius: '1.5rem',
+                cardShadow: 'lg',
+                cardImageAspect: 'tall',
+                cardImageFit: 'cover',
+                cardImagePadding: 'flush',
+                cardContentAlign: 'left',
+                cardMetaMode: 'category',
+                cardDiscountBadge: 'percent',
+                cardShowStatusBadges: true,
+                cardShowOldPrice: true,
+                cardPriceSize: 'large',
+                cardButtonStyle: 'solid',
+                cardActionMode: 'always',
+                cardWishlistMode: 'always',
+                cardImageHover: 'carousel',
+                cardHoverLift: 'scale'
+            },
+            bento: {
+                cardPreset: 'bento',
+                cardStyle: 'bento',
+                cardRadius: '1.5rem',
+                cardShadow: 'md',
+                cardImageAspect: 'square',
+                cardImageFit: 'cover',
+                cardImagePadding: 'inset',
+                cardContentAlign: 'left',
+                cardMetaMode: 'both',
+                cardDiscountBadge: 'percent',
+                cardShowStatusBadges: true,
+                cardShowOldPrice: true,
+                cardPriceSize: 'normal',
+                cardButtonStyle: 'split',
+                cardActionMode: 'always',
+                cardWishlistMode: 'always',
+                cardImageHover: 'carousel',
+                cardHoverLift: 'glow'
+            },
+            compact: {
+                cardPreset: 'compact',
+                cardStyle: 'outlined',
+                cardRadius: '0px',
+                cardShadow: 'none',
+                cardImageAspect: 'square',
+                cardImageFit: 'cover',
+                cardImagePadding: 'flush',
+                cardContentAlign: 'left',
+                cardMetaMode: 'both',
+                cardDiscountBadge: 'percent',
+                cardShowStatusBadges: true,
+                cardShowOldPrice: true,
+                cardPriceSize: 'normal',
+                cardButtonStyle: 'dark',
+                cardActionMode: 'always',
+                cardWishlistMode: 'always',
+                cardImageHover: 'carousel',
+                cardHoverLift: 'border'
+            },
+            gallery: {
+                cardPreset: 'gallery',
+                cardStyle: 'soft',
+                cardRadius: '1rem',
+                cardShadow: 'sm',
+                cardImageAspect: 'portrait',
+                cardImageFit: 'cover',
+                cardImagePadding: 'inset',
+                cardContentAlign: 'center',
+                cardMetaMode: 'category',
+                cardDiscountBadge: 'percent',
+                cardShowStatusBadges: true,
+                cardShowOldPrice: true,
+                cardPriceSize: 'large',
+                cardButtonStyle: 'outline',
+                cardActionMode: 'always',
+                cardWishlistMode: 'always',
+                cardImageHover: 'second_image',
+                cardHoverLift: 'glow'
+            }
+        };
+
+        const DEFAULT_GLOBAL_CARD_STYLES = CARD_STYLE_PRESETS.commercial;
+        Object.entries(DEFAULT_GLOBAL_CARD_STYLES).forEach(([k, defVal]) => {
+            if (gs[k] === undefined || gs[k] === null) {
+                gs[k] = defVal;
+            }
+        });
+
+        const cardPresetWrap = document.getElementById('style-card-preset');
+        const cardSelectMap = {
+            'style-card-radius': 'cardRadius',
+            'style-card-shadow': 'cardShadow',
+            'style-card-img-aspect': 'cardImageAspect',
+            'style-card-img-fit': 'cardImageFit',
+            'style-card-img-padding': 'cardImagePadding',
+            'style-card-align': 'cardContentAlign',
+            'style-card-meta': 'cardMetaMode',
+            'style-card-discount-badge': 'cardDiscountBadge',
+            'style-card-price-size': 'cardPriceSize',
+            'style-card-btn-style': 'cardButtonStyle',
+            'style-card-action-mode': 'cardActionMode',
+            'style-card-wishlist-mode': 'cardWishlistMode',
+            'style-card-img-hover': 'cardImageHover',
+            'style-card-hover-lift': 'cardHoverLift'
+        };
+        const cardCheckboxMap = {
+            'style-card-old-price': 'cardShowOldPrice',
+            'style-card-status-badges': 'cardShowStatusBadges'
+        };
+
+        const syncGlobalCardUI = () => {
+            const g = this.theme.globalStyles;
+            if (cardPresetWrap) {
+                const activePreset = g.cardPreset || 'commercial';
+                cardPresetWrap.querySelectorAll('button[data-value]').forEach(btn => {
+                    btn.classList.toggle('is-selected', btn.getAttribute('data-value') === activePreset);
+                });
+            }
+            if (cardStyleContainer) {
+                const activeCardStyle = g.cardStyle || 'elevated';
+                cardStyleContainer.querySelectorAll('.card-style-opt').forEach(btn => {
+                    btn.classList.toggle('is-selected', btn.getAttribute('data-value') === activeCardStyle);
+                });
+            }
+            Object.entries(cardSelectMap).forEach(([elId, propKey]) => {
+                const el = document.getElementById(elId);
+                if (el) {
+                    el.value = g[propKey] !== undefined && g[propKey] !== null
+                        ? String(g[propKey])
+                        : String(DEFAULT_GLOBAL_CARD_STYLES[propKey]);
+                }
+            });
+            Object.entries(cardCheckboxMap).forEach(([elId, propKey]) => {
+                const chk = document.getElementById(elId);
+                if (chk) {
+                    chk.checked = g[propKey] !== undefined && g[propKey] !== null
+                        ? Boolean(g[propKey])
+                        : Boolean(DEFAULT_GLOBAL_CARD_STYLES[propKey]);
+                }
+            });
+        };
+
+        if (cardPresetWrap) {
+            cardPresetWrap.querySelectorAll('button[data-value]').forEach(btn => {
+                btn.onclick = () => {
+                    const presetKey = btn.getAttribute('data-value');
+                    const presetConfig = CARD_STYLE_PRESETS[presetKey];
+                    if (!presetConfig) return;
+                    Object.assign(this.theme.globalStyles, presetConfig);
+                    syncGlobalCardUI();
+                    this.pushLiveStylesToIframe();
+                    this.scheduleAutoSave(false);
+                };
+            });
+        }
+
+        Object.entries(cardSelectMap).forEach(([elId, propKey]) => {
+            const el = document.getElementById(elId);
+            if (!el) return;
+            el.onchange = () => {
+                this.theme.globalStyles[propKey] = el.value;
+                this.pushLiveStylesToIframe();
+                this.scheduleAutoSave(false);
+            };
+        });
+
+        Object.entries(cardCheckboxMap).forEach(([elId, propKey]) => {
+            const chk = document.getElementById(elId);
+            if (!chk) return;
+            chk.onchange = () => {
+                this.theme.globalStyles[propKey] = chk.checked;
+                this.pushLiveStylesToIframe();
+                this.scheduleAutoSave(false);
+            };
+        });
+
+        const cardsResetBtn = document.getElementById('style-cards-reset');
+        if (cardsResetBtn) {
+            cardsResetBtn.onclick = () => {
+                Object.assign(this.theme.globalStyles, CARD_STYLE_PRESETS.commercial);
+                syncGlobalCardUI();
+                this.pushLiveStylesToIframe();
+                this.scheduleAutoSave(false);
+                if (window.Storevo && Storevo.UI && Storevo.UI.Toast) {
+                    Storevo.UI.Toast.show('Estilo de tarjetas restablecido', 'info');
+                }
+            };
+        }
+
+        syncGlobalCardUI();
+
+        // =====================================================================
+        // 4.C SISTEMA GLOBAL DE PÁGINA DE DETALLE DEL PRODUCTO
+        // =====================================================================
+        const DETAIL_STYLE_PRESETS = {
+            conversion: {
+                detailPreset: 'conversion',
+                detailInfoStyle: 'buybox',
+                detailStickyMode: 'sticky_info',
+                detailGalleryPosition: 'left',
+                detailLayoutRatio: '50_50',
+                detailGalleryLayout: 'bottom',
+                detailGalleryArrows: true,
+                detailImageAspect: 'square',
+                detailImageFit: 'cover',
+                detailImageZoom: true,
+                detailBuyLayout: 'standard',
+                detailVariantStyle: 'rounded',
+                detailShowBreadcrumbs: true,
+                detailShowMeta: true,
+                detailShowSku: true,
+                detailShowSavingsBadge: true,
+                detailShowStock: true,
+                detailShowTrustStrip: true,
+                detailShowShare: true,
+                detailShowSpecs: true,
+                detailSpecsOpen: 'collapsed',
+                detailShowPolicies: true,
+                detailShowRelated: true,
+                detailRelatedCols: '4'
+            },
+            fashion_lookbook: {
+                detailPreset: 'fashion_lookbook',
+                detailInfoStyle: 'clean',
+                detailStickyMode: 'sticky_info',
+                detailGalleryPosition: 'left',
+                detailLayoutRatio: '60_40',
+                detailGalleryLayout: 'grid',
+                detailGalleryArrows: true,
+                detailImageAspect: 'portrait',
+                detailImageFit: 'cover',
+                detailImageZoom: true,
+                detailBuyLayout: 'stacked',
+                detailVariantStyle: 'pills',
+                detailShowBreadcrumbs: true,
+                detailShowMeta: true,
+                detailShowSku: false,
+                detailShowSavingsBadge: true,
+                detailShowStock: true,
+                detailShowTrustStrip: true,
+                detailShowShare: true,
+                detailShowSpecs: true,
+                detailSpecsOpen: 'collapsed',
+                detailShowPolicies: true,
+                detailShowRelated: true,
+                detailRelatedCols: '3'
+            },
+            tech_specs: {
+                detailPreset: 'tech_specs',
+                detailInfoStyle: 'card',
+                detailStickyMode: 'sticky_gallery',
+                detailGalleryPosition: 'left',
+                detailLayoutRatio: '45_55',
+                detailGalleryLayout: 'bottom',
+                detailGalleryArrows: true,
+                detailImageAspect: 'square',
+                detailImageFit: 'contain',
+                detailImageZoom: true,
+                detailBuyLayout: 'side_by_side',
+                detailVariantStyle: 'rounded',
+                detailShowBreadcrumbs: true,
+                detailShowMeta: true,
+                detailShowSku: true,
+                detailShowSavingsBadge: true,
+                detailShowStock: true,
+                detailShowTrustStrip: true,
+                detailShowShare: true,
+                detailShowSpecs: true,
+                detailSpecsOpen: 'expanded',
+                detailShowPolicies: true,
+                detailShowRelated: true,
+                detailRelatedCols: '4'
+            },
+            luxury_boutique: {
+                detailPreset: 'luxury_boutique',
+                detailInfoStyle: 'clean',
+                detailStickyMode: 'sticky_info',
+                detailGalleryPosition: 'left',
+                detailLayoutRatio: '50_50',
+                detailGalleryLayout: 'left',
+                detailGalleryArrows: false,
+                detailImageAspect: 'tall',
+                detailImageFit: 'cover',
+                detailImageZoom: true,
+                detailBuyLayout: 'stacked',
+                detailVariantStyle: 'underline',
+                detailShowBreadcrumbs: false,
+                detailShowMeta: true,
+                detailShowSku: false,
+                detailShowSavingsBadge: false,
+                detailShowStock: false,
+                detailShowTrustStrip: true,
+                detailShowShare: true,
+                detailShowSpecs: true,
+                detailSpecsOpen: 'collapsed',
+                detailShowPolicies: true,
+                detailShowRelated: true,
+                detailRelatedCols: '3'
+            },
+            express_sale: {
+                detailPreset: 'express_sale',
+                detailInfoStyle: 'card',
+                detailStickyMode: 'sticky_info',
+                detailGalleryPosition: 'left',
+                detailLayoutRatio: '50_50',
+                detailGalleryLayout: 'carousel',
+                detailGalleryArrows: true,
+                detailImageAspect: 'square',
+                detailImageFit: 'cover',
+                detailImageZoom: false,
+                detailBuyLayout: 'stacked',
+                detailVariantStyle: 'pills',
+                detailShowBreadcrumbs: false,
+                detailShowMeta: true,
+                detailShowSku: false,
+                detailShowSavingsBadge: true,
+                detailShowStock: true,
+                detailShowTrustStrip: true,
+                detailShowShare: true,
+                detailShowSpecs: true,
+                detailSpecsOpen: 'collapsed',
+                detailShowPolicies: true,
+                detailShowRelated: true,
+                detailRelatedCols: '4'
+            },
+            urban_drop: {
+                detailPreset: 'urban_drop',
+                detailInfoStyle: 'outlined',
+                detailStickyMode: 'sticky_info',
+                detailGalleryPosition: 'left',
+                detailLayoutRatio: '60_40',
+                detailGalleryLayout: 'stack',
+                detailGalleryArrows: true,
+                detailImageAspect: 'square',
+                detailImageFit: 'cover',
+                detailImageZoom: true,
+                detailBuyLayout: 'side_by_side',
+                detailVariantStyle: 'square',
+                detailShowBreadcrumbs: true,
+                detailShowMeta: true,
+                detailShowSku: true,
+                detailShowSavingsBadge: true,
+                detailShowStock: true,
+                detailShowTrustStrip: true,
+                detailShowShare: true,
+                detailShowSpecs: true,
+                detailSpecsOpen: 'collapsed',
+                detailShowPolicies: true,
+                detailShowRelated: true,
+                detailRelatedCols: '4'
+            }
+        };
+
+        const DEFAULT_GLOBAL_DETAIL_STYLES = DETAIL_STYLE_PRESETS.conversion;
+        Object.entries(DEFAULT_GLOBAL_DETAIL_STYLES).forEach(([k, defVal]) => {
+            if (gs[k] === undefined || gs[k] === null) {
+                gs[k] = defVal;
+            }
+        });
+
+        const detailPresetWrap = document.getElementById('style-detail-preset');
+        const detailInfoStyleWrap = document.getElementById('style-detail-info-style');
+
+        const detailSelectMap = {
+            'style-detail-gallery-pos': 'detailGalleryPosition',
+            'style-detail-layout-ratio': 'detailLayoutRatio',
+            'style-detail-sticky': 'detailStickyMode',
+            'style-detail-gallery-layout': 'detailGalleryLayout',
+            'style-detail-img-aspect': 'detailImageAspect',
+            'style-detail-img-fit': 'detailImageFit',
+            'style-detail-buy-layout': 'detailBuyLayout',
+            'style-detail-variant-style': 'detailVariantStyle',
+            'style-detail-specs-open': 'detailSpecsOpen',
+            'style-detail-related-cols': 'detailRelatedCols'
+        };
+
+        const detailCheckboxMap = {
+            'style-detail-gallery-arrows': 'detailGalleryArrows',
+            'style-detail-img-zoom': 'detailImageZoom',
+            'style-detail-breadcrumbs': 'detailShowBreadcrumbs',
+            'style-detail-meta': 'detailShowMeta',
+            'style-detail-savings': 'detailShowSavingsBadge',
+            'style-detail-sku': 'detailShowSku',
+            'style-detail-share': 'detailShowShare',
+            'style-detail-stock': 'detailShowStock',
+            'style-detail-trust': 'detailShowTrustStrip',
+            'style-detail-specs': 'detailShowSpecs',
+            'style-detail-policies': 'detailShowPolicies',
+            'style-detail-related': 'detailShowRelated'
+        };
+
+        const syncGlobalDetailUI = () => {
+            const g = this.theme.globalStyles;
+            if (detailPresetWrap) {
+                const activePreset = g.detailPreset || 'conversion';
+                detailPresetWrap.querySelectorAll('button[data-value]').forEach(btn => {
+                    btn.classList.toggle('is-selected', btn.getAttribute('data-value') === activePreset);
+                });
+            }
+            if (detailInfoStyleWrap) {
+                const activeInfoStyle = g.detailInfoStyle || 'clean';
+                detailInfoStyleWrap.querySelectorAll('button[data-value]').forEach(btn => {
+                    btn.classList.toggle('is-selected', btn.getAttribute('data-value') === activeInfoStyle);
+                });
+            }
+            Object.entries(detailSelectMap).forEach(([elId, propKey]) => {
+                const el = document.getElementById(elId);
+                if (el) {
+                    el.value = g[propKey] !== undefined && g[propKey] !== null
+                        ? String(g[propKey])
+                        : String(DEFAULT_GLOBAL_DETAIL_STYLES[propKey]);
+                }
+            });
+            Object.entries(detailCheckboxMap).forEach(([elId, propKey]) => {
+                const chk = document.getElementById(elId);
+                if (chk) {
+                    chk.checked = g[propKey] !== undefined && g[propKey] !== null
+                        ? Boolean(g[propKey])
+                        : Boolean(DEFAULT_GLOBAL_DETAIL_STYLES[propKey]);
+                }
+            });
+        };
+
+        if (detailPresetWrap) {
+            detailPresetWrap.querySelectorAll('button[data-value]').forEach(btn => {
+                btn.onclick = () => {
+                    const presetKey = btn.getAttribute('data-value');
+                    const presetConfig = DETAIL_STYLE_PRESETS[presetKey];
+                    if (!presetConfig) return;
+                    Object.assign(this.theme.globalStyles, presetConfig);
+                    syncGlobalDetailUI();
+                    this.pushLiveStylesToIframe();
+                    this.scheduleAutoSave(false);
+                };
+            });
+        }
+
+        if (detailInfoStyleWrap) {
+            detailInfoStyleWrap.querySelectorAll('button[data-value]').forEach(btn => {
+                btn.onclick = () => {
+                    this.theme.globalStyles.detailInfoStyle = btn.getAttribute('data-value') || 'clean';
+                    syncGlobalDetailUI();
+                    this.pushLiveStylesToIframe();
+                    this.scheduleAutoSave(false);
+                };
+            });
+        }
+
+        Object.entries(detailSelectMap).forEach(([elId, propKey]) => {
+            const el = document.getElementById(elId);
+            if (!el) return;
+            el.onchange = () => {
+                this.theme.globalStyles[propKey] = el.value;
+                this.pushLiveStylesToIframe();
+                this.scheduleAutoSave(false);
+            };
+        });
+
+        Object.entries(detailCheckboxMap).forEach(([elId, propKey]) => {
+            const chk = document.getElementById(elId);
+            if (!chk) return;
+            chk.onchange = () => {
+                this.theme.globalStyles[propKey] = chk.checked;
+                this.pushLiveStylesToIframe();
+                this.scheduleAutoSave(false);
+            };
+        });
+
+        const detailResetBtn = document.getElementById('style-detail-reset');
+        if (detailResetBtn) {
+            detailResetBtn.onclick = () => {
+                Object.assign(this.theme.globalStyles, DETAIL_STYLE_PRESETS.conversion);
+                syncGlobalDetailUI();
+                this.pushLiveStylesToIframe();
+                this.scheduleAutoSave(false);
+                if (window.Storevo && Storevo.UI && Storevo.UI.Toast) {
+                    Storevo.UI.Toast.show('Configuración de ficha de producto restablecida', 'info');
+                }
+            };
+        }
+
+        syncGlobalDetailUI();
         // =====================================================================
         // 5. SISTEMA GLOBAL DE FILTROS Y BÚSQUEDA
         // Los handlers leen this.theme.globalStyles EN EL MOMENTO del evento

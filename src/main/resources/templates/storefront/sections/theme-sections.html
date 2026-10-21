@@ -313,7 +313,7 @@
 <section th:fragment="spotlight-product(sec)"
          th:with="rawProdId=${sec.settingStr('productId', '')},
                   targetId=${sec.settingLong('productId')},
-                  badgeText=${sec.settingStr('badgeText', '🔥 Producto Estrella')},
+                  badgeText=${sec.settingStr('badgeText', '⭐ Producto Estrella')},
                   customTitle=${sec.settingStr('customTitle', '')},
                   customSubtitle=${sec.settingStr('customSubtitle', '')},
                   imageSide=${sec.settingStr('imageSide', 'left')},
@@ -332,34 +332,43 @@
     <div th:if="${not #lists.isEmpty(matchedList)}" class="sv-spotlight-wrapper">
         <div th:with="sp=${matchedList[0]},
                       isOutOfStock=${!sp.isMadeToOrder and (sp.stock == null or sp.stock <= 0)},
-                      effectivePrice=${sp.discountPrice != null and sp.discountPrice > 0 ? sp.discountPrice : sp.price},
+                      hasDiscount=${sp.discountPrice != null and sp.discountPrice > 0 and sp.price != null and sp.price > sp.discountPrice},
+                      discountPct=${hasDiscount ? T(java.lang.Math).round(((sp.price - sp.discountPrice) * 100.0) / sp.price) : 0},
+                      effectivePrice=${hasDiscount ? sp.discountPrice : sp.price},
                       spImg=${sp.mainImageUrl != null ? sp.mainImageUrl : '/img/placeholder.jpg'}"
              th:attr="data-image-side=${imageSide}"
              class="product-card sv-spotlight-card bg-white text-slate-900 store-radius shadow-xl border border-slate-100">
             <div class="sv-spotlight-media">
                 <a th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${sp.id})}" class="block w-full h-full">
-                    <img th:src="${spImg}" th:alt="${sp.name}" class="w-full h-full object-cover hover:scale-105 transition-transform duration-500">
+                    <img th:src="${spImg}" th:alt="${sp.name}" class="sv-spotlight-img w-full h-full object-cover hover:scale-105 transition-transform duration-500">
                 </a>
                 <div class="absolute top-4 left-4 flex flex-col gap-2 z-10 pointer-events-none">
                     <span th:if="${!#strings.isEmpty(badgeText)}" class="bg-brand text-white text-xs font-black uppercase tracking-wider px-3.5 py-1.5 rounded-full shadow-md" th:text="${badgeText}"></span>
-                    <span th:if="${sp.discountPrice != null and sp.discountPrice > 0}" class="bg-red-500 text-white text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full shadow-md w-fit">En Oferta</span>
+                    <th:block th:if="${hasDiscount}">
+                        <span class="sv-card__discount-badge sv-badge-percent bg-red-500 text-white text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full shadow-md w-fit"
+                              th:text="'-' + ${discountPct} + '%'">-15%</span>
+                        <span class="sv-card__discount-badge sv-badge-label bg-red-500 text-white text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full shadow-md w-fit">En Oferta</span>
+                    </th:block>
                 </div>
             </div>
             <div class="sv-spotlight-body space-y-4">
                 <div>
-                    <p class="text-xs font-black uppercase tracking-widest text-brand mb-1"
-                       th:text="${sp.category != null ? sp.category.name : 'Destacado'}">Categoría</p>
+                    <div class="sv-card__meta flex items-center gap-2 flex-wrap text-xs font-black uppercase tracking-widest text-brand mb-1">
+                        <span class="sv-meta-cat" th:text="${sp.category != null ? sp.category.name : 'Destacado'}">Categoría</span>
+                        <span th:if="${sp.brand != null and !sp.brand.isBlank()}" class="sv-meta-sep opacity-50">•</span>
+                        <span th:if="${sp.brand != null and !sp.brand.isBlank()}" class="sv-meta-brand" th:text="${sp.brand}">Marca</span>
+                    </div>
                     <a th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${sp.id})}">
                         <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight hover:text-brand transition-colors"
                             th:text="${!#strings.isEmpty(customTitle) ? customTitle : sp.name}">Producto Estrella</h2>
                     </a>
                 </div>
-                <div class="flex items-end gap-3 flex-wrap">
+                <div class="sv-card__prices flex items-end gap-3 flex-wrap">
                     <span th:if="${sp.hasVariants}" class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1.5">Desde</span>
-                    <span class="text-3xl font-black text-slate-900"
+                    <span class="sv-card__price text-3xl font-black text-slate-900"
                           th:text="${'$ ' + #numbers.formatDecimal(effectivePrice, 1, 'POINT', 0, 'COMMA')}">$0</span>
-                    <span th:if="${sp.discountPrice != null and sp.discountPrice > 0}"
-                          class="text-lg text-slate-400 line-through font-medium mb-1"
+                    <span th:if="${hasDiscount}"
+                          class="sv-card__old-price text-lg text-slate-400 line-through font-medium mb-1"
                           th:text="${'$ ' + #numbers.formatDecimal(sp.price, 1, 'POINT', 0, 'COMMA')}">$0</span>
                 </div>
                 <p class="text-sm sm:text-base text-slate-600 leading-relaxed line-clamp-3 whitespace-pre-line"
@@ -368,16 +377,16 @@
                     <button th:if="${!sp.hasVariants and !isOutOfStock}"
                             type="button" th:data-slug="${slug}" th:data-id="${sp.id}"
                             onclick="buyNowFast(this.getAttribute('data-slug'), this.getAttribute('data-id'))"
-                            class="flex-1 bg-brand hover-bg-brand text-white font-bold py-3.5 px-6 rounded-xl shadow-md transition text-center text-sm">
+                            class="sv-card__cta-btn flex-1 bg-brand hover-bg-brand text-white font-bold py-3.5 px-6 rounded-xl shadow-md transition text-center text-sm">
                         Comprar ahora
                     </button>
                     <a th:if="${sp.hasVariants and !isOutOfStock}"
                        th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${sp.id})}"
-                       class="flex-1 bg-brand hover-bg-brand text-white font-bold py-3.5 px-6 rounded-xl shadow-md transition text-center text-sm">
+                       class="sv-card__cta-btn flex-1 bg-brand hover-bg-brand text-white font-bold py-3.5 px-6 rounded-xl shadow-md transition text-center text-sm">
                         Elegir opciones
                     </a>
                     <a th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${sp.id})}"
-                       class="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-3.5 px-6 rounded-xl transition text-center text-sm">
+                       class="sv-card__cta-btn bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-3.5 px-6 rounded-xl transition text-center text-sm">
                         Ver ficha completa
                     </a>
                 </div>
@@ -1072,17 +1081,16 @@
 <!-- ======================================================================= -->
 <section th:fragment="product-main(sec)"
          th:if="${product != null}"
-         th:with="galleryLayout=${sec.settingStr('galleryLayout', 'bottom')},
-                  showBreadcrumbs=${sec.settingBool('showBreadcrumbs', true)},
-                  showSku=${sec.settingBool('showSku', true)},
-                  showStockCounter=${sec.settingBool('showStockCounter', true)},
-                  showSpecs=${sec.settingBool('showSpecs', true)},
-                  showPolicies=${sec.settingBool('showPolicies', true)},
-                  showRelatedProducts=${sec.settingBool('showRelatedProducts', true)},
+         th:with="gs=${theme != null and theme.globalStyles != null ? theme.globalStyles : null},
+                  galleryLayout=${gs != null and gs.detailGalleryLayout != null ? gs.detailGalleryLayout : sec.settingStr('galleryLayout', 'bottom')},
+                  specsExpanded=${gs != null and gs.detailSpecsOpen == 'expanded'},
+                  relatedCols=${gs != null and gs.detailRelatedCols != null ? gs.detailRelatedCols : '4'},
+                  hasProductDiscount=${product.discountPrice != null and product.discountPrice > 0 and product.price != null and product.price > product.discountPrice},
+                  productDiscountPct=${hasProductDiscount and product.price > 0 ? T(java.lang.Math).round(((product.price - product.discountPrice) * 100.0) / product.price) : 0},
                   relatedTitle=${sec.settingStr('relatedTitle', 'También te puede interesar')},
                   relatedSubtitle=${sec.settingStr('relatedSubtitle', 'Otros productos de nuestro catálogo')}">
     <!-- Miga de pan -->
-    <div th:if="${showBreadcrumbs}" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 border-b border-slate-200/30">
+    <div class="sv-detail-breadcrumbs-wrap max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 border-b border-slate-200/30">
         <nav class="flex text-sm store-muted font-medium overflow-x-auto whitespace-nowrap">
             <a th:href="@{/s/{slug}(slug=${slug})}" class="hover:text-brand transition">Inicio</a>
             <span class="mx-2 opacity-50">/</span>
@@ -1093,149 +1101,220 @@
             <span class="store-heading font-bold truncate max-w-[200px]" th:text="${product.name}">Prod</span>
         </nav>
     </div>
+
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 lg:py-14">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16">
-            <!-- Galería de Imágenes con 3 layouts configurables (bottom | left | grid) -->
+        <div class="sv-detail-main-grid grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16">
+            <!-- Galería de Imágenes con 5 layouts configurables (bottom | left | grid | stack | carousel) -->
             <div class="sv-product-gallery" th:attr="data-gallery-layout=${galleryLayout}">
-                <div class="sv-product-gallery__main aspect-[4/5] sm:aspect-square store-radius overflow-hidden bg-white border border-slate-200/80 relative shadow-sm">
+                <div class="sv-product-gallery__main group aspect-[4/5] sm:aspect-square store-radius overflow-hidden bg-white border border-slate-200/80 relative shadow-sm">
                     <div class="absolute top-4 left-4 flex flex-col gap-1.5 z-10 pointer-events-none">
-                        <span th:if="${product.discountPrice != null and product.discountPrice > 0}" class="bg-red-500 text-white text-xs font-black uppercase px-3 py-1.5 rounded-full shadow-lg">Oferta</span>
+                        <span th:if="${hasProductDiscount}"
+                              class="bg-red-500 text-white text-xs font-black uppercase px-3 py-1.5 rounded-full shadow-lg"
+                              th:text="${productDiscountPct > 0 ? '-' + productDiscountPct + '% Oferta' : 'Oferta'}">Oferta</span>
                         <span th:if="${product.isMadeToOrder}" class="bg-amber-500 text-white text-xs font-black uppercase px-3 py-1.5 rounded-full shadow-lg">Bajo pedido</span>
                     </div>
                     <img id="main-product-image"
                          th:src="${product.mainImageUrl != null ? product.mainImageUrl : '/img/placeholder.jpg'}"
                          th:alt="${product.name}"
-                         class="w-full h-full object-cover transition-opacity duration-300">
+                         class="w-full h-full object-cover transition-all duration-300">
+
+                    <!-- Flechas de navegación y contador 1/N sobre la imagen principal cuando el producto tiene múltiples fotos -->
+                    <th:block th:if="${product.images != null and product.images.size() > 1}">
+                        <button type="button"
+                                onclick="window.StorevoDetailGallery && window.StorevoDetailGallery.step(-1, event)"
+                                aria-label="Foto anterior"
+                                title="Foto anterior"
+                                class="sv-detail-gallery-arrow sv-detail-gallery-arrow--prev">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path></svg>
+                        </button>
+                        <button type="button"
+                                onclick="window.StorevoDetailGallery && window.StorevoDetailGallery.step(1, event)"
+                                aria-label="Siguiente foto"
+                                title="Siguiente foto"
+                                class="sv-detail-gallery-arrow sv-detail-gallery-arrow--next">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
+                        </button>
+                        <span id="sv-detail-img-counter"
+                              class="sv-detail-img-counter-badge"
+                              th:text="'1 / ' + ${product.images.size()}">1 / 2</span>
+                    </th:block>
                 </div>
+
                 <div th:if="${product.images != null and product.images.size() > 1}" class="sv-product-gallery__thumbs">
                     <th:block th:with="seenUrls=${new java.util.HashSet()}">
                         <button th:each="img : ${product.images}"
                                 th:if="${seenUrls.add(img.secureUrl)}"
                                 type="button"
-                                th:data-src="${img.secureUrl}" onclick="Storevo.ProductDetail.changeImage(this)"
-                                class="product-thumbnail aspect-square rounded-xl overflow-hidden border-2 transition-all duration-200 bg-white"
+                                th:data-src="${img.secureUrl}"
+                                onclick="window.StorevoDetailGallery ? window.StorevoDetailGallery.onThumbClick(this, event) : Storevo.ProductDetail.changeImage(this)"
+                                class="product-thumbnail relative aspect-square rounded-xl overflow-hidden border-2 transition-all duration-200 bg-white"
                                 th:classappend="${img.isPrimary ? 'border-brand shadow-md ring-2 ring-brand/20' : 'border-transparent hover:border-slate-300 opacity-70 hover:opacity-100'}">
                             <img th:src="${img.getThumbnailUrl() != null ? img.getThumbnailUrl() : img.secureUrl}" th:alt="${product.name}" class="w-full h-full object-cover">
+                            <span class="sv-thumb-more-overlay hidden"></span>
                         </button>
                     </th:block>
+                    <button type="button"
+                            id="sv-detail-thumbs-collapse-btn"
+                            onclick="window.StorevoDetailGallery && window.StorevoDetailGallery.toggleExpand(false, event)"
+                            class="sv-thumb-collapse-btn hidden">
+                        Ver menos fotos ↑
+                    </button>
                 </div>
-            </div>
 
-            <!-- Información del Producto -->
-            <div class="flex flex-col">
-                <div class="flex items-center justify-between mb-2">
-                    <p class="text-xs font-black tracking-widest uppercase text-brand" th:text="${product.brand != null ? product.brand : (product.category != null ? product.category.name : '')}">Marca</p>
-                    <p id="dynamic-sku"
-                       th:style="${!showSku ? 'display:none;' : ''}"
-                       class="text-xs font-mono text-slate-600 bg-white border border-slate-200 px-2.5 py-1 rounded-lg shadow-sm"
-                       th:classappend="${product.sku == null or product.hasVariants ? 'hidden' : ''}"
-                       th:text="${product.sku != null ? 'SKU: ' + product.sku : ''}">SKU</p>
-                </div>
-                <h1 class="text-3xl sm:text-4xl font-black store-heading tracking-tight leading-tight mb-5" th:text="${product.name}">Nombre</h1>
-                <!-- Precio -->
-                <div class="flex items-end gap-3 mb-6 flex-wrap">
-                    <span id="dynamic-price-prefix" th:if="${product.hasVariants}" class="text-sm font-bold store-muted uppercase tracking-widest mb-1.5">Desde</span>
-                    <span id="dynamic-price" class="text-4xl font-black store-heading transition-colors duration-300"
-                          th:text="${'$ ' + #numbers.formatDecimal((product.discountPrice != null and product.discountPrice > 0 ? product.discountPrice : product.price), 1, 'POINT', 0, 'COMMA')}">$0</span>
-                    <span id="dynamic-old-price" th:if="${product.discountPrice != null and product.discountPrice > 0}"
-                          class="text-xl store-muted line-through font-medium mb-1"
-                          th:text="${'$ ' + #numbers.formatDecimal(product.price, 1, 'POINT', 0, 'COMMA')}">$0</span>
-                </div>
-                <div th:if="${product.description != null and !product.description.isBlank()}"
-                     class="prose prose-slate prose-sm mb-6 store-muted leading-relaxed whitespace-pre-line"
-                     th:text="${product.description}">Descripción</div>
-                <div th:if="${product.hasVariants}" class="mb-8 space-y-6 border-y border-slate-200/40 py-6">
-                    <div th:each="opt : ${product.options}" class="variant-option-group" th:data-option-name="${opt.name}">
-                        <div class="flex justify-between items-center mb-3">
-                            <p class="text-xs font-bold uppercase tracking-wider store-heading" th:text="${opt.name}">Opción</p>
-                            <span class="text-xs text-red-500 font-bold hidden option-error animate-pulse">¡Selecciona una opción!</span>
-                        </div>
-                        <div class="flex flex-wrap gap-2.5">
-                            <button th:each="val : ${opt.values}" type="button"
-                                    class="opt-btn px-5 py-2.5 border-2 border-slate-200 rounded-xl text-sm font-bold text-slate-700 hover:border-brand hover:text-brand transition-all bg-white shadow-sm"
-                                    th:data-value="${val.valueName}"
-                                    th:text="${val.valueName}">Valor</button>
-                        </div>
+            <!-- Columna de Información del Producto -->
+            <div class="sv-detail-info-col flex flex-col">
+                <div class="flex items-center justify-between gap-2 mb-2">
+                    <p class="sv-detail-meta-wrap text-xs font-black tracking-widest uppercase text-brand"
+                       th:text="${product.brand != null ? product.brand : (product.category != null ? product.category.name : '')}">Marca</p>
+                    <div class="flex items-center gap-2 ml-auto">
+                        <p id="dynamic-sku"
+                           class="sv-detail-sku-el text-xs font-mono text-slate-600 bg-white border border-slate-200 px-2.5 py-1 rounded-lg shadow-sm"
+                           th:classappend="${product.sku == null or product.hasVariants ? 'hidden' : ''}"
+                           th:text="${product.sku != null ? 'SKU: ' + product.sku : ''}">SKU</p>
+                        <button type="button"
+                                onclick="window.StorevoDetailGallery && window.StorevoDetailGallery.share(event)"
+                                title="Compartir producto"
+                                class="sv-detail-share-btn inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-brand bg-white border border-slate-200 hover:border-brand px-2.5 py-1 rounded-lg shadow-sm transition">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
+                            <span>Compartir</span>
+                        </button>
                     </div>
                 </div>
-                <form id="add-to-cart-form" th:action="@{/s/{slug}/cart/add(slug=${slug})}" method="POST" class="mt-auto space-y-6">
-                    <input type="hidden" name="productId" th:value="${product.id}">
-                    <input type="hidden" name="variantId" id="selectedVariantId" value="">
-                    <div class="flex flex-col sm:flex-row gap-4"
-                         th:with="blockedByStock=${!product.isMadeToOrder and (product.stock == null or product.stock <= 0)}">
-                        <div class="w-full sm:w-1/3">
-                            <label for="detail-quantity-input" class="block text-xs font-bold uppercase tracking-wider store-muted mb-2">Cantidad</label>
-                            <div class="flex items-center border border-slate-200 rounded-xl bg-white overflow-hidden h-14 shadow-sm">
-                                <button type="button" data-qty-step="-1" aria-label="Disminuir cantidad" class="w-12 h-full text-slate-600 hover:text-brand hover:bg-slate-100 transition flex items-center justify-center font-bold text-lg">-</button>
-                                <input type="number" id="detail-quantity-input" name="quantity" value="1" min="1"
-                                       th:attr="max=${(product.isMadeToOrder or product.hasVariants) ? null : product.stock}"
-                                       class="flex-1 w-full h-full text-center bg-transparent border-none focus:ring-0 font-bold text-slate-900 text-lg p-0">
-                                <button type="button" data-qty-step="1" aria-label="Aumentar cantidad" class="w-12 h-full text-slate-600 hover:text-brand hover:bg-slate-100 transition flex items-center justify-center font-bold text-lg">+</button>
+
+                <h1 class="text-3xl sm:text-4xl font-black store-heading tracking-tight leading-tight mb-5" th:text="${product.name}">Nombre</h1>
+
+                <div th:if="${product.description != null and !product.description.isBlank()}"
+                     class="sv-detail-description prose prose-slate prose-sm mb-6 store-muted leading-relaxed whitespace-pre-line"
+                     th:text="${product.description}">Descripción</div>
+
+                <!-- Contenedor Comercial de Compra (Buy-Box: Precios + Variantes + Botones + Confianza) -->
+                <div class="sv-detail-buybox flex flex-col">
+                    <!-- Precio e Insignia de Ahorro -->
+                    <div class="sv-detail-price-row flex items-end gap-3 mb-6 flex-wrap">
+                        <span id="dynamic-price-prefix" th:if="${product.hasVariants}" class="text-sm font-bold store-muted uppercase tracking-widest mb-1.5">Desde</span>
+                        <span id="dynamic-price" class="text-4xl font-black store-heading transition-colors duration-300"
+                              th:text="${'$ ' + #numbers.formatDecimal((product.discountPrice != null and product.discountPrice > 0 ? product.discountPrice : product.price), 1, 'POINT', 0, 'COMMA')}">$0</span>
+                        <span id="dynamic-old-price" th:if="${hasProductDiscount}"
+                              class="text-xl store-muted line-through font-medium mb-1"
+                              th:text="${'$ ' + #numbers.formatDecimal(product.price, 1, 'POINT', 0, 'COMMA')}">$0</span>
+                        <span th:if="${hasProductDiscount and productDiscountPct > 0}"
+                              class="sv-detail-savings-badge inline-flex items-center px-2.5 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-emerald-500/15 text-emerald-700 border border-emerald-500/30 mb-1.5"
+                              th:text="'Ahorras ' + ${productDiscountPct} + '%'">Ahorras 20%</span>
+                    </div>
+
+                    <!-- Selector de Variantes (Intacto para productDetail.js) -->
+                    <div th:if="${product.hasVariants}" class="mb-8 space-y-6 border-y border-slate-200/40 py-6">
+                        <div th:each="opt : ${product.options}" class="variant-option-group" th:data-option-name="${opt.name}">
+                            <div class="flex justify-between items-center mb-3">
+                                <p class="text-xs font-bold uppercase tracking-wider store-heading" th:text="${opt.name}">Opción</p>
+                                <span class="text-xs text-red-500 font-bold hidden option-error animate-pulse">¡Selecciona una opción!</span>
                             </div>
-                            <p id="dynamic-stock"
-                               th:style="${!showStockCounter ? 'display:none;' : ''}"
-                               class="text-xs mt-2 font-medium transition-colors"
-                               th:classappend="${blockedByStock ? 'text-red-500 font-bold' : 'store-muted'}"
-                               th:text="${blockedByStock ? 'Agotado' : (product.hasVariants ? 'Selecciona tus opciones' : (product.isMadeToOrder ? 'Bajo pedido' : 'Stock disponible: ' + product.stock))}">Stock</p>
+                            <div class="flex flex-wrap gap-2.5">
+                                <button th:each="val : ${opt.values}" type="button"
+                                        class="opt-btn px-5 py-2.5 border-2 border-slate-200 rounded-xl text-sm font-bold text-slate-700 hover:border-brand hover:text-brand transition-all bg-white shadow-sm"
+                                        th:data-value="${val.valueName}"
+                                        th:text="${val.valueName}">Valor</button>
+                            </div>
                         </div>
-                        <div class="w-full sm:w-2/3 flex flex-col gap-3 justify-end">
-                            <button th:if="${!product.isMadeToOrder}"
-                                    type="button"
-                                    id="btn-buy-now"
-                                    th:disabled="${blockedByStock or product.id == 0}"
-                                    th:data-slug="${slug}"
-                                    onclick="Storevo.ProductDetail.buyNow(this, this.getAttribute('data-slug'))"
-                                    th:class="${blockedByStock ? 'h-14 w-full bg-slate-300 text-white font-bold rounded-xl cursor-not-allowed text-lg' : 'h-14 w-full bg-brand hover-bg-brand text-white font-bold rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 text-lg'}">
-                                <span th:text="${blockedByStock ? 'Agotado' : 'Comprar ahora'}">Comprar ahora</span>
-                            </button>
-                            <th:block th:if="${product.isMadeToOrder}">
-                                <button th:if="${settings.whatsapp != null and !settings.whatsapp.isBlank()}"
+                    </div>
+
+                    <!-- Formulario de Compra -->
+                    <form id="add-to-cart-form" th:action="@{/s/{slug}/cart/add(slug=${slug})}" method="POST" class="mt-auto space-y-6">
+                        <input type="hidden" name="productId" th:value="${product.id}">
+                        <input type="hidden" name="variantId" id="selectedVariantId" value="">
+                        <div class="sv-detail-purchase-row flex flex-col sm:flex-row gap-4"
+                             th:with="blockedByStock=${!product.isMadeToOrder and (product.stock == null or product.stock <= 0)}">
+                            <div class="sv-detail-qty-col w-full sm:w-1/3">
+                                <label for="detail-quantity-input" class="block text-xs font-bold uppercase tracking-wider store-muted mb-2">Cantidad</label>
+                                <div class="flex items-center border border-slate-200 rounded-xl bg-white overflow-hidden h-14 shadow-sm">
+                                    <button type="button" data-qty-step="-1" aria-label="Disminuir cantidad" class="w-12 h-full text-slate-600 hover:text-brand hover:bg-slate-100 transition flex items-center justify-center font-bold text-lg">-</button>
+                                    <input type="number" id="detail-quantity-input" name="quantity" value="1" min="1"
+                                           th:attr="max=${(product.isMadeToOrder or product.hasVariants) ? null : product.stock}"
+                                           class="flex-1 w-full h-full text-center bg-transparent border-none focus:ring-0 font-bold text-slate-900 text-lg p-0">
+                                    <button type="button" data-qty-step="1" aria-label="Aumentar cantidad" class="w-12 h-full text-slate-600 hover:text-brand hover:bg-slate-100 transition flex items-center justify-center font-bold text-lg">+</button>
+                                </div>
+                                <p id="dynamic-stock"
+                                   class="sv-detail-stock-el text-xs mt-2 font-medium transition-colors"
+                                   th:classappend="${blockedByStock ? 'text-red-500 font-bold' : 'store-muted'}"
+                                   th:text="${blockedByStock ? 'Agotado' : (product.hasVariants ? 'Selecciona tus opciones' : (product.isMadeToOrder ? 'Bajo pedido' : 'Stock disponible: ' + product.stock))}">Stock</p>
+                            </div>
+                            <div class="sv-detail-actions-col w-full sm:w-2/3 flex flex-col gap-3 justify-end">
+                                <button th:if="${!product.isMadeToOrder}"
                                         type="button"
-                                        id="btn-buy-whatsapp"
+                                        id="btn-buy-now"
+                                        th:disabled="${blockedByStock or product.id == 0}"
                                         th:data-slug="${slug}"
                                         onclick="Storevo.ProductDetail.buyNow(this, this.getAttribute('data-slug'))"
-                                        class="h-14 w-full bg-[#25D366] hover:bg-[#1ebd5c] text-white font-bold rounded-xl shadow-lg shadow-green-500/30 transition-all flex items-center justify-center gap-2 text-lg">
-                                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.305-.88-.653-1.473-1.46-1.646-1.757-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
-                                    <span>Pedir por WhatsApp</span>
+                                        th:class="${blockedByStock ? 'sv-detail-primary-btn h-14 w-full bg-slate-300 text-white font-bold rounded-xl cursor-not-allowed text-lg' : 'sv-detail-primary-btn h-14 w-full bg-brand hover-bg-brand text-white font-bold rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 text-lg'}">
+                                    <span th:text="${blockedByStock ? 'Agotado' : 'Comprar ahora'}">Comprar ahora</span>
                                 </button>
-                                <button type="button" th:if="${settings.whatsapp == null or settings.whatsapp.isBlank()}"
-                                        onclick="Storevo.UI.Toast.show('WhatsApp no configurado por la tienda', 'warning')"
-                                        class="h-14 w-full bg-slate-300 text-white font-bold rounded-xl cursor-not-allowed flex items-center justify-center gap-2 text-lg">
-                                    <span>WhatsApp no disponible</span>
-                                </button>
-                            </th:block>
-                            <div class="flex items-center gap-3">
-                                <button id="btn-add-cart" type="submit" th:disabled="${blockedByStock or product.id == 0}"
-                                        th:class="${blockedByStock ? 'h-14 flex-1 bg-slate-100 text-slate-400 font-bold rounded-xl cursor-not-allowed text-base sm:text-lg border-2 border-slate-200' : 'h-14 flex-1 bg-white text-slate-900 border-2 border-slate-200 hover:border-brand hover:text-brand font-bold rounded-xl transition-all flex items-center justify-center gap-2 text-base sm:text-lg px-4 shadow-sm'}">
-                                    <svg class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
-                                    <span th:text="${blockedByStock ? 'Agotado' : 'Agregar a la Bolsa'}">Agregar a la Bolsa</span>
-                                </button>
-                                <button type="button" th:data-slug="${slug}" th:data-id="${product.id}"
-                                        th:disabled="${product.id == 0}"
-                                        onclick="toggleWishlistItem(this, this.getAttribute('data-slug'), this.getAttribute('data-id'))"
-                                        title="Guardar en Favoritos" aria-label="Guardar en Favoritos"
-                                        th:class="${wishlistProductIds != null and wishlistProductIds.contains(product.id)} ? 'h-14 w-14 flex-shrink-0 bg-white border-2 border-red-500 text-red-500 font-bold rounded-xl transition-all flex items-center justify-center shadow-sm' : 'h-14 w-14 flex-shrink-0 bg-white border-2 border-slate-200 hover:border-red-500 hover:text-red-500 text-slate-600 font-bold rounded-xl transition-all flex items-center justify-center shadow-sm'">
-                                    <svg class="w-6 h-6 icon-heart-empty" th:classappend="${wishlistProductIds != null and wishlistProductIds.contains(product.id)} ? 'hidden' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
-                                    <svg class="w-6 h-6 icon-heart-filled" th:classappend="${wishlistProductIds == null or !wishlistProductIds.contains(product.id)} ? 'hidden' : 'text-red-500'" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L12 8.343l3.172-3.171a4 4 0 115.656 5.656L12 21.414l-8.828-8.828a4 4 0 010-5.656z" clip-rule="evenodd"></path></svg>
-                                </button>
+                                <th:block th:if="${product.isMadeToOrder}">
+                                    <button th:if="${settings.whatsapp != null and !settings.whatsapp.isBlank()}"
+                                            type="button"
+                                            id="btn-buy-whatsapp"
+                                            th:data-slug="${slug}"
+                                            onclick="Storevo.ProductDetail.buyNow(this, this.getAttribute('data-slug'))"
+                                            class="sv-detail-primary-btn h-14 w-full bg-[#25D366] hover:bg-[#1ebd5c] text-white font-bold rounded-xl shadow-lg shadow-green-500/30 transition-all flex items-center justify-center gap-2 text-lg">
+                                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.305-.88-.653-1.473-1.46-1.646-1.757-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+                                        <span>Pedir por WhatsApp</span>
+                                    </button>
+                                    <button type="button" th:if="${settings.whatsapp == null or settings.whatsapp.isBlank()}"
+                                            onclick="Storevo.UI.Toast.show('WhatsApp no configurado por la tienda', 'warning')"
+                                            class="sv-detail-primary-btn h-14 w-full bg-slate-300 text-white font-bold rounded-xl cursor-not-allowed flex items-center justify-center gap-2 text-lg">
+                                        <span>WhatsApp no disponible</span>
+                                    </button>
+                                </th:block>
+                                <div class="sv-detail-secondary-row flex items-center gap-3">
+                                    <button id="btn-add-cart" type="submit" th:disabled="${blockedByStock or product.id == 0}"
+                                            th:class="${blockedByStock ? 'h-14 flex-1 bg-slate-100 text-slate-400 font-bold rounded-xl cursor-not-allowed text-base sm:text-lg border-2 border-slate-200' : 'h-14 flex-1 bg-white text-slate-900 border-2 border-slate-200 hover:border-brand hover:text-brand font-bold rounded-xl transition-all flex items-center justify-center gap-2 text-base sm:text-lg px-4 shadow-sm'}">
+                                        <svg class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+                                        <span th:text="${blockedByStock ? 'Agotado' : 'Agregar a la Bolsa'}">Agregar a la Bolsa</span>
+                                    </button>
+                                    <button type="button" th:data-slug="${slug}" th:data-id="${product.id}"
+                                            th:disabled="${product.id == 0}"
+                                            onclick="toggleWishlistItem(this, this.getAttribute('data-slug'), this.getAttribute('data-id'))"
+                                            title="Guardar en Favoritos" aria-label="Guardar en Favoritos"
+                                            th:class="${wishlistProductIds != null and wishlistProductIds.contains(product.id)} ? 'h-14 w-14 flex-shrink-0 bg-white border-2 border-red-500 text-red-500 font-bold rounded-xl transition-all flex items-center justify-center shadow-sm' : 'h-14 w-14 flex-shrink-0 bg-white border-2 border-slate-200 hover:border-red-500 hover:text-red-500 text-slate-600 font-bold rounded-xl transition-all flex items-center justify-center shadow-sm'">
+                                        <svg class="w-6 h-6 icon-heart-empty" th:classappend="${wishlistProductIds != null and wishlistProductIds.contains(product.id)} ? 'hidden' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+                                        <svg class="w-6 h-6 icon-heart-filled" th:classappend="${wishlistProductIds == null or !wishlistProductIds.contains(product.id)} ? 'hidden' : 'text-red-500'" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L12 8.343l3.172-3.171a4 4 0 115.656 5.656L12 21.414l-8.828-8.828a4 4 0 010-5.656z" clip-rule="evenodd"></path></svg>
+                                    </button>
+                                </div>
                             </div>
                         </div>
+                    </form>
+
+                    <!-- Micro-Franja de Confianza bajo los botones de compra -->
+                    <div class="sv-detail-trust-strip grid grid-cols-3 gap-2 pt-5 mt-5 border-t border-slate-200/50 text-center">
+                        <div class="flex flex-col items-center gap-1 p-2 rounded-xl bg-white/70 border border-slate-200/60">
+                            <svg class="w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                            <span class="text-[11px] font-bold text-slate-700 leading-tight">Compra Protegida</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-1 p-2 rounded-xl bg-white/70 border border-slate-200/60">
+                            <svg class="w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
+                            <span class="text-[11px] font-bold text-slate-700 leading-tight">Envíos Seguros</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-1 p-2 rounded-xl bg-white/70 border border-slate-200/60">
+                            <svg class="w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+                            <span class="text-[11px] font-bold text-slate-700 leading-tight">Soporte Directo</span>
+                        </div>
                     </div>
-                </form>
+                </div>
 
                 <!-- Especificaciones Técnicas y Políticas -->
                 <div class="mt-8 border-t border-slate-200/40 divide-y divide-slate-200/40">
                     <!-- Especificaciones Técnicas -->
-                    <div th:if="${showSpecs and ((product.attributes != null and !product.attributes.isEmpty()) or product.hasVariants)}">
+                    <div class="sv-detail-specs-wrap" th:if="${(product.attributes != null and !product.attributes.isEmpty()) or product.hasVariants}">
                         <button type="button"
                                 data-accordion-target="specs-content" data-accordion-icon="specs-icon"
                                 class="w-full flex justify-between items-center py-4 group transition-colors">
                             <h3 class="text-base font-bold store-heading group-hover:text-brand transition-colors">Especificaciones Técnicas</h3>
                             <span class="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center group-hover:bg-brand/10 transition-colors">
-                                <svg id="specs-icon" class="w-5 h-5 text-slate-500 group-hover:text-brand transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                <svg id="specs-icon" class="w-5 h-5 text-slate-500 group-hover:text-brand transition-transform duration-300"
+                                     th:classappend="${specsExpanded ? 'rotate-180' : ''}"
+                                     fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                             </span>
                         </button>
-                        <div id="specs-content" class="pb-5 hidden transition-all duration-300">
+                        <div id="specs-content" class="pb-5 transition-all duration-300" th:classappend="${!specsExpanded ? 'hidden' : ''}">
                             <div class="bg-white text-slate-900 p-5 store-radius border border-slate-200/80 shadow-sm">
                                 <div id="specs-list" class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2">
                                     <th:block th:if="${product.attributes != null}">
@@ -1250,9 +1329,8 @@
                             </div>
                         </div>
                     </div>
-
                     <!-- Política de Envíos -->
-                    <div th:if="${showPolicies and settings != null and settings.showShippingPolicy and settings.shippingPolicyText != null and !settings.shippingPolicyText.isBlank()}">
+                    <div class="sv-detail-policies-wrap" th:if="${settings != null and settings.showShippingPolicy and settings.shippingPolicyText != null and !settings.shippingPolicyText.isBlank()}">
                         <button type="button"
                                 data-accordion-target="shipping-policy-content" data-accordion-icon="shipping-policy-icon"
                                 class="w-full flex justify-between items-center py-4 group transition-colors">
@@ -1269,9 +1347,8 @@
                                  th:text="${settings.shippingPolicyText}"></div>
                         </div>
                     </div>
-
                     <!-- Política de Devoluciones -->
-                    <div th:if="${showPolicies and settings != null and settings.showReturnPolicy and settings.returnPolicyText != null and !settings.returnPolicyText.isBlank()}">
+                    <div class="sv-detail-policies-wrap" th:if="${settings != null and settings.showReturnPolicy and settings.returnPolicyText != null and !settings.returnPolicyText.isBlank()}">
                         <button type="button"
                                 data-accordion-target="return-policy-content" data-accordion-icon="return-policy-icon"
                                 class="w-full flex justify-between items-center py-4 group transition-colors">
@@ -1291,10 +1368,9 @@
                 </div>
             </div>
         </div>
-
         <!-- Productos Relacionados usando la tarjeta única -->
-        <div th:if="${showRelatedProducts and relatedProducts != null and not #lists.isEmpty(relatedProducts)}"
-             class="mt-16 pt-12 border-t border-slate-200/40">
+        <div th:if="${relatedProducts != null and not #lists.isEmpty(relatedProducts)}"
+             class="sv-detail-related-wrap mt-16 pt-12 border-t border-slate-200/40">
             <div class="flex items-center justify-between mb-8">
                 <div>
                     <h2 class="text-2xl font-black store-heading tracking-tight" th:text="${relatedTitle}">También te puede interesar</h2>
@@ -1302,7 +1378,9 @@
                 </div>
                 <a th:href="@{/s/{slug}/catalog(slug=${slug})}" class="text-sm font-bold text-brand hover:underline">Ver catálogo →</a>
             </div>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
+            <div id="sv-detail-related-grid"
+                 th:attr="data-cols=${relatedCols == '3' ? '3' : '4'}"
+                 class="sv-catalog-grid grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
                 <th:block th:each="p, pStat : ${relatedProducts}">
                     <div th:replace="~{components/storefront/product-card :: productCard(${p}, 'rel', ${pStat.index}, false, '', true)}"></div>
                 </th:block>

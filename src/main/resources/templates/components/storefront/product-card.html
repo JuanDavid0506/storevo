@@ -23,7 +23,7 @@
               data-made-to-order=${p.isMadeToOrder},
               data-stock=${p.stock != null ? p.stock : 0},
               data-out-of-stock=${isOutOfStock}"
-     th:class="'product-card group bg-white text-slate-900 store-radius overflow-hidden border border-slate-200/80 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between relative ' + (${extraClasses != null ? extraClasses : ''})">
+     th:class="'product-card sv-product-card group bg-white text-slate-900 overflow-hidden border border-slate-200/80 transition-all duration-300 flex flex-col justify-between relative ' + (${extraClasses != null ? extraClasses : ''})">
 
     <!-- Puente de datos de filtrado para storeCatalog.js (100% invisible en la UI) -->
     <div class="sv-card-filter-meta hidden"
@@ -57,110 +57,181 @@
         </th:block>
     </div>
 
-    <!-- Imagen y Badges -->
-    <div class="relative aspect-[4/5] w-full bg-slate-100 overflow-hidden">
-        <a th:unless="${isDeleted}"
-           th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${p.id}, preview=${isDraftPreview == true ? 'draft' : null})}"
-           class="block w-full h-full">
-            <img th:src="${imgUrl}"
-                 th:alt="${p.name}"
-                 loading="lazy"
-                 decoding="async"
-                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
-        </a>
-        <div th:if="${isDeleted}" class="w-full h-full flex items-center justify-center bg-slate-200 text-slate-500 text-xs font-bold p-4 text-center">
-            No disponible
-        </div>
+    <!-- Construcción de la lista de imágenes únicas para el Carrusel Interactivo y Hover -->
+    <th:block th:with="cardImages=${new java.util.ArrayList()},
+                       seenCardUrls=${new java.util.HashSet()},
+                       initMain=${imgUrl != null ? (seenCardUrls.add(imgUrl) ? cardImages.add(imgUrl) : false) : false}">
+        <th:block th:if="${p.images != null and T(org.hibernate.Hibernate).isInitialized(p.images)}">
+            <th:block th:each="imgObj : ${p.images}">
+                <th:block th:if="${imgObj != null}"
+                          th:with="candidateUrl=${imgObj.getThumbnailUrl() != null and !imgObj.getThumbnailUrl().isBlank() ? imgObj.getThumbnailUrl() : imgObj.secureUrl}">
+                    <th:block th:if="${candidateUrl != null and !candidateUrl.isBlank() and !seenCardUrls.contains(candidateUrl) and (imgObj.secureUrl == null or imgObj.secureUrl != p.mainImageUrl)}"
+                              th:with="added=${seenCardUrls.add(candidateUrl) ? cardImages.add(candidateUrl) : false}"></th:block>
+                </th:block>
+            </th:block>
+        </th:block>
 
-        <!-- Etiquetas Superiores Izquierda -->
-        <div class="absolute top-3 left-3 flex flex-col gap-1.5 z-10 pointer-events-none">
-            <span th:if="${hasDiscount}"
-                  class="bg-red-500 text-white text-[10px] sm:text-xs font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow-md w-fit"
-                  th:text="${showDiscountPercent and discountPct > 0 ? '-' + discountPct + '%' : 'Oferta'}">Oferta</span>
-            <span th:if="${p.isMadeToOrder}"
-                  class="bg-amber-500 text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow-md w-fit">
-                Bajo pedido
-            </span>
-            <span th:if="${isOutOfStock and !isDeleted}"
-                  class="bg-slate-900/85 text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow-md w-fit">
-                Agotado
-            </span>
-        </div>
+        <!-- Imagen, Carrusel Táctil / Flechas y Badges -->
+        <div class="sv-card__media-outer">
+            <div class="sv-card__media relative w-full bg-slate-100 overflow-hidden"
+                 th:attr="data-has-second-image=${cardImages.size() > 1},
+                          data-image-count=${cardImages.size()}">
+                <!-- Pista deslizable de fotos (Touch Swipe en móvil + Flechas en PC) -->
+                <div th:unless="${isDeleted}" class="sv-card__track w-full h-full">
+                    <a th:each="slideUrl, slideStat : ${cardImages}"
+                       th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${p.id}, preview=${isDraftPreview == true ? 'draft' : null})}"
+                       class="sv-card__slide block w-full h-full relative select-none"
+                       th:attr="data-slide-idx=${slideStat.index}">
+                        <img th:src="${slideUrl}"
+                             th:alt="${p.name}"
+                             loading="lazy"
+                             decoding="async"
+                             draggable="false"
+                             class="sv-card__img-primary w-full h-full object-cover transition-transform duration-500">
+                    </a>
+                </div>
 
-        <!-- Botón Favoritos (Derecha) -->
-        <button type="button"
-                th:data-slug="${slug}"
-                th:data-id="${p.id}"
-                onclick="toggleWishlistItem(this, this.getAttribute('data-slug'), this.getAttribute('data-id'))"
-                title="Guardar en Favoritos"
-                aria-label="Guardar en Favoritos"
-                class="absolute top-3 right-3 z-10 w-9 h-9 rounded-full bg-white/90 backdrop-blur-sm hover:bg-white shadow-md flex items-center justify-center transition-transform active:scale-95"
-                th:classappend="${inWishlist ? 'text-red-500' : 'text-slate-600 hover:text-red-500'}">
-            <svg class="w-4 h-4 icon-heart-empty" th:classappend="${inWishlist ? 'hidden' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
-            </svg>
-            <svg class="w-4 h-4 icon-heart-filled" th:classappend="${!inWishlist ? 'hidden' : 'text-red-500'}" fill="currentColor" viewBox="0 0 24 24">
-                <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L12 8.343l3.172-3.171a4 4 0 115.656 5.656L12 21.414l-8.828-8.828a4 4 0 010-5.656z" clip-rule="evenodd"></path>
-            </svg>
-        </button>
-    </div>
+                <!-- Imagen secundaria superpuesta exclusiva para el modo 'second_image' en Hover -->
+                <img th:if="${!isDeleted and cardImages.size() > 1}"
+                     th:src="${cardImages[1]}"
+                     th:alt="${p.name}"
+                     loading="lazy"
+                     decoding="async"
+                     class="sv-card__img-secondary absolute inset-0 w-full h-full object-cover opacity-0 transition-all duration-500 pointer-events-none">
 
-    <!-- Cuerpo de la Tarjeta -->
-    <div class="p-4 flex flex-col flex-1 justify-between gap-3">
-        <div>
-            <p th:if="${p.brand != null and !p.brand.isBlank()}"
-               class="text-[10px] font-black uppercase tracking-widest text-brand truncate mb-0.5"
-               th:text="${p.brand}">Marca</p>
-            <p th:if="${(p.brand == null or p.brand.isBlank()) and p.category != null}"
-               class="text-[10px] font-bold uppercase tracking-wider text-slate-400 truncate mb-0.5"
-               th:text="${p.category.name}">Categoría</p>
+                <div th:if="${isDeleted}" class="w-full h-full flex items-center justify-center bg-slate-200 text-slate-500 text-xs font-bold p-4 text-center">
+                    No disponible
+                </div>
 
-            <a th:unless="${isDeleted}"
-               th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${p.id}, preview=${isDraftPreview == true ? 'draft' : null})}">
-                <h3 class="product-title font-bold text-slate-900 group-hover:text-brand text-sm sm:text-base leading-snug line-clamp-2 transition-colors"
-                    th:text="${p.name}">Producto</h3>
-            </a>
-            <h3 th:if="${isDeleted}" class="product-title font-bold text-slate-400 text-sm sm:text-base leading-snug line-clamp-2" th:text="${p.name}">Producto</h3>
-        </div>
+                <!-- Flechas Laterales (Izquierda / Derecha) cuando el producto tiene 2+ fotos -->
+                <th:block th:if="${!isDeleted and cardImages.size() > 1}">
+                    <button type="button"
+                            onclick="window.StorevoCardCarousel && window.StorevoCardCarousel.step(this, -1, event)"
+                            aria-label="Foto anterior"
+                            title="Foto anterior"
+                            class="sv-card__arrow sv-card__arrow--prev">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path></svg>
+                    </button>
+                    <button type="button"
+                            onclick="window.StorevoCardCarousel && window.StorevoCardCarousel.step(this, 1, event)"
+                            aria-label="Siguiente foto"
+                            title="Siguiente foto"
+                            class="sv-card__arrow sv-card__arrow--next">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
+                    </button>
 
-        <div class="space-y-3 pt-1">
-            <!-- Precios -->
-            <div class="flex items-baseline gap-2 flex-wrap">
-                <span th:if="${p.hasVariants}" class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Desde</span>
-                <span class="text-base sm:text-lg font-black text-slate-900"
-                      th:text="${'$ ' + #numbers.formatDecimal(effectivePrice, 1, 'POINT', 0, 'COMMA')}">$ 0</span>
-                <span th:if="${hasDiscount}"
-                      class="text-xs text-slate-400 line-through font-medium"
-                      th:text="${'$ ' + #numbers.formatDecimal(p.price, 1, 'POINT', 0, 'COMMA')}">$ 0</span>
-            </div>
+                    <!-- Indicadores de posición (Dots) -->
+                    <div class="sv-card__dots">
+                        <button th:each="dotUrl, dotStat : ${cardImages}"
+                                type="button"
+                                onclick="window.StorevoCardCarousel && window.StorevoCardCarousel.goTo(this, Number(this.getAttribute('data-dot-idx')), event)"
+                                th:attr="data-dot-idx=${dotStat.index}"
+                                aria-label="Ver imagen"
+                                class="sv-card__dot"
+                                th:classappend="${dotStat.index == 0 ? 'is-active' : ''}"></button>
+                    </div>
+                </th:block>
 
-            <!-- Botón de Acción -->
-            <div th:unless="${isDeleted}">
-                <button th:if="${!p.hasVariants and !isOutOfStock and !p.isMadeToOrder}"
-                        type="button"
+                <!-- Degradado cinematográfico para modo Poster Inmersivo -->
+                <div class="sv-card__poster-scrim pointer-events-none"></div>
+
+                <!-- Etiquetas Superiores Izquierda -->
+                <div class="sv-card__badges absolute top-3 left-3 flex flex-col gap-1.5 z-20 pointer-events-none">
+                    <th:block th:if="${hasDiscount}">
+                        <span class="sv-card__discount-badge sv-badge-percent bg-red-500 text-white text-[10px] sm:text-xs font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow-md w-fit"
+                              th:text="${discountPct > 0 ? '-' + discountPct + '%' : 'Oferta'}">-15%</span>
+                        <span class="sv-card__discount-badge sv-badge-label bg-red-500 text-white text-[10px] sm:text-xs font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow-md w-fit">Oferta</span>
+                    </th:block>
+                    <span th:if="${p.isMadeToOrder}"
+                          class="sv-card__status-badge bg-amber-500 text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow-md w-fit">
+                        Bajo pedido
+                    </span>
+                    <span th:if="${isOutOfStock and !isDeleted}"
+                          class="sv-card__status-badge bg-slate-900/85 text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow-md w-fit">
+                        Agotado
+                    </span>
+                </div>
+
+                <!-- Botón Favoritos (Derecha) -->
+                <button type="button"
                         th:data-slug="${slug}"
                         th:data-id="${p.id}"
-                        onclick="buyNowFast(this.getAttribute('data-slug'), this.getAttribute('data-id'))"
-                        class="w-full py-2.5 px-3 rounded-xl bg-brand hover-bg-brand text-white font-bold text-xs sm:text-sm shadow-sm transition text-center">
-                    Comprar ahora
+                        onclick="toggleWishlistItem(this, this.getAttribute('data-slug'), this.getAttribute('data-id'))"
+                        title="Guardar en Favoritos"
+                        aria-label="Guardar en Favoritos"
+                        class="sv-card__wishlist-btn absolute top-3 right-3 z-20 w-9 h-9 rounded-full bg-white/90 backdrop-blur-sm hover:bg-white shadow-md flex items-center justify-center transition-all active:scale-95"
+                        th:classappend="${inWishlist ? 'text-red-500' : 'text-slate-600 hover:text-red-500'}">
+                    <svg class="w-4 h-4 icon-heart-empty" th:classappend="${inWishlist ? 'hidden' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                    </svg>
+                    <svg class="w-4 h-4 icon-heart-filled" th:classappend="${!inWishlist ? 'hidden' : 'text-red-500'}" fill="currentColor" viewBox="0 0 24 24">
+                        <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L12 8.343l3.172-3.171a4 4 0 115.656 5.656L12 21.414l-8.828-8.828a4 4 0 010-5.656z" clip-rule="evenodd"></path>
+                    </svg>
                 </button>
-                <a th:if="${p.hasVariants and !isOutOfStock}"
-                   th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${p.id}, preview=${isDraftPreview == true ? 'draft' : null})}"
-                   class="block w-full py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-brand text-white font-bold text-xs sm:text-sm transition text-center">
-                    Ver opciones
-                </a>
-                <a th:if="${p.isMadeToOrder and !p.hasVariants}"
-                   th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${p.id}, preview=${isDraftPreview == true ? 'draft' : null})}"
-                   class="block w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm transition text-center">
-                    Pedir por encargo
-                </a>
-                <span th:if="${isOutOfStock}"
-                      class="block w-full py-2.5 px-3 rounded-xl bg-slate-100 text-slate-400 font-bold text-xs sm:text-sm text-center cursor-not-allowed">
-                    Agotado
-                </span>
             </div>
         </div>
-    </div>
+
+        <!-- Cuerpo de la Tarjeta -->
+        <div class="sv-card__body p-4 flex flex-col flex-1 justify-between gap-3">
+            <div class="sv-card__info">
+                <div th:if="${p.category != null or (p.brand != null and !p.brand.isBlank())}"
+                     class="sv-card__meta flex items-center gap-1.5 flex-wrap mb-1">
+                    <span th:if="${p.category != null}"
+                          class="sv-meta-cat text-[10px] font-bold uppercase tracking-wider text-slate-400 truncate"
+                          th:text="${p.category.name}">Categoría</span>
+                    <span th:if="${p.category != null and p.brand != null and !p.brand.isBlank()}"
+                          class="sv-meta-sep text-[10px] text-slate-300">•</span>
+                    <span th:if="${p.brand != null and !p.brand.isBlank()}"
+                          class="sv-meta-brand text-[10px] font-black uppercase tracking-widest text-brand truncate"
+                          th:text="${p.brand}">Marca</span>
+                </div>
+
+                <a th:unless="${isDeleted}"
+                   th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${p.id}, preview=${isDraftPreview == true ? 'draft' : null})}">
+                    <h3 class="product-title sv-card__title font-bold text-slate-900 group-hover:text-brand text-sm sm:text-base leading-snug line-clamp-2 transition-colors"
+                        th:text="${p.name}">Producto</h3>
+                </a>
+                <h3 th:if="${isDeleted}" class="product-title sv-card__title font-bold text-slate-400 text-sm sm:text-base leading-snug line-clamp-2" th:text="${p.name}">Producto</h3>
+            </div>
+
+            <div class="sv-card__footer space-y-3 pt-1">
+                <!-- Precios -->
+                <div class="sv-card__prices flex items-baseline gap-2 flex-wrap">
+                    <span th:if="${p.hasVariants}" class="sv-card__price-from text-[10px] font-bold uppercase tracking-wider text-slate-400">Desde</span>
+                    <span class="sv-card__price text-base sm:text-lg font-black text-slate-900"
+                          th:text="${'$ ' + #numbers.formatDecimal(effectivePrice, 1, 'POINT', 0, 'COMMA')}">$ 0</span>
+                    <span th:if="${hasDiscount}"
+                          class="sv-card__old-price text-xs text-slate-400 line-through font-medium"
+                          th:text="${'$ ' + #numbers.formatDecimal(p.price, 1, 'POINT', 0, 'COMMA')}">$ 0</span>
+                </div>
+                <!-- Botón de Acción -->
+                <div th:unless="${isDeleted}" class="sv-card__cta-wrap">
+                    <button th:if="${!p.hasVariants and !isOutOfStock and !p.isMadeToOrder}"
+                            type="button"
+                            th:data-slug="${slug}"
+                            th:data-id="${p.id}"
+                            onclick="buyNowFast(this.getAttribute('data-slug'), this.getAttribute('data-id'))"
+                            class="sv-card__cta-btn w-full py-2.5 px-3 rounded-xl bg-brand hover-bg-brand text-white font-bold text-xs sm:text-sm shadow-sm transition text-center">
+                        Comprar ahora
+                    </button>
+                    <a th:if="${p.hasVariants and !isOutOfStock}"
+                       th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${p.id}, preview=${isDraftPreview == true ? 'draft' : null})}"
+                       class="sv-card__cta-btn block w-full py-2.5 px-3 rounded-xl bg-brand hover-bg-brand text-white font-bold text-xs sm:text-sm shadow-sm transition text-center">
+                        Ver opciones
+                    </a>
+                    <a th:if="${p.isMadeToOrder and !p.hasVariants}"
+                       th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${p.id}, preview=${isDraftPreview == true ? 'draft' : null})}"
+                       class="sv-card__cta-btn block w-full py-2.5 px-3 rounded-xl bg-brand hover-bg-brand text-white font-bold text-xs sm:text-sm shadow-sm transition text-center">
+                        Pedir por encargo
+                    </a>
+                    <span th:if="${isOutOfStock}"
+                          class="sv-card__cta-btn is-disabled block w-full py-2.5 px-3 rounded-xl bg-slate-100 text-slate-400 font-bold text-xs sm:text-sm text-center cursor-not-allowed">
+                        Agotado
+                    </span>
+                </div>
+            </div>
+        </div>
+    </th:block>
 </div>
 </body>
 </html>

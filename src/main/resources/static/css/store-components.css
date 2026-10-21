@@ -478,3 +478,816 @@ body[data-card-style="outlined"] .product-card:hover {
     overflow: hidden;
     box-shadow: 0 -20px 50px rgba(0, 0, 0, 0.25);
 }
+/* ==========================================================================
+   PERSONALIZACIÓN GLOBAL DE TARJETAS DE PRODUCTO Y PRODUCTO ESTRELLA
+   ========================================================================== */
+body .product-card,
+body .sv-spotlight-card {
+    border-radius: var(--sv-card-radius, var(--store-radius, 1rem)) !important;
+}
+
+/* --------------------------------------------------------------------------
+   1. CARRUSEL MULTI-IMAGEN INTERACTIVO (TOUCH SWIPE + FLECHAS + PUNTOS)
+   -------------------------------------------------------------------------- */
+.sv-card__track {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.sv-card__track::-webkit-scrollbar {
+    display: none;
+}
+.sv-card__slide {
+    flex: 0 0 100%;
+    width: 100%;
+    height: 100%;
+    scroll-snap-align: center;
+    scroll-snap-stop: always;
+}
+
+/* Si el modo de imagen NO es 'carousel', se desactiva el scroll horizontal y se ocultan flechas/puntos */
+body:not([data-sv-card-img-hover="carousel"]) .sv-card__track {
+    overflow-x: hidden !important;
+}
+body:not([data-sv-card-img-hover="carousel"]) .sv-card__arrow,
+body:not([data-sv-card-img-hover="carousel"]) .sv-card__dots {
+    display: none !important;
+}
+
+/* Flechas laterales izquierda / derecha en la tarjeta */
+.sv-card__arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 25;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.92);
+    color: #0f172a;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: opacity 0.2s ease, transform 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+}
+.sv-card__arrow--prev {
+    left: 0.5rem;
+}
+.sv-card__arrow--next {
+    right: 0.5rem;
+}
+.sv-card__arrow:hover {
+    background: var(--brand-color, #6366f1);
+    color: #ffffff;
+    transform: translateY(-50%) scale(1.08);
+}
+.sv-card__arrow:active {
+    transform: translateY(-50%) scale(0.95);
+}
+@media (hover: hover) and (min-width: 1024px) {
+    .sv-card__arrow {
+        opacity: 0;
+    }
+    .product-card:hover .sv-card__arrow {
+        opacity: 1;
+    }
+}
+
+/* Puntos indicadores (Dots) del carrusel */
+.sv-card__dots {
+    position: absolute;
+    bottom: 0.65rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 22;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 9999px;
+    background: rgba(15, 23, 42, 0.42);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+.sv-card__dot {
+    width: 0.38rem;
+    height: 0.38rem;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.55);
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: all 0.22s ease;
+}
+.sv-card__dot.is-active {
+    width: 0.95rem;
+    background: #ffffff;
+}
+
+/* --------------------------------------------------------------------------
+   2. ARQUITECTURAS ESTRUCTURALES DE TARJETA (cardStyle)
+   -------------------------------------------------------------------------- */
+.sv-card__poster-scrim {
+    display: none;
+}
+
+/* A. Editorial Limpia / Minimalista (clean) */
+body[data-card-style="clean"] .product-card:not(.sv-spotlight-card) {
+    background-color: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+}
+body[data-card-style="clean"] .product-card:not(.sv-spotlight-card) .sv-card__media {
+    border-radius: var(--sv-card-radius, var(--store-radius, 1rem)) !important;
+}
+body[data-card-style="clean"] .product-card:not(.sv-spotlight-card) .sv-card__body {
+    padding: 0.75rem 0.15rem 0.25rem !important;
+}
+
+/* B. Boutique Moda con Botón Flotante sobre la Foto (boutique) */
+body[data-card-style="boutique"] .product-card:not(.sv-spotlight-card) {
+    background-color: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+}
+body[data-card-style="boutique"] .product-card:not(.sv-spotlight-card) .sv-card__media {
+    border-radius: var(--sv-card-radius, var(--store-radius, 1rem)) !important;
+}
+body[data-card-style="boutique"] .product-card:not(.sv-spotlight-card) .sv-card__body {
+    padding: 0.75rem 0.25rem 0.25rem !important;
+}
+body[data-card-style="boutique"] .product-card:not(.sv-spotlight-card) .sv-card__cta-wrap {
+    position: absolute;
+    left: 0.65rem;
+    right: 0.65rem;
+    bottom: 5.5rem;
+    z-index: 24;
+}
+body[data-card-style="boutique"] .product-card:not(.sv-spotlight-card) .sv-card__cta-btn {
+    background-color: rgba(255, 255, 255, 0.94) !important;
+    color: #0f172a !important;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.25) !important;
+    border: 1px solid rgba(15, 23, 42, 0.08) !important;
+}
+body[data-card-style="boutique"] .product-card:not(.sv-spotlight-card) .sv-card__cta-btn:hover {
+    background-color: var(--brand-color) !important;
+    color: #ffffff !important;
+}
+
+/* C. Poster Inmersiva / Galería con Texto Superpuesto (poster) */
+body[data-card-style="poster"] .product-card:not(.sv-spotlight-card) {
+    min-height: 360px;
+    border: none !important;
+    background-color: #0f172a !important;
+    color: #ffffff !important;
+    justify-content: flex-end !important;
+}
+body[data-card-style="poster"] .product-card:not(.sv-spotlight-card) .sv-card__media-outer,
+body[data-card-style="poster"] .product-card:not(.sv-spotlight-card) .sv-card__media {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    aspect-ratio: unset !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+}
+body[data-card-style="poster"] .product-card:not(.sv-spotlight-card) .sv-card__poster-scrim {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: 12;
+    background: linear-gradient(to top, rgba(2, 6, 23, 0.92) 0%, rgba(2, 6, 23, 0.45) 48%, rgba(2, 6, 23, 0.05) 100%);
+}
+body[data-card-style="poster"] .product-card:not(.sv-spotlight-card) .sv-card__dots {
+    bottom: auto;
+    top: 0.9rem;
+}
+body[data-card-style="poster"] .product-card:not(.sv-spotlight-card) .sv-card__body {
+    position: relative;
+    z-index: 20;
+    flex: 0 0 auto !important;
+    padding: 1.15rem !important;
+    color: #ffffff !important;
+}
+body[data-card-style="poster"] .product-card:not(.sv-spotlight-card) .sv-card__title,
+body[data-card-style="poster"] .product-card:not(.sv-spotlight-card) .sv-card__price {
+    color: #ffffff !important;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+body[data-card-style="poster"] .product-card:not(.sv-spotlight-card) .sv-meta-cat,
+body[data-card-style="poster"] .product-card:not(.sv-spotlight-card) .sv-meta-brand,
+body[data-card-style="poster"] .product-card:not(.sv-spotlight-card) .sv-card__old-price,
+body[data-card-style="poster"] .product-card:not(.sv-spotlight-card) .sv-card__price-from {
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+
+/* D. Bento Marco Interno (bento) */
+body[data-card-style="bento"] .product-card:not(.sv-spotlight-card) {
+    background-color: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    padding: 0.6rem !important;
+}
+body[data-card-style="bento"] .product-card:not(.sv-spotlight-card) .sv-card__media {
+    border-radius: calc(var(--sv-card-radius, 1rem) * 0.78) !important;
+    box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.05);
+}
+body[data-card-style="bento"] .product-card:not(.sv-spotlight-card) .sv-card__body {
+    padding: 0.75rem 0.4rem 0.35rem !important;
+}
+
+/* E. Contorno Marcado Urbano / Neo-Brutalista (outlined) */
+body[data-card-style="outlined"] .product-card {
+    border: 2px solid var(--store-text, #0f172a) !important;
+    box-shadow: 3px 3px 0px var(--store-text, #0f172a) !important;
+}
+body[data-card-style="outlined"] .product-card:not(.sv-spotlight-card) .sv-card__media {
+    border-bottom: 2px solid var(--store-text, #0f172a);
+}
+body[data-card-style="outlined"] .product-card:hover {
+    box-shadow: 6px 6px 0px var(--brand-color, #6366f1) !important;
+    border-color: var(--brand-color, #6366f1) !important;
+    transform: translate(-2px, -2px) !important;
+}
+
+/* F. Tinte Suave (soft) */
+body[data-card-style="soft"] .product-card {
+    background-color: color-mix(in srgb, var(--brand-color, #6366f1) 5%, #f8fafc) !important;
+    border: 1px solid color-mix(in srgb, var(--brand-color, #6366f1) 16%, #e2e8f0) !important;
+}
+
+/* --------------------------------------------------------------------------
+   3. SOMBRAS, PROPORCIÓN DE IMAGEN Y MARGEN INTERNO
+   -------------------------------------------------------------------------- */
+body[data-sv-card-shadow="none"]:not([data-card-style="outlined"]) .product-card,
+body[data-sv-card-shadow="none"]:not([data-card-style="outlined"]) .product-card:hover {
+    box-shadow: none !important;
+}
+body[data-sv-card-shadow="sm"]:not([data-card-style="clean"]):not([data-card-style="boutique"]):not([data-card-style="outlined"]) .product-card {
+    box-shadow: 0 2px 6px -1px rgba(15, 23, 42, 0.08) !important;
+}
+body[data-sv-card-shadow="md"]:not([data-card-style="clean"]):not([data-card-style="boutique"]):not([data-card-style="outlined"]) .product-card {
+    box-shadow: 0 12px 28px -6px rgba(15, 23, 42, 0.14), 0 4px 10px -3px rgba(15, 23, 42, 0.07) !important;
+}
+body[data-sv-card-shadow="lg"]:not([data-card-style="clean"]):not([data-card-style="boutique"]):not([data-card-style="outlined"]) .product-card {
+    box-shadow: 0 22px 42px -10px rgba(15, 23, 42, 0.22), 0 10px 18px -6px rgba(15, 23, 42, 0.1) !important;
+}
+
+/* Proporción de foto en tarjetas (square | portrait | tall | landscape) */
+body[data-sv-card-img-aspect="square"]:not([data-card-style="poster"]) .product-card:not(.sv-spotlight-card) .sv-card__media,
+body:not([data-sv-card-img-aspect]):not([data-card-style="poster"]) .product-card:not(.sv-spotlight-card) .sv-card__media {
+    aspect-ratio: 1 / 1 !important;
+}
+body[data-sv-card-img-aspect="portrait"]:not([data-card-style="poster"]) .product-card:not(.sv-spotlight-card) .sv-card__media {
+    aspect-ratio: 4 / 5 !important;
+}
+body[data-sv-card-img-aspect="tall"]:not([data-card-style="poster"]) .product-card:not(.sv-spotlight-card) .sv-card__media {
+    aspect-ratio: 3 / 4 !important;
+}
+body[data-sv-card-img-aspect="landscape"]:not([data-card-style="poster"]) .product-card:not(.sv-spotlight-card) .sv-card__media {
+    aspect-ratio: 4 / 3 !important;
+}
+
+/* Ajuste de imagen (cover vs contain) */
+body[data-sv-card-img-fit="contain"] .product-card .sv-card__img-primary,
+body[data-sv-card-img-fit="contain"] .product-card .sv-card__img-extra,
+body[data-sv-card-img-fit="contain"] .product-card .sv-card__img-secondary,
+body[data-sv-card-img-fit="contain"] .sv-spotlight-card .sv-spotlight-img {
+    object-fit: contain !important;
+    background-color: #ffffff;
+    padding: 0.65rem;
+}
+
+/* Margen interno de imagen (inset) */
+body[data-sv-card-img-padding="inset"]:not([data-card-style="poster"]) .product-card:not(.sv-spotlight-card) .sv-card__media-outer {
+    padding: 0.65rem 0.65rem 0;
+}
+body[data-sv-card-img-padding="inset"]:not([data-card-style="poster"]) .product-card:not(.sv-spotlight-card) .sv-card__media {
+    border-radius: calc(var(--sv-card-radius, 1rem) * 0.78) !important;
+}
+
+/* --------------------------------------------------------------------------
+   4. ALINEACIÓN, METADATOS, PRECIOS Y ESTILOS DE BOTÓN DE COMPRA
+   -------------------------------------------------------------------------- */
+body[data-sv-card-align="center"] .product-card:not(.sv-spotlight-card) .sv-card__body {
+    text-align: center;
+}
+body[data-sv-card-align="center"] .product-card:not(.sv-spotlight-card) .sv-card__meta,
+body[data-sv-card-align="center"] .product-card:not(.sv-spotlight-card) .sv-card__prices {
+    justify-content: center;
+}
+
+/* Visibilidad de Categoría y Marca */
+body[data-sv-card-meta="none"] .product-card .sv-card__meta {
+    display: none !important;
+}
+body[data-sv-card-meta="category"] .product-card .sv-card__meta .sv-meta-brand,
+body[data-sv-card-meta="category"] .product-card .sv-card__meta .sv-meta-sep {
+    display: none !important;
+}
+body[data-sv-card-meta="brand"] .product-card .sv-card__meta .sv-meta-cat,
+body[data-sv-card-meta="brand"] .product-card .sv-card__meta .sv-meta-sep {
+    display: none !important;
+}
+
+/* Insignia de Descuento (percent | label | hidden) */
+body[data-sv-card-discount-badge="percent"] .product-card .sv-badge-label,
+body:not([data-sv-card-discount-badge]) .product-card .sv-badge-label {
+    display: none !important;
+}
+body[data-sv-card-discount-badge="label"] .product-card .sv-badge-percent {
+    display: none !important;
+}
+body[data-sv-card-discount-badge="hidden"] .product-card .sv-card__discount-badge {
+    display: none !important;
+}
+
+/* Etiquetas de estado y Precio anterior */
+body[data-sv-card-status-badges="false"] .product-card .sv-card__status-badge {
+    display: none !important;
+}
+body[data-sv-card-old-price="false"] .product-card .sv-card__old-price {
+    display: none !important;
+}
+body[data-sv-card-price-size="compact"] .product-card:not(.sv-spotlight-card) .sv-card__price {
+    font-size: 0.92rem !important;
+}
+body[data-sv-card-price-size="large"] .product-card:not(.sv-spotlight-card) .sv-card__price {
+    font-size: 1.3rem !important;
+}
+
+/* Estilos del botón de compra (cardButtonStyle: solid | outline | dark | split) */
+body[data-sv-card-btn-style="solid"]:not([data-card-style="boutique"]) .product-card:not(.sv-spotlight-card) .sv-card__cta-btn:not(.is-disabled),
+body[data-sv-card-btn-style="split"]:not([data-card-style="boutique"]) .product-card:not(.sv-spotlight-card) .sv-card__cta-btn:not(.is-disabled),
+body:not([data-sv-card-btn-style]):not([data-card-style="boutique"]) .product-card:not(.sv-spotlight-card) .sv-card__cta-btn:not(.is-disabled) {
+    background-color: var(--brand-color) !important;
+    color: #ffffff !important;
+    border: 1px solid var(--brand-color) !important;
+}
+body[data-sv-card-btn-style="solid"]:not([data-card-style="boutique"]) .product-card:not(.sv-spotlight-card) .sv-card__cta-btn:not(.is-disabled):hover,
+body[data-sv-card-btn-style="split"]:not([data-card-style="boutique"]) .product-card:not(.sv-spotlight-card) .sv-card__cta-btn:not(.is-disabled):hover {
+    filter: brightness(0.92);
+    background-color: var(--brand-color) !important;
+    color: #ffffff !important;
+}
+body[data-sv-card-btn-style="outline"] .product-card:not(.sv-spotlight-card) .sv-card__cta-btn:not(.is-disabled) {
+    background-color: transparent !important;
+    color: var(--brand-color) !important;
+    border: 2px solid var(--brand-color) !important;
+    box-shadow: none !important;
+}
+body[data-sv-card-btn-style="outline"] .product-card:not(.sv-spotlight-card) .sv-card__cta-btn:not(.is-disabled):hover {
+    background-color: var(--brand-color) !important;
+    color: #ffffff !important;
+}
+body[data-sv-card-btn-style="dark"] .product-card:not(.sv-spotlight-card) .sv-card__cta-btn:not(.is-disabled) {
+    background-color: #0f172a !important;
+    color: #ffffff !important;
+    border: 1px solid #0f172a !important;
+}
+body[data-sv-card-btn-style="dark"] .product-card:not(.sv-spotlight-card) .sv-card__cta-btn:not(.is-disabled):hover {
+    background-color: var(--brand-color) !important;
+    border-color: var(--brand-color) !important;
+}
+
+/* Modo Fila Dividida (split): Precio a la izquierda + Botón compacto a la derecha */
+body[data-sv-card-btn-style="split"]:not([data-card-style="boutique"]) .product-card:not(.sv-spotlight-card) .sv-card__footer {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 0.5rem !important;
+    padding-top: 0.5rem !important;
+    border-top: 1px solid rgba(226, 232, 240, 0.65);
+}
+body[data-sv-card-btn-style="split"]:not([data-card-style="boutique"]) .product-card:not(.sv-spotlight-card) .sv-card__footer > * + * {
+    margin-top: 0 !important;
+}
+body[data-sv-card-btn-style="split"]:not([data-card-style="boutique"]) .product-card:not(.sv-spotlight-card) .sv-card__cta-wrap {
+    flex-shrink: 0;
+}
+body[data-sv-card-btn-style="split"]:not([data-card-style="boutique"]) .product-card:not(.sv-spotlight-card) .sv-card__cta-btn {
+    width: auto !important;
+    padding: 0.45rem 0.85rem !important;
+    font-size: 0.72rem !important;
+    white-space: nowrap;
+}
+
+/* Visibilidad de Botón de Compra y Botón Favoritos (always | hover | hidden) */
+body[data-sv-card-action-mode="hidden"] .product-card:not(.sv-spotlight-card) .sv-card__cta-wrap {
+    display: none !important;
+}
+body[data-sv-card-wishlist-mode="hidden"] .product-card .sv-card__wishlist-btn {
+    display: none !important;
+}
+@media (hover: hover) and (min-width: 1024px) {
+    body[data-sv-card-action-mode="hover"] .product-card:not(.sv-spotlight-card) .sv-card__cta-wrap,
+    body[data-card-style="boutique"] .product-card:not(.sv-spotlight-card) .sv-card__cta-wrap {
+        opacity: 0;
+        transform: translateY(8px);
+        transition: opacity 0.22s ease, transform 0.22s ease;
+    }
+    body[data-sv-card-action-mode="hover"] .product-card:not(.sv-spotlight-card):hover .sv-card__cta-wrap,
+    body[data-card-style="boutique"] .product-card:not(.sv-spotlight-card):hover .sv-card__cta-wrap {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    body[data-sv-card-wishlist-mode="hover"] .product-card .sv-card__wishlist-btn {
+        opacity: 0;
+        transform: scale(0.88);
+    }
+    body[data-sv-card-wishlist-mode="hover"] .product-card:hover .sv-card__wishlist-btn {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* --------------------------------------------------------------------------
+   5. EFECTOS INTERACTIVOS EN FOTO Y ANIMACIONES DE TARJETA EN HOVER
+   -------------------------------------------------------------------------- */
+body[data-sv-card-img-hover="zoom"] .product-card:hover .sv-card__img-primary,
+body[data-sv-card-img-hover="zoom"] .sv-spotlight-card:hover .sv-spotlight-img,
+body[data-sv-card-img-hover="carousel"] .product-card:hover .sv-card__slide:hover img {
+    transform: scale(1.07);
+}
+body[data-sv-card-img-hover="none"] .product-card:hover .sv-card__img-primary,
+body[data-sv-card-img-hover="none"] .sv-spotlight-card:hover .sv-spotlight-img {
+    transform: none !important;
+}
+body[data-sv-card-img-hover="second_image"] .product-card .sv-card__media[data-has-second-image="true"]:hover .sv-card__img-secondary {
+    opacity: 1;
+    z-index: 10;
+}
+body[data-sv-card-img-hover="second_image"] .product-card .sv-card__media[data-has-second-image="false"]:hover .sv-card__img-primary {
+    transform: scale(1.06);
+}
+
+/* Animaciones del contenedor de tarjeta al pasar el cursor (lift | glow | scale | border | none) */
+body[data-sv-card-hover-lift="lift"]:not([data-card-style="outlined"]) .product-card:not(.sv-spotlight-card):hover {
+    transform: translateY(-6px) !important;
+    box-shadow: 0 20px 32px -10px rgba(15, 23, 42, 0.18) !important;
+}
+body[data-sv-card-hover-lift="glow"]:not([data-card-style="outlined"]) .product-card:not(.sv-spotlight-card):hover {
+    transform: translateY(-4px) !important;
+    border-color: var(--brand-color, #6366f1) !important;
+    box-shadow: 0 14px 30px -6px color-mix(in srgb, var(--brand-color, #6366f1) 35%, transparent) !important;
+}
+body[data-sv-card-hover-lift="scale"]:not([data-card-style="outlined"]) .product-card:not(.sv-spotlight-card):hover {
+    transform: scale(1.025) !important;
+}
+body[data-sv-card-hover-lift="border"]:not([data-card-style="outlined"]) .product-card:not(.sv-spotlight-card):hover {
+    border-color: var(--brand-color, #6366f1) !important;
+    box-shadow: 0 0 0 2px var(--brand-color, #6366f1) !important;
+}
+body[data-sv-card-hover-lift="none"]:not([data-card-style="outlined"]) .product-card:not(.sv-spotlight-card):hover {
+    transform: none !important;
+}
+
+/* ==========================================================================
+   PERSONALIZACIÓN GLOBAL DE LA PÁGINA DE DETALLE DEL PRODUCTO
+   ========================================================================== */
+
+/* 1. POSICIÓN DE GALERÍA, PROPORCIÓN DE COLUMNAS Y COMPORTAMIENTO STICKY */
+@media (min-width: 1024px) {
+    .sv-detail-main-grid {
+        align-items: start;
+    }
+    body[data-sv-detail-gallery-pos="right"] .sv-detail-main-grid > .sv-product-gallery {
+        order: 2;
+    }
+    body[data-sv-detail-gallery-pos="right"] .sv-detail-main-grid > .sv-detail-info-col {
+        order: 1;
+    }
+    body[data-sv-detail-layout-ratio="60_40"] .sv-detail-main-grid {
+        grid-template-columns: minmax(0, 1.38fr) minmax(0, 1fr) !important;
+    }
+    body[data-sv-detail-layout-ratio="45_55"] .sv-detail-main-grid {
+        grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr) !important;
+    }
+    body[data-sv-detail-sticky="sticky_info"] .sv-detail-info-col {
+        position: sticky;
+        top: 6rem;
+    }
+    body[data-sv-detail-sticky="sticky_gallery"] .sv-product-gallery {
+        position: sticky;
+        top: 6rem;
+    }
+}
+
+/* 2. ARQUITECTURAS VISUALES DE LA FICHA DE INFORMACIÓN (detailInfoStyle) */
+/* A. Ficha en Tarjeta Elevada (card) */
+body[data-sv-detail-info-style="card"] .sv-detail-info-col {
+    background-color: #ffffff;
+    color: #0f172a;
+    padding: 1.75rem;
+    border-radius: var(--store-radius, 1rem);
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.09);
+}
+@media (min-width: 640px) {
+    body[data-sv-detail-info-style="card"] .sv-detail-info-col {
+        padding: 2.25rem;
+    }
+}
+
+/* B. Caja de Compra Comercial Buy-Box (buybox) */
+body[data-sv-detail-info-style="buybox"] .sv-detail-buybox {
+    background-color: #ffffff;
+    color: #0f172a;
+    padding: 1.5rem;
+    border-radius: var(--store-radius, 1rem);
+    border: 1px solid rgba(203, 213, 225, 0.9);
+    box-shadow: 0 12px 28px -8px rgba(15, 23, 42, 0.08);
+}
+
+/* C. Urbana Neo-Brutalista con Contorno 2px (outlined) */
+body[data-sv-detail-info-style="outlined"] .sv-product-gallery__main,
+body[data-sv-detail-info-style="outlined"] .sv-detail-info-col {
+    border: 2px solid var(--store-text, #0f172a) !important;
+    box-shadow: 5px 5px 0px var(--store-text, #0f172a) !important;
+}
+body[data-sv-detail-info-style="outlined"] .sv-detail-info-col {
+    background-color: #ffffff;
+    color: #0f172a;
+    padding: 1.75rem;
+    border-radius: var(--store-radius, 0.5rem);
+}
+
+/* 3. DISEÑOS DE GALERÍA E IMÁGENES EN DETALLE (bottom | left | grid | stack | carousel) */
+/* Flechas interactivas sobre la foto principal */
+.sv-detail-gallery-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 20;
+    width: 2.6rem;
+    height: 2.6rem;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.92);
+    color: #0f172a;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.sv-detail-gallery-arrow--prev {
+    left: 0.85rem;
+}
+.sv-detail-gallery-arrow--next {
+    right: 0.85rem;
+}
+.sv-detail-gallery-arrow:hover {
+    background: var(--brand-color, #6366f1);
+    color: #ffffff;
+    transform: translateY(-50%) scale(1.08);
+}
+body[data-sv-detail-gallery-arrows="false"]:not([data-sv-detail-gallery-layout="carousel"]) .sv-detail-gallery-arrow {
+    display: none !important;
+}
+
+/* Contador 1 / N en la esquina inferior derecha de la foto principal */
+.sv-detail-img-counter-badge {
+    position: absolute;
+    bottom: 0.85rem;
+    right: 0.85rem;
+    z-index: 20;
+    padding: 0.3rem 0.7rem;
+    border-radius: 9999px;
+    background: rgba(15, 23, 42, 0.72);
+    color: #ffffff;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    pointer-events: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Miniaturas ocultas que exceden el límite del diseño y capa +N sobre la última miniatura visible */
+.product-thumbnail.is-hidden-thumb {
+    display: none !important;
+}
+.sv-thumb-more-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 15;
+    background: rgba(15, 23, 42, 0.74);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    color: #ffffff;
+    font-size: 1.05rem;
+    font-weight: 900;
+    letter-spacing: 0.02em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 0.25rem;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+.product-thumbnail.is-more-trigger {
+    opacity: 1 !important;
+    border-color: rgba(15, 23, 42, 0.25) !important;
+}
+.product-thumbnail.is-more-trigger:hover .sv-thumb-more-overlay {
+    background: color-mix(in srgb, var(--brand-color, #6366f1) 88%, #0f172a);
+}
+
+/* Botón para volver a recoger las miniaturas cuando están expandidas */
+.sv-thumb-collapse-btn {
+    grid-column: 1 / -1;
+    width: 100%;
+    padding: 0.5rem 0.85rem;
+    border-radius: 0.75rem;
+    background: #ffffff;
+    color: #334155;
+    border: 1px solid #cbd5e1;
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.18s ease;
+}
+.sv-thumb-collapse-btn:hover {
+    border-color: var(--brand-color, #6366f1);
+    color: var(--brand-color, #6366f1);
+}
+
+/* Modo Carrusel Minimalista (carousel): oculta la tira de miniaturas y usa las flechas sobre la imagen */
+.sv-product-gallery[data-gallery-layout="carousel"] .sv-product-gallery__thumbs {
+    display: none !important;
+}
+
+/* Modo Mosaico Lookbook (grid): miniaturas grandes en 2 columnas con relación vertical */
+.sv-product-gallery[data-gallery-layout="grid"] .sv-product-gallery__thumbs {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 1rem !important;
+}
+.sv-product-gallery[data-gallery-layout="grid"] .product-thumbnail {
+    aspect-ratio: 4 / 5 !important;
+    opacity: 1 !important;
+    border-radius: var(--store-radius, 1rem) !important;
+}
+
+/* Modo Cascada Editorial (stack): imágenes grandes apiladas a 1 columna */
+.sv-product-gallery[data-gallery-layout="stack"] {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+.sv-product-gallery[data-gallery-layout="stack"] .sv-product-gallery__thumbs {
+    display: grid !important;
+    grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+    gap: 1.25rem !important;
+}
+.sv-product-gallery[data-gallery-layout="stack"] .product-thumbnail {
+    aspect-ratio: 1 / 1 !important;
+    opacity: 1 !important;
+    border-radius: var(--store-radius, 1rem) !important;
+}
+
+/* Proporción y ajuste de la imagen principal en Detalle */
+body[data-sv-detail-img-aspect="square"] .sv-product-gallery__main {
+    aspect-ratio: 1 / 1 !important;
+}
+body[data-sv-detail-img-aspect="portrait"] .sv-product-gallery__main {
+    aspect-ratio: 4 / 5 !important;
+}
+body[data-sv-detail-img-aspect="tall"] .sv-product-gallery__main {
+    aspect-ratio: 3 / 4 !important;
+}
+body[data-sv-detail-img-aspect="landscape"] .sv-product-gallery__main {
+    aspect-ratio: 4 / 3 !important;
+}
+body[data-sv-detail-img-fit="contain"] #main-product-image {
+    object-fit: contain !important;
+    background-color: #ffffff;
+    padding: 1rem;
+}
+body[data-sv-detail-img-zoom="true"] .sv-product-gallery__main:hover #main-product-image {
+    transform: scale(1.06);
+}
+
+/* 4. DISPOSICIÓN DE BOTONES DE COMPRA (detailBuyLayout: standard | stacked | side_by_side) */
+/* Modo Apilado Ancho Completo (stacked) */
+body[data-sv-detail-buy-layout="stacked"] .sv-detail-purchase-row {
+    flex-direction: column !important;
+}
+body[data-sv-detail-buy-layout="stacked"] .sv-detail-qty-col,
+body[data-sv-detail-buy-layout="stacked"] .sv-detail-actions-col {
+    width: 100% !important;
+}
+
+/* Modo Doble Columna en Fila (side_by_side) */
+body[data-sv-detail-buy-layout="side_by_side"] .sv-detail-purchase-row {
+    flex-direction: column !important;
+}
+body[data-sv-detail-buy-layout="side_by_side"] .sv-detail-qty-col,
+body[data-sv-detail-buy-layout="side_by_side"] .sv-detail-actions-col {
+    width: 100% !important;
+}
+@media (min-width: 640px) {
+    body[data-sv-detail-buy-layout="side_by_side"] .sv-detail-actions-col {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+        gap: 0.75rem !important;
+    }
+}
+
+/* 5. ESTILO VISUAL DE LOS SELECTORES DE VARIANTES (.opt-btn) */
+.variant-option-group .opt-btn:hover {
+    border-color: var(--brand-color) !important;
+    color: var(--brand-color) !important;
+}
+.variant-option-group .opt-btn.bg-brand,
+.variant-option-group .opt-btn.is-selected,
+.variant-option-group .opt-btn.selected,
+.variant-option-group .opt-btn[aria-pressed="true"] {
+    background-color: var(--brand-color) !important;
+    border-color: var(--brand-color) !important;
+    color: #ffffff !important;
+}
+body[data-sv-detail-variant-style="pills"] .variant-option-group .opt-btn {
+    border-radius: 9999px !important;
+    padding-left: 1.35rem;
+    padding-right: 1.35rem;
+}
+body[data-sv-detail-variant-style="square"] .variant-option-group .opt-btn {
+    border-radius: 0px !important;
+}
+body[data-sv-detail-variant-style="underline"] .variant-option-group .opt-btn {
+    border-radius: 0px !important;
+    border-top-color: transparent !important;
+    border-left-color: transparent !important;
+    border-right-color: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+}
+body[data-sv-detail-variant-style="underline"] .variant-option-group .opt-btn.bg-brand,
+body[data-sv-detail-variant-style="underline"] .variant-option-group .opt-btn.is-selected,
+body[data-sv-detail-variant-style="underline"] .variant-option-group .opt-btn.selected {
+    background-color: color-mix(in srgb, var(--brand-color) 12%, transparent) !important;
+    border-bottom: 3px solid var(--brand-color) !important;
+    color: var(--brand-color) !important;
+}
+
+/* 6. VISIBILIDAD REACTIVA DE ELEMENTOS EN LA PÁGINA DE DETALLE */
+body[data-sv-detail-breadcrumbs="false"] .sv-detail-breadcrumbs-wrap {
+    display: none !important;
+}
+body[data-sv-detail-meta="false"] .sv-detail-meta-wrap {
+    display: none !important;
+}
+body[data-sv-detail-sku="false"] #dynamic-sku {
+    display: none !important;
+}
+body[data-sv-detail-savings="false"] .sv-detail-savings-badge {
+    display: none !important;
+}
+body[data-sv-detail-stock="false"] #dynamic-stock {
+    display: none !important;
+}
+body[data-sv-detail-trust="false"] .sv-detail-trust-strip {
+    display: none !important;
+}
+body[data-sv-detail-share="false"] .sv-detail-share-btn {
+    display: none !important;
+}
+body[data-sv-detail-specs="false"] .sv-detail-specs-wrap {
+    display: none !important;
+}
+body[data-sv-detail-policies="false"] .sv-detail-policies-wrap {
+    display: none !important;
+}
+body[data-sv-detail-related="false"] .sv-detail-related-wrap {
+    display: none !important;
+}
+
+/* Columnas de Productos Relacionados en Detalle */
+@media (min-width: 768px) {
+    #sv-detail-related-grid[data-cols="3"] {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    }
+    #sv-detail-related-grid[data-cols="4"] {
+        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    }
+}

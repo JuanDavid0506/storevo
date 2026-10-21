@@ -2172,6 +2172,10 @@ video {
   border-color: rgb(255 255 255 / 0.15);
 }
 
+.border-slate-200\/50 {
+  border-color: rgb(226 232 240 / 0.5);
+}
+
 .border-t-transparent {
   border-top-color: transparent;
 }
@@ -2502,6 +2506,10 @@ video {
 
 .bg-white\/90 {
   background-color: rgb(255 255 255 / 0.9);
+}
+
+.bg-white\/70 {
+  background-color: rgb(255 255 255 / 0.7);
 }
 
 .bg-gradient-to-r {

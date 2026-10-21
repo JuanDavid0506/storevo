@@ -65,7 +65,10 @@
         }
         .nav-layout-opt.is-selected,
         .font-pair-opt.is-selected,
-        .card-style-opt.is-selected {
+        .card-style-opt.is-selected,
+        .card-preset-opt.is-selected,
+        .detail-preset-opt.is-selected,
+        .detail-info-opt.is-selected {
             border-color: #6366f1;
             background: rgba(99, 102, 241, 0.14);
             color: #ffffff;
@@ -763,7 +766,7 @@
                     <summary>
                         <span class="min-w-0">
                             <span class="style-acc-title">Bordes y Formas</span>
-                            <span class="style-acc-hint">Esquinas, botones y estilo de las tarjetas</span>
+                            <span class="style-acc-hint">Esquinas de bloques y forma de los botones</span>
                         </span>
                         <svg class="style-acc-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </summary>
@@ -774,9 +777,8 @@
                                 Restablecer sección
                             </button>
                         </div>
-
                         <div>
-                            <label class="block text-xs font-bold text-slate-300 mb-1.5">Estilo de Bordes de Tarjetas y Bloques</label>
+                            <label class="block text-xs font-bold text-slate-300 mb-1.5">Estilo de Bordes de Secciones y Bloques</label>
                             <select id="style-border-radius" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:border-storevo-500">
                                 <option value="0px">Recto Editorial (0px)</option>
                                 <option value="0.375rem">Sutil (6px)</option>
@@ -786,7 +788,6 @@
                                 <option value="2rem">Ultra Redondeado (32px)</option>
                             </select>
                         </div>
-
                         <div>
                             <label class="block text-xs font-bold text-slate-300 mb-1.5">Forma de los botones</label>
                             <select id="style-button-radius" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:border-storevo-500">
@@ -796,42 +797,498 @@
                                 <option value="pill">Píldora (totalmente redondos)</option>
                             </select>
                         </div>
+                    </div>
+                </details>
 
+                <!-- ============ 4.B TARJETAS DE PRODUCTOS (GLOBAL) ============ -->
+                <details class="style-acc" data-acc="product-cards">
+                    <summary>
+                        <span class="min-w-0">
+                            <span class="style-acc-title">Tarjetas de Productos</span>
+                            <span class="style-acc-hint">Arquitectura visual, carrusel táctil/flechas, botones y efectos</span>
+                        </span>
+                        <svg class="style-acc-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </summary>
+                    <div class="style-acc-body" id="style-product-cards-section">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-storevo-400 bg-storevo-500/10 border border-storevo-500/20 px-2 py-0.5 rounded-full">
+                                Se aplica a todas las vitrinas
+                            </span>
+                            <button type="button" id="style-cards-reset"
+                                    class="text-[11px] font-bold text-slate-400 hover:text-white transition">
+                                Restablecer sección
+                            </button>
+                        </div>
+
+                        <!-- 1. Diseños Predefinidos de Alto Impacto -->
                         <div>
-                            <label class="block text-xs font-bold text-slate-300 mb-1.5">Estilo de las tarjetas de producto</label>
-                            <div id="style-card-style" class="grid grid-cols-3 gap-2">
-                                <button type="button" data-value="elevated"
-                                        class="card-style-opt flex flex-col items-center gap-1.5 p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
-                                    <svg viewBox="0 0 64 44" class="w-full h-10" fill="currentColor">
-                                        <rect x="16" y="9" width="32" height="32" rx="4" opacity=".12"/>
-                                        <rect x="16" y="5" width="32" height="32" rx="4" fill="none" stroke="currentColor" stroke-width="1" opacity=".5"/>
-                                        <rect x="19" y="8" width="26" height="15" rx="2" opacity=".35"/>
-                                        <rect x="19" y="27" width="18" height="2.5" rx="1" opacity=".7"/>
-                                        <rect x="19" y="31" width="10" height="2.5" rx="1" opacity=".4"/>
-                                    </svg>
-                                    <span class="text-[10px] font-bold text-center leading-tight">Elevada</span>
+                            <label class="block text-xs font-bold text-slate-300 mb-1.5">Estilos predefinidos (1 clic)</label>
+                            <div id="style-card-preset" class="grid grid-cols-2 gap-2">
+                                <button type="button" data-value="commercial"
+                                        class="card-preset-opt text-left p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
+                                    <span class="block text-[11px] font-bold">Comercial Clásica</span>
+                                    <span class="block text-[10px] text-slate-500 mt-0.5">Carrusel + Caja blanca + Botón fijo</span>
                                 </button>
-                                <button type="button" data-value="clean"
-                                        class="card-style-opt flex flex-col items-center gap-1.5 p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
-                                    <svg viewBox="0 0 64 44" class="w-full h-10" fill="currentColor">
-                                        <rect x="19" y="6" width="26" height="22" rx="2" opacity=".35"/>
-                                        <rect x="19" y="32" width="18" height="2.5" rx="1" opacity=".7"/>
-                                        <rect x="19" y="36" width="10" height="2.5" rx="1" opacity=".4"/>
-                                    </svg>
-                                    <span class="text-[10px] font-bold text-center leading-tight">Editorial limpia</span>
+                                <button type="button" data-value="boutique"
+                                        class="card-preset-opt text-left p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
+                                    <span class="block text-[11px] font-bold">Boutique Zara</span>
+                                    <span class="block text-[10px] text-slate-500 mt-0.5">Sin bordes + Botón flotante en foto</span>
                                 </button>
-                                <button type="button" data-value="outlined"
-                                        class="card-style-opt flex flex-col items-center gap-1.5 p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
-                                    <svg viewBox="0 0 64 44" class="w-full h-10" fill="currentColor">
-                                        <rect x="16" y="5" width="32" height="34" rx="2" fill="none" stroke="currentColor" stroke-width="2.5"/>
-                                        <rect x="20" y="9" width="24" height="14" rx="1" opacity=".35"/>
-                                        <rect x="20" y="27" width="16" height="2.5" rx="1" opacity=".7"/>
-                                        <rect x="20" y="31" width="9" height="2.5" rx="1" opacity=".4"/>
-                                    </svg>
-                                    <span class="text-[10px] font-bold text-center leading-tight">Contorno marcado</span>
+                                <button type="button" data-value="poster"
+                                        class="card-preset-opt text-left p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
+                                    <span class="block text-[11px] font-bold">Poster Inmersiva</span>
+                                    <span class="block text-[10px] text-slate-500 mt-0.5">Foto 100% + Texto blanco sobre imagen</span>
+                                </button>
+                                <button type="button" data-value="bento"
+                                        class="card-preset-opt text-left p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
+                                    <span class="block text-[11px] font-bold">Bento Tech</span>
+                                    <span class="block text-[10px] text-slate-500 mt-0.5">Marco interno + Precio y botón en fila</span>
+                                </button>
+                                <button type="button" data-value="compact"
+                                        class="card-preset-opt text-left p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
+                                    <span class="block text-[11px] font-bold">Urbana Brutalista</span>
+                                    <span class="block text-[10px] text-slate-500 mt-0.5">Contorno negro 2px + Sombra dura</span>
+                                </button>
+                                <button type="button" data-value="gallery"
+                                        class="card-preset-opt text-left p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
+                                    <span class="block text-[11px] font-bold">Catálogo Suave</span>
+                                    <span class="block text-[10px] text-slate-500 mt-0.5">Tinte de marca + Botón contorno</span>
                                 </button>
                             </div>
-                            <p class="text-[11px] text-slate-500 mt-1.5">Se aplica a las tarjetas de producto en portada, catálogo, detalle y favoritos.</p>
+                        </div>
+
+                        <!-- 2. Arquitectura Visual de la Tarjeta -->
+                        <div class="pt-2 border-t border-slate-800/80 space-y-3">
+                            <p class="text-[11px] font-black uppercase tracking-wider text-storevo-400">Arquitectura de la Tarjeta</p>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-300 mb-1.5">Estructura y diseño de tarjeta</label>
+                                <div id="style-card-style" class="grid grid-cols-2 gap-2">
+                                    <button type="button" data-value="elevated"
+                                            class="card-style-opt flex flex-col items-center gap-1 p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
+                                        <span class="text-[11px] font-bold">Clásica Elevada</span>
+                                        <span class="text-[9px] text-slate-500 text-center">Caja blanca con sombra</span>
+                                    </button>
+                                    <button type="button" data-value="boutique"
+                                            class="card-style-opt flex flex-col items-center gap-1 p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
+                                        <span class="text-[11px] font-bold">Boutique Flotante</span>
+                                        <span class="text-[9px] text-slate-500 text-center">Botón flota sobre la foto</span>
+                                    </button>
+                                    <button type="button" data-value="poster"
+                                            class="card-style-opt flex flex-col items-center gap-1 p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
+                                        <span class="text-[11px] font-bold">Poster Inmersiva</span>
+                                        <span class="text-[9px] text-slate-500 text-center">Texto dentro de la imagen</span>
+                                    </button>
+                                    <button type="button" data-value="bento"
+                                            class="card-style-opt flex flex-col items-center gap-1 p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
+                                        <span class="text-[11px] font-bold">Bento Marco</span>
+                                        <span class="text-[9px] text-slate-500 text-center">Foto enmarcada con margen</span>
+                                    </button>
+                                    <button type="button" data-value="outlined"
+                                            class="card-style-opt flex flex-col items-center gap-1 p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
+                                        <span class="text-[11px] font-bold">Contorno Urbano</span>
+                                        <span class="text-[9px] text-slate-500 text-center">Borde 2px y sombra sólida</span>
+                                    </button>
+                                    <button type="button" data-value="clean"
+                                            class="card-style-opt flex flex-col items-center gap-1 p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
+                                        <span class="text-[11px] font-bold">Editorial Limpia</span>
+                                        <span class="text-[9px] text-slate-500 text-center">Sin bordes ni fondo</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-300 mb-1">Esquinas de tarjeta</label>
+                                    <select id="style-card-radius" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-storevo-500">
+                                        <option value="sync">Igual a la tienda</option>
+                                        <option value="0px">Rectas (0px)</option>
+                                        <option value="0.5rem">Sutiles (8px)</option>
+                                        <option value="1rem">Redondeadas (16px)</option>
+                                        <option value="1.5rem">Orgánicas (24px)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-300 mb-1">Sombra</label>
+                                    <select id="style-card-shadow" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-storevo-500">
+                                        <option value="none">Sin sombra</option>
+                                        <option value="sm">Sutil</option>
+                                        <option value="md">Media</option>
+                                        <option value="lg">Profunda</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 3. Galería en Tarjeta (Carrusel / Flechas / Swipe), Proporción y Ajuste -->
+                        <div class="pt-2 border-t border-slate-800/80 space-y-3">
+                            <p class="text-[11px] font-black uppercase tracking-wider text-storevo-400">Galería de Fotos en la Tarjeta</p>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-300 mb-1">Comportamiento de múltiples fotos</label>
+                                <select id="style-card-img-hover" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-bold text-white focus:border-storevo-500">
+                                    <option value="carousel">Carrusel interactivo (Flechas laterales + Deslizar con el dedo)</option>
+                                    <option value="second_image">Cambiar a 2da foto automáticamente al pasar el mouse</option>
+                                    <option value="zoom">Mostrar 1ra foto con Zoom suave</option>
+                                    <option value="none">Foto estática sin efectos</option>
+                                </select>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-300 mb-1">Proporción de foto</label>
+                                    <select id="style-card-img-aspect" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-storevo-500">
+                                        <option value="square">Cuadrada (1:1)</option>
+                                        <option value="portrait">Vertical Moda (4:5)</option>
+                                        <option value="tall">Retrato Alto (3:4)</option>
+                                        <option value="landscape">Horizontal (4:3)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-300 mb-1">Ajuste de imagen</label>
+                                    <select id="style-card-img-fit" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-storevo-500">
+                                        <option value="cover">Rellenar (Cover)</option>
+                                        <option value="contain">Completa sin recorte</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-300 mb-1">Margen de la imagen</label>
+                                <select id="style-card-img-padding" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-storevo-500">
+                                    <option value="flush">Borde a borde (A sangre)</option>
+                                    <option value="inset">Con marco interno</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- 4. Contenido, Precios y Etiquetas -->
+                        <div class="pt-2 border-t border-slate-800/80 space-y-3">
+                            <p class="text-[11px] font-black uppercase tracking-wider text-storevo-400">Contenido, Precios y Descuentos</p>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-300 mb-1">Alineación de texto</label>
+                                    <select id="style-card-align" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-storevo-500">
+                                        <option value="left">Izquierda</option>
+                                        <option value="center">Centrado</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-300 mb-1">Dato sobre el título</label>
+                                    <select id="style-card-meta" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-storevo-500">
+                                        <option value="category">Categoría</option>
+                                        <option value="brand">Marca</option>
+                                        <option value="both">Categoría y Marca</option>
+                                        <option value="none">Ocultar</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-300 mb-1">Insignia de oferta</label>
+                                    <select id="style-card-discount-badge" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-storevo-500">
+                                        <option value="percent">Porcentaje (-20%)</option>
+                                        <option value="label">Etiqueta "Oferta"</option>
+                                        <option value="hidden">Ocultar insignia</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-300 mb-1">Tamaño del precio</label>
+                                    <select id="style-card-price-size" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-storevo-500">
+                                        <option value="compact">Compacto</option>
+                                        <option value="normal">Estándar</option>
+                                        <option value="large">Destacado grande</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <label class="flex items-center justify-between p-2.5 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
+                                <span class="text-xs text-slate-300">Mostrar precio anterior tachado en ofertas</span>
+                                <input type="checkbox" id="style-card-old-price" checked class="w-4 h-4 rounded border-slate-700 text-storevo-500">
+                            </label>
+                            <label class="flex items-center justify-between p-2.5 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
+                                <span class="text-xs text-slate-300">Mostrar etiquetas "Bajo pedido" y "Agotado"</span>
+                                <input type="checkbox" id="style-card-status-badges" checked class="w-4 h-4 rounded border-slate-700 text-storevo-500">
+                            </label>
+                        </div>
+
+                        <!-- 5. Botones y Animaciones -->
+                        <div class="pt-2 border-t border-slate-800/80 space-y-3">
+                            <p class="text-[11px] font-black uppercase tracking-wider text-storevo-400">Botones y Animaciones</p>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-300 mb-1">Diseño del botón</label>
+                                    <select id="style-card-btn-style" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-storevo-500">
+                                        <option value="solid">Sólido color marca</option>
+                                        <option value="split">En fila junto al precio</option>
+                                        <option value="outline">Contorno fino</option>
+                                        <option value="dark">Oscuro editorial</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-300 mb-1">Visibilidad del botón</label>
+                                    <select id="style-card-action-mode" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-storevo-500">
+                                        <option value="always">Siempre visible</option>
+                                        <option value="hover">Al pasar el cursor (PC)</option>
+                                        <option value="hidden">Ocultar botón</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-300 mb-1">Botón Favoritos</label>
+                                    <select id="style-card-wishlist-mode" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-storevo-500">
+                                        <option value="always">Siempre visible</option>
+                                        <option value="hover">Al pasar el cursor (PC)</option>
+                                        <option value="hidden">Ocultar</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-300 mb-1">Animación al pasar</label>
+                                    <select id="style-card-hover-lift" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-storevo-500">
+                                        <option value="lift">Elevación 3D</option>
+                                        <option value="glow">Resplandor de marca</option>
+                                        <option value="scale">Expansión suave</option>
+                                        <option value="border">Borde iluminado</option>
+                                        <option value="none">Sin animación</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </details>
+
+                <!-- ============ 4.C PÁGINA DE DETALLE DEL PRODUCTO (GLOBAL) ============ -->
+                <details class="style-acc" data-acc="product-detail">
+                    <summary>
+                        <span class="min-w-0">
+                            <span class="style-acc-title">Página de Detalle del Producto</span>
+                            <span class="style-acc-hint">Presets por rubro, arquitectura de ficha, galería y compra</span>
+                        </span>
+                        <svg class="style-acc-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </summary>
+                    <div class="style-acc-body" id="style-product-detail-section">
+                        <div class="flex items-center justify-between gap-2">
+                            <button type="button" onclick="Storevo.ThemeEditor.switchPage('product')"
+                                    class="text-[10px] font-bold text-storevo-300 hover:text-white bg-storevo-500/15 hover:bg-storevo-500/25 border border-storevo-500/30 px-2.5 py-1 rounded-lg transition">
+                                Ver Ficha en Vista Previa →
+                            </button>
+                            <button type="button" id="style-detail-reset"
+                                    class="text-[11px] font-bold text-slate-400 hover:text-white transition">
+                                Restablecer sección
+                            </button>
+                        </div>
+
+                        <!-- 1. Diseños Predefinidos por Tipo de Negocio (1 clic) -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 mb-1.5">Estilos predefinidos de ficha (1 clic)</label>
+                            <div id="style-detail-preset" class="grid grid-cols-2 gap-2">
+                                <button type="button" data-value="conversion"
+                                        class="detail-preset-opt text-left p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
+                                    <span class="block text-[11px] font-bold">Conversión Pro</span>
+                                    <span class="block text-[10px] text-slate-500 mt-0.5">Buy-Box + Confianza + Ahorro</span>
+                                </button>
+                                <button type="button" data-value="fashion_lookbook"
+                                        class="detail-preset-opt text-left p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
+                                    <span class="block text-[11px] font-bold">Lookbook Moda</span>
+                                    <span class="block text-[10px] text-slate-500 mt-0.5">Mosaico 60/40 + Foto 4:5 + Píldoras</span>
+                                </button>
+                                <button type="button" data-value="tech_specs"
+                                        class="detail-preset-opt text-left p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
+                                    <span class="block text-[11px] font-bold">Tech & Catálogo</span>
+                                    <span class="block text-[10px] text-slate-500 mt-0.5">Tarjeta blanca + Ficha técnica abierta</span>
+                                </button>
+                                <button type="button" data-value="luxury_boutique"
+                                        class="detail-preset-opt text-left p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
+                                    <span class="block text-[11px] font-bold">Boutique Lujo</span>
+                                    <span class="block text-[10px] text-slate-500 mt-0.5">Galería lateral + Minimalista limpia</span>
+                                </button>
+                                <button type="button" data-value="express_sale"
+                                        class="detail-preset-opt text-left p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
+                                    <span class="block text-[11px] font-bold">Venta Express</span>
+                                    <span class="block text-[10px] text-slate-500 mt-0.5">Botones 100% grandes + Carrusel</span>
+                                </button>
+                                <button type="button" data-value="urban_drop"
+                                        class="detail-preset-opt text-left p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
+                                    <span class="block text-[11px] font-bold">Urbana Drop</span>
+                                    <span class="block text-[10px] text-slate-500 mt-0.5">Contorno 2px + Cascada vertical</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 2. Arquitectura Visual de la Ficha y Fijación Sticky -->
+                        <div class="pt-2 border-t border-slate-800/80 space-y-3">
+                            <p class="text-[11px] font-black uppercase tracking-wider text-storevo-400">Arquitectura de la Ficha</p>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-300 mb-1.5">Presentación del panel de información</label>
+                                <div id="style-detail-info-style" class="grid grid-cols-2 gap-2">
+                                    <button type="button" data-value="clean"
+                                            class="detail-info-opt flex flex-col items-center gap-1 p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
+                                        <span class="text-[11px] font-bold">Editorial Limpia</span>
+                                        <span class="text-[9px] text-slate-500 text-center">Integrada al fondo</span>
+                                    </button>
+                                    <button type="button" data-value="card"
+                                            class="detail-info-opt flex flex-col items-center gap-1 p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
+                                        <span class="text-[11px] font-bold">Tarjeta Elevada</span>
+                                        <span class="text-[9px] text-slate-500 text-center">Ficha en caja blanca</span>
+                                    </button>
+                                    <button type="button" data-value="buybox"
+                                            class="detail-info-opt flex flex-col items-center gap-1 p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
+                                        <span class="text-[11px] font-bold">Caja Buy-Box</span>
+                                        <span class="text-[9px] text-slate-500 text-center">Resalta bloque de compra</span>
+                                    </button>
+                                    <button type="button" data-value="outlined"
+                                            class="detail-info-opt flex flex-col items-center gap-1 p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
+                                        <span class="text-[11px] font-bold">Urbana Contorno</span>
+                                        <span class="text-[9px] text-slate-500 text-center">Borde 2px y sombra dura</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-300 mb-1">Posición de fotos (PC)</label>
+                                    <select id="style-detail-gallery-pos" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-storevo-500">
+                                        <option value="left">Galería a la izquierda</option>
+                                        <option value="right">Galería a la derecha</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-300 mb-1">Proporción columnas</label>
+                                    <select id="style-detail-layout-ratio" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-storevo-500">
+                                        <option value="50_50">Equilibrada (50% / 50%)</option>
+                                        <option value="60_40">Galería amplia (60% / 40%)</option>
+                                        <option value="45_55">Ficha amplia (45% / 55%)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-300 mb-1">Comportamiento al bajar con scroll (PC)</label>
+                                <select id="style-detail-sticky" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-storevo-500">
+                                    <option value="sticky_info">Fijar información mientras bajan las fotos</option>
+                                    <option value="sticky_gallery">Fijar fotos mientras leen la ficha técnica</option>
+                                    <option value="none">Desplazamiento normal simultáneo</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- 3. Galería de Imágenes y Controles Visuales -->
+                        <div class="pt-2 border-t border-slate-800/80 space-y-3">
+                            <p class="text-[11px] font-black uppercase tracking-wider text-storevo-400">Galería de Imágenes</p>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-300 mb-1">Distribución de galería y miniaturas</label>
+                                <select id="style-detail-gallery-layout" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-bold text-white focus:border-storevo-500">
+                                    <option value="bottom">Miniaturas debajo de la foto principal</option>
+                                    <option value="left">Miniaturas verticales a la izquierda</option>
+                                    <option value="grid">Mosaico Lookbook (2 columnas grandes)</option>
+                                    <option value="stack">Cascada editorial (Imágenes grandes apiladas)</option>
+                                    <option value="carousel">Carrusel limpio (Sin tira de miniaturas)</option>
+                                </select>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-300 mb-1">Proporción foto principal</label>
+                                    <select id="style-detail-img-aspect" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-storevo-500">
+                                        <option value="square">Cuadrada (1:1)</option>
+                                        <option value="portrait">Vertical Moda (4:5)</option>
+                                        <option value="tall">Retrato (3:4)</option>
+                                        <option value="landscape">Horizontal (4:3)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-300 mb-1">Ajuste de imagen</label>
+                                    <select id="style-detail-img-fit" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-storevo-500">
+                                        <option value="cover">Rellenar (Cover)</option>
+                                        <option value="contain">Completa sin recorte</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <label class="flex items-center justify-between p-2.5 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
+                                <span class="text-xs text-slate-300">Mostrar flechas Anterior / Siguiente sobre la foto</span>
+                                <input type="checkbox" id="style-detail-gallery-arrows" checked class="w-4 h-4 rounded border-slate-700 text-storevo-500">
+                            </label>
+                            <label class="flex items-center justify-between p-2.5 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
+                                <span class="text-xs text-slate-300">Efecto zoom al pasar el mouse sobre la foto</span>
+                                <input type="checkbox" id="style-detail-img-zoom" checked class="w-4 h-4 rounded border-slate-700 text-storevo-500">
+                            </label>
+                        </div>
+
+                        <!-- 4. Botones de Compra, Variantes e Información Visible -->
+                        <div class="pt-2 border-t border-slate-800/80 space-y-3">
+                            <p class="text-[11px] font-black uppercase tracking-wider text-storevo-400">Compra, Variantes y Elementos</p>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-300 mb-1">Disposición de cantidad y botones de compra</label>
+                                <select id="style-detail-buy-layout" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-storevo-500">
+                                    <option value="standard">Clásica (Cantidad a la izq. + Botones a la der.)</option>
+                                    <option value="stacked">Botones 100% ancho completo apilados</option>
+                                    <option value="side_by_side">Botones Comprar y Bolsa lado a lado (50/50)</option>
+                                </select>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-300 mb-1">Estilo de variantes</label>
+                                    <select id="style-detail-variant-style" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-storevo-500">
+                                        <option value="rounded">Botones redondeados</option>
+                                        <option value="pills">Píldoras cápsula</option>
+                                        <option value="square">Cajas rectas editoriales</option>
+                                        <option value="underline">Pestañas con línea inferior</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-300 mb-1">Especificaciones</label>
+                                    <select id="style-detail-specs-open" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-storevo-500">
+                                        <option value="collapsed">En acordeón cerrado</option>
+                                        <option value="expanded">Abiertas por defecto</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="space-y-1.5">
+                                <label class="flex items-center justify-between p-2 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
+                                    <span class="text-xs text-slate-300">Mostrar migas de pan (Inicio / Catálogo / Producto)</span>
+                                    <input type="checkbox" id="style-detail-breadcrumbs" checked class="w-4 h-4 rounded border-slate-700 text-storevo-500">
+                                </label>
+                                <label class="flex items-center justify-between p-2 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
+                                    <span class="text-xs text-slate-300">Mostrar marca o categoría encima del título</span>
+                                    <input type="checkbox" id="style-detail-meta" checked class="w-4 h-4 rounded border-slate-700 text-storevo-500">
+                                </label>
+                                <label class="flex items-center justify-between p-2 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
+                                    <span class="text-xs text-slate-300">Mostrar insignia "Ahorras X%" junto al precio</span>
+                                    <input type="checkbox" id="style-detail-savings" checked class="w-4 h-4 rounded border-slate-700 text-storevo-500">
+                                </label>
+                                <label class="flex items-center justify-between p-2 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
+                                    <span class="text-xs text-slate-300">Mostrar código SKU del producto</span>
+                                    <input type="checkbox" id="style-detail-sku" checked class="w-4 h-4 rounded border-slate-700 text-storevo-500">
+                                </label>
+                                <label class="flex items-center justify-between p-2 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
+                                    <span class="text-xs text-slate-300">Mostrar botón "Compartir" producto</span>
+                                    <input type="checkbox" id="style-detail-share" checked class="w-4 h-4 rounded border-slate-700 text-storevo-500">
+                                </label>
+                                <label class="flex items-center justify-between p-2 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
+                                    <span class="text-xs text-slate-300">Mostrar contador de unidades en stock</span>
+                                    <input type="checkbox" id="style-detail-stock" checked class="w-4 h-4 rounded border-slate-700 text-storevo-500">
+                                </label>
+                                <label class="flex items-center justify-between p-2 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
+                                    <span class="text-xs text-slate-300">Mostrar sellos de confianza bajo los botones</span>
+                                    <input type="checkbox" id="style-detail-trust" checked class="w-4 h-4 rounded border-slate-700 text-storevo-500">
+                                </label>
+                                <label class="flex items-center justify-between p-2 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
+                                    <span class="text-xs text-slate-300">Mostrar bloque de Especificaciones Técnicas</span>
+                                    <input type="checkbox" id="style-detail-specs" checked class="w-4 h-4 rounded border-slate-700 text-storevo-500">
+                                </label>
+                                <label class="flex items-center justify-between p-2 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
+                                    <span class="text-xs text-slate-300">Mostrar Políticas de Envío y Devolución</span>
+                                    <input type="checkbox" id="style-detail-policies" checked class="w-4 h-4 rounded border-slate-700 text-storevo-500">
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- 5. Productos Relacionados -->
+                        <div class="pt-2 border-t border-slate-800/80 space-y-3">
+                            <p class="text-[11px] font-black uppercase tracking-wider text-storevo-400">Productos Relacionados</p>
+                            <label class="flex items-center justify-between p-2.5 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
+                                <span class="text-xs font-bold text-white">Mostrar productos relacionados al final</span>
+                                <input type="checkbox" id="style-detail-related" checked class="w-4 h-4 rounded border-slate-700 text-storevo-500">
+                            </label>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-300 mb-1">Columnas en escritorio</label>
+                                <select id="style-detail-related-cols" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-storevo-500">
+                                    <option value="4">4 productos por fila</option>
+                                    <option value="3">3 productos por fila (tarjetas más amplias)</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                 </details>
