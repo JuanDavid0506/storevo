@@ -992,18 +992,42 @@ Storevo.Router = (function() {
             }
 
             const rawHref = anchor.getAttribute('href') || '';
-            if (!rawHref || rawHref.startsWith('#') || rawHref.startsWith('javascript:') || rawHref.startsWith('mailto:') || rawHref.startsWith('tel:')) {
+            if (!rawHref || rawHref.startsWith('javascript:') || rawHref.startsWith('mailto:') || rawHref.startsWith('tel:')) {
+                return;
+            }
+
+            if (rawHref.startsWith('#')) {
+                if (rawHref.length > 1) {
+                    const hashId = rawHref.slice(1);
+                    const hashTarget = document.getElementById(hashId);
+                    if (hashTarget) {
+                        e.preventDefault();
+                        closeOpenMenusAndDrawers();
+                        window.history.pushState(
+                            { storevoSpa: true, url: window.location.pathname + window.location.search + rawHref },
+                            '',
+                            window.location.pathname + window.location.search + rawHref
+                        );
+                        hashTarget.scrollIntoView({ behavior: 'smooth' });
+                    }
+                }
                 return;
             }
 
             const targetUrl = normalizeUrl(rawHref);
             if (!targetUrl || !isEligibleStoreUrl(targetUrl)) return;
 
-            if (
-                targetUrl.pathname === window.location.pathname &&
-                targetUrl.search === window.location.search &&
-                targetUrl.hash
-            ) {
+            const sameCleanPath = targetUrl.pathname.replace(/\/+$/, '') === window.location.pathname.replace(/\/+$/, '');
+            if (sameCleanPath && targetUrl.search === window.location.search && targetUrl.hash) {
+                const hashId = targetUrl.hash.slice(1);
+                const hashTarget = hashId ? document.getElementById(hashId) : null;
+                if (hashTarget) {
+                    e.preventDefault();
+                    closeOpenMenusAndDrawers();
+                    const cleanHashUrl = window.location.pathname + window.location.search + targetUrl.hash;
+                    window.history.pushState({ storevoSpa: true, url: cleanHashUrl }, '', cleanHashUrl);
+                    hashTarget.scrollIntoView({ behavior: 'smooth' });
+                }
                 return;
             }
 

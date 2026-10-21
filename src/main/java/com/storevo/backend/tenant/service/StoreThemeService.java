@@ -108,7 +108,29 @@ public class StoreThemeService {
     private static final Set<String> RESERVED_PAGE_SLUGS = Set.of(
             "home", "catalog", "product", "product-preview", "cart", "checkout", "wishlist", "order", "p", "page"
     );
-
+    private static final Set<String> ALLOWED_LAYOUT_SPACING = Set.of("none", "sm", "lg");
+    private static final Set<String> ALLOWED_LAYOUT_WIDTH = Set.of("full");
+    private static final Set<String> ALLOWED_LAYOUT_BG_MODES = Set.of("none", "solid");
+    private static final Set<String> ALLOWED_LAYOUT_TONES = Set.of("light", "dark");
+    private static final Set<String> RESERVED_ANCHOR_IDS = Set.of(
+            "storenavbar", "storevomaincontent", "storevo-page-scripts",
+            "storevo-catalog-products-bridge", "storevo-navbar-advanced-bridge",
+            "navwishlistcounter", "navcartcounter", "mobile-menu", "mobile-menu-backdrop",
+            "whatsapp-modal", "wa-modal-product-name", "wa-modal-variant-info",
+            "wa-customer-name", "wa-customer-phone", "wa-customer-city",
+            "wa-customer-address", "wa-customer-notes", "catalog-search-input",
+            "catalog-sort-select", "catalog-products-grid", "catalog-empty-state",
+            "catalog-filter-bridge", "sv-catalog-workspace", "sv-catalog-sidebar-facets",
+            "sv-catalog-topbar-panel", "sv-catalog-topbar-facets", "sv-catalog-active-chips",
+            "sv-catalog-results-count", "sv-filter-drawer-backdrop", "sv-filter-drawer-facets",
+            "main-product-image", "sv-detail-img-counter", "dynamic-price", "dynamic-old-price",
+            "dynamic-discount-badge", "dynamic-stock", "dynamic-sku",
+            "variant-selectors-container", "selected-variant-id", "quantity-input",
+            "btn-add-to-cart", "btn-buy-whatsapp", "sv-detail-related-grid",
+            "adm-sidebar-tooltip", "dashboard-sidebar", "admin-theme-toggle",
+            "admin-theme-label", "sidebar-collapse-btn", "topbar-sidebar-toggle",
+            "home", "catalog", "product", "product-preview", "cart", "checkout", "wishlist", "order", "top"
+    );
     public ThemeConfigDto getHydratedThemeForStorefront(Store store, boolean previewDraft) {
         ThemeConfigDto config = getRawThemeConfig(store, previewDraft);
         hydrateThemeSections(store, config);
@@ -954,6 +976,7 @@ public class StoreThemeService {
                 for (ThemeSectionDto sec : list) {
                     sanitizeSingleSection(sec);
                 }
+                deduplicateSectionAnchors(list);
             }
         }
 
@@ -998,6 +1021,7 @@ public class StoreThemeService {
                 for (ThemeSectionDto sec : cp.getSections()) {
                     sanitizeSingleSection(sec);
                 }
+                deduplicateSectionAnchors(cp.getSections());
                 cleanCustomPages.add(cp);
             }
             config.setCustomPages(cleanCustomPages);
@@ -1042,6 +1066,64 @@ public class StoreThemeService {
                 }
                 return v;
             });
+            sanitizeAllowedSetting(sec.getSettings(), "layoutSpaceTop", ALLOWED_LAYOUT_SPACING);
+            sanitizeAllowedSetting(sec.getSettings(), "layoutSpaceBottom", ALLOWED_LAYOUT_SPACING);
+            sanitizeAllowedSetting(sec.getSettings(), "layoutWidth", ALLOWED_LAYOUT_WIDTH);
+            sanitizeAllowedSetting(sec.getSettings(), "layoutBgMode", ALLOWED_LAYOUT_BG_MODES);
+            sanitizeAllowedSetting(sec.getSettings(), "layoutTone", ALLOWED_LAYOUT_TONES);
+            if (!"solid".equals(sec.getSettings().get("layoutBgMode"))
+                    || !(sec.getSettings().get("layoutBgColor") instanceof String bgHex)
+                    || !isValidHex(bgHex)) {
+                sec.getSettings().remove("layoutBgMode");
+                sec.getSettings().remove("layoutBgColor");
+                sec.getSettings().remove("layoutTone");
+            }
+            sanitizeSectionAnchor(sec);
+        }
+    }
+
+    private void sanitizeSectionAnchor(ThemeSectionDto sec) {
+        if (sec == null || sec.getSettings() == null || !sec.getSettings().containsKey("layoutAnchor")) return;
+        if ("catalog_results".equalsIgnoreCase(sec.getType()) || "product_main".equalsIgnoreCase(sec.getType())) {
+            sec.getSettings().remove("layoutAnchor");
+            return;
+        }
+        Object raw = sec.getSettings().get("layoutAnchor");
+        if (!(raw instanceof String str)) {
+            sec.getSettings().remove("layoutAnchor");
+            return;
+        }
+        String clean = str.trim();
+        if (!isValidAnchorSlug(clean)) {
+            sec.getSettings().remove("layoutAnchor");
+        }
+    }
+
+    private boolean isValidAnchorSlug(String slug) {
+        if (slug == null || slug.isEmpty() || slug.length() > 40) return false;
+        if (slug.endsWith("-") || RESERVED_ANCHOR_IDS.contains(slug)) return false;
+        return slug.matches("^[a-z][a-z0-9-]{0,39}$");
+    }
+
+    private void deduplicateSectionAnchors(List<ThemeSectionDto> sections) {
+        if (sections == null || sections.isEmpty()) return;
+        Set<String> seen = new HashSet<>();
+        for (ThemeSectionDto sec : sections) {
+            if (sec == null || sec.getSettings() == null) continue;
+            Object raw = sec.getSettings().get("layoutAnchor");
+            if (raw instanceof String anchor && !anchor.isBlank()) {
+                if (!seen.add(anchor)) {
+                    sec.getSettings().remove("layoutAnchor");
+                }
+            }
+        }
+    }
+
+    private void sanitizeAllowedSetting(Map<String, Object> settings, String key, Set<String> allowedValues) {
+        if (settings == null || !settings.containsKey(key)) return;
+        Object raw = settings.get(key);
+        if (!(raw instanceof String str) || !allowedValues.contains(str.trim())) {
+            settings.remove(key);
         }
     }
 

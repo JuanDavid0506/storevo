@@ -14,6 +14,7 @@ Storevo.ThemeEditor = {
 
     catalogDefinitions: {
         announcement_bar: {
+            layoutSupport: { bg: false, spacing: false, width: false, anchor: true },
             label: 'Barra de Anuncio Superior',
             description: 'Cintillo superior con hasta 3 mensajes rotativos para promociones o envíos gratis.',
             defaultSettings: {
@@ -26,6 +27,7 @@ Storevo.ThemeEditor = {
             }
         },
         hero_banner: {
+            layoutSupport: { bg: false, spacing: false, width: false, anchor: true },
             label: 'Banner Principal (Hero)',
             description: 'Portada de gran impacto con 3 estilos de diseño, imagen y hasta 2 botones.',
             defaultSettings: {
@@ -45,6 +47,7 @@ Storevo.ThemeEditor = {
             }
         },
         product_grid: {
+            layoutSupport: { bg: true, spacing: true, width: true, anchor: true },
             label: 'Vitrina de Productos',
             description: 'Muestra tus novedades, productos en oferta o una categoría específica.',
             defaultSettings: {
@@ -57,6 +60,7 @@ Storevo.ThemeEditor = {
             }
         },
         spotlight_product: {
+            layoutSupport: { bg: true, spacing: true, width: true, anchor: true },
             label: 'Producto Estrella / Destacado',
             description: 'Destaca un producto específico en gran formato con foto grande, precio y compra rápida.',
             defaultSettings: {
@@ -68,6 +72,7 @@ Storevo.ThemeEditor = {
             }
         },
         featured_categories: {
+            layoutSupport: { bg: true, spacing: true, width: true, anchor: true },
             label: 'Categorías Destacadas',
             description: 'Tarjetas interactivas con foto automática, ícono o píldoras hacia tus categorías.',
             defaultSettings: {
@@ -78,6 +83,7 @@ Storevo.ThemeEditor = {
             }
         },
         countdown_promo: {
+            layoutSupport: { bg: false, spacing: true, width: true, anchor: true },
             label: 'Oferta con Contador Regresivo',
             description: 'Banner de urgencia con reloj en vivo (Días, Horas, Minutos y Segundos) para ofertas.',
             defaultSettings: {
@@ -92,6 +98,7 @@ Storevo.ThemeEditor = {
             }
         },
         multi_banners: {
+            layoutSupport: { bg: false, spacing: true, width: true, anchor: true },
             label: 'Mosaico Doble de Banners',
             description: '2 tarjetas visuales lado a lado para destacar colecciones o rebajas.',
             defaultSettings: {
@@ -112,6 +119,7 @@ Storevo.ThemeEditor = {
             }
         },
         promo_banner: {
+            layoutSupport: { bg: false, spacing: true, width: true, anchor: true },
             label: 'Banner Dividido (Imagen + Texto)',
             description: 'Bloque mitad texto y mitad foto para destacar una promoción o colección.',
             defaultSettings: {
@@ -126,6 +134,7 @@ Storevo.ThemeEditor = {
             }
         },
         testimonials: {
+            layoutSupport: { bg: true, spacing: true, width: true, anchor: true },
             label: 'Reseñas Verificadas de Clientes',
             description: 'Muestra automáticamente las calificaciones reales dejadas por compradores en sus pedidos.',
             defaultSettings: {
@@ -134,6 +143,7 @@ Storevo.ThemeEditor = {
             }
         },
         how_to_buy: {
+            layoutSupport: { bg: true, spacing: true, width: true, anchor: true },
             label: 'Cómo Comprar en 3 Pasos + Pagos',
             description: 'Explica en 3 pasos sencillos cómo pedir en tu tienda y muestra los medios de pago.',
             defaultSettings: {
@@ -149,6 +159,7 @@ Storevo.ThemeEditor = {
             }
         },
         trust_badges: {
+            layoutSupport: { bg: true, spacing: true, width: true, anchor: true },
             label: 'Franja de Confianza y Beneficios',
             description: '3 bloques con íconos personalizables para transmitir seguridad, envíos y atención.',
             defaultSettings: {
@@ -165,6 +176,7 @@ Storevo.ThemeEditor = {
             }
         },
         faq_accordion: {
+            layoutSupport: { bg: true, spacing: true, width: false, anchor: true },
             label: 'Preguntas Frecuentes (Acordeón)',
             description: 'Desplegable interactivo con hasta 5 preguntas sobre envíos, pagos y garantías.',
             defaultSettings: {
@@ -183,6 +195,7 @@ Storevo.ThemeEditor = {
             }
         },
         whatsapp_cta: {
+            layoutSupport: { bg: true, spacing: true, width: false, anchor: true },
             label: 'Banner de Asesoría por WhatsApp',
             description: 'Invita a tus clientes a escribirte por WhatsApp con un solo clic.',
             defaultSettings: {
@@ -192,6 +205,7 @@ Storevo.ThemeEditor = {
             }
         },
         rich_text: {
+            layoutSupport: { bg: true, spacing: true, width: false, anchor: true },
             label: 'Texto Libre / Sobre Nosotros',
             description: 'Sección limpia para contar la historia de tu marca o información clave.',
             defaultSettings: {
@@ -200,6 +214,7 @@ Storevo.ThemeEditor = {
             }
         },
         catalog_results: {
+            layoutSupport: { bg: false, spacing: false, width: false, anchor: false },
             label: 'Catálogo de Productos',
             description: 'Grilla principal del catálogo con buscador, ordenamiento y píldoras de categorías.',
             anchorOnly: true,
@@ -215,6 +230,7 @@ Storevo.ThemeEditor = {
             }
         },
         product_main: {
+            layoutSupport: { bg: false, spacing: false, width: false, anchor: false },
             label: 'Ficha Principal del Producto',
             description: 'Galería de fotos, selector de variantes, botones de compra y especificaciones.',
             anchorOnly: true,
@@ -230,6 +246,85 @@ Storevo.ThemeEditor = {
                 relatedSubtitle: 'Otros productos de nuestro catálogo'
             }
         }
+    },
+    getLayoutSupport: function(type) {
+        const def = this.catalogDefinitions[type];
+        const declared = (def && def.layoutSupport) || {};
+        return {
+            bg: declared.bg === true,
+            spacing: declared.spacing === true,
+            width: declared.width === true,
+            anchor: declared.anchor === true
+        };
+    },
+
+    computeLayoutTone: function(hexColor) {
+        const clean = String(hexColor || '').trim();
+        if (!/^#[0-9a-fA-F]{6}$/.test(clean)) return 'light';
+        const r = parseInt(clean.substring(1, 3), 16) / 255;
+        const g = parseInt(clean.substring(3, 5), 16) / 255;
+        const b = parseInt(clean.substring(5, 7), 16) / 255;
+        const toLinear = (c) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+        const luminance = (0.2126 * toLinear(r)) + (0.7152 * toLinear(g)) + (0.0722 * toLinear(b));
+        return luminance < 0.179 ? 'dark' : 'light';
+    },
+
+    RESERVED_ANCHOR_IDS: [
+        'storenavbar', 'storevomaincontent', 'storevo-page-scripts',
+        'storevo-catalog-products-bridge', 'storevo-navbar-advanced-bridge',
+        'navwishlistcounter', 'navcartcounter', 'mobile-menu', 'mobile-menu-backdrop',
+        'whatsapp-modal', 'wa-modal-product-name', 'wa-modal-variant-info',
+        'wa-customer-name', 'wa-customer-phone', 'wa-customer-city',
+        'wa-customer-address', 'wa-customer-notes', 'catalog-search-input',
+        'catalog-sort-select', 'catalog-products-grid', 'catalog-empty-state',
+        'catalog-filter-bridge', 'sv-catalog-workspace', 'sv-catalog-sidebar-facets',
+        'sv-catalog-topbar-panel', 'sv-catalog-topbar-facets', 'sv-catalog-active-chips',
+        'sv-catalog-results-count', 'sv-filter-drawer-backdrop', 'sv-filter-drawer-facets',
+        'main-product-image', 'sv-detail-img-counter', 'dynamic-price', 'dynamic-old-price',
+        'dynamic-discount-badge', 'dynamic-stock', 'dynamic-sku',
+        'variant-selectors-container', 'selected-variant-id', 'quantity-input',
+        'btn-add-to-cart', 'btn-buy-whatsapp', 'sv-detail-related-grid',
+        'adm-sidebar-tooltip', 'dashboard-sidebar', 'admin-theme-toggle',
+        'admin-theme-label', 'sidebar-collapse-btn', 'topbar-sidebar-toggle',
+        'home', 'catalog', 'product', 'product-preview', 'cart', 'checkout', 'wishlist', 'order', 'top'
+    ],
+
+    normalizeAnchorSlug: function(raw) {
+        return String(raw || '')
+            .toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .replace(/[\s_]+/g, '-')
+            .replace(/[^a-z0-9-]/g, '')
+            .replace(/-+/g, '-')
+            .replace(/^-+/, '')
+            .substring(0, 40);
+    },
+
+    validateLayoutAnchor: function(slugVal, currentSectionId) {
+        const clean = String(slugVal || '').trim();
+        if (!clean) {
+            return { valid: true, message: '' };
+        }
+        if (!/^[a-z]/.test(clean)) {
+            return { valid: false, message: 'El ID de ancla debe comenzar con una letra (a-z).' };
+        }
+        if (clean.endsWith('-')) {
+            return { valid: false, message: 'El ID de ancla no puede terminar en guion (-).' };
+        }
+        if (!/^[a-z][a-z0-9-]{0,39}$/.test(clean)) {
+            return { valid: false, message: 'Usa solo letras minúsculas, números y guiones (máx. 40 caracteres).' };
+        }
+        if (this.RESERVED_ANCHOR_IDS.includes(clean)) {
+            return { valid: false, message: 'Este ID está reservado por el sistema. Elige otro nombre.' };
+        }
+        const activeSections = this.getActivePageSections(false) || [];
+        const duplicate = activeSections.some(s =>
+            s && s.id !== currentSectionId && s.settings && String(s.settings.layoutAnchor || '').trim() === clean
+        );
+        if (duplicate) {
+            return { valid: false, message: 'Este ID de ancla ya está en uso en otra sección de esta página.' };
+        }
+        return { valid: true, message: '' };
     },
 
     ensurePagesStructure: function() {
@@ -1256,6 +1351,9 @@ Storevo.ThemeEditor = {
             locked: false,
             settings: JSON.parse(JSON.stringify(original.settings || {}))
         };
+        if (cloned.settings) {
+            delete cloned.settings.layoutAnchor;
+        }
 
         list.splice(index + 1, 0, cloned);
         this.renderSectionsList();
@@ -1273,6 +1371,19 @@ Storevo.ThemeEditor = {
         }
     },
 
+    getActivePageRelativeBasePath: function() {
+        if (this.activePage && this.activePage.startsWith('page:')) {
+            return '/page/' + this.activePage.substring(5);
+        }
+        if (this.activePage && this.activePage.startsWith('category:')) {
+            return '/catalog?category=' + this.activePage.substring(9);
+        }
+        if (this.activePage === 'catalog') {
+            return '/catalog';
+        }
+        return '';
+    },
+
     normalizeInternalUrlForSelect: function(rawUrl) {
         if (rawUrl === undefined || rawUrl === null) return '';
         let clean = String(rawUrl).trim();
@@ -1287,6 +1398,7 @@ Storevo.ThemeEditor = {
         if (clean === 'catalog') return '/catalog';
         if (clean === 'wishlist') return '/wishlist';
         if (clean === 'cart') return '/cart';
+        if (clean.startsWith('/#')) return clean.substring(1);
         return clean;
     },
 
@@ -1355,6 +1467,17 @@ Storevo.ThemeEditor = {
         if (!sec) return;
         this.activeSectionId = sec.id;
 
+        const syncConditionalFields = () => {
+            const rootContainer = document.getElementById('inspector-fields-container');
+            if (!rootContainer) return;
+            const currentSettings = (sec && sec.settings) ? sec.settings : {};
+            rootContainer.querySelectorAll('[data-field-key]').forEach(el => {
+                if (typeof el._showIf === 'function') {
+                    el.classList.toggle('hidden', !el._showIf(currentSettings));
+                }
+            });
+        };
+
         const commitSectionChange = (key, value) => {
             if (this.activePage && this.activePage.startsWith('category:') && !this.isCategoryCustomized(this.activePage.substring(9))) {
                 const materializedSec = this.ensureCategoryMaterializedOnEdit(this.activeSectionId);
@@ -1364,7 +1487,12 @@ Storevo.ThemeEditor = {
                 }
             }
             if (!sec.settings) sec.settings = {};
-            sec.settings[key] = value;
+            if (value === undefined || value === null) {
+                delete sec.settings[key];
+            } else {
+                sec.settings[key] = value;
+            }
+            syncConditionalFields();
             this.scheduleAutoSave();
         };
 
@@ -1569,11 +1697,39 @@ Storevo.ThemeEditor = {
                     presetSelect.appendChild(cpGroup);
                 }
 
+                const pageBasePath = this.getActivePageRelativeBasePath();
+                const pageAnchors = (this.getActivePageSections(false) || [])
+                    .filter(s => s && s.settings && String(s.settings.layoutAnchor || '').trim() !== '')
+                    .map(s => {
+                        const anchorId = String(s.settings.layoutAnchor).trim();
+                        const sDef = this.catalogDefinitions[s.type] || { label: s.type };
+                        return {
+                            value: pageBasePath ? `${pageBasePath}#${anchorId}` : `#${anchorId}`,
+                            label: `⚓ #${anchorId} (${sDef.label})`
+                        };
+                    });
+
+                if (pageAnchors.length > 0) {
+                    const anchorGroup = document.createElement('optgroup');
+                    anchorGroup.label = 'Anclas de esta Página';
+                    pageAnchors.forEach(aOpt => {
+                        const o = document.createElement('option');
+                        o.value = aOpt.value;
+                        o.textContent = aOpt.label;
+                        if (o.value === normalizedCurrent) {
+                            o.selected = true;
+                            matchedPreset = true;
+                        }
+                        anchorGroup.appendChild(o);
+                    });
+                    presetSelect.appendChild(anchorGroup);
+                }
+
                 const extGroup = document.createElement('optgroup');
-                extGroup.label = 'Externo';
+                extGroup.label = 'Ancla Manual o Enlace Externo';
                 const customOpt = document.createElement('option');
                 customOpt.value = '__custom__';
-                customOpt.textContent = 'Otro enlace externo (Instagram, TikTok, Web...)';
+                customOpt.textContent = 'Escribir #ancla o enlace externo (Instagram, Web...)';
                 if (!matchedPreset) {
                     customOpt.selected = true;
                 }
@@ -1583,7 +1739,7 @@ Storevo.ThemeEditor = {
                 const customUrlInput = document.createElement('input');
                 customUrlInput.type = 'text';
                 customUrlInput.value = matchedPreset ? '' : currentVal;
-                customUrlInput.placeholder = 'Pega aquí el enlace (Ej: https://instagram.com/mitienda)';
+                customUrlInput.placeholder = 'Ej: #mi-seccion o https://instagram.com/mitienda';
                 customUrlInput.className = (matchedPreset ? 'hidden ' : '') + 'w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:border-storevo-500 focus:outline-none';
 
                 presetSelect.addEventListener('change', () => {
@@ -1597,7 +1753,11 @@ Storevo.ThemeEditor = {
                 });
 
                 customUrlInput.addEventListener('input', () => {
-                    commitSectionChange(field.key, customUrlInput.value.trim());
+                    let raw = customUrlInput.value.trim();
+                    if (raw.startsWith('#') && raw.length > 1 && pageBasePath) {
+                        raw = `${pageBasePath}${raw}`;
+                    }
+                    commitSectionChange(field.key, raw);
                 });
 
                 urlBox.appendChild(presetSelect);
@@ -1722,8 +1882,312 @@ Storevo.ThemeEditor = {
                 }
             }
 
+            if (typeof field.showIf === 'function') {
+                wrapper._showIf = field.showIf;
+                wrapper.classList.toggle('hidden', !field.showIf(sec.settings));
+            }
+
             container.appendChild(wrapper);
         });
+
+        // Bloque transversal colapsable: "Diseño de la sección"
+        const layoutSupport = this.getLayoutSupport(sec.type);
+        const layoutFields = [];
+
+        if (layoutSupport.bg) {
+            layoutFields.push(
+                {
+                    key: 'layoutBgMode',
+                    label: 'Fondo de la sección',
+                    type: 'select',
+                    defaultVal: 'none',
+                    options: [
+                        { value: 'none', label: 'Sin fondo (Predeterminado)' },
+                        { value: 'solid', label: 'Color sólido personalizado' }
+                    ]
+                },
+                {
+                    key: 'layoutBgColor',
+                    label: 'Color de fondo de la sección',
+                    type: 'color',
+                    defaultVal: '#f1f5f9',
+                    showIf: (s) => Boolean(s && s.layoutBgMode === 'solid')
+                }
+            );
+        }
+
+        if (layoutSupport.spacing) {
+            const spacingOptions = [
+                { value: 'default', label: 'Predeterminado de la sección' },
+                { value: 'none', label: 'Sin espacio (0px)' },
+                { value: 'sm', label: 'Compacto (24px)' },
+                { value: 'lg', label: 'Amplio (72px / 96px en PC)' }
+            ];
+            layoutFields.push(
+                { key: 'layoutSpaceTop', label: 'Espaciado superior', type: 'select', defaultVal: 'default', options: spacingOptions },
+                { key: 'layoutSpaceBottom', label: 'Espaciado inferior', type: 'select', defaultVal: 'default', options: spacingOptions }
+            );
+        }
+
+        if (layoutSupport.width) {
+            layoutFields.push({
+                key: 'layoutWidth',
+                label: 'Ancho del contenido',
+                type: 'select',
+                defaultVal: 'default',
+                options: [
+                    { value: 'default', label: 'Estándar centrado' },
+                    { value: 'full', label: 'Ancho completo (100%)' }
+                ]
+            });
+        }
+
+        if (layoutSupport.anchor) {
+            layoutFields.push({
+                key: 'layoutAnchor',
+                label: 'ID de ancla (enlace directo)',
+                type: 'anchor',
+                defaultVal: '',
+                placeholder: 'ej: como-comprar o preguntas-frecuentes'
+            });
+        }
+
+        if (layoutFields.length > 0) {
+            const detailsEl = document.createElement('details');
+            detailsEl.className = 'style-acc mt-4';
+            detailsEl.setAttribute('data-acc', 'section-layout');
+
+            const hasCustomLayout = ['layoutBgMode', 'layoutBgColor', 'layoutSpaceTop', 'layoutSpaceBottom', 'layoutWidth', 'layoutAnchor']
+                .some(k => sec.settings && sec.settings[k] !== undefined && sec.settings[k] !== null && String(sec.settings[k]).trim() !== '' && sec.settings[k] !== 'default' && sec.settings[k] !== 'none');
+            if (hasCustomLayout) {
+                detailsEl.open = true;
+            }
+
+            const summaryEl = document.createElement('summary');
+            summaryEl.innerHTML = `
+                <span class="min-w-0">
+                    <span class="style-acc-title">Diseño de la sección</span>
+                    <span class="style-acc-hint">Fondo, espaciado, ancho y ancla</span>
+                </span>
+                <svg class="style-acc-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            `;
+            detailsEl.appendChild(summaryEl);
+
+            const bodyEl = document.createElement('div');
+            bodyEl.className = 'style-acc-body';
+
+            layoutFields.forEach(field => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'space-y-1.5';
+                wrapper.setAttribute('data-field-key', field.key);
+
+                const label = document.createElement('label');
+                label.className = 'block text-xs font-bold text-slate-300';
+                label.textContent = field.label;
+                wrapper.appendChild(label);
+
+                const currentVal = (sec.settings && sec.settings[field.key] !== undefined && sec.settings[field.key] !== null)
+                    ? sec.settings[field.key]
+                    : field.defaultVal;
+
+                if (field.type === 'select') {
+                    const select = document.createElement('select');
+                    select.className = 'w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:border-storevo-500 focus:outline-none cursor-pointer';
+                    (field.options || []).forEach(opt => {
+                        const o = document.createElement('option');
+                        o.value = opt.value;
+                        o.textContent = opt.label;
+                        if (String(opt.value) === String(currentVal)) o.selected = true;
+                        select.appendChild(o);
+                    });
+                    select.addEventListener('change', () => {
+                        if (field.key === 'layoutBgMode') {
+                            if (select.value === 'solid') {
+                                const colorWrap = bodyEl.querySelector('[data-field-key="layoutBgColor"]');
+                                const pickerEl = colorWrap ? colorWrap.querySelector('input[type="color"]') : null;
+                                const chosenColor = (sec.settings && /^#[0-9a-fA-F]{6}$/.test(sec.settings.layoutBgColor || ''))
+                                    ? sec.settings.layoutBgColor
+                                    : (pickerEl && /^#[0-9a-fA-F]{6}$/.test(pickerEl.value) ? pickerEl.value : '#f1f5f9');
+                                if (!sec.settings) sec.settings = {};
+                                sec.settings.layoutBgColor = chosenColor;
+                                sec.settings.layoutTone = this.computeLayoutTone(chosenColor);
+                                commitSectionChange('layoutBgMode', 'solid');
+                            } else {
+                                if (sec.settings) {
+                                    delete sec.settings.layoutBgColor;
+                                    delete sec.settings.layoutTone;
+                                }
+                                commitSectionChange('layoutBgMode', null);
+                            }
+                            return;
+                        }
+                        const nextVal = select.value === field.defaultVal ? null : select.value;
+                        commitSectionChange(field.key, nextVal);
+                    });
+                    wrapper.appendChild(select);
+                } else if (field.type === 'color') {
+                    const colorRow = document.createElement('div');
+                    colorRow.className = 'flex items-center gap-2';
+
+                    const safeColor = /^#[0-9a-fA-F]{6}$/.test(String(currentVal || '').trim())
+                        ? String(currentVal).trim()
+                        : (field.defaultVal || '#f1f5f9');
+
+                    const colorInput = document.createElement('input');
+                    colorInput.type = 'color';
+                    colorInput.value = safeColor;
+                    colorInput.className = 'w-8 h-8 rounded cursor-pointer bg-transparent';
+
+                    const hexInput = document.createElement('input');
+                    hexInput.type = 'text';
+                    hexInput.value = safeColor;
+                    hexInput.className = 'flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-white';
+
+                    const applyLayoutColor = (hexVal) => {
+                        if (!sec.settings) sec.settings = {};
+                        sec.settings.layoutTone = this.computeLayoutTone(hexVal);
+                        commitSectionChange(field.key, hexVal);
+                    };
+
+                    colorInput.addEventListener('input', () => {
+                        hexInput.value = colorInput.value;
+                        applyLayoutColor(colorInput.value);
+                    });
+                    hexInput.addEventListener('input', () => {
+                        const cleanHex = hexInput.value.trim();
+                        if (/^#[0-9a-fA-F]{6}$/.test(cleanHex)) {
+                            colorInput.value = cleanHex;
+                            applyLayoutColor(cleanHex);
+                        }
+                    });
+
+                    colorRow.appendChild(colorInput);
+                    colorRow.appendChild(hexInput);
+                    wrapper.appendChild(colorRow);
+                } else if (field.type === 'anchor') {
+                    const inputWrap = document.createElement('div');
+                    inputWrap.className = 'relative flex items-center';
+
+                    const hashPrefix = document.createElement('span');
+                    hashPrefix.className = 'absolute left-3 text-xs font-mono font-bold text-slate-500 select-none pointer-events-none';
+                    hashPrefix.textContent = '#';
+
+                    const anchorInput = document.createElement('input');
+                    anchorInput.type = 'text';
+                    anchorInput.maxLength = 40;
+                    anchorInput.value = String(currentVal || '');
+                    anchorInput.placeholder = field.placeholder || 'ej: ofertas';
+                    anchorInput.className = 'w-full pl-6 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono text-white focus:border-storevo-500 focus:outline-none';
+
+                    const hintEl = document.createElement('p');
+                    hintEl.className = 'text-[11px] text-slate-500 leading-snug';
+                    hintEl.textContent = currentVal
+                        ? `Enlázala usando #${currentVal} o /#${currentVal}`
+                        : 'Permite saltar a esta sección con un enlace #ancla.';
+
+                    const errorEl = document.createElement('p');
+                    errorEl.className = 'hidden text-[11px] font-bold text-red-400 leading-snug';
+
+                    anchorInput.addEventListener('input', () => {
+                        const slugged = this.normalizeAnchorSlug(anchorInput.value);
+                        if (anchorInput.value !== slugged) {
+                            anchorInput.value = slugged;
+                        }
+                        if (!slugged) {
+                            errorEl.textContent = '';
+                            errorEl.classList.add('hidden');
+                            anchorInput.classList.remove('border-red-500');
+                            hintEl.textContent = 'Permite saltar a esta sección con un enlace #ancla.';
+                            commitSectionChange('layoutAnchor', null);
+                            return;
+                        }
+                        const check = this.validateLayoutAnchor(slugged, this.activeSectionId);
+                        if (!check.valid) {
+                            errorEl.textContent = check.message;
+                            errorEl.classList.remove('hidden');
+                            anchorInput.classList.add('border-red-500');
+                            return;
+                        }
+                        errorEl.textContent = '';
+                        errorEl.classList.add('hidden');
+                        anchorInput.classList.remove('border-red-500');
+                        hintEl.textContent = `Enlázala usando #${slugged} o /#${slugged}`;
+                        commitSectionChange('layoutAnchor', slugged);
+                    });
+
+                    inputWrap.appendChild(hashPrefix);
+                    inputWrap.appendChild(anchorInput);
+                    wrapper.appendChild(inputWrap);
+                    wrapper.appendChild(errorEl);
+                    wrapper.appendChild(hintEl);
+                }
+
+                if (typeof field.showIf === 'function') {
+                    wrapper._showIf = field.showIf;
+                    wrapper.classList.toggle('hidden', !field.showIf(sec.settings));
+                }
+
+                bodyEl.appendChild(wrapper);
+            });
+
+            const resetRow = document.createElement('div');
+            resetRow.className = 'pt-2 border-t border-slate-800/80 flex justify-end';
+            const resetBtn = document.createElement('button');
+            resetBtn.type = 'button';
+            resetBtn.className = 'text-[11px] font-bold text-slate-400 hover:text-white transition';
+            resetBtn.textContent = 'Restablecer diseño de la sección';
+            resetBtn.addEventListener('click', () => {
+                if (this.activePage && this.activePage.startsWith('category:') && !this.isCategoryCustomized(this.activePage.substring(9))) {
+                    const materializedSec = this.ensureCategoryMaterializedOnEdit(this.activeSectionId);
+                    if (materializedSec) {
+                        sec = materializedSec;
+                        this.activeSectionId = sec.id;
+                    }
+                }
+                if (sec.settings) {
+                    ['layoutBgMode', 'layoutBgColor', 'layoutTone', 'layoutSpaceTop', 'layoutSpaceBottom', 'layoutWidth', 'layoutAnchor']
+                        .forEach(k => delete sec.settings[k]);
+                }
+                layoutFields.forEach(field => {
+                    const wrap = bodyEl.querySelector(`[data-field-key="${field.key}"]`);
+                    if (!wrap) return;
+                    if (field.type === 'select') {
+                        const sel = wrap.querySelector('select');
+                        if (sel) sel.value = field.defaultVal;
+                    } else if (field.type === 'color') {
+                        const cInput = wrap.querySelector('input[type="color"]');
+                        const hInput = wrap.querySelector('input[type="text"]');
+                        if (cInput) cInput.value = field.defaultVal;
+                        if (hInput) hInput.value = field.defaultVal;
+                    } else if (field.type === 'anchor') {
+                        const aInput = wrap.querySelector('input[type="text"]');
+                        const errP = wrap.querySelector('p.text-red-400');
+                        const hintP = wrap.querySelector('p.text-slate-500');
+                        if (aInput) {
+                            aInput.value = '';
+                            aInput.classList.remove('border-red-500');
+                        }
+                        if (errP) {
+                            errP.textContent = '';
+                            errP.classList.add('hidden');
+                        }
+                        if (hintP) {
+                            hintP.textContent = 'Permite saltar a esta sección con un enlace #ancla.';
+                        }
+                    }
+                });
+                syncConditionalFields();
+                this.scheduleAutoSave();
+                if (Storevo.UI && Storevo.UI.Toast) {
+                    Storevo.UI.Toast.show('Diseño de la sección restablecido', 'info');
+                }
+            });
+            resetRow.appendChild(resetBtn);
+            bodyEl.appendChild(resetRow);
+
+            detailsEl.appendChild(bodyEl);
+            container.appendChild(detailsEl);
+        }
 
         this.switchTab('sections');
         this.highlightSectionInIframe(this.activeSectionId);
@@ -5648,7 +6112,7 @@ Storevo.ThemeEditor = {
         // permitiendo que cada plantilla aplique sus propios títulos, etiquetas y textos comerciales especializados.
         const PRESERVED_MEDIA_AND_DATA_KEYS = [
             'imageUrl', 'card1ImageUrl', 'card2ImageUrl',
-            'productId', 'categoryId', 'endDate'
+            'productId', 'categoryId', 'endDate', 'layoutAnchor'
         ];
 
         newHomeSections.forEach(newSec => {
@@ -5701,8 +6165,23 @@ Storevo.ThemeEditor = {
             nextTheme.pages.home = nextTheme.sections;
         }
 
-        if (keepContent && Array.isArray(nextTheme.pages.home)) {
-            this.mergeUserContentIntoPreset(oldHomeSections, nextTheme.pages.home);
+        if (Array.isArray(nextTheme.pages.home)) {
+            if (keepContent) {
+                this.mergeUserContentIntoPreset(oldHomeSections, nextTheme.pages.home);
+            } else {
+                const usedAnchorOldIds = new Set();
+                nextTheme.pages.home.forEach(newSec => {
+                    const match = oldHomeSections.find(oldSec =>
+                        oldSec && oldSec.type === newSec.type && !usedAnchorOldIds.has(oldSec.id)
+                    );
+                    if (!match || !match.settings || !newSec.settings) return;
+                    usedAnchorOldIds.add(match.id);
+                    const anchorVal = match.settings.layoutAnchor;
+                    if (anchorVal !== undefined && anchorVal !== null && String(anchorVal).trim() !== '') {
+                        newSec.settings.layoutAnchor = String(anchorVal).trim();
+                    }
+                });
+            }
         }
 
         if (keepContent) {

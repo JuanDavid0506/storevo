@@ -21,15 +21,83 @@
               'faq_accordion': 'Preguntas Frecuentes',
               'whatsapp_cta': 'Asesoría WhatsApp',
               'catalog_results': 'Catálogo de Productos',
-              'product_main': 'Ficha de Producto'
-          } }">
+                           'product_main': 'Ficha de Producto'
+          } },
+              svBgMap=${ {
+                  'product_grid': true,
+                  'spotlight_product': true,
+                  'featured_categories': true,
+                  'testimonials': true,
+                  'how_to_buy': true,
+                  'trust_badges': true,
+                  'rich_text': true,
+                  'faq_accordion': true,
+                  'whatsapp_cta': true
+              } },
+              svSpacingMap=${ {
+                  'product_grid': true,
+                  'spotlight_product': true,
+                  'featured_categories': true,
+                  'countdown_promo': true,
+                  'promo_banner': true,
+                  'multi_banners': true,
+                  'testimonials': true,
+                  'how_to_buy': true,
+                  'trust_badges': true,
+                  'rich_text': true,
+                  'faq_accordion': true,
+                  'whatsapp_cta': true
+              } },
+              svWidthMap=${ {
+                  'product_grid': true,
+                  'spotlight_product': true,
+                  'featured_categories': true,
+                  'countdown_promo': true,
+                  'promo_banner': true,
+                  'multi_banners': true,
+                  'testimonials': true,
+                  'how_to_buy': true,
+                  'trust_badges': true
+              } },
+              svSupportsBg=${svBgMap[sec.type] == true},
+              svSupportsSpacing=${svSpacingMap[sec.type] == true},
+              svSupportsWidth=${svWidthMap[sec.type] == true},
+              svSupportsAnchor=${sec.type != 'catalog_results' and sec.type != 'product_main'},
+              svLayoutAnchor=${svSupportsAnchor ? sec.settingStr('layoutAnchor', '') : ''},
+              svHasValidAnchor=${svSupportsAnchor and #strings.length(svLayoutAnchor) >= 1 and #strings.length(svLayoutAnchor) <= 40 and not #strings.endsWith(svLayoutAnchor, '-') and (svLayoutAnchor matches '^[a-z][a-z0-9-]*$')},
+              svLayoutBgMode=${svSupportsBg ? sec.settingStr('layoutBgMode', 'none') : 'none'},
+              svLayoutBgColor=${svSupportsBg ? sec.settingStr('layoutBgColor', '') : ''},
+              svHasSolidBg=${svSupportsBg and svLayoutBgMode == 'solid' and #strings.length(svLayoutBgColor) == 7 and (svLayoutBgColor matches '^#[0-9a-fA-F]+$')},
+              svLayoutTone=${svHasSolidBg ? sec.settingStr('layoutTone', 'light') : ''},
+              svLayoutTop=${svSupportsSpacing ? sec.settingStr('layoutSpaceTop', 'default') : 'default'},
+              svLayoutBottom=${svSupportsSpacing ? sec.settingStr('layoutSpaceBottom', 'default') : 'default'},
+              svLayoutWide=${svSupportsWidth and sec.settingStr('layoutWidth', 'default') == 'full'},
+              svLayoutClasses=${#strings.trim(
+                  ((svLayoutTop == 'none' or svLayoutTop == 'sm' or svLayoutTop == 'lg') ? 'sv-space-top-' + svLayoutTop + ' ' : '')
+                  + ((svLayoutBottom == 'none' or svLayoutBottom == 'sm' or svLayoutBottom == 'lg') ? 'sv-space-bottom-' + svLayoutBottom + ' ' : '')
+                  + (svLayoutWide ? 'sv-width-full ' : '')
+                  + (svHasSolidBg and (svLayoutTone == 'dark' or svLayoutTone == 'light') ? 'sv-tone-' + svLayoutTone : ''))}">
+    <!-- Matriz layoutSupport espejada de themeEditor.js (catalogDefinitions):
+         bg      (9):  product_grid, spotlight_product, featured_categories, testimonials, how_to_buy,
+                       trust_badges, rich_text, faq_accordion, whatsapp_cta
+         spacing (12): product_grid, spotlight_product, featured_categories, countdown_promo, promo_banner,
+                       multi_banners, testimonials, how_to_buy, trust_badges, rich_text, faq_accordion, whatsapp_cta
+         width   (9):  product_grid, spotlight_product, featured_categories, countdown_promo, promo_banner,
+                       multi_banners, testimonials, how_to_buy, trust_badges
+         anchor  (14): todas excepto catalog_results y product_main -->
+
     <div th:if="${(isDraftPreview == true) and products != null}" id="storevo-catalog-products-bridge" class="hidden">
         <span th:each="prodItem : ${products}" th:attr="data-id=${prodItem.id}, data-name=${prodItem.name}"></span>
     </div>
-    <div th:attr="data-section-id=${sec.id},
+
+    <div th:attr="id=${svHasValidAnchor ? svLayoutAnchor : null},
+                  data-section-id=${sec.id},
                   data-section-type=${sec.type},
                   data-section-label=${sectionLabels[sec.type] != null ? sectionLabels[sec.type] : sec.type}"
-         class="storevo-theme-section">
+         class="storevo-theme-section"
+         th:classappend="${svLayoutClasses != ''} ? ${svLayoutClasses}"
+         th:styleappend="${svHasSolidBg} ? ${'background-color: ' + svLayoutBgColor + ';'}">
+
         <th:block th:switch="${sec.type}">
             <th:block th:case="'announcement_bar'">
                 <div th:replace="~{storefront/sections/theme-sections :: announcement-bar(${sec})}"></div>

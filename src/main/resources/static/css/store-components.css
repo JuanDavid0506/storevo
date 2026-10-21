@@ -1291,3 +1291,77 @@ body[data-sv-detail-related="false"] .sv-detail-related-wrap {
         grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
     }
 }
+/* ==========================================================================
+   OPCIONES TRANSVERSALES DE SECCIÓN (espaciado y ancho)
+   Las clases las agrega theme-sections.html :: render-section sobre el
+   envoltorio .storevo-theme-section, y solo cuando el comerciante cambia el
+   valor predeterminado. Sin clase, la sección se ve exactamente como antes.
+   Se aplican al <section> raíz del fragmento (hijo directo del envoltorio).
+   Especificidad (0,2,1) > utilidades de Tailwind (0,1,0): no requiere !important.
+   ========================================================================== */
+.storevo-theme-section.sv-space-top-none > section {
+    padding-top: 0;
+}
+.storevo-theme-section.sv-space-top-sm > section {
+    padding-top: 1.5rem;
+}
+.storevo-theme-section.sv-space-top-lg > section {
+    padding-top: 4.5rem;
+}
+.storevo-theme-section.sv-space-bottom-none > section {
+    padding-bottom: 0;
+}
+.storevo-theme-section.sv-space-bottom-sm > section {
+    padding-bottom: 1.5rem;
+}
+.storevo-theme-section.sv-space-bottom-lg > section {
+    padding-bottom: 4.5rem;
+}
+@media (min-width: 640px) {
+    .storevo-theme-section.sv-space-top-lg > section {
+        padding-top: 6rem;
+    }
+    .storevo-theme-section.sv-space-bottom-lg > section {
+        padding-bottom: 6rem;
+    }
+}
+.storevo-theme-section.sv-width-full > section {
+    max-width: none;
+}
+.storevo-theme-section.sv-width-full .sv-spotlight-wrapper {
+    max-width: none;
+}
+
+/* Contraste automático para secciones con fondo sólido personalizado */
+.storevo-theme-section.sv-tone-dark {
+    --store-text: #f8fafc;
+    color: var(--store-text);
+}
+.storevo-theme-section.sv-tone-light {
+    --store-text: #0f172a;
+    color: var(--store-text);
+}
+
+/* Preservar divisor interno oscuro en tarjetas blancas con borde outlined dentro de sección oscura */
+body[data-card-style="outlined"] .storevo-theme-section.sv-tone-dark .product-card:not(.sv-spotlight-card) .sv-card__media {
+    border-bottom-color: #0f172a;
+}
+
+/* Adaptar textos de tarjetas sin fondo (clean / boutique) cuando la sección tiene fondo oscuro */
+body[data-card-style="clean"] .storevo-theme-section.sv-tone-dark .product-card:not(.sv-spotlight-card) .sv-card__title,
+body[data-card-style="clean"] .storevo-theme-section.sv-tone-dark .product-card:not(.sv-spotlight-card) .sv-card__price,
+body[data-card-style="boutique"] .storevo-theme-section.sv-tone-dark .product-card:not(.sv-spotlight-card) .sv-card__title,
+body[data-card-style="boutique"] .storevo-theme-section.sv-tone-dark .product-card:not(.sv-spotlight-card) .sv-card__price {
+    color: #f8fafc !important;
+}
+body[data-card-style="clean"] .storevo-theme-section.sv-tone-dark .product-card:not(.sv-spotlight-card) .sv-card__old-price,
+body[data-card-style="clean"] .storevo-theme-section.sv-tone-dark .product-card:not(.sv-spotlight-card) .sv-card__price-from,
+body[data-card-style="boutique"] .storevo-theme-section.sv-tone-dark .product-card:not(.sv-spotlight-card) .sv-card__old-price,
+body[data-card-style="boutique"] .storevo-theme-section.sv-tone-dark .product-card:not(.sv-spotlight-card) .sv-card__price-from {
+    color: rgba(248, 250, 252, 0.72) !important;
+}
+
+/* Compensación del navbar fijo para saltos por ancla (#id) */
+.storevo-theme-section[id] {
+    scroll-margin-top: calc(var(--sv-nav-h, 4.5rem) + 1rem);
+}
