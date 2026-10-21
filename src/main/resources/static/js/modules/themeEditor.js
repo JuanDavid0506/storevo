@@ -2993,27 +2993,26 @@ Storevo.ThemeEditor = {
         const name = this.storeName || 'Nuestra Tienda';
         return [
             {
-                id: 'editorial_couture',
-                category: 'fashion',
-                name: 'Editorial Haute Couture',
-                tag: 'Alta Costura & Moda',
-                layoutSummary: 'Navbar Editorial • Bordes Rectos 0px • Galería Lookbook',
-                colors: ['#18181b', '#27272a', '#f8fafc'],
-                description: 'Composición de revista con tipografía Cormorant Garamond en mayúsculas, tarjetas limpias sin bordes, catálogo de 3 columnas grandes y ficha en mosaico.',
+                id: 'atelier_provenza',
+                category: 'moda_calzado',
+                name: 'Atelier Provenza',
+                tag: 'Ropa, Boutique y Moda de Autor',
+                layoutSummary: 'Navbar Boutique Centrado • Tarjeta Editorial 4:5 • Galería Lookbook',
+                colors: ['#9a6b56', '#1c1917', '#faf8f5'],
+                description: 'Editorial de alta costura con tipografía Cormorant Garamond y Manrope, tarjetas verticales limpias, catálogo de 3 columnas amplias y ficha en mosaico 60/40.',
                 config: {
                     globalStyles: {
-                        primaryColor: '#18181b',
-                        secondaryColor: '#27272a',
-                        backgroundColor: '#f8fafc',
-                        textColor: '#0f172a',
+                        primaryColor: '#9a6b56',
+                        secondaryColor: '#1c1917',
+                        backgroundColor: '#faf8f5',
+                        textColor: '#1c1917',
                         headingFont: 'Cormorant Garamond',
                         bodyFont: 'Manrope',
-                        headingTransform: 'uppercase',
+                        headingTransform: 'none',
                         fontScale: 'standard',
-                        borderRadius: '0px',
+                        borderRadius: '0.375rem',
                         buttonRadius: 'square',
-                        cardStyle: 'clean',
-                        navbarLayout: 'editorial',
+                        navbarLayout: 'centered',
                         navbarStyle: 'light',
                         navbarLinkFormat: 'uppercase',
                         navbarLinkHover: 'underline_center',
@@ -3022,55 +3021,322 @@ Storevo.ThemeEditor = {
                         navbarDropdownAnim: 'fade',
                         navbarTrigger: 'hover',
                         navbarSpeed: 'slow',
-                        navbarCompactOnScroll: true
+                        navbarCompactOnScroll: true,
+                        cardPreset: 'commercial',
+                        cardStyle: 'clean',
+                        cardRadius: '0px',
+                        cardShadow: 'none',
+                        cardImageAspect: 'portrait',
+                        cardImageFit: 'cover',
+                        cardImagePadding: 'flush',
+                        cardContentAlign: 'left',
+                        cardMetaMode: 'category',
+                        cardDiscountBadge: 'percent',
+                        cardShowStatusBadges: true,
+                        cardShowOldPrice: true,
+                        cardPriceSize: 'normal',
+                        cardButtonStyle: 'dark',
+                        cardActionMode: 'always',
+                        cardWishlistMode: 'always',
+                        cardImageHover: 'carousel',
+                        cardHoverLift: 'none',
+                        detailPreset: 'fashion_lookbook',
+                        detailInfoStyle: 'clean',
+                        detailStickyMode: 'sticky_info',
+                        detailGalleryPosition: 'left',
+                        detailLayoutRatio: '60_40',
+                        detailGalleryLayout: 'grid',
+                        detailGalleryArrows: true,
+                        detailImageAspect: 'portrait',
+                        detailImageFit: 'cover',
+                        detailImageZoom: true,
+                        detailBuyLayout: 'stacked',
+                        detailVariantStyle: 'pills',
+                        detailShowBreadcrumbs: true,
+                        detailShowMeta: true,
+                        detailShowSku: false,
+                        detailShowSavingsBadge: true,
+                        detailShowStock: false,
+                        detailShowTrustStrip: true,
+                        detailShowShare: true,
+                        detailShowSpecs: true,
+                        detailSpecsOpen: 'collapsed',
+                        detailShowPolicies: true,
+                        detailShowRelated: true,
+                        detailRelatedCols: '3',
+                        filterEnabled: true,
+                        filterLayout: 'drawer',
+                        filterShowSearch: true,
+                        filterShowSort: true,
+                        filterShowCount: true,
+                        filterShowCategory: true,
+                        filterShowPrice: true,
+                        filterShowOffers: true,
+                        filterShowAvailability: true,
+                        filterShowBrand: false,
+                        filterShowVariants: true,
+                        filterShowSpecs: false,
+                        searchEnabled: true,
+                        searchMode: 'predictive',
+                        searchNavbarVariant: 'expandable_icon',
+                        searchMobileMode: 'fullscreen',
+                        searchInputStyle: 'underline',
+                        searchInputSize: 'normal',
+                        searchButtonMode: 'icon',
+                        searchAnim: 'fade',
+                        searchPlaceholder: 'Buscar vestidos, blusas, tallas...',
+                        searchButtonLabel: 'Buscar',
+                        searchEmptyMessage: 'No encontramos prendas para tu búsqueda',
+                        searchMinChars: 2,
+                        searchDebounceMs: 250,
+                        searchMaxSuggestions: 6,
+                        searchShowProductImg: true,
+                        searchShowProductPrice: true,
+                        searchShowProductDiscount: true,
+                        searchShowProductCategory: true,
+                        searchShowProductBrand: false,
+                        searchSuggestCategories: true,
+                        searchSuggestBrands: false,
+                        searchShowRecent: true,
+                        searchPopularTerms: 'Vestidos, Lino, Blusas, Conjuntos, Ofertas',
+                        searchCategoryScope: 'none',
+                        searchAdvancedEnabled: false,
+                        searchMatchVariants: true,
+                        searchMatchSpecs: true,
+                        searchAdvCategory: true,
+                        searchAdvBrand: false,
+                        searchAdvPrice: true,
+                        searchAdvAvailability: true,
+                        searchAdvVariants: true,
+                        searchAdvSpecs: false
                     },
                     sections: [
                         {
-                            id: 'sec_ann_ec', type: 'announcement_bar', enabled: true,
-                            settings: { text: 'ENVÍOS A TODA COLOMBIA • EDICIÓN LIMITADA DISPONIBLE', text2: 'ATENCIÓN PERSONALIZADA VÍA WHATSAPP', text3: '', bgColor: '#18181b', textColor: '#ffffff', linkUrl: '/catalog' }
+                            id: 'sec_ann_ap', type: 'announcement_bar', enabled: true,
+                            settings: { text: '✨ Envíos a toda Colombia • Cambios de talla fáciles y rápidos', text2: '💳 Pago seguro en línea con PSE, Nequi y Tarjetas', text3: '💬 Asesoría personalizada de tallaje por WhatsApp', bgColor: '#1c1917', textColor: '#ffffff', linkUrl: '/catalog' }
                         },
                         {
-                            id: 'sec_hero_ec', type: 'hero_banner', enabled: true,
-                            settings: { heroLayout: 'classic', badgeText: 'COLECCIÓN DE TEMPORADA', title: name, subtitle: 'Siluetas atemporales y acabados de autor diseñados para destacar.', buttonText: 'EXPLORAR COLECCIÓN', buttonUrl: '/catalog', secondaryButtonText: '', secondaryButtonUrl: '/catalog', imageUrl: '', overlayOpacity: 45, bgColor: '#18181b', textColor: '#ffffff', alignment: 'center' }
+                            id: 'sec_hero_ap', type: 'hero_banner', enabled: true,
+                            settings: { heroLayout: 'split', badgeText: 'NUEVA COLECCIÓN', title: 'Siluetas de autor y elegancia natural en ' + name, subtitle: 'Prendas diseñadas para destacar en cada ocasión con telas seleccionadas y confección impecable.', buttonText: 'Ver Colección', buttonUrl: '/catalog', secondaryButtonText: 'Asesoría de Talla', secondaryButtonUrl: '__whatsapp__', imageUrl: '', overlayOpacity: 40, bgColor: '#1c1917', textColor: '#ffffff', alignment: 'left' }
                         },
                         {
-                            id: 'sec_cats_ec', type: 'featured_categories', enabled: true,
+                            id: 'sec_cats_ap', type: 'featured_categories', enabled: true,
                             settings: { title: 'Líneas de Colección', subtitle: 'Explora nuestras categorías principales', cardLayout: 'visual', columns: '3' }
                         },
                         {
-                            id: 'sec_grid_ec', type: 'product_grid', enabled: true,
-                            settings: { title: 'Nuevos Ingresos', subtitle: 'Piezas seleccionadas de la temporada', source: 'NEWEST', categoryId: '', limit: 8, showFilters: false, showViewAll: true }
+                            id: 'sec_grid_ap', type: 'product_grid', enabled: true,
+                            settings: { title: 'Nuevos Ingresos', subtitle: 'Piezas recién llegadas a nuestra boutique', source: 'NEWEST', categoryId: '', limit: 8, showFilters: false, showViewAll: true }
                         },
                         {
-                            id: 'sec_spot_ec', type: 'spotlight_product', enabled: true,
-                            settings: { productId: '', badgeText: 'PIEZA DE AUTOR', customTitle: '', customSubtitle: '', imageSide: 'right' }
+                            id: 'sec_spot_ap', type: 'spotlight_product', enabled: true,
+                            settings: { productId: '', badgeText: '✨ PIEZA DE LA SEMANA', customTitle: '', customSubtitle: '', imageSide: 'left' }
                         },
                         {
-                            id: 'sec_rich_ec', type: 'rich_text', enabled: true,
-                            settings: { title: 'Filosofía de Marca', content: 'En ' + name + ' creamos colecciones con atención meticulosa al detalle, priorizando materiales nobles y cortes impecables.' }
+                            id: 'sec_multi_ap', type: 'multi_banners', enabled: true,
+                            settings: { card1Badge: 'Esenciales', card1Title: 'Básicos de Armario', card1Subtitle: 'Versatilidad y frescura para todos los días', card1ButtonText: 'Explorar', card1ButtonUrl: '/catalog', card1ImageUrl: '', card1BgColor: '#1c1917', card2Badge: 'Edición Limitada', card2Title: 'Ocasiones Especiales', card2Subtitle: 'Diseños exclusivos en unidades limitadas', card2ButtonText: 'Descubrir', card2ButtonUrl: '/catalog', card2ImageUrl: '', card2BgColor: '#9a6b56' }
+                        },
+                        {
+                            id: 'sec_rich_ap', type: 'rich_text', enabled: true,
+                            settings: { title: 'Nuestra Filosofía de Diseño', content: 'En ' + name + ' cuidamos cada corte, textura y caída para entregarte prendas atemporales hechas con dedicación en Colombia.' }
+                        },
+                        {
+                            id: 'sec_test_ap', type: 'testimonials', enabled: true,
+                            settings: { title: 'Experiencias de Nuestras Clientas', subtitle: 'Calificaciones reales verificadas en cada pedido' }
+                        },
+                        {
+                            id: 'sec_wa_ap', type: 'whatsapp_cta', enabled: true,
+                            settings: { title: '¿Tienes dudas con tu talla o medidas?', subtitle: 'Escríbenos por WhatsApp y te asesoramos en minutos para que elijas el fit ideal.', buttonText: 'Hablar con una asesora en WhatsApp' }
+                        },
+                        {
+                            id: 'sec_trust_ap', type: 'trust_badges', enabled: true,
+                            settings: { badgeStyle: 'minimal', item1Icon: 'shield', item1Title: 'Compra 100% Protegida', item1Text: 'Paga en línea con total tranquilidad o coordina por WhatsApp.', item2Icon: 'truck', item2Title: 'Envíos a Toda Colombia', item2Text: 'Empaque delicado y despacho seguro hasta tu puerta.', item3Icon: 'refresh', item3Title: 'Cambios de Talla Fáciles', item3Text: 'Te acompañamos si necesitas cambiar la talla de tu prenda.' }
                         }
                     ],
                     pages: {
                         catalog: [{
                             id: 'sec_catalog_results', type: 'catalog_results', enabled: true, locked: true,
-                            settings: { showHeader: true, headerBadge: 'LOOKBOOK', headerTitle: 'Catálogo Completo', headerSubtitle: 'Explora todas las piezas disponibles en nuestra tienda.', showCategoryPills: true, showSearchAndSort: true, filterLayout: 'topbar', showFilterPrice: true, showFilterAvailability: true, showFilterCategory: true, showFilterVariants: true, showFilterAttributes: true, columnsDesktop: '3', showDiscountPercent: false }
+                            settings: { showHeader: true, headerBadge: 'LOOKBOOK', headerTitle: 'Catálogo de Colección', headerSubtitle: 'Filtra por talla, color o categoría para encontrar tu prenda ideal.', showCategoryPills: true, showSearchAndSort: true, filterLayout: 'drawer', showFilterPrice: true, showFilterAvailability: true, showFilterCategory: true, showFilterVariants: true, showFilterAttributes: false, columnsDesktop: '3', showDiscountPercent: true }
                         }],
                         product: [
                             {
                                 id: 'sec_product_main', type: 'product_main', enabled: true, locked: true,
-                                settings: { galleryLayout: 'grid', showBreadcrumbs: true, showSku: false, showStockCounter: true, showSpecs: true, showPolicies: true, showRelatedProducts: true, relatedTitle: 'Completa el Look', relatedSubtitle: 'Otras piezas de nuestra colección' }
-                            },
-                            {
-                                id: 'sec_prod_trust_ec', type: 'trust_badges', enabled: true, locked: false,
-                                settings: { badgeStyle: 'minimal', item1Icon: 'shield', item1Title: 'Compra Protegida', item1Text: 'Transacciones 100% seguras en línea.', item2Icon: 'truck', item2Title: 'Despacho Nacional', item2Text: 'Envíos cuidados a cualquier ciudad.', item3Icon: 'refresh', item3Title: 'Cambios de Talla', item3Text: 'Soporte directo por WhatsApp.' }
+                                settings: { galleryLayout: 'grid', showBreadcrumbs: true, showSku: false, showStockCounter: false, showSpecs: true, showPolicies: true, showRelatedProducts: true, relatedTitle: 'Completa tu Look', relatedSubtitle: 'Prendas que combinan con tu elección' }
                             }
                         ]
                     }
                 }
             },
             {
+                id: 'nexo_digital',
+                category: 'tecnologia',
+                name: 'Nexo Digital',
+                tag: 'Tecnología, Audio y Accesorios',
+                layoutSummary: 'Navbar Buscador Comercial • Tarjetas Bento Contain • Ficha Técnica Abierta',
+                colors: ['#2563eb', '#0f172a', '#f1f5f9'],
+                description: 'Estructura tipo marketplace tecnológico con buscador prominente en cabecera, submenú Maestro-Detalle, tarjetas Bento con imagen completa sin recorte y especificaciones técnicas desplegadas.',
+                config: {
+                    globalStyles: {
+                        primaryColor: '#2563eb',
+                        secondaryColor: '#0f172a',
+                        backgroundColor: '#f1f5f9',
+                        textColor: '#0f172a',
+                        headingFont: 'Plus Jakarta Sans',
+                        bodyFont: 'Inter',
+                        headingTransform: 'none',
+                        fontScale: 'standard',
+                        borderRadius: '1rem',
+                        buttonRadius: 'classic',
+                        navbarLayout: 'marketplace',
+                        navbarStyle: 'secondary',
+                        navbarLinkFormat: 'normal',
+                        navbarLinkHover: 'slide_bg',
+                        navbarSticky: true,
+                        navbarDropdownStyle: 'split',
+                        navbarDropdownAnim: 'slide_up',
+                        navbarTrigger: 'hover',
+                        navbarSpeed: 'fast',
+                        navbarCompactOnScroll: true,
+                        cardPreset: 'bento',
+                        cardStyle: 'bento',
+                        cardRadius: '1rem',
+                        cardShadow: 'sm',
+                        cardImageAspect: 'square',
+                        cardImageFit: 'contain',
+                        cardImagePadding: 'inset',
+                        cardContentAlign: 'left',
+                        cardMetaMode: 'brand',
+                        cardDiscountBadge: 'percent',
+                        cardShowStatusBadges: true,
+                        cardShowOldPrice: true,
+                        cardPriceSize: 'normal',
+                        cardButtonStyle: 'solid',
+                        cardActionMode: 'always',
+                        cardWishlistMode: 'always',
+                        cardImageHover: 'carousel',
+                        cardHoverLift: 'glow',
+                        detailPreset: 'tech_specs',
+                        detailInfoStyle: 'card',
+                        detailStickyMode: 'sticky_gallery',
+                        detailGalleryPosition: 'left',
+                        detailLayoutRatio: '50_50',
+                        detailGalleryLayout: 'left',
+                        detailGalleryArrows: true,
+                        detailImageAspect: 'square',
+                        detailImageFit: 'contain',
+                        detailImageZoom: true,
+                        detailBuyLayout: 'standard',
+                        detailVariantStyle: 'rounded',
+                        detailShowBreadcrumbs: true,
+                        detailShowMeta: true,
+                        detailShowSku: true,
+                        detailShowSavingsBadge: true,
+                        detailShowStock: true,
+                        detailShowTrustStrip: true,
+                        detailShowShare: true,
+                        detailShowSpecs: true,
+                        detailSpecsOpen: 'expanded',
+                        detailShowPolicies: true,
+                        detailShowRelated: true,
+                        detailRelatedCols: '4',
+                        filterEnabled: true,
+                        filterLayout: 'sidebar',
+                        filterShowSearch: true,
+                        filterShowSort: true,
+                        filterShowCount: true,
+                        filterShowCategory: true,
+                        filterShowPrice: true,
+                        filterShowOffers: true,
+                        filterShowAvailability: true,
+                        filterShowBrand: true,
+                        filterShowVariants: true,
+                        filterShowSpecs: true,
+                        searchEnabled: true,
+                        searchMode: 'predictive',
+                        searchNavbarVariant: 'inline_bar',
+                        searchMobileMode: 'fullscreen',
+                        searchInputStyle: 'rounded',
+                        searchInputSize: 'normal',
+                        searchButtonMode: 'icon_text',
+                        searchAnim: 'slide_up',
+                        searchPlaceholder: 'Buscar por referencia, marca, modelo o especificación...',
+                        searchButtonLabel: 'Buscar',
+                        searchEmptyMessage: 'No encontramos equipos o accesorios para tu búsqueda',
+                        searchMinChars: 2,
+                        searchDebounceMs: 150,
+                        searchMaxSuggestions: 8,
+                        searchShowProductImg: true,
+                        searchShowProductPrice: true,
+                        searchShowProductDiscount: true,
+                        searchShowProductCategory: true,
+                        searchShowProductBrand: true,
+                        searchSuggestCategories: true,
+                        searchSuggestBrands: true,
+                        searchShowRecent: true,
+                        searchPopularTerms: 'Audífonos, Cargador, Smartwatch, Gamer, Ofertas',
+                        searchCategoryScope: 'pills_top',
+                        searchAdvancedEnabled: true,
+                        searchMatchVariants: true,
+                        searchMatchSpecs: true,
+                        searchAdvCategory: true,
+                        searchAdvBrand: true,
+                        searchAdvPrice: true,
+                        searchAdvAvailability: true,
+                        searchAdvVariants: true,
+                        searchAdvSpecs: true
+                    },
+                    sections: [
+                        {
+                            id: 'sec_ann_nd', type: 'announcement_bar', enabled: true,
+                            settings: { text: '⚡ Garantía directa en todos los equipos • Despacho rápido y asegurado a toda Colombia', text2: '💳 Paga en línea con PSE, Nequi, Tarjetas o coordina por WhatsApp', text3: '🛡️ Equipos verificados y soporte técnico directo', bgColor: '#2563eb', textColor: '#ffffff', linkUrl: '/catalog' }
+                        },
+                        {
+                            id: 'sec_hero_nd', type: 'hero_banner', enabled: true,
+                            settings: { heroLayout: 'split', badgeText: 'TECNOLOGÍA GARANTIZADA', title: 'Innovación y alto rendimiento en ' + name, subtitle: 'Encuentra dispositivos, audio y accesorios con respaldo real, especificaciones claras y envío ágil.', buttonText: 'Explorar Catálogo', buttonUrl: '/catalog', secondaryButtonText: 'Asesoría Técnica', secondaryButtonUrl: '__whatsapp__', imageUrl: '', overlayOpacity: 45, bgColor: '#1e293b', textColor: '#ffffff', alignment: 'left' }
+                        },
+                        {
+                            id: 'sec_cats_nd', type: 'featured_categories', enabled: true,
+                            settings: { title: 'Categorías Tecnológicas', subtitle: 'Accede directo a la línea de productos que buscas', cardLayout: 'icon', columns: '4' }
+                        },
+                        {
+                            id: 'sec_cd_nd', type: 'countdown_promo', enabled: true,
+                            settings: { badgeText: '⚡ OFERTAS TECH DE LA SEMANA', title: '¡Precios especiales en referencias seleccionadas!', subtitle: 'Unidades disponibles en inventario con despacho inmediato.', endDate: '', buttonText: 'Ver Ofertas Ahora', buttonUrl: '/catalog', bgColor: '#090d16', textColor: '#ffffff' }
+                        },
+                        {
+                            id: 'sec_grid_nd', type: 'product_grid', enabled: true,
+                            settings: { title: 'Catálogo Tecnológico', subtitle: 'Busca por referencia o filtra por marca, capacidad y precio', source: 'NEWEST', categoryId: '', limit: 12, showFilters: true, showViewAll: true }
+                        },
+                        {
+                            id: 'sec_spot_nd', type: 'spotlight_product', enabled: true,
+                            settings: { productId: '__offer__', badgeText: '⚡ OFERTA DESTACADA', customTitle: '', customSubtitle: '', imageSide: 'left' }
+                        },
+                        {
+                            id: 'sec_trust_nd', type: 'trust_badges', enabled: true,
+                            settings: { badgeStyle: 'cards', item1Icon: 'shield', item1Title: 'Garantía Real', item1Text: 'Respaldo directo ante defectos de fabricación.', item2Icon: 'truck', item2Title: 'Envío Asegurado', item2Text: 'Empaque de alta protección hasta tu ciudad.', item3Icon: 'card', item3Title: 'Múltiples Medios de Pago', item3Text: 'PSE, Nequi, Daviplata, tarjetas o WhatsApp.' }
+                        },
+                        {
+                            id: 'sec_steps_nd', type: 'how_to_buy', enabled: true,
+                            settings: { title: '¿Cómo comprar tu equipo en ' + name + '?', subtitle: 'Proceso 100% transparente, rápido y seguro', step1Title: 'Revisa la ficha técnica', step1Text: 'Verifica compatibilidad, capacidad y especificaciones en el producto.', step2Title: 'Ingresa tus datos de envío', step2Text: 'Indica tu ciudad, dirección exacta y datos de facturación.', step3Title: 'Paga en línea o por WhatsApp', step3Text: 'Usa nuestra pasarela segura o confirma directamente con un asesor.', showPaymentBadges: true }
+                        },
+                        {
+                            id: 'sec_faq_nd', type: 'faq_accordion', enabled: true,
+                            settings: { title: 'Preguntas Frecuentes', subtitle: 'Resolvemos tus dudas técnicas antes de comprar', q1: '¿Qué cubre la garantía de los productos?', a1: 'Todos nuestros productos cuentan con garantía directa por defectos de fábrica y acompañamiento técnico.', q2: '¿Cuánto tarda el envío a mi ciudad?', a2: 'Despachamos en menos de 24 horas hábiles. La entrega toma de 1 a 4 días hábiles según tu ubicación.', q3: '¿Los equipos son nuevos y originales?', a3: 'Sí, comercializamos referencias verificadas y selladas con sus accesorios correspondientes.' }
+                        }
+                    ],
+                    pages: {
+                        catalog: [{
+                            id: 'sec_catalog_results', type: 'catalog_results', enabled: true, locked: true,
+                            settings: { showHeader: true, headerBadge: 'CATÁLOGO OFICIAL', headerTitle: 'Todos los Equipos y Accesorios', headerSubtitle: 'Usa los filtros laterales para buscar por marca, especificaciones técnicas y rango de precio.', showCategoryPills: true, showSearchAndSort: true, filterLayout: 'sidebar', showFilterPrice: true, showFilterAvailability: true, showFilterCategory: true, showFilterVariants: true, showFilterAttributes: true, columnsDesktop: '4', showDiscountPercent: true }
+                        }],
+                        product: [{
+                            id: 'sec_product_main', type: 'product_main', enabled: true, locked: true,
+                            settings: { galleryLayout: 'left', showBreadcrumbs: true, showSku: true, showStockCounter: true, showSpecs: true, showPolicies: true, showRelatedProducts: true, relatedTitle: 'Accesorios y Equipos Compatibles', relatedSubtitle: 'Complementa tu compra con estas referencias' }
+                        }]
+                    }
+                }
+            },
+            {
                 id: 'urban_streetwear',
-                category: 'fashion',
+                category: 'moda_calzado',
                 name: 'Urbano & Streetwear Drop',
                 tag: 'Streetwear & Sneakers',
                 layoutSummary: 'Navbar Transparente Hero • Tarjetas Contorno • Contador Drop',
@@ -3135,78 +3401,8 @@ Storevo.ThemeEditor = {
                 }
             },
             {
-                id: 'tech_gadgets',
-                category: 'commercial',
-                name: 'Tecnología & Gadgets Pro',
-                tag: 'Electrónica, Audio & Accesorios',
-                layoutSummary: 'Navbar Buscador Grande • Filtros Laterales • Ficha Técnica',
-                colors: ['#2563eb', '#0f172a', '#f8fafc'],
-                description: 'Estructura tipo marketplace tecnológico con buscador prominente, categorías con ícono, vitrina con filtros dinámicos y especificaciones técnicas destacadas.',
-                config: {
-                    globalStyles: {
-                        primaryColor: '#2563eb',
-                        secondaryColor: '#0f172a',
-                        backgroundColor: '#f8fafc',
-                        textColor: '#0f172a',
-                        headingFont: 'Plus Jakarta Sans',
-                        bodyFont: 'Inter',
-                        headingTransform: 'none',
-                        fontScale: 'standard',
-                        borderRadius: '1rem',
-                        buttonRadius: 'classic',
-                        cardStyle: 'elevated',
-                        navbarLayout: 'marketplace',
-                        navbarStyle: 'secondary',
-                        navbarLinkFormat: 'normal',
-                        navbarLinkHover: 'pill',
-                        navbarSticky: true,
-                        navbarDropdownStyle: 'mega',
-                        navbarDropdownAnim: 'slide_up',
-                        navbarTrigger: 'hover',
-                        navbarSpeed: 'fast',
-                        navbarCompactOnScroll: true
-                    },
-                    sections: [
-                        {
-                            id: 'sec_ann_tg', type: 'announcement_bar', enabled: true,
-                            settings: { text: '⚡ Garantía real en todos nuestros productos • Despacho rápido a toda Colombia', text2: '💳 Paga seguro con PSE, Nequi, Tarjetas o coordina por WhatsApp', text3: '', bgColor: '#2563eb', textColor: '#ffffff', linkUrl: '/catalog' }
-                        },
-                        {
-                            id: 'sec_hero_tg', type: 'hero_banner', enabled: true,
-                            settings: { heroLayout: 'split', badgeText: 'TECNOLOGÍA GARANTIZADA', title: 'Innovación y rendimiento al mejor precio en ' + name, subtitle: 'Equipos y accesorios seleccionados con respaldo técnico y entrega ágil.', buttonText: 'Explorar Catálogo', buttonUrl: '/catalog', secondaryButtonText: 'Asesoría Técnica', secondaryButtonUrl: '__whatsapp__', imageUrl: '', overlayOpacity: 45, bgColor: '#0f172a', textColor: '#ffffff', alignment: 'left' }
-                        },
-                        {
-                            id: 'sec_cats_tg', type: 'featured_categories', enabled: true,
-                            settings: { title: 'Categorías Tecnológicas', subtitle: 'Encuentra rápido el equipo o accesorio que necesitas', cardLayout: 'icon', columns: '4' }
-                        },
-                        {
-                            id: 'sec_grid_tg', type: 'product_grid', enabled: true,
-                            settings: { title: 'Equipos Destacados', subtitle: 'Filtra por marca, capacidad o rango de precio', source: 'NEWEST', categoryId: '', limit: 12, showFilters: true, showViewAll: true }
-                        },
-                        {
-                            id: 'sec_trust_tg', type: 'trust_badges', enabled: true,
-                            settings: { badgeStyle: 'secondary', item1Icon: 'shield', item1Title: 'Garantía Directa', item1Text: 'Todos nuestros equipos cuentan con respaldo real.', item2Icon: 'truck', item2Title: 'Envío Asegurado', item2Text: 'Empaque protegido hasta la puerta de tu casa.', item3Icon: 'chat', item3Title: 'Soporte Especializado', item3Text: 'Te ayudamos a elegir antes y después de tu compra.' }
-                        },
-                        {
-                            id: 'sec_faq_tg', type: 'faq_accordion', enabled: true,
-                            settings: { title: 'Preguntas Frecuentes', subtitle: 'Resolvemos tus dudas sobre garantía y envíos', q1: '¿Los productos tienen garantía?', a1: 'Sí, todos nuestros productos incluyen garantía por defectos de fábrica y soporte directo.', q2: '¿Cuánto demora el envío a mi ciudad?', a2: 'Despachamos en menos de 24 horas hábiles. La entrega toma entre 1 y 4 días hábiles.', q3: '¿Qué medios de pago aceptan?', a3: 'Aceptamos PSE, Nequi, Daviplata, tarjetas débito/crédito y pedidos por WhatsApp.' }
-                        }
-                    ],
-                    pages: {
-                        catalog: [{
-                            id: 'sec_catalog_results', type: 'catalog_results', enabled: true, locked: true,
-                            settings: { showHeader: true, headerBadge: 'CATÁLOGO OFICIAL', headerTitle: 'Todos los Productos', headerSubtitle: 'Usa el panel lateral para filtrar por marca, especificaciones y disponibilidad.', showCategoryPills: true, showSearchAndSort: true, filterLayout: 'sidebar', showFilterPrice: true, showFilterAvailability: true, showFilterCategory: true, showFilterVariants: true, showFilterAttributes: true, columnsDesktop: '4', showDiscountPercent: true }
-                        }],
-                        product: [{
-                            id: 'sec_product_main', type: 'product_main', enabled: true, locked: true,
-                            settings: { galleryLayout: 'bottom', showBreadcrumbs: true, showSku: true, showStockCounter: true, showSpecs: true, showPolicies: true, showRelatedProducts: true, relatedTitle: 'Accesorios y Equipos Similares', relatedSubtitle: 'Compatibles con tu selección' }
-                        }]
-                    }
-                }
-            },
-            {
                 id: 'whatsapp_express',
-                category: 'commercial',
+                category: 'multitienda',
                 name: 'Catálogo Express WhatsApp',
                 tag: 'Venta Ágil por WhatsApp & Redes',
                 layoutSummary: 'Navbar Compacto • Vitrina Directa con Filtros • Botones Píldora',
@@ -3272,7 +3468,7 @@ Storevo.ThemeEditor = {
             },
             {
                 id: 'jewelry_boutique',
-                category: 'boutique',
+                category: 'accesorios_joyas',
                 name: 'Joyería & Boutique Dorada',
                 tag: 'Joyería, Relojería & Perfumería',
                 layoutSummary: 'Navbar Boutique Centrado • Fuente Cinzel • Galería Lateral',
@@ -3342,7 +3538,7 @@ Storevo.ThemeEditor = {
             },
             {
                 id: 'natural_artisan',
-                category: 'boutique',
+                category: 'regalos_artesanias',
                 name: 'Artesanal, Natural & Orgánico',
                 tag: 'Cosmética Natural, Hogar & Artesanía',
                 layoutSummary: 'Bordes Orgánicos 24px • Tonos Tierra/Oliva • Historia de Marca',
@@ -3412,7 +3608,7 @@ Storevo.ThemeEditor = {
             },
             {
                 id: 'sport_fitness',
-                category: 'fashion',
+                category: 'deportes',
                 name: 'Deportivo & Alto Rendimiento',
                 tag: 'Fitness, Suplementos & Ropa Deportiva',
                 layoutSummary: 'Tipografía Oswald Impacto • Contorno Firme • Velocidad Rápida',
@@ -3482,7 +3678,7 @@ Storevo.ThemeEditor = {
             },
             {
                 id: 'commercial_megastore',
-                category: 'commercial',
+                category: 'multitienda',
                 name: 'Comercial Multitienda & Hogar',
                 tag: 'Multicategoría, Variedades & Distribuidoras',
                 layoutSummary: 'Doble Barra Comercial • Mega Menú • Vitrina 12 Productos',
@@ -3573,9 +3769,24 @@ Storevo.ThemeEditor = {
         container.innerHTML = '';
 
         const allPresets = this.getPresetsDefinitions();
+        const allBtn = document.querySelector('#preset-category-pills .preset-cat-btn[data-cat="all"]');
+        if (allBtn) {
+            allBtn.textContent = `Todas (${allPresets.length})`;
+        }
+
         const filtered = this.activePresetCategory === 'all'
             ? allPresets
             : allPresets.filter(p => p.category === this.activePresetCategory);
+
+        if (filtered.length === 0) {
+            container.innerHTML = `
+                <div class="bg-slate-950 border border-dashed border-slate-800 rounded-2xl p-6 text-center space-y-2">
+                    <p class="text-xs font-bold text-slate-300">No hay plantillas en esta categoría todavía</p>
+                    <p class="text-[11px] text-slate-500">Selecciona «Todas» para explorar los diseños disponibles.</p>
+                </div>
+            `;
+            return;
+        }
 
         filtered.forEach(preset => {
             const isCurrent = this.activePresetId === preset.id;
@@ -3621,16 +3832,11 @@ Storevo.ThemeEditor = {
         if (!Array.isArray(oldHomeSections) || !Array.isArray(newHomeSections)) return;
         const usedOldIds = new Set();
 
-        const CONTENT_KEYS = [
+        // Conservar únicamente las imágenes subidas por el comerciante, fechas de ofertas y vínculos de productos/categorías,
+        // permitiendo que cada plantilla aplique sus propios títulos, etiquetas y textos comerciales especializados.
+        const PRESERVED_MEDIA_AND_DATA_KEYS = [
             'imageUrl', 'card1ImageUrl', 'card2ImageUrl',
-            'title', 'subtitle', 'badgeText', 'buttonText', 'buttonUrl',
-            'secondaryButtonText', 'secondaryButtonUrl',
-            'text', 'text2', 'text3', 'linkUrl',
-            'productId', 'customTitle', 'customSubtitle',
-            'card1Badge', 'card1Title', 'card1Subtitle', 'card1ButtonText', 'card1ButtonUrl',
-            'card2Badge', 'card2Title', 'card2Subtitle', 'card2ButtonText', 'card2ButtonUrl',
-            'content', 'q1', 'a1', 'q2', 'a2', 'q3', 'a3', 'q4', 'a4', 'q5', 'a5',
-            'endDate'
+            'productId', 'categoryId', 'endDate'
         ];
 
         newHomeSections.forEach(newSec => {
@@ -3640,7 +3846,7 @@ Storevo.ThemeEditor = {
             if (!match || !match.settings || !newSec.settings) return;
             usedOldIds.add(match.id);
 
-            CONTENT_KEYS.forEach(k => {
+            PRESERVED_MEDIA_AND_DATA_KEYS.forEach(k => {
                 const val = match.settings[k];
                 if (val !== undefined && val !== null && String(val).trim() !== '') {
                     newSec.settings[k] = val;
@@ -3659,7 +3865,11 @@ Storevo.ThemeEditor = {
         const keepChk = document.getElementById('preset-keep-content-chk');
         const keepContent = keepChk ? Boolean(keepChk.checked) : true;
 
-        const oldHomeSections = JSON.parse(JSON.stringify(this.theme.pages.home || this.theme.sections || []));
+        // Tomar como base de contenido el diseño original del usuario antes de probar plantillas en esta sesión
+        const baseSourceTheme = this.previousThemeSnapshot || this.theme;
+        const oldHomeSections = JSON.parse(JSON.stringify(
+            (baseSourceTheme.pages && baseSourceTheme.pages.home) || baseSourceTheme.sections || []
+        ));
         const currentCustomPages = Array.isArray(this.theme.customPages)
             ? JSON.parse(JSON.stringify(this.theme.customPages)) : [];
 
@@ -3689,18 +3899,9 @@ Storevo.ThemeEditor = {
             });
         }
 
-        // Los filtros y el buscador son configuraciones globales independientes de la plantilla: se conservan
-        const previousGlobal = this.theme.globalStyles || {};
-        const preservedFilterStyles = {};
-        Object.keys(previousGlobal).forEach(k => {
-            if (k.startsWith('filter') || k.startsWith('search')) {
-                preservedFilterStyles[k] = previousGlobal[k];
-            }
-        });
-
         this.theme = nextTheme;
         this.theme.customPages = currentCustomPages;
-        this.theme.globalStyles = Object.assign({}, this.theme.globalStyles, preservedFilterStyles);
+        this.theme.globalStyles = Object.assign({}, nextTheme.globalStyles || {});
         this.ensurePagesStructure();
 
         this.activePresetId = preset.id;
@@ -3715,6 +3916,7 @@ Storevo.ThemeEditor = {
         this.renderSectionsList();
         this.initGlobalStylesInputs();
         this.renderPresetsCatalog();
+        this.pushLiveStylesToIframe();
         this.saveDraft(false, true);
 
         if (Storevo.UI && Storevo.UI.Toast) {
