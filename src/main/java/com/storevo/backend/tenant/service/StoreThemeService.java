@@ -112,6 +112,18 @@ public class StoreThemeService {
     private static final Set<String> ALLOWED_LAYOUT_WIDTH = Set.of("full");
     private static final Set<String> ALLOWED_LAYOUT_BG_MODES = Set.of("none", "solid");
     private static final Set<String> ALLOWED_LAYOUT_TONES = Set.of("light", "dark");
+    private static final Set<String> ALLOWED_VIDEO_ASPECTS = Set.of("16:9", "9:16");
+    private static final Set<String> ALLOWED_STAT_STYLES = Set.of("cards", "minimal", "secondary");
+    private static final Set<String> ALLOWED_STAT_ICONS = Set.of(
+            "none", "shield", "truck", "chat", "star", "clock", "gift", "refresh", "card"
+    );
+    private static final Set<String> ALLOWED_GALLERY_COLS = Set.of("2", "3", "4");
+    private static final Set<String> ALLOWED_GALLERY_ASPECTS = Set.of("square", "portrait", "landscape");
+    private static final Set<String> ALLOWED_BRAND_DISPLAY_MODES = Set.of("grid", "carousel");
+    private static final Set<String> ALLOWED_BRAND_LOGO_SIZES = Set.of("sm", "md", "lg");
+    private static final java.util.regex.Pattern YOUTUBE_ID_PATTERN = java.util.regex.Pattern.compile(
+            "(?:youtube(?:-nocookie)?\\.com/(?:watch\\?(?:.*&)?v=|embed/|shorts/|live/)|youtu\\.be/)([a-zA-Z0-9_-]{11})"
+    );
     private static final Set<String> RESERVED_ANCHOR_IDS = Set.of(
             "storenavbar", "storevomaincontent", "storevo-page-scripts",
             "storevo-catalog-products-bridge", "storevo-navbar-advanced-bridge",
@@ -1056,10 +1068,12 @@ public class StoreThemeService {
             sec.getSettings().replaceAll((k, v) -> {
                 if (v instanceof String str) {
                     String trimmed = str.trim();
-                    if (k.toLowerCase().endsWith("url") && trimmed.toLowerCase().startsWith("javascript:")) {
+                    String lowerKey = k.toLowerCase();
+                    String lowerVal = trimmed.toLowerCase();
+                    if (lowerKey.endsWith("url") && (lowerVal.startsWith("javascript:") || lowerVal.startsWith("data:") || lowerVal.startsWith("vbscript:"))) {
                         return "";
                     }
-                    if (k.toLowerCase().endsWith("color") && !trimmed.isEmpty() && !isValidHex(trimmed)) {
+                    if (lowerKey.endsWith("color") && !trimmed.isEmpty() && !isValidHex(trimmed)) {
                         return "#0f172a";
                     }
                     return trimmed;
@@ -1079,7 +1093,99 @@ public class StoreThemeService {
                 sec.getSettings().remove("layoutTone");
             }
             sanitizeSectionAnchor(sec);
+            sanitizePhase2SectionSettings(sec);
         }
+    }
+
+    private void sanitizePhase2SectionSettings(ThemeSectionDto sec) {
+        if (sec == null || sec.getSettings() == null || sec.getType() == null) return;
+        Map<String, Object> s = sec.getSettings();
+        String type = sec.getType();
+
+        if ("featured_video".equalsIgnoreCase(type)) {
+            if (!ALLOWED_VIDEO_ASPECTS.contains(sec.settingStr("aspectRatio", ""))) {
+                s.put("aspectRatio", "16:9");
+            }
+            String rawVideoUrl = sec.settingStr("videoUrl", "");
+            String extractedId = extractYoutubeVideoId(rawVideoUrl);
+            if (extractedId.isEmpty()) {
+                extractedId = extractYoutubeVideoId(sec.settingStr("videoId", ""));
+            }
+            if (!extractedId.isEmpty()) {
+                s.put("videoId", extractedId);
+            } else {
+                s.remove("videoId");
+                if (!rawVideoUrl.isEmpty() && !rawVideoUrl.startsWith("https://") && !rawVideoUrl.startsWith("http://")) {
+                    s.put("videoUrl", "");
+                }
+            }
+        } else if ("stats_counter".equalsIgnoreCase(type)) {
+            if (!ALLOWED_STAT_STYLES.contains(sec.settingStr("statStyle", ""))) {
+                s.put("statStyle", "cards");
+            }
+            for (int i = 1; i <= 4; i++) {
+                String iconKey = "item" + i + "Icon";
+                if (s.containsKey(iconKey) && !ALLOWED_STAT_ICONS.contains(sec.settingStr(iconKey, ""))) {
+                    s.put(iconKey, "star");
+                }
+            }
+        } else if ("gallery_lookbook".equalsIgnoreCase(type)) {
+            if (!ALLOWED_GALLERY_COLS.contains(sec.settingStr("columns", ""))) {
+                s.put("columns", "3");
+            }
+            if (!ALLOWED_GALLERY_ASPECTS.contains(sec.settingStr("imageAspect", ""))) {
+                s.put("imageAspect", "portrait");
+            }
+        } else if ("brand_carousel".equalsIgnoreCase(type)) {
+            if (!ALLOWED_BRAND_DISPLAY_MODES.contains(sec.settingStr("displayMode", ""))) {
+                s.put("displayMode", "grid");
+            }
+            if (!ALLOWED_BRAND_LOGO_SIZES.contains(sec.settingStr("logoSize", ""))) {
+                s.put("logoSize", "md");
+            }
+            s.put("grayscale", sec.settingBool("grayscale", false));
+        } else if ("social_showcase".equalsIgnoreCase(type)) {
+            s.put("instagramUrl", normalizeSocialProfileUrl(sec.settingStr("instagramUrl", ""), "instagram"));
+            s.put("tiktokUrl", normalizeSocialProfileUrl(sec.settingStr("tiktokUrl", ""), "tiktok"));
+            s.put("facebookUrl", normalizeSocialProfileUrl(sec.settingStr("facebookUrl", ""), "facebook"));
+            s.put("showWhatsapp", sec.settingBool("showWhatsapp", true));
+        }
+    }
+
+    private String normalizeSocialProfileUrl(String raw, String platform) {
+        if (raw == null || raw.isBlank()) return "";
+        String clean = raw.trim();
+        String lower = clean.toLowerCase();
+        if (lower.startsWith("javascript:") || lower.startsWith("data:") || lower.startsWith("vbscript:")) {
+            return "";
+        }
+        if (lower.startsWith("https://") || lower.startsWith("http://")) {
+            return clean;
+        }
+        String handle = clean.replaceFirst("^@+", "").replaceAll("[^a-zA-Z0-9._/-]", "");
+        if (handle.isEmpty()) return "";
+        return switch (platform) {
+            case "instagram" -> "https://www.instagram.com/" + handle;
+            case "tiktok" -> "https://www.tiktok.com/@" + handle;
+            case "facebook" -> "https://www.facebook.com/" + handle;
+            default -> "";
+        };
+    }
+
+    private String extractYoutubeVideoId(String rawUrl) {
+        if (rawUrl == null || rawUrl.isBlank()) return "";
+        String clean = rawUrl.trim();
+        if (clean.matches("^[a-zA-Z0-9_-]{11}$")) {
+            return clean;
+        }
+        java.util.regex.Matcher m = YOUTUBE_ID_PATTERN.matcher(clean);
+        if (m.find()) {
+            String candidate = m.group(1);
+            if (candidate != null && candidate.matches("^[a-zA-Z0-9_-]{11}$")) {
+                return candidate;
+            }
+        }
+        return "";
     }
 
     private void sanitizeSectionAnchor(ThemeSectionDto sec) {

@@ -213,6 +213,129 @@ Storevo.ThemeEditor = {
                 content: 'Somos una tienda comprometida con ofrecerte la mejor calidad y atención personalizada en cada pedido.'
             }
         },
+        featured_video: {
+            layoutSupport: { bg: true, spacing: true, width: true, anchor: true },
+            label: 'Video Destacado (YouTube)',
+            description: 'Muestra un video de tus productos o marca en formato horizontal (16:9) o vertical (Shorts 9:16).',
+            defaultSettings: {
+                badgeText: '🎥 Conoce Más',
+                title: 'Mira nuestros productos en acción',
+                subtitle: 'Calidad, detalles y acabados reales antes de hacer tu pedido.',
+                videoUrl: '',
+                videoId: '',
+                aspectRatio: '16:9',
+                coverImageUrl: '',
+                buttonText: '',
+                buttonUrl: '/catalog'
+            }
+        },
+        stats_counter: {
+            layoutSupport: { bg: true, spacing: true, width: true, anchor: true },
+            label: 'Estadísticas y Cifras Destacadas',
+            description: 'Presenta entre 2 y 4 indicadores clave de respaldo (clientes, envíos, experiencia o cobertura).',
+            defaultSettings: {
+                title: 'Nuestra Trayectoria en Cifras',
+                subtitle: 'Resultados que respaldan cada pedido en nuestra tienda',
+                statStyle: 'cards',
+                item1Icon: 'star',
+                item1Value: '+1.500',
+                item1Label: 'Clientes satisfechos',
+                item2Icon: 'truck',
+                item2Value: '100%',
+                item2Label: 'Envíos seguros en el país',
+                item3Icon: 'clock',
+                item3Value: '24h - 72h',
+                item3Label: 'Despacho ágil y garantizado',
+                item4Icon: 'shield',
+                item4Value: '',
+                item4Label: ''
+            }
+        },
+        gallery_lookbook: {
+            layoutSupport: { bg: true, spacing: true, width: true, anchor: true },
+            label: 'Galería / Lookbook Visual',
+            description: 'Colección de fotos en cuadrícula con enlaces opcionales a colecciones, categorías o productos.',
+            defaultSettings: {
+                title: 'Inspiración y Estilo',
+                subtitle: 'Explora nuestra galería visual y conoce cada detalle de la colección',
+                columns: '3',
+                imageAspect: 'portrait',
+                item1ImageUrl: '',
+                item1Caption: '',
+                item1LinkUrl: '',
+                item2ImageUrl: '',
+                item2Caption: '',
+                item2LinkUrl: '',
+                item3ImageUrl: '',
+                item3Caption: '',
+                item3LinkUrl: '',
+                item4ImageUrl: '',
+                item4Caption: '',
+                item4LinkUrl: '',
+                item5ImageUrl: '',
+                item5Caption: '',
+                item5LinkUrl: '',
+                item6ImageUrl: '',
+                item6Caption: '',
+                item6LinkUrl: ''
+            }
+        },
+        brand_carousel: {
+            layoutSupport: { bg: true, spacing: true, width: true, anchor: true },
+            label: 'Carrusel / Vitrina de Marcas',
+            description: 'Muestra los logotipos o nombres de las marcas que comercializa tu tienda en cuadrícula o carrusel.',
+            defaultSettings: {
+                title: 'Marcas que Comercializamos',
+                subtitle: 'Productos originales con respaldo y garantía',
+                displayMode: 'grid',
+                logoSize: 'md',
+                grayscale: false,
+                item1Name: '',
+                item1ImageUrl: '',
+                item1LinkUrl: '',
+                item2Name: '',
+                item2ImageUrl: '',
+                item2LinkUrl: '',
+                item3Name: '',
+                item3ImageUrl: '',
+                item3LinkUrl: '',
+                item4Name: '',
+                item4ImageUrl: '',
+                item4LinkUrl: '',
+                item5Name: '',
+                item5ImageUrl: '',
+                item5LinkUrl: '',
+                item6Name: '',
+                item6ImageUrl: '',
+                item6LinkUrl: ''
+            }
+        },
+        social_showcase: {
+            layoutSupport: { bg: true, spacing: true, width: true, anchor: true },
+            label: 'Síguenos en Redes Sociales',
+            description: 'Conecta tus perfiles de Instagram, TikTok, Facebook y WhatsApp con una galería opcional de publicaciones.',
+            defaultSettings: {
+                handleText: '',
+                title: 'Síguenos en Redes Sociales',
+                subtitle: 'Conoce nuestros últimos lanzamientos, contenido exclusivo y promociones.',
+                instagramUrl: '',
+                tiktokUrl: '',
+                facebookUrl: '',
+                showWhatsapp: true,
+                post1ImageUrl: '',
+                post1Caption: '',
+                post1LinkUrl: '',
+                post2ImageUrl: '',
+                post2Caption: '',
+                post2LinkUrl: '',
+                post3ImageUrl: '',
+                post3Caption: '',
+                post3LinkUrl: '',
+                post4ImageUrl: '',
+                post4Caption: '',
+                post4LinkUrl: ''
+            }
+        },
         catalog_results: {
             layoutSupport: { bg: false, spacing: false, width: false, anchor: false },
             label: 'Catálogo de Productos',
@@ -256,6 +379,14 @@ Storevo.ThemeEditor = {
             width: declared.width === true,
             anchor: declared.anchor === true
         };
+    },
+
+    extractYoutubeId: function(rawUrl) {
+        const clean = String(rawUrl || '').trim();
+        if (!clean) return '';
+        if (/^[a-zA-Z0-9_-]{11}$/.test(clean)) return clean;
+        const m = clean.match(/(?:youtube(?:-nocookie)?\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+        return (m && m[1]) ? m[1] : '';
     },
 
     computeLayoutTone: function(hexColor) {
@@ -1864,6 +1995,15 @@ Storevo.ThemeEditor = {
                 input.placeholder = field.placeholder || '';
                 input.className = 'w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:border-storevo-500 focus:outline-none [color-scheme:dark]';
                 input.addEventListener('input', () => {
+                    if (sec.type === 'featured_video' && field.key === 'videoUrl') {
+                        if (!sec.settings) sec.settings = {};
+                        const extracted = this.extractYoutubeId(input.value);
+                        if (extracted) {
+                            sec.settings.videoId = extracted;
+                        } else {
+                            delete sec.settings.videoId;
+                        }
+                    }
                     commitSectionChange(field.key, input.value);
                     if (sec.type === 'hero_banner' && field.key === 'secondaryButtonText') {
                         const secUrlWrap = container.querySelector('[data-field-key="secondaryButtonUrl"]');
@@ -2400,6 +2540,118 @@ Storevo.ThemeEditor = {
                     { key: 'title', label: 'Título', type: 'text', placeholder: 'Sobre Nosotros' },
                     { key: 'content', label: 'Contenido', type: 'textarea', placeholder: 'Escribe aquí la historia o mensaje de tu tienda...' }
                 ];
+            case 'featured_video':
+                return [
+                    { key: 'badgeText', label: 'Etiqueta superior (Opcional)', type: 'text', placeholder: 'Ej: 🎥 Conoce Más' },
+                    { key: 'title', label: 'Título de la sección (Opcional)', type: 'text', placeholder: 'Mira nuestros productos en acción' },
+                    { key: 'subtitle', label: 'Descripción opcional', type: 'textarea', placeholder: 'Explica brevemente qué verán tus clientes en el video...' },
+                    { key: 'videoUrl', label: 'Enlace del video de YouTube', type: 'text', placeholder: 'Ej: https://www.youtube.com/watch?v=... o Shorts' },
+                    { key: 'aspectRatio', label: 'Proporción del video', type: 'select', defaultVal: '16:9', options: [
+                            { value: '16:9', label: 'Horizontal panorámico (16:9)' },
+                            { value: '9:16', label: 'Vertical móvil / Shorts (9:16)' }
+                        ]},
+                    { key: 'coverImageUrl', label: 'Imagen de portada personalizada (Opcional)', type: 'image' },
+                    { key: 'buttonText', label: 'Texto del botón (Dejar vacío para ocultar)', type: 'text', placeholder: 'Ej: Ver Productos Destacados' },
+                    { key: 'buttonUrl', label: '¿A dónde lleva el botón?', type: 'url', defaultVal: '/catalog', showIf: (s) => Boolean(s && String(s.buttonText || '').trim()) }
+                ];
+            case 'stats_counter': {
+                const statIconOptions = [{ value: 'none', label: '— Sin ícono —' }].concat(trustIconOptions);
+                return [
+                    { key: 'title', label: 'Título de la sección (Opcional)', type: 'text', placeholder: 'Nuestra Trayectoria en Cifras' },
+                    { key: 'subtitle', label: 'Descripción opcional', type: 'text', placeholder: 'Resultados que respaldan cada pedido' },
+                    { key: 'statStyle', label: 'Estilo visual de los indicadores', type: 'select', defaultVal: 'cards', options: [
+                            { value: 'cards', label: 'Tarjetas Blancas con Sombra' },
+                            { value: 'minimal', label: 'Minimalista Integrado al Fondo' },
+                            { value: 'secondary', label: 'Franja Destacada en Color Secundario' }
+                        ]},
+                    { key: 'item1Icon', label: 'Indicador 1: Ícono', type: 'select', defaultVal: 'star', options: statIconOptions },
+                    { key: 'item1Value', label: 'Indicador 1: Cifra o dato', type: 'text', placeholder: 'Ej: +1.500' },
+                    { key: 'item1Label', label: 'Indicador 1: Etiqueta descriptiva', type: 'text', placeholder: 'Ej: Clientes satisfechos' },
+                    { key: 'item2Icon', label: 'Indicador 2: Ícono', type: 'select', defaultVal: 'truck', options: statIconOptions },
+                    { key: 'item2Value', label: 'Indicador 2: Cifra o dato', type: 'text', placeholder: 'Ej: 100%' },
+                    { key: 'item2Label', label: 'Indicador 2: Etiqueta descriptiva', type: 'text', placeholder: 'Ej: Envíos seguros en el país' },
+                    { key: 'item3Icon', label: 'Indicador 3: Ícono (Opcional)', type: 'select', defaultVal: 'clock', options: statIconOptions },
+                    { key: 'item3Value', label: 'Indicador 3: Cifra (Dejar vacío para ocultar)', type: 'text', placeholder: 'Ej: 24h - 72h' },
+                    { key: 'item3Label', label: 'Indicador 3: Etiqueta descriptiva', type: 'text', placeholder: 'Ej: Despacho ágil y garantizado' },
+                    { key: 'item4Icon', label: 'Indicador 4: Ícono (Opcional)', type: 'select', defaultVal: 'shield', options: statIconOptions },
+                    { key: 'item4Value', label: 'Indicador 4: Cifra (Dejar vacío para ocultar)', type: 'text', placeholder: 'Ej: 5 Años' },
+                    { key: 'item4Label', label: 'Indicador 4: Etiqueta descriptiva', type: 'text', placeholder: 'Ej: Experiencia en el mercado' }
+                ];
+            }
+            case 'gallery_lookbook': {
+                const fields = [
+                    { key: 'title', label: 'Título de la galería (Opcional)', type: 'text', placeholder: 'Inspiración y Estilo' },
+                    { key: 'subtitle', label: 'Descripción opcional', type: 'textarea', placeholder: 'Presenta tu colección, estilo o galería de fotos...' },
+                    { key: 'columns', label: 'Columnas en computador', type: 'select', defaultVal: '3', options: [
+                            { value: '2', label: '2 columnas grandes' },
+                            { value: '3', label: '3 columnas (Editorial)' },
+                            { value: '4', label: '4 columnas (Mosaico compacto)' }
+                        ]},
+                    { key: 'imageAspect', label: 'Proporción de las fotos', type: 'select', defaultVal: 'portrait', options: [
+                            { value: 'portrait', label: 'Vertical Lookbook (4:5)' },
+                            { value: 'square', label: 'Cuadrada (1:1)' },
+                            { value: 'landscape', label: 'Horizontal (4:3)' }
+                        ]}
+                ];
+                for (let i = 1; i <= 6; i++) {
+                    const imgKey = `item${i}ImageUrl`;
+                    const hasImg = (s) => Boolean(s && String(s[imgKey] || '').trim());
+                    fields.push(
+                        { key: imgKey, label: `Imagen ${i}${i > 3 ? ' (Opcional)' : ''}`, type: 'image' },
+                        { key: `item${i}Caption`, label: `Imagen ${i}: Texto sobre la foto (Opcional)`, type: 'text', placeholder: 'Ej: Nueva Colección o Look Urbano', showIf: hasImg },
+                        { key: `item${i}LinkUrl`, label: `Imagen ${i}: Enlace al hacer clic (Opcional)`, type: 'url', allowEmpty: true, defaultVal: '', showIf: hasImg }
+                    );
+                }
+                return fields;
+            }
+            case 'brand_carousel': {
+                const brandFields = [
+                    { key: 'title', label: 'Título de la sección (Opcional)', type: 'text', placeholder: 'Marcas que Comercializamos' },
+                    { key: 'subtitle', label: 'Subtítulo opcional', type: 'text', placeholder: 'Productos originales con respaldo y garantía' },
+                    { key: 'displayMode', label: 'Formato de visualización', type: 'select', defaultVal: 'grid', options: [
+                            { value: 'grid', label: 'Cuadrícula adaptable centrada' },
+                            { value: 'carousel', label: 'Carrusel deslizable con flechas' }
+                        ]},
+                    { key: 'logoSize', label: 'Tamaño visual de los logotipos', type: 'select', defaultVal: 'md', options: [
+                            { value: 'sm', label: 'Compacto (Sutil)' },
+                            { value: 'md', label: 'Mediano (Estándar)' },
+                            { value: 'lg', label: 'Grande (Destacado)' }
+                        ]},
+                    { key: 'grayscale', label: 'Efecto monocromático', type: 'checkbox', placeholder: 'Mostrar logotipos en escala de grises y a color al pasar el cursor', defaultVal: false }
+                ];
+                for (let i = 1; i <= 6; i++) {
+                    const nameKey = `item${i}Name`;
+                    const imgKey = `item${i}ImageUrl`;
+                    const hasBrandData = (s) => Boolean(s && (String(s[nameKey] || '').trim() || String(s[imgKey] || '').trim()));
+                    brandFields.push(
+                        { key: nameKey, label: `Marca ${i}: Nombre${i > 4 ? ' (Opcional)' : ''}`, type: 'text', placeholder: `Ej: Marca ${i}` },
+                        { key: imgKey, label: `Marca ${i}: Logotipo (Opcional)`, type: 'image' },
+                        { key: `item${i}LinkUrl`, label: `Marca ${i}: Enlace al hacer clic (Opcional)`, type: 'url', allowEmpty: true, defaultVal: '', showIf: hasBrandData }
+                    );
+                }
+                return brandFields;
+            }
+            case 'social_showcase': {
+                const socialFields = [
+                    { key: 'handleText', label: 'Usuario o etiqueta superior (Opcional)', type: 'text', placeholder: 'Ej: @nuestratienda' },
+                    { key: 'title', label: 'Título de la sección', type: 'text', placeholder: 'Síguenos en Redes Sociales' },
+                    { key: 'subtitle', label: 'Descripción opcional', type: 'textarea', placeholder: 'Conoce nuestros últimos lanzamientos y promociones...' },
+                    { key: 'instagramUrl', label: 'Instagram (Usuario @ o URL — si está vacío usa el de Configuración)', type: 'text', placeholder: 'Ej: @mitienda o https://instagram.com/mitienda' },
+                    { key: 'tiktokUrl', label: 'TikTok (Usuario @ o URL — si está vacío usa el de Configuración)', type: 'text', placeholder: 'Ej: @mitienda o https://tiktok.com/@mitienda' },
+                    { key: 'facebookUrl', label: 'Facebook (Usuario o URL — si está vacío usa el de Configuración)', type: 'text', placeholder: 'Ej: https://facebook.com/mitienda' },
+                    { key: 'showWhatsapp', label: 'Botón de WhatsApp', type: 'checkbox', placeholder: 'Mostrar botón directo al WhatsApp de la tienda', defaultVal: true }
+                ];
+                for (let i = 1; i <= 4; i++) {
+                    const imgKey = `post${i}ImageUrl`;
+                    const hasPostImg = (s) => Boolean(s && String(s[imgKey] || '').trim());
+                    socialFields.push(
+                        { key: imgKey, label: `Foto destacada ${i} (Opcional)`, type: 'image' },
+                        { key: `post${i}Caption`, label: `Foto ${i}: Texto o descripción corta (Opcional)`, type: 'text', placeholder: 'Ej: Nuevo lanzamiento', showIf: hasPostImg },
+                        { key: `post${i}LinkUrl`, label: `Foto ${i}: Enlace al hacer clic (Opcional)`, type: 'url', allowEmpty: true, defaultVal: '', showIf: hasPostImg }
+                    );
+                }
+                return socialFields;
+            }
             case 'catalog_results':
                 return [
                     { key: 'showHeader', label: 'Encabezado del Catálogo', type: 'checkbox', placeholder: 'Mostrar título y descripción del catálogo', defaultVal: true },
@@ -6112,6 +6364,10 @@ Storevo.ThemeEditor = {
         // permitiendo que cada plantilla aplique sus propios títulos, etiquetas y textos comerciales especializados.
         const PRESERVED_MEDIA_AND_DATA_KEYS = [
             'imageUrl', 'card1ImageUrl', 'card2ImageUrl',
+            'videoUrl', 'videoId', 'coverImageUrl',
+            'item1ImageUrl', 'item2ImageUrl', 'item3ImageUrl',
+            'item4ImageUrl', 'item5ImageUrl', 'item6ImageUrl',
+            'post1ImageUrl', 'post2ImageUrl', 'post3ImageUrl', 'post4ImageUrl',
             'productId', 'categoryId', 'endDate', 'layoutAnchor'
         ];
 

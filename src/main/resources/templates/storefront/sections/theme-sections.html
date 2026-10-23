@@ -21,7 +21,12 @@
               'faq_accordion': 'Preguntas Frecuentes',
               'whatsapp_cta': 'Asesoría WhatsApp',
               'catalog_results': 'Catálogo de Productos',
-                           'product_main': 'Ficha de Producto'
+                           'product_main': 'Ficha de Producto',
+              'featured_video': 'Video Destacado',
+              'stats_counter': 'Estadísticas y Cifras',
+              'gallery_lookbook': 'Galería / Lookbook',
+              'brand_carousel': 'Carrusel de Marcas',
+              'social_showcase': 'Redes Sociales'
           } },
               svBgMap=${ {
                   'product_grid': true,
@@ -32,7 +37,12 @@
                   'trust_badges': true,
                   'rich_text': true,
                   'faq_accordion': true,
-                  'whatsapp_cta': true
+                  'whatsapp_cta': true,
+                  'featured_video': true,
+                  'stats_counter': true,
+                  'gallery_lookbook': true,
+                  'brand_carousel': true,
+                  'social_showcase': true
               } },
               svSpacingMap=${ {
                   'product_grid': true,
@@ -46,7 +56,12 @@
                   'trust_badges': true,
                   'rich_text': true,
                   'faq_accordion': true,
-                  'whatsapp_cta': true
+                  'whatsapp_cta': true,
+                  'featured_video': true,
+                  'stats_counter': true,
+                  'gallery_lookbook': true,
+                  'brand_carousel': true,
+                  'social_showcase': true
               } },
               svWidthMap=${ {
                   'product_grid': true,
@@ -57,7 +72,12 @@
                   'multi_banners': true,
                   'testimonials': true,
                   'how_to_buy': true,
-                  'trust_badges': true
+                  'trust_badges': true,
+                  'featured_video': true,
+                  'stats_counter': true,
+                  'gallery_lookbook': true,
+                  'brand_carousel': true,
+                  'social_showcase': true
               } },
               svSupportsBg=${svBgMap[sec.type] == true},
               svSupportsSpacing=${svSpacingMap[sec.type] == true},
@@ -78,13 +98,14 @@
                   + (svLayoutWide ? 'sv-width-full ' : '')
                   + (svHasSolidBg and (svLayoutTone == 'dark' or svLayoutTone == 'light') ? 'sv-tone-' + svLayoutTone : ''))}">
     <!-- Matriz layoutSupport espejada de themeEditor.js (catalogDefinitions):
-         bg      (9):  product_grid, spotlight_product, featured_categories, testimonials, how_to_buy,
-                       trust_badges, rich_text, faq_accordion, whatsapp_cta
-         spacing (12): product_grid, spotlight_product, featured_categories, countdown_promo, promo_banner,
-                       multi_banners, testimonials, how_to_buy, trust_badges, rich_text, faq_accordion, whatsapp_cta
-         width   (9):  product_grid, spotlight_product, featured_categories, countdown_promo, promo_banner,
-                       multi_banners, testimonials, how_to_buy, trust_badges
-         anchor  (14): todas excepto catalog_results y product_main -->
+         bg      (14): product_grid, spotlight_product, featured_categories, testimonials, how_to_buy,
+                       trust_badges, rich_text, faq_accordion, whatsapp_cta, featured_video, stats_counter,
+                       gallery_lookbook, brand_carousel, social_showcase
+         spacing (17): las 14 anteriores + countdown_promo, promo_banner, multi_banners
+         width   (14): product_grid, spotlight_product, featured_categories, countdown_promo, promo_banner,
+                       multi_banners, testimonials, how_to_buy, trust_badges, featured_video, stats_counter,
+                       gallery_lookbook, brand_carousel, social_showcase
+         anchor  (19): todas excepto catalog_results y product_main -->
 
     <div th:if="${(isDraftPreview == true) and products != null}" id="storevo-catalog-products-bridge" class="hidden">
         <span th:each="prodItem : ${products}" th:attr="data-id=${prodItem.id}, data-name=${prodItem.name}"></span>
@@ -97,6 +118,564 @@
          class="storevo-theme-section"
          th:classappend="${svLayoutClasses != ''} ? ${svLayoutClasses}"
          th:styleappend="${svHasSolidBg} ? ${'background-color: ' + svLayoutBgColor + ';'}">
+
+        <!-- ===============================================================
+             FASE 2 - A. VIDEO DESTACADO (featured_video)
+             =============================================================== -->
+        <th:block th:if="${sec.type == 'featured_video'}"
+                  th:with="badge=${sec.settingStr('badgeText', '')},
+                           title=${sec.settingStr('title', '')},
+                           subtitle=${sec.settingStr('subtitle', '')},
+                           videoId=${sec.settingStr('videoId', '')},
+                           hasValidVideo=${#strings.length(videoId) == 11 and (videoId matches '^[a-zA-Z0-9_-]+$')},
+                           aspect=${sec.settingStr('aspectRatio', '16:9') == '9:16' ? '9:16' : '16:9'},
+                           coverUrl=${sec.settingStr('coverImageUrl', '')},
+                           btnText=${sec.settingStr('buttonText', '')},
+                           btnUrl=${sec.settingStr('buttonUrl', '/catalog')},
+                           waClean=${(settings != null and settings.whatsapp != null) ? #strings.replace(#strings.replace(settings.whatsapp, '+', ''), ' ', '') : ''},
+                           resolvedBtnHref=${btnUrl == '__whatsapp__'
+                               ? (!#strings.isEmpty(waClean) ? 'https://wa.me/' + waClean : '/s/' + store.slug + '/catalog')
+                               : (#strings.startsWith(btnUrl, 'http') or #strings.startsWith(btnUrl, '#')
+                                   ? btnUrl
+                                   : (btnUrl == '/' ? '/s/' + store.slug : '/s/' + store.slug + (#strings.startsWith(btnUrl, '/') ? btnUrl : '/' + btnUrl)))}">
+            <section th:if="${hasValidVideo or (isDraftPreview == true)}"
+                     class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                <div th:if="${!#strings.isEmpty(badge) or !#strings.isEmpty(title) or !#strings.isEmpty(subtitle)}"
+                     class="text-center max-w-3xl mx-auto mb-8">
+                    <span th:if="${!#strings.isEmpty(badge)}"
+                          class="inline-flex items-center px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider mb-3"
+                          style="background-color: color-mix(in srgb, var(--brand-color) 14%, transparent); color: var(--brand-color);"
+                          th:text="${badge}">Video</span>
+                    <h2 th:if="${!#strings.isEmpty(title)}"
+                        class="text-2xl sm:text-3xl font-extrabold tracking-tight store-heading"
+                        th:text="${title}">Título del video</h2>
+                    <p th:if="${!#strings.isEmpty(subtitle)}"
+                       class="mt-2 text-sm sm:text-base store-muted opacity-80 leading-relaxed"
+                       th:text="${subtitle}">Subtítulo</p>
+                </div>
+
+                <div class="sv-video-shell" th:attr="data-aspect=${aspect}">
+                    <div class="sv-video-frame store-radius" th:attr="data-aspect=${aspect}">
+                        <th:block th:if="${hasValidVideo}">
+                            <button th:if="${!#strings.isEmpty(coverUrl)}"
+                                    type="button"
+                                    class="sv-video-cover group"
+                                    aria-label="Reproducir video"
+                                    th:attr="data-video-embed=${'https://www.youtube-nocookie.com/embed/' + videoId + '?rel=0&playsinline=1&autoplay=1'},
+                                             data-video-title=${!#strings.isEmpty(title) ? title : 'Video de ' + store.name}"
+                                    onclick="const f=this.closest('.sv-video-frame');if(f&&this.dataset.videoEmbed){const i=document.createElement('iframe');i.src=this.dataset.videoEmbed;i.title=this.dataset.videoTitle||'Video';i.className='sv-video-iframe';i.setAttribute('allow','accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');i.setAttribute('allowfullscreen','allowfullscreen');f.innerHTML='';f.appendChild(i);}">
+                                <img th:src="${coverUrl}"
+                                     th:alt="${!#strings.isEmpty(title) ? title : store.name}"
+                                     loading="lazy"
+                                     class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                                <span class="sv-video-cover__scrim"></span>
+                                <span class="sv-video-play-btn">
+                                    <svg class="w-7 h-7 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"></path></svg>
+                                </span>
+                            </button>
+
+                            <iframe th:if="${#strings.isEmpty(coverUrl)}"
+                                    class="sv-video-iframe"
+                                    th:src="${'https://www.youtube-nocookie.com/embed/' + videoId + '?rel=0&playsinline=1'}"
+                                    th:title="${!#strings.isEmpty(title) ? title : 'Video de ' + store.name}"
+                                    loading="lazy"
+                                    allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                    allowfullscreen="allowfullscreen"></iframe>
+                        </th:block>
+
+                        <div th:if="${!hasValidVideo and (isDraftPreview == true)}"
+                             class="w-full h-full flex flex-col items-center justify-center text-center p-6 bg-slate-900 text-white">
+                            <div class="w-14 h-14 rounded-full bg-white/10 border border-white/20 flex items-center justify-center mb-3">
+                                <svg class="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"></path></svg>
+                            </div>
+                            <p class="text-sm font-bold">Vista previa de Video Destacado</p>
+                            <p class="text-xs text-slate-300 mt-1 max-w-md">Pega un enlace de YouTube (video o Short) en el panel izquierdo para mostrar el reproductor.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div th:if="${!#strings.isEmpty(btnText)}" class="mt-8 text-center">
+                    <a th:href="${resolvedBtnHref}"
+                       th:target="${#strings.startsWith(resolvedBtnHref, 'http') ? '_blank' : null}"
+                       th:rel="${#strings.startsWith(resolvedBtnHref, 'http') ? 'noopener noreferrer' : null}"
+                       class="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-sm text-white shadow-sm transition hover:opacity-95"
+                       style="background-color: var(--brand-color);">
+                        <span th:text="${btnText}">Ver Catálogo</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                    </a>
+                </div>
+            </section>
+        </th:block>
+
+        <!-- ===============================================================
+             FASE 2 - D. ESTADÍSTICAS Y CIFRAS DESTACADAS (stats_counter)
+             =============================================================== -->
+        <th:block th:if="${sec.type == 'stats_counter'}"
+                  th:with="title=${sec.settingStr('title', '')},
+                           subtitle=${sec.settingStr('subtitle', '')},
+                           statStyle=${sec.settingStr('statStyle', 'cards')},
+                           i1Icon=${sec.settingStr('item1Icon', 'star')},
+                           i1Val=${sec.settingStr('item1Value', '')},
+                           i1Lbl=${sec.settingStr('item1Label', '')},
+                           has1=${!#strings.isEmpty(i1Val) and !#strings.isEmpty(i1Lbl)},
+                           i2Icon=${sec.settingStr('item2Icon', 'truck')},
+                           i2Val=${sec.settingStr('item2Value', '')},
+                           i2Lbl=${sec.settingStr('item2Label', '')},
+                           has2=${!#strings.isEmpty(i2Val) and !#strings.isEmpty(i2Lbl)},
+                           i3Icon=${sec.settingStr('item3Icon', 'clock')},
+                           i3Val=${sec.settingStr('item3Value', '')},
+                           i3Lbl=${sec.settingStr('item3Label', '')},
+                           has3=${!#strings.isEmpty(i3Val) and !#strings.isEmpty(i3Lbl)},
+                           i4Icon=${sec.settingStr('item4Icon', 'shield')},
+                           i4Val=${sec.settingStr('item4Value', '')},
+                           i4Lbl=${sec.settingStr('item4Label', '')},
+                           has4=${!#strings.isEmpty(i4Val) and !#strings.isEmpty(i4Lbl)},
+                           activeCount=${(has1 ? 1 : 0) + (has2 ? 1 : 0) + (has3 ? 1 : 0) + (has4 ? 1 : 0)},
+                           statItems=${ {
+                               {'active': has1, 'icon': i1Icon, 'val': i1Val, 'lbl': i1Lbl},
+                               {'active': has2, 'icon': i2Icon, 'val': i2Val, 'lbl': i2Lbl},
+                               {'active': has3, 'icon': i3Icon, 'val': i3Val, 'lbl': i3Lbl},
+                               {'active': has4, 'icon': i4Icon, 'val': i4Val, 'lbl': i4Lbl}
+                           } }">
+            <section th:if="${activeCount >= 2 or (isDraftPreview == true)}"
+                     class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                <div th:if="${!#strings.isEmpty(title) or !#strings.isEmpty(subtitle)}"
+                     class="text-center max-w-3xl mx-auto mb-8">
+                    <h2 th:if="${!#strings.isEmpty(title)}"
+                        class="text-2xl sm:text-3xl font-extrabold tracking-tight store-heading"
+                        th:text="${title}">Nuestra Trayectoria en Cifras</h2>
+                    <p th:if="${!#strings.isEmpty(subtitle)}"
+                       class="mt-2 text-sm sm:text-base store-muted opacity-80"
+                       th:text="${subtitle}">Subtítulo</p>
+                </div>
+
+                <div th:if="${activeCount >= 2}"
+                     class="sv-stats-grid"
+                     th:attr="data-count=${activeCount}, data-stat-style=${statStyle}">
+                    <th:block th:each="st : ${statItems}">
+                        <div th:if="${st['active']}"
+                             th:class="${statStyle == 'secondary'
+                                 ? 'sv-stat-card store-radius p-6 text-center text-white shadow-sm'
+                                 : (statStyle == 'minimal'
+                                     ? 'sv-stat-card p-4 text-center'
+                                     : 'sv-stat-card store-radius bg-white text-slate-900 border border-slate-200/80 p-6 text-center shadow-sm')}"
+                             th:style="${statStyle == 'secondary'} ? 'background-color: var(--brand-secondary, #0f172a);'">
+                            <div th:if="${st['icon'] != 'none'}"
+                                 class="w-11 h-11 rounded-xl mx-auto mb-3 flex items-center justify-center"
+                                 th:style="${statStyle == 'secondary'}
+                                     ? 'background-color: rgba(255,255,255,0.12); color: #ffffff;'
+                                     : 'background-color: color-mix(in srgb, var(--brand-color) 12%, transparent); color: var(--brand-color);'">
+                                <svg th:if="${st['icon'] == 'shield'}" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                                <svg th:if="${st['icon'] == 'truck'}" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"></path></svg>
+                                <svg th:if="${st['icon'] == 'chat'}" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+                                <svg th:if="${st['icon'] == 'star'}" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg>
+                                <svg th:if="${st['icon'] == 'clock'}" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                <svg th:if="${st['icon'] == 'gift'}" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"></path></svg>
+                                <svg th:if="${st['icon'] == 'refresh'}" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                                <svg th:if="${st['icon'] == 'card'}" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
+                            </div>
+                            <p th:class="${statStyle == 'secondary'
+                                   ? 'text-2xl sm:text-3xl font-extrabold tracking-tight text-white'
+                                   : (statStyle == 'minimal'
+                                       ? 'text-2xl sm:text-3xl font-extrabold tracking-tight store-heading'
+                                       : 'text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900')}"
+                               th:text="${st['val']}">+1.500</p>
+                            <p th:class="${statStyle == 'secondary'
+                                   ? 'mt-1 text-xs sm:text-sm font-medium text-slate-300'
+                                   : (statStyle == 'minimal'
+                                       ? 'mt-1 text-xs sm:text-sm font-medium store-muted opacity-80'
+                                       : 'mt-1 text-xs sm:text-sm font-medium text-slate-600')}"
+                               th:text="${st['lbl']}">Clientes satisfechos</p>
+                        </div>
+                    </th:block>
+                </div>
+
+                <div th:if="${activeCount < 2 and (isDraftPreview == true)}"
+                     class="p-6 rounded-2xl border border-dashed border-slate-300 text-center max-w-xl mx-auto">
+                    <p class="text-sm font-bold store-heading">Completa al menos 2 indicadores</p>
+                    <p class="text-xs store-muted opacity-75 mt-1">Escribe la cifra y la etiqueta de al menos 2 indicadores en el panel izquierdo para mostrar esta sección.</p>
+                </div>
+            </section>
+        </th:block>
+
+        <!-- ===============================================================
+             FASE 2 - B. GALERÍA / LOOKBOOK VISUAL (gallery_lookbook)
+             =============================================================== -->
+        <th:block th:if="${sec.type == 'gallery_lookbook'}"
+                  th:with="title=${sec.settingStr('title', '')},
+                           subtitle=${sec.settingStr('subtitle', '')},
+                           cols=${sec.settingStr('columns', '3')},
+                           safeCols=${(cols == '2' or cols == '3' or cols == '4') ? cols : '3'},
+                           aspect=${sec.settingStr('imageAspect', 'portrait')},
+                           safeAspect=${(aspect == 'square' or aspect == 'portrait' or aspect == 'landscape') ? aspect : 'portrait'},
+                           waClean=${(settings != null and settings.whatsapp != null) ? #strings.replace(#strings.replace(settings.whatsapp, '+', ''), ' ', '') : ''},
+                           i1Img=${sec.settingStr('item1ImageUrl', '')},
+                           i1Cap=${sec.settingStr('item1Caption', '')},
+                           i1Url=${sec.settingStr('item1LinkUrl', '')},
+                           i2Img=${sec.settingStr('item2ImageUrl', '')},
+                           i2Cap=${sec.settingStr('item2Caption', '')},
+                           i2Url=${sec.settingStr('item2LinkUrl', '')},
+                           i3Img=${sec.settingStr('item3ImageUrl', '')},
+                           i3Cap=${sec.settingStr('item3Caption', '')},
+                           i3Url=${sec.settingStr('item3LinkUrl', '')},
+                           i4Img=${sec.settingStr('item4ImageUrl', '')},
+                           i4Cap=${sec.settingStr('item4Caption', '')},
+                           i4Url=${sec.settingStr('item4LinkUrl', '')},
+                           i5Img=${sec.settingStr('item5ImageUrl', '')},
+                           i5Cap=${sec.settingStr('item5Caption', '')},
+                           i5Url=${sec.settingStr('item5LinkUrl', '')},
+                           i6Img=${sec.settingStr('item6ImageUrl', '')},
+                           i6Cap=${sec.settingStr('item6Caption', '')},
+                           i6Url=${sec.settingStr('item6LinkUrl', '')},
+                           activeCount=${(!#strings.isEmpty(i1Img) ? 1 : 0)
+                               + (!#strings.isEmpty(i2Img) ? 1 : 0)
+                               + (!#strings.isEmpty(i3Img) ? 1 : 0)
+                               + (!#strings.isEmpty(i4Img) ? 1 : 0)
+                               + (!#strings.isEmpty(i5Img) ? 1 : 0)
+                               + (!#strings.isEmpty(i6Img) ? 1 : 0)},
+                           lookbookItems=${ {
+                               {'active': !#strings.isEmpty(i1Img), 'img': i1Img, 'cap': i1Cap, 'url': i1Url},
+                               {'active': !#strings.isEmpty(i2Img), 'img': i2Img, 'cap': i2Cap, 'url': i2Url},
+                               {'active': !#strings.isEmpty(i3Img), 'img': i3Img, 'cap': i3Cap, 'url': i3Url},
+                               {'active': !#strings.isEmpty(i4Img), 'img': i4Img, 'cap': i4Cap, 'url': i4Url},
+                               {'active': !#strings.isEmpty(i5Img), 'img': i5Img, 'cap': i5Cap, 'url': i5Url},
+                               {'active': !#strings.isEmpty(i6Img), 'img': i6Img, 'cap': i6Cap, 'url': i6Url}
+                           } }">
+            <section th:if="${activeCount > 0 or (isDraftPreview == true)}"
+                     class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                <div th:if="${!#strings.isEmpty(title) or !#strings.isEmpty(subtitle)}"
+                     class="text-center max-w-3xl mx-auto mb-8">
+                    <h2 th:if="${!#strings.isEmpty(title)}"
+                        class="text-2xl sm:text-3xl font-extrabold tracking-tight store-heading"
+                        th:text="${title}">Inspiración y Estilo</h2>
+                    <p th:if="${!#strings.isEmpty(subtitle)}"
+                       class="mt-2 text-sm sm:text-base store-muted opacity-80 leading-relaxed"
+                       th:text="${subtitle}">Subtítulo</p>
+                </div>
+
+                <div th:if="${activeCount > 0}"
+                     class="sv-lookbook-grid"
+                     th:attr="data-cols=${safeCols}">
+                    <th:block th:each="it : ${lookbookItems}">
+                        <div th:if="${it['active']}"
+                             th:with="rawUrl=${it['url']},
+                                      resolvedHref=${#strings.isEmpty(rawUrl)
+                                          ? ''
+                                          : (rawUrl == '__whatsapp__'
+                                              ? (!#strings.isEmpty(waClean) ? 'https://wa.me/' + waClean : '/s/' + store.slug + '/catalog')
+                                              : (#strings.startsWith(rawUrl, 'http') or #strings.startsWith(rawUrl, '#')
+                                                  ? rawUrl
+                                                  : (rawUrl == '/' ? '/s/' + store.slug : '/s/' + store.slug + (#strings.startsWith(rawUrl, '/') ? rawUrl : '/' + rawUrl))))}"
+                             class="sv-lookbook-item store-radius group"
+                             th:attr="data-aspect=${safeAspect}">
+                            <img th:src="${it['img']}"
+                                 th:alt="${!#strings.isEmpty(it['cap']) ? it['cap'] : (!#strings.isEmpty(title) ? title : store.name)}"
+                                 loading="lazy"
+                                 class="sv-lookbook-img" />
+                            <div th:if="${!#strings.isEmpty(it['cap']) or !#strings.isEmpty(resolvedHref)}"
+                                 class="sv-lookbook-overlay">
+                                <span th:if="${!#strings.isEmpty(it['cap'])}"
+                                      class="sv-lookbook-caption"
+                                      th:text="${it['cap']}">Colección</span>
+                                <span th:if="${!#strings.isEmpty(resolvedHref)}"
+                                      class="sv-lookbook-action-pill">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                                </span>
+                            </div>
+                            <a th:if="${!#strings.isEmpty(resolvedHref)}"
+                               th:href="${resolvedHref}"
+                               th:target="${#strings.startsWith(resolvedHref, 'http') ? '_blank' : null}"
+                               th:rel="${#strings.startsWith(resolvedHref, 'http') ? 'noopener noreferrer' : null}"
+                               th:attr="aria-label=${!#strings.isEmpty(it['cap']) ? it['cap'] : 'Ver enlace de la galería'}"
+                               class="sv-lookbook-stretch-link"></a>
+                        </div>
+                    </th:block>
+                </div>
+
+                <div th:if="${activeCount == 0 and (isDraftPreview == true)}"
+                     class="sv-lookbook-grid"
+                     th:attr="data-cols=${safeCols}">
+                    <div th:each="idx : ${ {1, 2, 3} }"
+                         class="sv-lookbook-item store-radius bg-slate-900/90 text-white flex flex-col items-center justify-center p-6 text-center border border-dashed border-slate-700"
+                         th:attr="data-aspect=${safeAspect}">
+                        <svg class="w-8 h-8 text-slate-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                        <p class="text-xs font-bold" th:text="${'Imagen ' + idx + ' del Lookbook'}">Imagen del Lookbook</p>
+                        <p class="text-[11px] text-slate-400 mt-1">Sube tus fotos desde el panel izquierdo</p>
+                    </div>
+                </div>
+            </section>
+        </th:block>
+
+        <!-- ===============================================================
+             FASE 2 - C. CARRUSEL / VITRINA DE MARCAS (brand_carousel)
+             =============================================================== -->
+        <th:block th:if="${sec.type == 'brand_carousel'}"
+                  th:with="title=${sec.settingStr('title', '')},
+                           subtitle=${sec.settingStr('subtitle', '')},
+                           mode=${sec.settingStr('displayMode', 'grid') == 'carousel' ? 'carousel' : 'grid'},
+                           size=${sec.settingStr('logoSize', 'md')},
+                           safeSize=${(size == 'sm' or size == 'md' or size == 'lg') ? size : 'md'},
+                           isGray=${sec.settingBool('grayscale', false)},
+                           waClean=${(settings != null and settings.whatsapp != null) ? #strings.replace(#strings.replace(settings.whatsapp, '+', ''), ' ', '') : ''},
+                           i1Name=${sec.settingStr('item1Name', '')},
+                           i1Img=${sec.settingStr('item1ImageUrl', '')},
+                           i1Url=${sec.settingStr('item1LinkUrl', '')},
+                           has1=${!#strings.isEmpty(i1Name) or !#strings.isEmpty(i1Img)},
+                           i2Name=${sec.settingStr('item2Name', '')},
+                           i2Img=${sec.settingStr('item2ImageUrl', '')},
+                           i2Url=${sec.settingStr('item2LinkUrl', '')},
+                           has2=${!#strings.isEmpty(i2Name) or !#strings.isEmpty(i2Img)},
+                           i3Name=${sec.settingStr('item3Name', '')},
+                           i3Img=${sec.settingStr('item3ImageUrl', '')},
+                           i3Url=${sec.settingStr('item3LinkUrl', '')},
+                           has3=${!#strings.isEmpty(i3Name) or !#strings.isEmpty(i3Img)},
+                           i4Name=${sec.settingStr('item4Name', '')},
+                           i4Img=${sec.settingStr('item4ImageUrl', '')},
+                           i4Url=${sec.settingStr('item4LinkUrl', '')},
+                           has4=${!#strings.isEmpty(i4Name) or !#strings.isEmpty(i4Img)},
+                           i5Name=${sec.settingStr('item5Name', '')},
+                           i5Img=${sec.settingStr('item5ImageUrl', '')},
+                           i5Url=${sec.settingStr('item5LinkUrl', '')},
+                           has5=${!#strings.isEmpty(i5Name) or !#strings.isEmpty(i5Img)},
+                           i6Name=${sec.settingStr('item6Name', '')},
+                           i6Img=${sec.settingStr('item6ImageUrl', '')},
+                           i6Url=${sec.settingStr('item6LinkUrl', '')},
+                           has6=${!#strings.isEmpty(i6Name) or !#strings.isEmpty(i6Img)},
+                           activeCount=${(has1 ? 1 : 0) + (has2 ? 1 : 0) + (has3 ? 1 : 0) + (has4 ? 1 : 0) + (has5 ? 1 : 0) + (has6 ? 1 : 0)},
+                           brandItems=${ {
+                               {'active': has1, 'name': i1Name, 'img': i1Img, 'url': i1Url},
+                               {'active': has2, 'name': i2Name, 'img': i2Img, 'url': i2Url},
+                               {'active': has3, 'name': i3Name, 'img': i3Img, 'url': i3Url},
+                               {'active': has4, 'name': i4Name, 'img': i4Img, 'url': i4Url},
+                               {'active': has5, 'name': i5Name, 'img': i5Img, 'url': i5Url},
+                               {'active': has6, 'name': i6Name, 'img': i6Img, 'url': i6Url}
+                           } }">
+            <section th:if="${activeCount > 0 or (isDraftPreview == true)}"
+                     class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                <div th:if="${!#strings.isEmpty(title) or !#strings.isEmpty(subtitle)}"
+                     class="text-center max-w-3xl mx-auto mb-8">
+                    <h2 th:if="${!#strings.isEmpty(title)}"
+                        class="text-2xl sm:text-3xl font-extrabold tracking-tight store-heading"
+                        th:text="${title}">Marcas que Comercializamos</h2>
+                    <p th:if="${!#strings.isEmpty(subtitle)}"
+                       class="mt-2 text-sm sm:text-base store-muted opacity-80"
+                       th:text="${subtitle}">Subtítulo</p>
+                </div>
+
+                <div th:if="${activeCount > 0}"
+                     th:class="${mode == 'carousel' ? 'sv-brand-carousel-wrap' : 'sv-brand-grid-wrap'}">
+                    <button th:if="${mode == 'carousel'}"
+                            type="button"
+                            class="sv-brand-nav-btn sv-brand-nav-btn--prev"
+                            aria-label="Marcas anteriores"
+                            onclick="const t=this.parentElement.querySelector('.sv-brand-track');if(t)t.scrollBy({left:-260,behavior:'smooth'});">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M15 19l-7-7 7-7"></path></svg>
+                    </button>
+
+                    <div th:class="${mode == 'carousel' ? 'sv-brand-track' : 'sv-brand-grid'}"
+                         th:attr="data-size=${safeSize}, data-grayscale=${isGray}, data-count=${activeCount}">
+                        <th:block th:each="b : ${brandItems}">
+                            <div th:if="${b['active']}"
+                                 th:with="rawUrl=${b['url']},
+                                          resolvedHref=${#strings.isEmpty(rawUrl)
+                                              ? ''
+                                              : (rawUrl == '__whatsapp__'
+                                                  ? (!#strings.isEmpty(waClean) ? 'https://wa.me/' + waClean : '/s/' + store.slug + '/catalog')
+                                                  : (#strings.startsWith(rawUrl, 'http') or #strings.startsWith(rawUrl, '#')
+                                                      ? rawUrl
+                                                      : (rawUrl == '/' ? '/s/' + store.slug : '/s/' + store.slug + (#strings.startsWith(rawUrl, '/') ? rawUrl : '/' + rawUrl))))}"
+                                 class="sv-brand-card store-radius">
+                                <img th:if="${!#strings.isEmpty(b['img'])}"
+                                     th:src="${b['img']}"
+                                     th:alt="${!#strings.isEmpty(b['name']) ? b['name'] : store.name}"
+                                     loading="lazy"
+                                     class="sv-brand-logo" />
+                                <span th:if="${#strings.isEmpty(b['img']) and !#strings.isEmpty(b['name'])}"
+                                      class="sv-brand-text-fallback"
+                                      th:text="${b['name']}">Marca</span>
+                                <a th:if="${!#strings.isEmpty(resolvedHref)}"
+                                   th:href="${resolvedHref}"
+                                   th:target="${#strings.startsWith(resolvedHref, 'http') ? '_blank' : null}"
+                                   th:rel="${#strings.startsWith(resolvedHref, 'http') ? 'noopener noreferrer' : null}"
+                                   th:attr="aria-label=${!#strings.isEmpty(b['name']) ? 'Ver marca ' + b['name'] : 'Ver marca'}"
+                                   class="sv-lookbook-stretch-link"></a>
+                            </div>
+                        </th:block>
+                    </div>
+
+                    <button th:if="${mode == 'carousel'}"
+                            type="button"
+                            class="sv-brand-nav-btn sv-brand-nav-btn--next"
+                            aria-label="Siguientes marcas"
+                            onclick="const t=this.parentElement.querySelector('.sv-brand-track');if(t)t.scrollBy({left:260,behavior:'smooth'});">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M9 5l7 7-7 7"></path></svg>
+                    </button>
+                </div>
+
+                <div th:if="${activeCount == 0 and (isDraftPreview == true)}"
+                     class="sv-brand-grid"
+                     th:attr="data-size=${safeSize}">
+                    <div th:each="idx : ${ {1, 2, 3, 4} }"
+                         class="sv-brand-card store-radius border border-dashed border-slate-300 bg-white/80 text-slate-500">
+                        <span class="text-xs font-extrabold uppercase tracking-wider" th:text="${'Marca ' + idx}">Marca</span>
+                    </div>
+                </div>
+            </section>
+        </th:block>
+
+        <!-- ===============================================================
+             FASE 2 - E. SÍGUENOS EN REDES SOCIALES (social_showcase)
+             =============================================================== -->
+        <th:block th:if="${sec.type == 'social_showcase'}"
+                  th:with="handleText=${sec.settingStr('handleText', '')},
+                           title=${sec.settingStr('title', '')},
+                           subtitle=${sec.settingStr('subtitle', '')},
+                           rawIg=${!#strings.isEmpty(sec.settingStr('instagramUrl', ''))
+                               ? sec.settingStr('instagramUrl', '')
+                               : ((settings != null and settings.instagram != null) ? #strings.trim(settings.instagram) : '')},
+                           igHref=${#strings.isEmpty(rawIg)
+                               ? ''
+                               : (#strings.startsWith(rawIg, 'http://') or #strings.startsWith(rawIg, 'https://')
+                                   ? rawIg
+                                   : 'https://www.instagram.com/' + #strings.replace(rawIg, '@', ''))},
+                           rawTt=${!#strings.isEmpty(sec.settingStr('tiktokUrl', ''))
+                               ? sec.settingStr('tiktokUrl', '')
+                               : ((settings != null and settings.tiktok != null) ? #strings.trim(settings.tiktok) : '')},
+                           ttHref=${#strings.isEmpty(rawTt)
+                               ? ''
+                               : (#strings.startsWith(rawTt, 'http://') or #strings.startsWith(rawTt, 'https://')
+                                   ? rawTt
+                                   : 'https://www.tiktok.com/@' + #strings.replace(rawTt, '@', ''))},
+                           rawFb=${!#strings.isEmpty(sec.settingStr('facebookUrl', ''))
+                               ? sec.settingStr('facebookUrl', '')
+                               : ((settings != null and settings.facebook != null) ? #strings.trim(settings.facebook) : '')},
+                           fbHref=${#strings.isEmpty(rawFb)
+                               ? ''
+                               : (#strings.startsWith(rawFb, 'http://') or #strings.startsWith(rawFb, 'https://')
+                                   ? rawFb
+                                   : 'https://www.facebook.com/' + #strings.replace(rawFb, '@', ''))},
+                           showWa=${sec.settingBool('showWhatsapp', true)},
+                           waClean=${(settings != null and settings.whatsapp != null) ? #strings.replace(#strings.replace(settings.whatsapp, '+', ''), ' ', '') : ''},
+                           waHref=${(showWa and !#strings.isEmpty(waClean)) ? 'https://wa.me/' + waClean : ''},
+                           hasAnySocial=${!#strings.isEmpty(igHref) or !#strings.isEmpty(ttHref) or !#strings.isEmpty(fbHref) or !#strings.isEmpty(waHref)},
+                           p1Img=${sec.settingStr('post1ImageUrl', '')},
+                           p1Cap=${sec.settingStr('post1Caption', '')},
+                           p1Url=${sec.settingStr('post1LinkUrl', '')},
+                           p2Img=${sec.settingStr('post2ImageUrl', '')},
+                           p2Cap=${sec.settingStr('post2Caption', '')},
+                           p2Url=${sec.settingStr('post2LinkUrl', '')},
+                           p3Img=${sec.settingStr('post3ImageUrl', '')},
+                           p3Cap=${sec.settingStr('post3Caption', '')},
+                           p3Url=${sec.settingStr('post3LinkUrl', '')},
+                           p4Img=${sec.settingStr('post4ImageUrl', '')},
+                           p4Cap=${sec.settingStr('post4Caption', '')},
+                           p4Url=${sec.settingStr('post4LinkUrl', '')},
+                           postCount=${(!#strings.isEmpty(p1Img) ? 1 : 0)
+                               + (!#strings.isEmpty(p2Img) ? 1 : 0)
+                               + (!#strings.isEmpty(p3Img) ? 1 : 0)
+                               + (!#strings.isEmpty(p4Img) ? 1 : 0)},
+                           postItems=${ {
+                               {'active': !#strings.isEmpty(p1Img), 'img': p1Img, 'cap': p1Cap, 'url': p1Url},
+                               {'active': !#strings.isEmpty(p2Img), 'img': p2Img, 'cap': p2Cap, 'url': p2Url},
+                               {'active': !#strings.isEmpty(p3Img), 'img': p3Img, 'cap': p3Cap, 'url': p3Url},
+                               {'active': !#strings.isEmpty(p4Img), 'img': p4Img, 'cap': p4Cap, 'url': p4Url}
+                           } }">
+            <section th:if="${hasAnySocial or postCount > 0 or (isDraftPreview == true)}"
+                     class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                <div class="text-center max-w-3xl mx-auto">
+                    <span th:if="${!#strings.isEmpty(handleText)}"
+                          class="inline-flex items-center px-3.5 py-1 rounded-full text-xs font-extrabold tracking-wide mb-3"
+                          style="background-color: color-mix(in srgb, var(--brand-color) 14%, transparent); color: var(--brand-color);"
+                          th:text="${handleText}">@nuestratienda</span>
+                    <h2 th:if="${!#strings.isEmpty(title)}"
+                        class="text-2xl sm:text-3xl font-extrabold tracking-tight store-heading"
+                        th:text="${title}">Síguenos en Redes Sociales</h2>
+                    <p th:if="${!#strings.isEmpty(subtitle)}"
+                       class="mt-2 text-sm sm:text-base store-muted opacity-80 leading-relaxed"
+                       th:text="${subtitle}">Subtítulo</p>
+
+                    <div th:if="${hasAnySocial}" class="sv-social-pills mt-6">
+                        <a th:if="${!#strings.isEmpty(igHref)}"
+                           th:href="${igHref}"
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           class="sv-social-btn store-radius">
+                            <svg class="w-5 h-5 text-pink-600 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                            <span>Instagram</span>
+                        </a>
+                        <a th:if="${!#strings.isEmpty(ttHref)}"
+                           th:href="${ttHref}"
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           class="sv-social-btn store-radius">
+                            <svg class="w-5 h-5 text-slate-900 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-5.2 1.74 2.89 2.89 0 012.31-4.64 2.93 2.93 0 01.88.13V9.4a6.84 6.84 0 00-1-.05A6.33 6.33 0 005 20.1a6.34 6.34 0 0010.86-4.43v-7a8.16 8.16 0 004.77 1.52v-3.4a4.85 4.85 0 01-1-.1z"/></svg>
+                            <span>TikTok</span>
+                        </a>
+                        <a th:if="${!#strings.isEmpty(fbHref)}"
+                           th:href="${fbHref}"
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           class="sv-social-btn store-radius">
+                            <svg class="w-5 h-5 text-blue-600 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M22.675 0h-21.35c-.732 0-1.325.593-1.325 1.325v21.351c0 .731.593 1.324 1.325 1.324h11.495v-9.294h-3.128v-3.622h3.128v-2.671c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.795.143v3.24l-1.918.001c-1.504 0-1.795.715-1.795 1.763v2.313h3.587l-.467 3.622h-3.12v9.293h6.116c.73 0 1.323-.593 1.323-1.325v-21.35c0-.732-.593-1.325-1.325-1.325z"/></svg>
+                            <span>Facebook</span>
+                        </a>
+                        <a th:if="${!#strings.isEmpty(waHref)}"
+                           th:href="${waHref}"
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           class="sv-social-btn store-radius">
+                            <svg class="w-5 h-5 text-emerald-600 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.1.824zm-3.423-14.416c-6.627 0-12 5.373-12 12 0 2.126.556 4.124 1.531 5.862l-1.531 5.592 5.736-1.505c1.693.922 3.633 1.451 5.702 1.451 6.627 0 12-5.373 12-12s-5.373-12-12-12z"/></svg>
+                            <span>WhatsApp</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div th:if="${postCount > 0}"
+                     class="sv-social-feed-grid mt-8"
+                     th:attr="data-count=${postCount}">
+                    <th:block th:each="post : ${postItems}">
+                        <div th:if="${post['active']}"
+                             th:with="rawUrl=${post['url']},
+                                      resolvedHref=${#strings.isEmpty(rawUrl)
+                                          ? (!#strings.isEmpty(igHref) ? igHref : (!#strings.isEmpty(ttHref) ? ttHref : fbHref))
+                                          : (rawUrl == '__whatsapp__'
+                                              ? (!#strings.isEmpty(waClean) ? 'https://wa.me/' + waClean : '/s/' + store.slug + '/catalog')
+                                              : (#strings.startsWith(rawUrl, 'http') or #strings.startsWith(rawUrl, '#')
+                                                  ? rawUrl
+                                                  : (rawUrl == '/' ? '/s/' + store.slug : '/s/' + store.slug + (#strings.startsWith(rawUrl, '/') ? rawUrl : '/' + rawUrl))))}"
+                             class="sv-lookbook-item store-radius group"
+                             data-aspect="square">
+                            <img th:src="${post['img']}"
+                                 th:alt="${!#strings.isEmpty(post['cap']) ? post['cap'] : store.name}"
+                                 loading="lazy"
+                                 class="sv-lookbook-img" />
+                            <div th:if="${!#strings.isEmpty(post['cap']) or !#strings.isEmpty(resolvedHref)}"
+                                 class="sv-lookbook-overlay">
+                                <span th:if="${!#strings.isEmpty(post['cap'])}"
+                                      class="sv-lookbook-caption"
+                                      th:text="${post['cap']}">Publicación</span>
+                                <span th:if="${!#strings.isEmpty(resolvedHref)}"
+                                      class="sv-lookbook-action-pill">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                                </span>
+                            </div>
+                            <a th:if="${!#strings.isEmpty(resolvedHref)}"
+                               th:href="${resolvedHref}"
+                               th:target="${#strings.startsWith(resolvedHref, 'http') ? '_blank' : null}"
+                               th:rel="${#strings.startsWith(resolvedHref, 'http') ? 'noopener noreferrer' : null}"
+                               th:attr="aria-label=${!#strings.isEmpty(post['cap']) ? post['cap'] : 'Ver publicación'}"
+                               class="sv-lookbook-stretch-link"></a>
+                        </div>
+                    </th:block>
+                </div>
+
+                <div th:if="${!hasAnySocial and postCount == 0 and (isDraftPreview == true)}"
+                     class="mt-6 p-6 rounded-2xl border border-dashed border-slate-300 text-center max-w-xl mx-auto">
+                    <p class="text-sm font-bold store-heading">Conecta tus Redes Sociales</p>
+                    <p class="text-xs store-muted opacity-75 mt-1">Escribe tu usuario o enlace de Instagram, TikTok o Facebook en el panel izquierdo, o sube hasta 4 fotos destacadas.</p>
+                </div>
+            </section>
+        </th:block>
 
         <th:block th:switch="${sec.type}">
             <th:block th:case="'announcement_bar'">
