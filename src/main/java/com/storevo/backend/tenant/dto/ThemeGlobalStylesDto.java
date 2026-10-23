@@ -507,4 +507,51 @@ public class ThemeGlobalStylesDto {
     @Builder.Default
     private String detailRelatedCols = "4";
 
+    // =========================================================================
+    // PAGINACIÓN Y CARGA DE PRODUCTOS (GLOBAL POR TIENDA)
+    // =========================================================================
+    @Builder.Default
+    private String paginationMode = "numbered"; // numbered | compact | load_more | infinite | arrows | counter_more
+
+    @Builder.Default
+    private Integer paginationPageSize = 12; // 4 a 48 productos por página o por carga
+
+    @Builder.Default
+    private String paginationButtonShape = "rounded"; // sync | square | rounded | pill
+
+    @Builder.Default
+    private String paginationButtonSize = "md"; // sm | md | lg
+
+    @Builder.Default
+    private String paginationAlign = "center"; // left | center | right | between
+
+    @Builder.Default
+    private String paginationSpacing = "md"; // sm | md | lg
+
+    @Builder.Default
+    private String paginationBorderWidth = "1px"; // 0px | 1px | 2px
+
+    @Builder.Default
+    private String paginationColorMode = "brand"; // brand (usa primario/secundario de la tienda) | custom
+
+    @Builder.Default
+    private String paginationBgColor = "#ffffff";
+
+    @Builder.Default
+    private String paginationTextColor = "#334155";
+
+    @Builder.Default
+    private String paginationBorderColor = "#e2e8f0";
+
+    @Builder.Default
+    private String paginationActiveBgColor = "#6366f1";
+
+    @Builder.Default
+    private String paginationActiveTextColor = "#ffffff";
+
+    @Builder.Default
+    private Boolean paginationShowCounter = true;
+
+    @Builder.Default
+    private Boolean paginationShowPrevNext = true;
 }

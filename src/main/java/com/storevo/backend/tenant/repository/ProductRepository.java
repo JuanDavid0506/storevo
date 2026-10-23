@@ -75,6 +75,49 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             @Param("quick") String quick,
             Pageable pageable);
 
+    @Query(value = "SELECT p FROM Product p LEFT JOIN p.brandRef b WHERE " +
+            "p.isActive = true AND p.isDeleted = false AND p.isDraft = false AND " +
+            "(b IS NULL OR b.isActive = true) AND " +
+            "(:categoryIds IS NULL OR p.category.id IN :categoryIds) AND " +
+            "(:brandId IS NULL OR b.id = :brandId) AND " +
+            "(:brandName IS NULL OR :brandName = '' OR LOWER(p.brand) = LOWER(:brandName)) AND " +
+            "(:q IS NULL OR :q = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :q, '%')) " +
+            "  OR LOWER(p.sku) LIKE LOWER(CONCAT('%', :q, '%')) " +
+            "  OR LOWER(p.brand) LIKE LOWER(CONCAT('%', :q, '%'))) AND " +
+            "(:onlyOffers IS NULL OR :onlyOffers = false OR (p.discountPrice IS NOT NULL AND p.discountPrice > 0 AND (p.price IS NULL OR p.discountPrice < p.price))) AND " +
+            "(:onlyFeatured IS NULL OR :onlyFeatured = false OR p.isFeatured = true) AND " +
+            "(:onlyInStock IS NULL OR :onlyInStock = false OR p.isMadeToOrder = true OR p.stock > 0) AND " +
+            "(:minPrice IS NULL OR (CASE WHEN p.discountPrice IS NOT NULL AND p.discountPrice > 0 AND (p.price IS NULL OR p.discountPrice < p.price) THEN p.discountPrice ELSE p.price END) >= :minPrice) AND " +
+            "(:maxPrice IS NULL OR (CASE WHEN p.discountPrice IS NOT NULL AND p.discountPrice > 0 AND (p.price IS NULL OR p.discountPrice < p.price) THEN p.discountPrice ELSE p.price END) <= :maxPrice) AND " +
+            "(:cursorId IS NULL OR p.id < :cursorId)",
+            countQuery = "SELECT COUNT(p) FROM Product p LEFT JOIN p.brandRef b WHERE " +
+                    "p.isActive = true AND p.isDeleted = false AND p.isDraft = false AND " +
+                    "(b IS NULL OR b.isActive = true) AND " +
+                    "(:categoryIds IS NULL OR p.category.id IN :categoryIds) AND " +
+                    "(:brandId IS NULL OR b.id = :brandId) AND " +
+                    "(:brandName IS NULL OR :brandName = '' OR LOWER(p.brand) = LOWER(:brandName)) AND " +
+                    "(:q IS NULL OR :q = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :q, '%')) " +
+                    "  OR LOWER(p.sku) LIKE LOWER(CONCAT('%', :q, '%')) " +
+                    "  OR LOWER(p.brand) LIKE LOWER(CONCAT('%', :q, '%'))) AND " +
+                    "(:onlyOffers IS NULL OR :onlyOffers = false OR (p.discountPrice IS NOT NULL AND p.discountPrice > 0 AND (p.price IS NULL OR p.discountPrice < p.price))) AND " +
+                    "(:onlyFeatured IS NULL OR :onlyFeatured = false OR p.isFeatured = true) AND " +
+                    "(:onlyInStock IS NULL OR :onlyInStock = false OR p.isMadeToOrder = true OR p.stock > 0) AND " +
+                    "(:minPrice IS NULL OR (CASE WHEN p.discountPrice IS NOT NULL AND p.discountPrice > 0 AND (p.price IS NULL OR p.discountPrice < p.price) THEN p.discountPrice ELSE p.price END) >= :minPrice) AND " +
+                    "(:maxPrice IS NULL OR (CASE WHEN p.discountPrice IS NOT NULL AND p.discountPrice > 0 AND (p.price IS NULL OR p.discountPrice < p.price) THEN p.discountPrice ELSE p.price END) <= :maxPrice) AND " +
+                    "(:cursorId IS NULL OR :cursorId IS NOT NULL)")
+    Page<Product> searchPublicCatalogPaginated(
+            @Param("categoryIds") List<Long> categoryIds,
+            @Param("brandId") Long brandId,
+            @Param("brandName") String brandName,
+            @Param("q") String q,
+            @Param("onlyOffers") Boolean onlyOffers,
+            @Param("onlyFeatured") Boolean onlyFeatured,
+            @Param("onlyInStock") Boolean onlyInStock,
+            @Param("minPrice") Double minPrice,
+            @Param("maxPrice") Double maxPrice,
+            @Param("cursorId") Long cursorId,
+            Pageable pageable);
+
     Optional<Product> findTopByOrderByIdDesc();
 
     // ===== MARCAS =====

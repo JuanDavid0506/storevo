@@ -6972,6 +6972,55 @@ if (document.readyState === 'loading') {
             ));
             const catWrapper = catSelect ? (catSelect.closest('div') || catSelect.parentElement) : null;
 
+            // Asegurar que el selector de límite (cantidad de productos) permita filas exactas de 3 y de 4 (3, 4, 6, 8, 9, 12, 16, 24)
+            const limitSelect = selects.find(sel => sel !== sourceSelect && (
+                (sel.name || sel.getAttribute('data-setting') || sel.getAttribute('data-key') || sel.id || '').toLowerCase().includes('limit')
+            ));
+            if (limitSelect && !limitSelect.dataset.svRowsEnhanced) {
+                limitSelect.dataset.svRowsEnhanced = 'true';
+                const currentLimitVal = String(sec.settings.limit || limitSelect.value || '8');
+                const limitOptions = [
+                    { v: '3', t: '3 productos (1 fila de 3)' },
+                    { v: '4', t: '4 productos (1 fila de 4)' },
+                    { v: '6', t: '6 productos (2 filas de 3)' },
+                    { v: '8', t: '8 productos (2 filas de 4)' },
+                    { v: '9', t: '9 productos (3 filas de 3)' },
+                    { v: '12', t: '12 productos (3 filas de 4 / 4 filas de 3)' },
+                    { v: '16', t: '16 productos (4 filas de 4)' },
+                    { v: '24', t: '24 productos' }
+                ];
+                limitSelect.innerHTML = limitOptions.map(o =>
+                    `<option value="${o.v}" ${o.v === currentLimitVal ? 'selected' : ''}>${o.t}</option>`
+                ).join('');
+            }
+
+            // Inyectar selector "Columnas en PC" (4 por fila Estándar vs 3 por fila Editorial) si no existe en la sección
+            const hasColsSelect = selects.some(sel =>
+                (sel.name || sel.getAttribute('data-setting') || sel.getAttribute('data-key') || sel.id || '').toLowerCase().includes('columnsdesktop')
+            );
+            if (!hasColsSelect && !container.querySelector('.sv-pg-cols-wrap')) {
+                const currentCols = String(sec.settings.columnsDesktop || '4') === '3' ? '3' : '4';
+                const colsWrap = document.createElement('div');
+                colsWrap.className = 'sv-pg-cols-wrap space-y-1.5 mt-3';
+                colsWrap.innerHTML = `
+                    <label class="block text-xs font-bold text-slate-300">Disposición en PC (Productos por fila)</label>
+                    <select class="sv-pg-cols-select w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-semibold text-white focus:border-indigo-500 focus:outline-none cursor-pointer">
+                        <option value="4" ${currentCols === '4' ? 'selected' : ''}>4 productos por fila (Estándar)</option>
+                        <option value="3" ${currentCols === '3' ? 'selected' : ''}>3 productos grandes por fila (Editorial)</option>
+                    </select>
+                `;
+                const targetAnchor = limitSelect ? (limitSelect.closest('div') || limitSelect.parentElement) : sourceSelect.closest('div');
+                targetAnchor.insertAdjacentElement('afterend', colsWrap);
+
+                const colsSelectEl = colsWrap.querySelector('.sv-pg-cols-select');
+                if (colsSelectEl) {
+                    colsSelectEl.addEventListener('change', () => {
+                        sec.settings.columnsDesktop = colsSelectEl.value === '3' ? '3' : '4';
+                        TE.triggerSectionChanged();
+                    });
+                }
+            }
+
             // Crear contenedor dinámico para BRAND y MANUAL
             const extraHost = document.createElement('div');
             extraHost.className = 'space-y-3 mt-3 pt-3 border-t border-slate-800/80';
@@ -7243,5 +7292,446 @@ if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initProductGridAndCategoryExtension);
     } else {
         setTimeout(initProductGridAndCategoryExtension, 0);
+    }
+})();
+/* ==========================================================================
+   APARTADO GLOBAL: PAGINACIÓN Y CARGA DE PRODUCTOS (ESTILOS GLOBALES)
+   ========================================================================== */
+(function() {
+    function initGlobalPaginationStylesPanel() {
+        if (!window.Storevo || !Storevo.ThemeEditor) return;
+        const TE = Storevo.ThemeEditor;
+        if (TE.__paginationStylesMounted) return;
+        TE.__paginationStylesMounted = true;
+
+        function getStorePrimary() {
+            return (TE.theme && TE.theme.globalStyles && TE.theme.globalStyles.primaryColor) || '#6366f1';
+        }
+
+        function getStoreSecondary() {
+            return (TE.theme && TE.theme.globalStyles && TE.theme.globalStyles.secondaryColor) || '#0f172a';
+        }
+
+        function isValidHex(val) {
+            return /^#[0-9a-fA-F]{6}$/.test(String(val || '').trim());
+        }
+
+        function ensureGlobalStylesObject() {
+            if (!TE.theme) TE.theme = {};
+            if (!TE.theme.globalStyles) TE.theme.globalStyles = {};
+            const gs = TE.theme.globalStyles;
+            const defaults = {
+                paginationMode: 'numbered',
+                paginationPageSize: 12,
+                paginationButtonShape: 'rounded',
+                paginationButtonSize: 'md',
+                paginationAlign: 'center',
+                paginationSpacing: 'md',
+                paginationBorderWidth: '1px',
+                paginationColorMode: 'brand',
+                paginationBgColor: '#ffffff',
+                paginationTextColor: getStoreSecondary(),
+                paginationBorderColor: '#e2e8f0',
+                paginationActiveBgColor: getStorePrimary(),
+                paginationActiveTextColor: '#ffffff',
+                paginationShowCounter: true,
+                paginationShowPrevNext: true
+            };
+            Object.keys(defaults).forEach(k => {
+                if (gs[k] === undefined || gs[k] === null || gs[k] === '') {
+                    gs[k] = defaults[k];
+                }
+            });
+            return gs;
+        }
+
+        function postLivePaginationStyles() {
+            const gs = ensureGlobalStylesObject();
+            const iframe = document.getElementById('theme-preview-iframe') || document.querySelector('#preview-frame-container iframe');
+            if (iframe && iframe.contentWindow) {
+                iframe.contentWindow.postMessage({
+                    type: 'storevo:live-styles',
+                    styles: gs
+                }, window.location.origin);
+            }
+            if (typeof TE.triggerSectionChanged === 'function') {
+                TE.triggerSectionChanged();
+            } else if (typeof TE.markDirty === 'function') {
+                TE.markDirty();
+            }
+        }
+
+        function buildColorFieldHtml(idPrefix, labelText) {
+            return `
+                <div>
+                    <label id="${idPrefix}-label" class="block text-[10px] font-bold text-slate-400 mb-1">${labelText}</label>
+                    <div class="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl p-1 focus-within:border-storevo-500 transition">
+                        <input type="color" id="${idPrefix}" class="w-7 h-7 rounded-lg bg-transparent border-0 cursor-pointer flex-shrink-0 p-0">
+                        <input type="text" id="${idPrefix}-hex" maxlength="7" placeholder="#6366F1"
+                               class="w-full bg-transparent border-0 text-[11px] font-mono font-bold text-white uppercase focus:outline-none focus:ring-0 px-1">
+                    </div>
+                </div>
+            `;
+        }
+
+        function mountPaginationAccordion() {
+            if (document.getElementById('style-acc-pagination')) return;
+
+            const firstStyleAcc = document.querySelector('#theme-editor-sidebar details.style-acc');
+            const stylesContainer = firstStyleAcc ? firstStyleAcc.parentElement : null;
+            if (!stylesContainer) return;
+
+            ensureGlobalStylesObject();
+
+            const details = document.createElement('details');
+            details.className = 'style-acc';
+            details.id = 'style-acc-pagination';
+            details.innerHTML = `
+                <summary>
+                    <div>
+                        <span class="style-acc-title">Paginación y carga de productos</span>
+                        <span class="style-acc-hint">Aplica al Catálogo General y a todas las Categorías</span>
+                    </div>
+                    <svg class="style-acc-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </summary>
+                <div class="style-acc-body space-y-4 text-xs">
+                    <!-- 1. Modo de Paginación -->
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-300 mb-1.5">Modo de paginación</label>
+                        <select id="gs-pag-mode" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-bold text-white focus:border-storevo-500 focus:outline-none">
+                            <option value="numbered">Numerada (1, 2, 3…)</option>
+                            <option value="compact">Numerada compacta (Página X de Y)</option>
+                            <option value="load_more">Cargar más (Botón)</option>
+                            <option value="infinite">Desplazamiento infinito (Scroll)</option>
+                            <option value="arrows">Navegación con flechas</option>
+                            <option value="counter_more">Mostrar más con contador y progreso</option>
+                        </select>
+                    </div>
+
+                    <!-- 2. Productos por página o por carga -->
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-300 mb-1.5">Productos por página / por carga (Catálogo)</label>
+                        <select id="gs-pag-size" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-semibold text-white focus:border-storevo-500 focus:outline-none">
+                            <option value="4">4 productos</option>
+                            <option value="6">6 productos</option>
+                            <option value="8">8 productos</option>
+                            <option value="12">12 productos (Recomendado)</option>
+                            <option value="16">16 productos</option>
+                            <option value="20">20 productos</option>
+                            <option value="24">24 productos</option>
+                            <option value="32">32 productos</option>
+                            <option value="48">48 productos</option>
+                        </select>
+                        <p class="text-[10px] text-slate-500 mt-1">Las vitrinas de productos en Inicio respetan su propio límite de filas.</p>
+                    </div>
+
+                    <!-- 3. Alineación y Espaciado -->
+                    <div class="grid grid-cols-2 gap-3" data-pag-group="layout">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-400 mb-1">Alineación</label>
+                            <select id="gs-pag-align" class="w-full px-2.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-storevo-500 focus:outline-none">
+                                <option value="left">Izquierda</option>
+                                <option value="center">Centro</option>
+                                <option value="right">Derecha</option>
+                                <option value="between">Distribuido</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-400 mb-1">Espaciado</label>
+                            <select id="gs-pag-spacing" class="w-full px-2.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-storevo-500 focus:outline-none">
+                                <option value="sm">Compacto</option>
+                                <option value="md">Estándar</option>
+                                <option value="lg">Amplio</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- 4. Forma, Tamaño y Borde de Botones (Oculto en infinite) -->
+                    <div class="grid grid-cols-3 gap-2.5" data-pag-group="buttons">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-400 mb-1">Forma</label>
+                            <select id="gs-pag-shape" class="w-full px-2 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-storevo-500 focus:outline-none">
+                                <option value="rounded">Redondeado</option>
+                                <option value="pill">Píldora</option>
+                                <option value="square">Cuadrado</option>
+                                <option value="sync">Sincronizar</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-400 mb-1">Tamaño</label>
+                            <select id="gs-pag-btn-size" class="w-full px-2 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-storevo-500 focus:outline-none">
+                                <option value="sm">Pequeño</option>
+                                <option value="md">Mediano</option>
+                                <option value="lg">Grande</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-400 mb-1">Borde</label>
+                            <select id="gs-pag-border-w" class="w-full px-2 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-storevo-500 focus:outline-none">
+                                <option value="0px">Sin borde</option>
+                                <option value="1px">Fino (1px)</option>
+                                <option value="2px">Grueso (2px)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- 5. Origen de Colores (Automático con Colores de la Tienda vs Personalizado) -->
+                    <div class="pt-2 border-t border-slate-800/80 space-y-3">
+                        <div class="flex items-center justify-between gap-2">
+                            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-300">Colores de paginación</label>
+                            <button type="button" id="gs-pag-sync-brand-btn"
+                                    class="hidden text-[10px] font-bold text-storevo-400 hover:text-storevo-300 transition">
+                                ↻ Tomar colores de la tienda
+                            </button>
+                        </div>
+                        <select id="gs-pag-color-mode" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-semibold text-white focus:border-storevo-500 focus:outline-none">
+                            <option value="brand">Automático (Usar Primario y Secundario de la tienda)</option>
+                            <option value="custom">Personalizar colores manualmente</option>
+                        </select>
+
+                        <!-- Contenedor de selectores de color con Paleta + Código Hex -->
+                        <div id="gs-pag-custom-colors-wrap" class="space-y-3 hidden pt-1">
+                            <!-- Colores de Página Activa / Botón Principal -->
+                            <div class="grid grid-cols-2 gap-2.5" data-pag-group="active-colors">
+                                ${buildColorFieldHtml('gs-pag-active-bg', 'Fondo página activa')}
+                                <div data-pag-group="active-text-color">
+                                    ${buildColorFieldHtml('gs-pag-active-text', 'Texto página activa')}
+                                </div>
+                            </div>
+
+                            <!-- Colores de Botones Inactivos y Borde (Solo en modos multipágina) -->
+                            <div class="grid grid-cols-2 gap-2.5" data-pag-group="inactive-colors">
+                                ${buildColorFieldHtml('gs-pag-bg', 'Fondo botón inactivo')}
+                                ${buildColorFieldHtml('gs-pag-text', 'Texto botón (Secundario)')}
+                                <div class="col-span-2">
+                                    ${buildColorFieldHtml('gs-pag-border', 'Color del borde')}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 6. Controles de Visibilidad Pertinentes -->
+                    <div class="space-y-2.5 pt-2 border-t border-slate-800/80" data-pag-group="toggles">
+                        <label class="flex items-center justify-between gap-2 cursor-pointer" data-pag-toggle="counter">
+                            <span class="text-xs font-medium text-slate-300">Mostrar contador de productos</span>
+                            <input type="checkbox" id="gs-pag-counter" class="w-4 h-4 rounded border-slate-700 bg-slate-950 text-storevo-500 focus:ring-storevo-500">
+                        </label>
+                        <label class="flex items-center justify-between gap-2 cursor-pointer" data-pag-toggle="prev-next">
+                            <span class="text-xs font-medium text-slate-300">Mostrar botones Anterior / Siguiente</span>
+                            <input type="checkbox" id="gs-pag-prev-next" class="w-4 h-4 rounded border-slate-700 bg-slate-950 text-storevo-500 focus:ring-storevo-500">
+                        </label>
+                    </div>
+                </div>
+            `;
+
+            stylesContainer.appendChild(details);
+            syncInputsFromGlobalStyles();
+            bindPaginationInputs();
+        }
+
+        function updateModeSpecificVisibility(mode, colorMode) {
+            const panel = document.getElementById('style-acc-pagination');
+            if (!panel) return;
+
+            const isPageBased = (mode === 'numbered' || mode === 'compact' || mode === 'arrows');
+            const hasPrevNextOption = (mode === 'numbered' || mode === 'compact');
+            const isInfinite = (mode === 'infinite');
+            const isCounterMore = (mode === 'counter_more');
+            const isCustomColor = (colorMode === 'custom');
+
+            const buttonsGroup = panel.querySelector('[data-pag-group="buttons"]');
+            const customColorsWrap = document.getElementById('gs-pag-custom-colors-wrap');
+            const syncBrandBtn = document.getElementById('gs-pag-sync-brand-btn');
+            const inactiveColorsGroup = panel.querySelector('[data-pag-group="inactive-colors"]');
+            const activeTextColorGroup = panel.querySelector('[data-pag-group="active-text-color"]');
+            const counterToggle = panel.querySelector('[data-pag-toggle="counter"]');
+            const prevNextToggle = panel.querySelector('[data-pag-toggle="prev-next"]');
+            const activeBgLabel = document.getElementById('gs-pag-active-bg-label');
+            const activeTextLabel = document.getElementById('gs-pag-active-text-label');
+
+            if (buttonsGroup) buttonsGroup.classList.toggle('hidden', isInfinite);
+            if (customColorsWrap) customColorsWrap.classList.toggle('hidden', !isCustomColor);
+            if (syncBrandBtn) syncBrandBtn.classList.toggle('hidden', !isCustomColor);
+            if (inactiveColorsGroup) inactiveColorsGroup.classList.toggle('hidden', !isPageBased);
+            if (activeTextColorGroup) activeTextColorGroup.classList.toggle('hidden', isInfinite);
+            if (counterToggle) counterToggle.classList.toggle('hidden', isCounterMore);
+            if (prevNextToggle) prevNextToggle.classList.toggle('hidden', !hasPrevNextOption);
+
+            if (activeBgLabel) {
+                activeBgLabel.textContent = isPageBased
+                    ? 'Fondo página activa (Primario)'
+                    : (isInfinite ? 'Color del indicador' : 'Fondo botón principal');
+            }
+            if (activeTextLabel) {
+                activeTextLabel.textContent = isPageBased ? 'Texto página activa' : 'Texto botón principal';
+            }
+        }
+
+        function setColorPairValue(idPrefix, hexVal) {
+            const safeHex = isValidHex(hexVal) ? hexVal.toUpperCase() : '#6366F1';
+            const colorEl = document.getElementById(idPrefix);
+            const hexEl = document.getElementById(idPrefix + '-hex');
+            if (colorEl) colorEl.value = safeHex.toLowerCase();
+            if (hexEl && document.activeElement !== hexEl) hexEl.value = safeHex;
+        }
+
+        function syncInputsFromGlobalStyles() {
+            const gs = ensureGlobalStylesObject();
+            const setVal = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.value = String(val);
+            };
+            const setCheck = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.checked = Boolean(val);
+            };
+
+            setVal('gs-pag-mode', gs.paginationMode);
+            setVal('gs-pag-size', gs.paginationPageSize);
+            setVal('gs-pag-align', gs.paginationAlign);
+            setVal('gs-pag-spacing', gs.paginationSpacing);
+            setVal('gs-pag-shape', gs.paginationButtonShape);
+            setVal('gs-pag-btn-size', gs.paginationButtonSize);
+            setVal('gs-pag-border-w', gs.paginationBorderWidth);
+            setVal('gs-pag-color-mode', gs.paginationColorMode || 'brand');
+
+            setColorPairValue('gs-pag-bg', gs.paginationBgColor || '#ffffff');
+            setColorPairValue('gs-pag-text', gs.paginationTextColor || getStoreSecondary());
+            setColorPairValue('gs-pag-border', gs.paginationBorderColor || '#e2e8f0');
+            setColorPairValue('gs-pag-active-bg', gs.paginationActiveBgColor || getStorePrimary());
+            setColorPairValue('gs-pag-active-text', gs.paginationActiveTextColor || '#ffffff');
+
+            setCheck('gs-pag-counter', gs.paginationShowCounter);
+            setCheck('gs-pag-prev-next', gs.paginationShowPrevNext);
+
+            updateModeSpecificVisibility(gs.paginationMode, gs.paginationColorMode || 'brand');
+        }
+
+        function bindColorPair(idPrefix, gsKey) {
+            const colorEl = document.getElementById(idPrefix);
+            const hexEl = document.getElementById(idPrefix + '-hex');
+            if (!colorEl || !hexEl) return;
+
+            colorEl.addEventListener('input', () => {
+                const gs = ensureGlobalStylesObject();
+                const val = colorEl.value.toUpperCase();
+                hexEl.value = val;
+                gs[gsKey] = colorEl.value;
+                postLivePaginationStyles();
+            });
+
+            hexEl.addEventListener('input', () => {
+                let raw = hexEl.value.trim();
+                if (raw && !raw.startsWith('#')) {
+                    raw = '#' + raw;
+                }
+                if (isValidHex(raw)) {
+                    const gs = ensureGlobalStylesObject();
+                    colorEl.value = raw.toLowerCase();
+                    gs[gsKey] = raw.toLowerCase();
+                    postLivePaginationStyles();
+                }
+            });
+
+            hexEl.addEventListener('blur', () => {
+                const gs = ensureGlobalStylesObject();
+                let raw = hexEl.value.trim();
+                if (raw && !raw.startsWith('#')) raw = '#' + raw;
+                if (isValidHex(raw)) {
+                    hexEl.value = raw.toUpperCase();
+                } else {
+                    hexEl.value = String(gs[gsKey] || colorEl.value || '#000000').toUpperCase();
+                }
+            });
+        }
+
+        function bindPaginationInputs() {
+            const standardControls = [
+                { id: 'gs-pag-mode', key: 'paginationMode', type: 'str' },
+                { id: 'gs-pag-size', key: 'paginationPageSize', type: 'int' },
+                { id: 'gs-pag-align', key: 'paginationAlign', type: 'str' },
+                { id: 'gs-pag-spacing', key: 'paginationSpacing', type: 'str' },
+                { id: 'gs-pag-shape', key: 'paginationButtonShape', type: 'str' },
+                { id: 'gs-pag-btn-size', key: 'paginationButtonSize', type: 'str' },
+                { id: 'gs-pag-border-w', key: 'paginationBorderWidth', type: 'str' },
+                { id: 'gs-pag-color-mode', key: 'paginationColorMode', type: 'str' },
+                { id: 'gs-pag-counter', key: 'paginationShowCounter', type: 'bool' },
+                { id: 'gs-pag-prev-next', key: 'paginationShowPrevNext', type: 'bool' }
+            ];
+
+            standardControls.forEach(item => {
+                const el = document.getElementById(item.id);
+                if (!el) return;
+                const handler = () => {
+                    const gs = ensureGlobalStylesObject();
+                    if (item.type === 'int') {
+                        gs[item.key] = parseInt(el.value, 10) || 12;
+                    } else if (item.type === 'bool') {
+                        gs[item.key] = Boolean(el.checked);
+                    } else {
+                        gs[item.key] = el.value;
+                    }
+                    if (item.key === 'paginationColorMode' && gs.paginationColorMode === 'custom') {
+                        // Al pasar a personalizado, pre-cargar con los colores actuales de la tienda si no se habían personalizado
+                        if (!isValidHex(gs.paginationActiveBgColor)) gs.paginationActiveBgColor = getStorePrimary();
+                        if (!isValidHex(gs.paginationTextColor)) gs.paginationTextColor = getStoreSecondary();
+                        syncInputsFromGlobalStyles();
+                    }
+                    updateModeSpecificVisibility(gs.paginationMode, gs.paginationColorMode);
+                    postLivePaginationStyles();
+                };
+                el.addEventListener('input', handler);
+                el.addEventListener('change', handler);
+            });
+
+            bindColorPair('gs-pag-active-bg', 'paginationActiveBgColor');
+            bindColorPair('gs-pag-active-text', 'paginationActiveTextColor');
+            bindColorPair('gs-pag-bg', 'paginationBgColor');
+            bindColorPair('gs-pag-text', 'paginationTextColor');
+            bindColorPair('gs-pag-border', 'paginationBorderColor');
+
+            const syncBrandBtn = document.getElementById('gs-pag-sync-brand-btn');
+            if (syncBrandBtn) {
+                syncBrandBtn.addEventListener('click', () => {
+                    const gs = ensureGlobalStylesObject();
+                    gs.paginationActiveBgColor = getStorePrimary();
+                    gs.paginationActiveTextColor = '#ffffff';
+                    gs.paginationBgColor = '#ffffff';
+                    gs.paginationTextColor = getStoreSecondary();
+                    gs.paginationBorderColor = '#e2e8f0';
+                    syncInputsFromGlobalStyles();
+                    postLivePaginationStyles();
+                });
+            }
+        }
+
+        window.addEventListener('message', (e) => {
+            if (e.origin !== window.location.origin || !e.data) return;
+            if (e.data.type === 'storevo:page-loaded') {
+                syncInputsFromGlobalStyles();
+                const iframe = document.getElementById('theme-preview-iframe') || document.querySelector('#preview-frame-container iframe');
+                if (iframe && iframe.contentWindow && TE.theme && TE.theme.globalStyles) {
+                    iframe.contentWindow.postMessage({
+                        type: 'storevo:live-styles',
+                        styles: TE.theme.globalStyles
+                    }, window.location.origin);
+                }
+            }
+        });
+
+        const sidebar = document.getElementById('theme-editor-sidebar');
+        if (sidebar) {
+            const obs = new MutationObserver(() => mountPaginationAccordion());
+            obs.observe(sidebar, { childList: true, subtree: true });
+        }
+        mountPaginationAccordion();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initGlobalPaginationStylesPanel);
+    } else {
+        setTimeout(initGlobalPaginationStylesPanel, 50);
     }
 })();

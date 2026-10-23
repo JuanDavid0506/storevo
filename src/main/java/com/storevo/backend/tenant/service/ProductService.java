@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -66,6 +67,167 @@ public class ProductService {
         }
         List<Long> categoryIds = categoryService.getCategoryAndDescendantIds(categoryId);
         return productRepository.findActiveProductsByCategoryIds(categoryIds);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<Product> searchPublicCatalogPage(
+            Long categoryId,
+            Long brandId,
+            String brandName,
+            String q,
+            Boolean onlyOffers,
+            Boolean onlyFeatured,
+            Boolean onlyInStock,
+            Double minPrice,
+            Double maxPrice,
+            String sortStr,
+            int pageZeroBased,
+            int size,
+            Long cursorId) {
+
+        int safePage = Math.max(0, pageZeroBased);
+        int safeSize = Math.max(1, Math.min(size, 48));
+
+        List<Long> categoryIds = null;
+        if (categoryId != null) {
+            categoryIds = categoryService.getCategoryAndDescendantIds(categoryId);
+            if (categoryIds == null || categoryIds.isEmpty()) {
+                return new PageImpl<>(Collections.emptyList(), PageRequest.of(safePage, safeSize), 0);
+            }
+        }
+
+        Long resolvedBrandId = brandId;
+        String resolvedBrandName = (brandName != null && !brandName.isBlank()) ? brandName.trim() : null;
+        if (resolvedBrandId != null) {
+            final Long targetBrandId = resolvedBrandId;
+            Brand b = brandService.getAllBrands().stream()
+                    .filter(item -> targetBrandId.equals(item.getId()))
+                    .findFirst()
+                    .orElse(null);
+            if (b == null || Boolean.FALSE.equals(b.getIsActive())) {
+                return new PageImpl<>(Collections.emptyList(), PageRequest.of(safePage, safeSize), 0);
+            }
+            resolvedBrandName = null; // Filtrar por ID de marca normalizada
+        } else if (resolvedBrandName != null) {
+            String targetSlug = BrandService.slugify(resolvedBrandName);
+            final String searchBrandName = resolvedBrandName;
+            Brand b = brandService.getAllBrands().stream()
+                    .filter(item -> targetSlug.equalsIgnoreCase(item.getSlug()) || searchBrandName.equalsIgnoreCase(item.getName()))
+                    .findFirst()
+                    .orElse(null);
+            if (b != null) {
+                if (Boolean.FALSE.equals(b.getIsActive())) {
+                    return new PageImpl<>(Collections.emptyList(), PageRequest.of(safePage, safeSize), 0);
+                }
+                resolvedBrandId = b.getId();
+                resolvedBrandName = null;
+            }
+        }
+
+        String cleanSort = sortStr != null ? sortStr.trim().toLowerCase(Locale.ROOT) : "default";
+        Sort sort;
+        boolean supportsCursor = false;
+        switch (cleanSort) {
+            case "price_asc":
+                sort = Sort.by("price").ascending().and(Sort.by("id").descending());
+                break;
+            case "price_desc":
+                sort = Sort.by("price").descending().and(Sort.by("id").descending());
+                break;
+            case "name_asc":
+                sort = Sort.by("name").ascending().and(Sort.by("id").descending());
+                break;
+            case "newest":
+            case "default":
+            default:
+                sort = Sort.by("id").descending();
+                supportsCursor = true;
+                break;
+        }
+
+        Long effectiveCursor = (supportsCursor && cursorId != null && cursorId > 0) ? cursorId : null;
+        int effectivePage = (effectiveCursor != null) ? 0 : safePage;
+        Pageable pageable = PageRequest.of(effectivePage, safeSize, sort);
+
+        String cleanQ = (q != null && !q.isBlank()) ? q.trim() : null;
+
+        return productRepository.searchPublicCatalogPaginated(
+                categoryIds,
+                resolvedBrandId,
+                resolvedBrandName,
+                cleanQ,
+                onlyOffers,
+                onlyFeatured,
+                onlyInStock,
+                minPrice,
+                maxPrice,
+                effectiveCursor,
+                pageable
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public Page<Product> getManualPublicProductsPage(
+            List<Long> orderedIds,
+            String q,
+            String sortStr,
+            int pageZeroBased,
+            int size) {
+
+        int safePage = Math.max(0, pageZeroBased);
+        int safeSize = Math.max(1, Math.min(size, 48));
+
+        if (orderedIds == null || orderedIds.isEmpty()) {
+            return new PageImpl<>(Collections.emptyList(), PageRequest.of(safePage, safeSize), 0);
+        }
+
+        List<Long> uniqueIds = orderedIds.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        if (uniqueIds.isEmpty()) {
+            return new PageImpl<>(Collections.emptyList(), PageRequest.of(safePage, safeSize), 0);
+        }
+
+        List<Product> found = productRepository.findActivePublicProductsByIdIn(uniqueIds);
+        Map<Long, Product> byId = new HashMap<>();
+        for (Product p : found) {
+            if (p != null && p.getId() != null) {
+                byId.put(p.getId(), p);
+            }
+        }
+
+        String cleanQ = (q != null && !q.isBlank()) ? q.trim().toLowerCase(Locale.ROOT) : null;
+        List<Product> ordered = new ArrayList<>();
+        for (Long id : uniqueIds) {
+            Product p = byId.get(id);
+            if (p == null) continue;
+            if (cleanQ != null) {
+                String name = p.getName() != null ? p.getName().toLowerCase(Locale.ROOT) : "";
+                String brand = p.getBrand() != null ? p.getBrand().toLowerCase(Locale.ROOT) : "";
+                String sku = p.getSku() != null ? p.getSku().toLowerCase(Locale.ROOT) : "";
+                if (!name.contains(cleanQ) && !brand.contains(cleanQ) && !sku.contains(cleanQ)) {
+                    continue;
+                }
+            }
+            ordered.add(p);
+        }
+
+        String cleanSort = sortStr != null ? sortStr.trim().toLowerCase(Locale.ROOT) : "default";
+        if ("price_asc".equals(cleanSort)) {
+            ordered.sort(Comparator.comparingDouble(p -> (p.getDiscountPrice() != null && p.getDiscountPrice() > 0 && (p.getPrice() == null || p.getDiscountPrice() < p.getPrice())) ? p.getDiscountPrice() : (p.getPrice() != null ? p.getPrice() : 0.0)));
+        } else if ("price_desc".equals(cleanSort)) {
+            ordered.sort(Comparator.comparingDouble((Product p) -> (p.getDiscountPrice() != null && p.getDiscountPrice() > 0 && (p.getPrice() == null || p.getDiscountPrice() < p.getPrice())) ? p.getDiscountPrice() : (p.getPrice() != null ? p.getPrice() : 0.0)).reversed());
+        } else if ("name_asc".equals(cleanSort)) {
+            ordered.sort(Comparator.comparing(p -> p.getName() != null ? p.getName().toLowerCase(Locale.ROOT) : ""));
+        }
+
+        int total = ordered.size();
+        int fromIndex = Math.min(safePage * safeSize, total);
+        int toIndex = Math.min(fromIndex + safeSize, total);
+        List<Product> slice = ordered.subList(fromIndex, toIndex);
+
+        return new PageImpl<>(slice, PageRequest.of(safePage, safeSize), total);
     }
 
     @Transactional(readOnly = true)

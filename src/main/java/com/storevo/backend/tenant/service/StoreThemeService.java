@@ -125,6 +125,15 @@ public class StoreThemeService {
     private static final Set<String> ALLOWED_PRODUCT_GRID_SOURCES = Set.of(
             "NEWEST", "OFFERS", "CATEGORY", "BRAND", "MANUAL", "FEATURED"
     );
+    private static final Set<String> ALLOWED_PAGINATION_MODES = Set.of(
+            "numbered", "compact", "load_more", "infinite", "arrows", "counter_more"
+    );
+    private static final Set<String> ALLOWED_PAGINATION_SHAPES = Set.of(
+            "sync", "square", "rounded", "pill"
+    );
+    private static final Set<String> ALLOWED_PAGINATION_SIZES = Set.of("sm", "md", "lg");
+    private static final Set<String> ALLOWED_PAGINATION_ALIGNS = Set.of("left", "center", "right", "between");
+    private static final Set<String> ALLOWED_PAGINATION_BORDERS = Set.of("0px", "1px", "2px");
     private static final java.util.regex.Pattern YOUTUBE_ID_PATTERN = java.util.regex.Pattern.compile(
             "(?:youtube(?:-nocookie)?\\.com/(?:watch\\?(?:.*&)?v=|embed/|shorts/|live/)|youtu\\.be/)([a-zA-Z0-9_-]{11})"
     );
@@ -231,7 +240,11 @@ public class StoreThemeService {
             TenantContext.setCurrentTenant(store.getSchemaName());
         }
 
-        Map<String, List<Product>> queryCache = new HashMap<>();
+        int globalPageSize = (theme.getGlobalStyles() != null && theme.getGlobalStyles().getPaginationPageSize() != null)
+                ? Math.max(4, Math.min(theme.getGlobalStyles().getPaginationPageSize(), 48))
+                : 12;
+
+        Map<String, org.springframework.data.domain.Page<Product>> pageCache = new HashMap<>();
         Set<ThemeSectionDto> visited = Collections.newSetFromMap(new IdentityHashMap<>());
 
         if (activePageKey != null && !activePageKey.isBlank()) {
@@ -239,7 +252,7 @@ public class StoreThemeService {
             if (targetSections != null) {
                 for (ThemeSectionDto sec : targetSections) {
                     if (visited.add(sec)) {
-                        hydrateSingleSection(sec, preloadedProducts, queryCache);
+                        hydrateSingleSection(sec, preloadedProducts, pageCache, globalPageSize);
                     }
                 }
             }
@@ -251,7 +264,7 @@ public class StoreThemeService {
                 if (pageSections != null) {
                     for (ThemeSectionDto sec : pageSections) {
                         if (visited.add(sec)) {
-                            hydrateSingleSection(sec, preloadedProducts, queryCache);
+                            hydrateSingleSection(sec, preloadedProducts, pageCache, globalPageSize);
                         }
                     }
                 }
@@ -262,7 +275,7 @@ public class StoreThemeService {
                 if (cp != null && cp.getSections() != null) {
                     for (ThemeSectionDto sec : cp.getSections()) {
                         if (visited.add(sec)) {
-                            hydrateSingleSection(sec, preloadedProducts, queryCache);
+                            hydrateSingleSection(sec, preloadedProducts, pageCache, globalPageSize);
                         }
                     }
                 }
@@ -271,43 +284,36 @@ public class StoreThemeService {
         if (theme.getSections() != null) {
             for (ThemeSectionDto sec : theme.getSections()) {
                 if (visited.add(sec)) {
-                    hydrateSingleSection(sec, preloadedProducts, queryCache);
+                    hydrateSingleSection(sec, preloadedProducts, pageCache, globalPageSize);
                 }
             }
         }
     }
 
-    private void hydrateSingleSection(ThemeSectionDto section, List<Product> preloadedProducts, Map<String, List<Product>> queryCache) {
+    private void hydrateSingleSection(
+            ThemeSectionDto section,
+            List<Product> preloadedProducts,
+            Map<String, org.springframework.data.domain.Page<Product>> pageCache,
+            int globalPageSize) {
         if (section == null || !Boolean.TRUE.equals(section.getEnabled())) return;
         if ("brand_carousel".equalsIgnoreCase(section.getType())
                 && "AUTO".equalsIgnoreCase(section.settingStr("source", "MANUAL"))) {
-            List<Product> baseProducts = preloadedProducts != null
-                    ? preloadedProducts
-                    : queryCache.computeIfAbsent("ALL_CATALOG", k -> productService.getPublicCatalog(null));
-            TreeMap<String, String> brandsByName = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-            for (Product p : baseProducts) {
-                String b = p.getBrand() == null ? "" : p.getBrand().trim();
-                if (!b.isEmpty()) brandsByName.putIfAbsent(b, b);
-            }
-            List<String> names = new ArrayList<>(brandsByName.values());
-            Map<String, String> logos = new LinkedHashMap<>();
             List<String> visible = new ArrayList<>();
+            Map<String, String> logos = new LinkedHashMap<>();
             try {
-                Map<String, Brand> bySlug = new HashMap<>();
-                entityManager.createQuery("SELECT b FROM Brand b", Brand.class).getResultList()
-                        .forEach(b -> bySlug.put(b.getSlug(), b));
-                for (String n : names) {
-                    Brand b = bySlug.get(BrandService.slugify(n));
-                    if (b != null && Boolean.FALSE.equals(b.getIsActive())) continue;
-                    visible.add(n);
-                    if (b != null && b.getLogoUrl() != null && !b.getLogoUrl().isBlank()) {
-                        logos.put(n, b.getLogoUrl());
+                List<Brand> activeBrands = entityManager.createQuery(
+                                "SELECT b FROM Brand b WHERE b.isActive = true ORDER BY b.name ASC", Brand.class)
+                        .setMaxResults(24)
+                        .getResultList();
+                for (Brand b : activeBrands) {
+                    if (b.getName() == null || b.getName().isBlank()) continue;
+                    visible.add(b.getName().trim());
+                    if (b.getLogoUrl() != null && !b.getLogoUrl().isBlank()) {
+                        logos.put(b.getName().trim(), b.getLogoUrl());
                     }
                 }
-            } catch (Exception e) {
-                visible = new ArrayList<>(names);
-            }
-            section.setResolvedBrands(visible.size() > 24 ? new ArrayList<>(visible.subList(0, 24)) : visible);
+            } catch (Exception ignored) {}
+            section.setResolvedBrands(visible);
             section.setResolvedBrandLogos(logos);
             return;
         }
@@ -315,62 +321,65 @@ public class StoreThemeService {
             String rawSource = section.settingStr("source", "NEWEST").toUpperCase(Locale.ROOT);
             String source = ALLOWED_PRODUCT_GRID_SOURCES.contains(rawSource) ? rawSource : "NEWEST";
             Long categoryId = section.settingLong("categoryId");
-            int limit = Math.max(1, Math.min(section.settingInt("limit", 8), 24));
+            // Respetar siempre el límite propio configurado en la vitrina (ej. 4, 8, 12 productos)
+            int pageSize = Math.max(1, Math.min(section.settingInt("limit", 8), 24));
 
             if ("NEWEST".equals(source) && categoryId != null) {
                 source = "CATEGORY";
             }
 
-            List<Product> resolved;
+            org.springframework.data.domain.Page<Product> resolvedPage;
             switch (source) {
                 case "CATEGORY": {
-                    if (categoryId != null) {
-                        String cacheKey = "CATEGORY:" + categoryId + ":" + limit;
-                        resolved = queryCache.computeIfAbsent(cacheKey,
-                                k -> productService.getPublicCatalogLimited(categoryId, limit));
-                    } else {
-                        String cacheKey = "NEWEST:" + limit;
-                        resolved = queryCache.computeIfAbsent(cacheKey,
-                                k -> productService.getNewestPublicProducts(limit));
-                    }
+                    String cacheKey = "CATEGORY:" + (categoryId != null ? categoryId : "ALL") + ":" + pageSize;
+                    resolvedPage = pageCache.computeIfAbsent(cacheKey,
+                            k -> productService.searchPublicCatalogPage(categoryId, null, null, null, false, false, false, null, null, "default", 0, pageSize, null));
                     break;
                 }
                 case "OFFERS": {
-                    String cacheKey = "OFFERS:" + limit;
-                    resolved = queryCache.computeIfAbsent(cacheKey,
-                            k -> productService.getOfferPublicProducts(limit));
+                    String cacheKey = "OFFERS:" + pageSize;
+                    resolvedPage = pageCache.computeIfAbsent(cacheKey,
+                            k -> productService.searchPublicCatalogPage(null, null, null, null, true, false, false, null, null, "default", 0, pageSize, null));
                     break;
                 }
                 case "BRAND": {
                     Long brandId = section.settingLong("brandId");
                     String brandName = section.settingStr("brandName", "");
-                    String cacheKey = "BRAND:" + (brandId != null ? brandId : "") + ":" + brandName.toLowerCase(Locale.ROOT) + ":" + limit;
-                    resolved = queryCache.computeIfAbsent(cacheKey,
-                            k -> productService.getPublicProductsByBrand(brandId, brandName, limit));
+                    String cacheKey = "BRAND:" + (brandId != null ? brandId : "") + ":" + brandName.toLowerCase(Locale.ROOT) + ":" + pageSize;
+                    resolvedPage = pageCache.computeIfAbsent(cacheKey,
+                            k -> productService.searchPublicCatalogPage(null, brandId, brandName, null, false, false, false, null, null, "default", 0, pageSize, null));
                     break;
                 }
                 case "FEATURED": {
-                    String cacheKey = "FEATURED:" + limit;
-                    resolved = queryCache.computeIfAbsent(cacheKey,
-                            k -> productService.getFeaturedPublicProducts(limit));
+                    String cacheKey = "FEATURED:" + pageSize;
+                    resolvedPage = pageCache.computeIfAbsent(cacheKey,
+                            k -> productService.searchPublicCatalogPage(null, null, null, null, false, true, false, null, null, "default", 0, pageSize, null));
                     break;
                 }
                 case "MANUAL": {
                     List<Long> manualIds = section.settingLongList("productIds");
-                    String cacheKey = "MANUAL:" + manualIds.toString() + ":" + limit;
-                    resolved = queryCache.computeIfAbsent(cacheKey,
-                            k -> productService.getManualPublicProductsInOrder(manualIds, limit));
+                    String cacheKey = "MANUAL:" + manualIds.toString() + ":" + pageSize;
+                    resolvedPage = pageCache.computeIfAbsent(cacheKey,
+                            k -> productService.getManualPublicProductsPage(manualIds, null, "default", 0, pageSize));
                     break;
                 }
                 case "NEWEST":
                 default: {
-                    String cacheKey = "NEWEST:" + limit;
-                    resolved = queryCache.computeIfAbsent(cacheKey,
-                            k -> productService.getNewestPublicProducts(limit));
+                    String cacheKey = "NEWEST:" + pageSize;
+                    resolvedPage = pageCache.computeIfAbsent(cacheKey,
+                            k -> productService.searchPublicCatalogPage(null, null, null, null, false, false, false, null, null, "default", 0, pageSize, null));
                     break;
                 }
             }
-            section.setResolvedProducts(resolved);
+
+            List<Product> content = resolvedPage.getContent();
+            section.setResolvedProducts(content);
+            section.setResolvedTotalProducts(resolvedPage.getTotalElements());
+            section.setResolvedPageSize(pageSize);
+            section.setResolvedCurrentPage(1);
+            section.setResolvedTotalPages(Math.max(1, resolvedPage.getTotalPages()));
+            section.setResolvedHasNext(resolvedPage.hasNext());
+            section.setResolvedNextCursor(!content.isEmpty() ? content.get(content.size() - 1).getId() : null);
         }
     }
 
@@ -704,6 +713,7 @@ public class StoreThemeService {
         gridSettings.put("source", "NEWEST");
         gridSettings.put("categoryId", "");
         gridSettings.put("limit", 12);
+        gridSettings.put("columnsDesktop", "4");
         gridSettings.put("showViewAll", true);
         gridSettings.put("showFilters", false);
         homeSections.add(ThemeSectionDto.builder()
@@ -1069,6 +1079,53 @@ public class StoreThemeService {
             gs.setDetailRelatedCols("4");
         }
 
+        // Sanitización de estilos globales de Paginación y Carga de Productos
+        if (gs.getPaginationMode() == null || !ALLOWED_PAGINATION_MODES.contains(gs.getPaginationMode())) {
+            gs.setPaginationMode("numbered");
+        }
+        if (gs.getPaginationPageSize() == null || gs.getPaginationPageSize() < 4 || gs.getPaginationPageSize() > 48) {
+            gs.setPaginationPageSize(12);
+        }
+        if (gs.getPaginationButtonShape() == null || !ALLOWED_PAGINATION_SHAPES.contains(gs.getPaginationButtonShape())) {
+            gs.setPaginationButtonShape("rounded");
+        }
+        if (gs.getPaginationButtonSize() == null || !ALLOWED_PAGINATION_SIZES.contains(gs.getPaginationButtonSize())) {
+            gs.setPaginationButtonSize("md");
+        }
+        if (gs.getPaginationAlign() == null || !ALLOWED_PAGINATION_ALIGNS.contains(gs.getPaginationAlign())) {
+            gs.setPaginationAlign("center");
+        }
+        if (gs.getPaginationSpacing() == null || !ALLOWED_PAGINATION_SIZES.contains(gs.getPaginationSpacing())) {
+            gs.setPaginationSpacing("md");
+        }
+        if (gs.getPaginationBorderWidth() == null || !ALLOWED_PAGINATION_BORDERS.contains(gs.getPaginationBorderWidth())) {
+            gs.setPaginationBorderWidth("1px");
+        }
+        if (gs.getPaginationColorMode() == null || (!"brand".equals(gs.getPaginationColorMode()) && !"custom".equals(gs.getPaginationColorMode()))) {
+            gs.setPaginationColorMode("brand");
+        }
+        if (!isValidHex(gs.getPaginationBgColor())) {
+            gs.setPaginationBgColor("#ffffff");
+        }
+        if (!isValidHex(gs.getPaginationTextColor())) {
+            gs.setPaginationTextColor(isValidHex(gs.getSecondaryColor()) ? gs.getSecondaryColor() : "#0f172a");
+        }
+        if (!isValidHex(gs.getPaginationBorderColor())) {
+            gs.setPaginationBorderColor("#e2e8f0");
+        }
+        if (!isValidHex(gs.getPaginationActiveBgColor())) {
+            gs.setPaginationActiveBgColor(isValidHex(gs.getPrimaryColor()) ? gs.getPrimaryColor() : "#6366f1");
+        }
+        if (!isValidHex(gs.getPaginationActiveTextColor())) {
+            gs.setPaginationActiveTextColor("#ffffff");
+        }
+        if (gs.getPaginationShowCounter() == null) {
+            gs.setPaginationShowCounter(true);
+        }
+        if (gs.getPaginationShowPrevNext() == null) {
+            gs.setPaginationShowPrevNext(true);
+        }
+
         if (config.getPages() == null) {
             config.setPages(new LinkedHashMap<>());
         }
@@ -1288,6 +1345,9 @@ public class StoreThemeService {
                 rawSource = "NEWEST";
             }
             s.put("source", rawSource);
+
+            String cols = sec.settingStr("columnsDesktop", "4");
+            s.put("columnsDesktop", "3".equals(cols) ? "3" : "4");
 
             List<Long> cleanIds = sec.settingLongList("productIds");
             if (cleanIds.size() > 24) {

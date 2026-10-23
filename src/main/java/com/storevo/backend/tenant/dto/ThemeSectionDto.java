@@ -34,6 +34,29 @@ public class ThemeSectionDto {
     @Builder.Default
     private List<Product> resolvedProducts = new ArrayList<>();
 
+    @JsonIgnore
+    @Builder.Default
+    private Long resolvedTotalProducts = 0L;
+
+    @JsonIgnore
+    @Builder.Default
+    private Integer resolvedPageSize = 12;
+
+    @JsonIgnore
+    @Builder.Default
+    private Integer resolvedCurrentPage = 1;
+
+    @JsonIgnore
+    @Builder.Default
+    private Integer resolvedTotalPages = 1;
+
+    @JsonIgnore
+    @Builder.Default
+    private Boolean resolvedHasNext = false;
+
+    @JsonIgnore
+    private Long resolvedNextCursor;
+
     // Nombres de marcas resueltos en tiempo de ejecución (carrusel de marcas automático)
     @JsonIgnore
     @Builder.Default

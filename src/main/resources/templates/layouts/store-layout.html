@@ -31,9 +31,17 @@
                     hSerif=${hFont == 'Playfair Display' or hFont == 'Lora' or hFont == 'Cormorant Garamond' or hFont == 'Cinzel'},
                     bSerif=${bFont == 'Lora'},
                     bRadius=${theme != null and theme.globalStyles != null and theme.globalStyles.borderRadius != null ? theme.globalStyles.borderRadius : '1rem'},
-                    cRadiusRaw=${theme != null and theme.globalStyles != null and theme.globalStyles.cardRadius != null ? theme.globalStyles.cardRadius : 'sync'},
-                    cRadius=${cRadiusRaw == 'sync' ? bRadius : cRadiusRaw},
-                    fScale=${theme != null and theme.globalStyles != null and theme.globalStyles.fontScale == 'compact' ? '95%' : (theme != null and theme.globalStyles != null and theme.globalStyles.fontScale == 'large' ? '106%' : '100%')}">
+                     cRadiusRaw=${theme != null and theme.globalStyles != null and theme.globalStyles.cardRadius != null ? theme.globalStyles.cardRadius : 'sync'},
+                     cRadius=${cRadiusRaw == 'sync' ? bRadius : cRadiusRaw},
+                     fScale=${theme != null and theme.globalStyles != null and theme.globalStyles.fontScale == 'compact' ? '95%' : (theme != null and theme.globalStyles != null and theme.globalStyles.fontScale == 'large' ? '106%' : '100%')},
+                     pagColorMode=${theme != null and theme.globalStyles != null and theme.globalStyles.paginationColorMode != null ? theme.globalStyles.paginationColorMode : 'brand'},
+                     pagUseBrand=${pagColorMode != 'custom'},
+                     pagBg=${pagUseBrand ? '#ffffff' : (theme != null and theme.globalStyles != null and theme.globalStyles.paginationBgColor != null ? theme.globalStyles.paginationBgColor : '#ffffff')},
+                     pagText=${pagUseBrand ? sColor : (theme != null and theme.globalStyles != null and theme.globalStyles.paginationTextColor != null ? theme.globalStyles.paginationTextColor : sColor)},
+                     pagBorder=${pagUseBrand ? '#e2e8f0' : (theme != null and theme.globalStyles != null and theme.globalStyles.paginationBorderColor != null ? theme.globalStyles.paginationBorderColor : '#e2e8f0')},
+                     pagBorderW=${theme != null and theme.globalStyles != null and theme.globalStyles.paginationBorderWidth != null ? theme.globalStyles.paginationBorderWidth : '1px'},
+                     pagActiveBg=${pagUseBrand ? pColor : (theme != null and theme.globalStyles != null and theme.globalStyles.paginationActiveBgColor != null ? theme.globalStyles.paginationActiveBgColor : pColor)},
+                     pagActiveText=${pagUseBrand ? '#ffffff' : (theme != null and theme.globalStyles != null and theme.globalStyles.paginationActiveTextColor != null ? theme.globalStyles.paginationActiveTextColor : '#ffffff')}">
         :root {
             --brand-color: [[${pColor}]];
             --brand-secondary: [[${sColor}]];
@@ -44,6 +52,109 @@
             --store-radius: [[${bRadius}]];
             --sv-card-radius: [[${cRadius}]];
             --store-font-scale: [[${fScale}]];
+            --sv-pag-bg: [[${pagBg}]];
+            --sv-pag-text: [[${pagText}]];
+            --sv-pag-border: [[${pagBorder}]];
+            --sv-pag-border-width: [[${pagBorderW}]];
+            --sv-pag-active-bg: [[${pagActiveBg}]];
+            --sv-pag-active-text: [[${pagActiveText}]];
+        }
+        .sv-pagination-host {
+            width: 100%;
+            transition: all 0.2s ease;
+        }
+        body[data-sv-pag-spacing="sm"] .sv-pagination-host { margin-top: 1.5rem; --sv-pag-gap: 0.375rem; }
+        body[data-sv-pag-spacing="md"] .sv-pagination-host,
+        body:not([data-sv-pag-spacing]) .sv-pagination-host { margin-top: 2.5rem; --sv-pag-gap: 0.5rem; }
+        body[data-sv-pag-spacing="lg"] .sv-pagination-host { margin-top: 3.75rem; --sv-pag-gap: 0.75rem; }
+
+        .sv-pag-wrap {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: var(--sv-pag-gap, 0.5rem);
+            width: 100%;
+        }
+        body[data-sv-pag-align="left"] .sv-pag-wrap { justify-content: flex-start; }
+        body[data-sv-pag-align="center"] .sv-pag-wrap,
+        body:not([data-sv-pag-align]) .sv-pag-wrap { justify-content: center; }
+        body[data-sv-pag-align="right"] .sv-pag-wrap { justify-content: flex-end; }
+        body[data-sv-pag-align="between"] .sv-pag-wrap { justify-content: space-between; }
+
+        .sv-pag-controls {
+            display: inline-flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: var(--sv-pag-gap, 0.5rem);
+        }
+        .sv-pag-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            background-color: var(--sv-pag-bg, #ffffff);
+            color: var(--sv-pag-text, #334155);
+            border: var(--sv-pag-border-width, 1px) solid var(--sv-pag-border, #e2e8f0);
+            font-weight: 700;
+            line-height: 1;
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+        }
+        .sv-pag-btn:hover:not(:disabled):not(.is-active) {
+            border-color: var(--sv-pag-active-bg, var(--brand-color));
+            color: var(--sv-pag-active-bg, var(--brand-color));
+            transform: translateY(-1px);
+        }
+        .sv-pag-btn:disabled {
+            opacity: 0.42;
+            cursor: not-allowed;
+        }
+        .sv-pag-btn.is-active,
+        .sv-pag-btn--cta {
+            background-color: var(--sv-pag-active-bg, var(--brand-color)) !important;
+            color: var(--sv-pag-active-text, #ffffff) !important;
+            border-color: var(--sv-pag-active-bg, var(--brand-color)) !important;
+            box-shadow: 0 4px 14px -3px color-mix(in srgb, var(--sv-pag-active-bg, #6366f1) 45%, transparent);
+        }
+        .sv-pag-btn--cta:hover:not(:disabled) {
+            filter: brightness(0.94);
+            transform: translateY(-1px);
+        }
+        body[data-sv-pag-shape="square"] .sv-pag-btn { border-radius: 0px; }
+        body[data-sv-pag-shape="rounded"] .sv-pag-btn,
+        body:not([data-sv-pag-shape]) .sv-pag-btn { border-radius: 0.75rem; }
+        body[data-sv-pag-shape="pill"] .sv-pag-btn { border-radius: 9999px; }
+        body[data-sv-pag-shape="sync"] .sv-pag-btn { border-radius: var(--store-radius, 0.75rem); }
+
+        body[data-sv-pag-btn-size="sm"] .sv-pag-btn { min-width: 2rem; height: 2rem; padding: 0 0.65rem; font-size: 0.75rem; }
+        body[data-sv-pag-btn-size="md"] .sv-pag-btn,
+        body:not([data-sv-pag-btn-size]) .sv-pag-btn { min-width: 2.5rem; height: 2.5rem; padding: 0 0.9rem; font-size: 0.85rem; }
+        body[data-sv-pag-btn-size="lg"] .sv-pag-btn { min-width: 3rem; height: 3rem; padding: 0 1.25rem; font-size: 0.95rem; }
+
+        body[data-sv-pag-btn-size="sm"] .sv-pag-btn--cta { padding: 0 1.1rem; height: 2.25rem; }
+        body[data-sv-pag-btn-size="md"] .sv-pag-btn--cta { padding: 0 1.5rem; height: 2.75rem; }
+        body[data-sv-pag-btn-size="lg"] .sv-pag-btn--cta { padding: 0 2rem; height: 3.25rem; }
+
+        .sv-pag-counter {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--store-text);
+            opacity: 0.75;
+        }
+        .sv-pag-progress-track {
+            width: 100%;
+            max-width: 260px;
+            height: 6px;
+            border-radius: 9999px;
+            background: color-mix(in srgb, var(--sv-pag-border, #cbd5e1) 65%, transparent);
+            overflow: hidden;
+        }
+        .sv-pag-progress-bar {
+            height: 100%;
+            border-radius: 9999px;
+            background-color: var(--sv-pag-active-bg, var(--brand-color));
+            transition: width 0.3s ease;
         }
         html {
             font-size: var(--store-font-scale, 100%);
@@ -222,8 +333,23 @@
                 data-sv-search-adv-brand=${gs == null or gs.searchAdvBrand == null or gs.searchAdvBrand},
                 data-sv-search-adv-price=${gs == null or gs.searchAdvPrice == null or gs.searchAdvPrice},
                 data-sv-search-adv-availability=${gs == null or gs.searchAdvAvailability == null or gs.searchAdvAvailability},
-                data-sv-search-adv-variants=${gs == null or gs.searchAdvVariants == null or gs.searchAdvVariants},
-                data-sv-search-adv-specs=${gs != null and gs.searchAdvSpecs != null ? gs.searchAdvSpecs : false}">
+                 data-sv-search-adv-variants=${gs == null or gs.searchAdvVariants == null or gs.searchAdvVariants},
+                 data-sv-search-adv-specs=${gs != null and gs.searchAdvSpecs != null ? gs.searchAdvSpecs : false},
+                 data-sv-pag-mode=${gs != null and gs.paginationMode != null ? gs.paginationMode : 'numbered'},
+                 data-sv-pag-color-mode=${gs != null and gs.paginationColorMode != null ? gs.paginationColorMode : 'brand'},
+                 data-sv-pag-size=${gs != null and gs.paginationPageSize != null ? gs.paginationPageSize : 12},
+                 data-sv-pag-shape=${gs != null and gs.paginationButtonShape != null ? gs.paginationButtonShape : 'rounded'},
+                 data-sv-pag-btn-size=${gs != null and gs.paginationButtonSize != null ? gs.paginationButtonSize : 'md'},
+                 data-sv-pag-align=${gs != null and gs.paginationAlign != null ? gs.paginationAlign : 'center'},
+                 data-sv-pag-spacing=${gs != null and gs.paginationSpacing != null ? gs.paginationSpacing : 'md'},
+                 data-sv-pag-border-w=${gs != null and gs.paginationBorderWidth != null ? gs.paginationBorderWidth : '1px'},
+                 data-sv-pag-bg=${gs != null and gs.paginationBgColor != null ? gs.paginationBgColor : '#ffffff'},
+                 data-sv-pag-text=${gs != null and gs.paginationTextColor != null ? gs.paginationTextColor : '#334155'},
+                 data-sv-pag-border=${gs != null and gs.paginationBorderColor != null ? gs.paginationBorderColor : '#e2e8f0'},
+                 data-sv-pag-active-bg=${gs != null and gs.paginationActiveBgColor != null ? gs.paginationActiveBgColor : '#6366f1'},
+                 data-sv-pag-active-text=${gs != null and gs.paginationActiveTextColor != null ? gs.paginationActiveTextColor : '#ffffff'},
+                 data-sv-pag-counter=${gs == null or gs.paginationShowCounter == null or gs.paginationShowCounter},
+                 data-sv-pag-prev-next=${gs == null or gs.paginationShowPrevNext == null or gs.paginationShowPrevNext}">
 
 <nav th:replace="~{components/store-navbar :: storeNavbar}"></nav>
 <script th:src="@{/js/ui/navbarStyle.js}"></script>
@@ -1511,7 +1637,7 @@
         function isPureFormOrFilterControl(target) {
             if (!target || !target.closest) return false;
             return Boolean(
-                target.closest('input, select, textarea, [data-qty-step], .sv-card__arrow, .sv-card__dot, .sv-card__dots, .sv-detail-gallery-arrow, .sv-detail-share-btn, .product-thumbnail, .opt-btn, .sv-filter-open-btn, .sv-filter-drawer-backdrop, .sv-global-filters-host, .sv-catalog-sidebar, .sv-active-filters-bar, .sv-nav__search, .sv-nav__search-expand, .sv-nav__search-trigger, .sv-search-panel, .sv-search-modal-backdrop, .sv-toolbar-search-box, .sv-search-cat-pills')
+                target.closest('input, select, textarea, [data-qty-step], .sv-pagination-host, .sv-pag-btn, .sv-card__arrow, .sv-card__dot, .sv-card__dots, .sv-detail-gallery-arrow, .sv-detail-share-btn, .product-thumbnail, .opt-btn, .sv-filter-open-btn, .sv-filter-drawer-backdrop, .sv-global-filters-host, .sv-catalog-sidebar, .sv-active-filters-bar, .sv-nav__search, .sv-nav__search-expand, .sv-nav__search-trigger, .sv-search-panel, .sv-search-modal-backdrop, .sv-toolbar-search-box, .sv-search-cat-pills')
             );
         }
 
@@ -1797,6 +1923,56 @@
             if (hasSearchPayload || hasFilterPayload) {
                 document.dispatchEvent(new CustomEvent('storevo:search-config-updated', { detail: s }));
             }
+
+            const pagKeysMap = {
+                paginationMode: 'svPagMode',
+                paginationColorMode: 'svPagColorMode',
+                paginationPageSize: 'svPagSize',
+                paginationButtonShape: 'svPagShape',
+                paginationButtonSize: 'svPagBtnSize',
+                paginationAlign: 'svPagAlign',
+                paginationSpacing: 'svPagSpacing',
+                paginationBorderWidth: 'svPagBorderW',
+                paginationBgColor: 'svPagBg',
+                paginationTextColor: 'svPagText',
+                paginationBorderColor: 'svPagBorder',
+                paginationActiveBgColor: 'svPagActiveBg',
+                paginationActiveTextColor: 'svPagActiveText',
+                paginationShowCounter: 'svPagCounter',
+                paginationShowPrevNext: 'svPagPrevNext'
+            };
+            let hasPagPayload = false;
+            Object.keys(pagKeysMap).forEach(key => {
+                if (s[key] !== undefined && s[key] !== null) {
+                    document.body.dataset[pagKeysMap[key]] = String(s[key]);
+                    hasPagPayload = true;
+                }
+            });
+
+            const activeColorMode = s.paginationColorMode || document.body.dataset.svPagColorMode || 'brand';
+            const brandPrimary = s.primaryColor || getComputedStyle(root).getPropertyValue('--brand-color').trim() || '#6366f1';
+            const brandSecondary = s.secondaryColor || getComputedStyle(root).getPropertyValue('--brand-secondary').trim() || '#0f172a';
+
+            if (s.paginationBorderWidth) {
+                root.style.setProperty('--sv-pag-border-width', s.paginationBorderWidth);
+            }
+            if (activeColorMode === 'brand') {
+                root.style.setProperty('--sv-pag-bg', '#ffffff');
+                root.style.setProperty('--sv-pag-text', brandSecondary);
+                root.style.setProperty('--sv-pag-border', '#e2e8f0');
+                root.style.setProperty('--sv-pag-active-bg', brandPrimary);
+                root.style.setProperty('--sv-pag-active-text', '#ffffff');
+            } else {
+                if (s.paginationBgColor) root.style.setProperty('--sv-pag-bg', s.paginationBgColor);
+                if (s.paginationTextColor) root.style.setProperty('--sv-pag-text', s.paginationTextColor);
+                if (s.paginationBorderColor) root.style.setProperty('--sv-pag-border', s.paginationBorderColor);
+                if (s.paginationActiveBgColor) root.style.setProperty('--sv-pag-active-bg', s.paginationActiveBgColor);
+                if (s.paginationActiveTextColor) root.style.setProperty('--sv-pag-active-text', s.paginationActiveTextColor);
+            }
+
+            if (hasPagPayload) {
+                document.dispatchEvent(new CustomEvent('storevo:pagination-config-updated', { detail: s }));
+            }
         };
 
         window.addEventListener('message', function(e) {
@@ -1835,6 +2011,563 @@
         document.addEventListener('storevo:page-load', notifyEditorPageLoaded);
         window.addEventListener('popstate', notifyEditorPageLoaded);
         notifyEditorPageLoaded();
+    })();
+</script>
+<script data-sv-persistent="true">
+    (function() {
+        if (window.StorevoPagination) return;
+
+        const bridge = document.getElementById('storevo-navbar-advanced-bridge');
+        const storeSlug = bridge ? (bridge.getAttribute('data-slug') || '') : (window.location.pathname.split('/')[2] || '');
+        const isPreviewDraft = bridge ? (bridge.getAttribute('data-is-preview') === 'true') : new URLSearchParams(window.location.search).get('preview') === 'draft';
+
+        function escHtml(str) {
+            return String(str == null ? '' : str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function formatCOP(val) {
+            const num = Math.round(Number(val) || 0);
+            return '$ ' + num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        }
+
+        function buildCardHtml(p, prefix, index) {
+            const previewParam = isPreviewDraft ? '?preview=draft' : '';
+            const detailUrl = `/s/${storeSlug}/p/${p.id}${previewParam}`;
+            const images = Array.isArray(p.images) && p.images.length > 0 ? p.images : [p.mainImageUrl || '/img/placeholder.jpg'];
+            const slidesHtml = images.map((imgUrl, idx) => `
+                <div class="sv-card__slide">
+                    <img src="${escHtml(imgUrl)}" alt="${escHtml(p.name)}" loading="lazy" class="sv-card__img w-full h-full object-cover" />
+                </div>
+            `).join('');
+
+            const arrowsHtml = images.length > 1 ? `
+                <button type="button" onclick="window.StorevoCardCarousel && StorevoCardCarousel.step(this, -1, event)" class="sv-card__arrow sv-card__arrow--prev" aria-label="Anterior">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path></svg>
+                </button>
+                <button type="button" onclick="window.StorevoCardCarousel && StorevoCardCarousel.step(this, 1, event)" class="sv-card__arrow sv-card__arrow--next" aria-label="Siguiente">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+                <div class="sv-card__dots">
+                    ${images.map((_, i) => `<button type="button" onclick="window.StorevoCardCarousel && StorevoCardCarousel.goTo(this, ${i}, event)" class="sv-card__dot ${i === 0 ? 'is-active' : ''}" aria-label="Imagen ${i + 1}"></button>`).join('')}
+                </div>
+            ` : '';
+
+            const discountBadgesHtml = p.hasDiscount ? `
+                <span class="sv-card__discount-badge sv-badge-percent bg-red-500 text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow-sm">-${p.discountPercent}%</span>
+                <span class="sv-card__discount-badge sv-badge-label bg-red-500 text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow-sm">Oferta</span>
+            ` : '';
+
+            const statusBadgeHtml = p.isMadeToOrder
+                ? `<span class="sv-card__status-badge bg-amber-500 text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow-sm">Bajo pedido</span>`
+                : (p.outOfStock ? `<span class="sv-card__status-badge bg-slate-900/85 text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow-sm">Agotado</span>` : '');
+
+            const actionHtml = p.outOfStock
+                ? `<button type="button" disabled class="sv-card__cta-btn w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-slate-200 text-slate-400 cursor-not-allowed">Agotado</button>`
+                : (p.hasVariants
+                    ? `<a href="${detailUrl}" class="sv-card__cta-btn block w-full text-center py-2.5 px-4 rounded-xl text-xs font-bold bg-brand text-white hover-bg-brand transition">Ver opciones</a>`
+                    : `<button type="button" data-slug="${escHtml(storeSlug)}" data-id="${p.id}" onclick="buyNowFast(this.getAttribute('data-slug'), this.getAttribute('data-id'))" class="sv-card__cta-btn w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-brand text-white hover-bg-brand transition">Comprar ahora</button>`);
+
+            return `
+                <article class="product-card catalog-product-card sv-card group bg-white text-slate-900 flex flex-col overflow-hidden relative"
+                         data-product-id="${p.id}"
+                         data-name="${escHtml(p.name.toLowerCase())}"
+                         data-brand="${escHtml((p.brand || '').toLowerCase())}"
+                         data-category-id="${p.categoryId || ''}"
+                         data-price="${p.effectivePrice || 0}"
+                         data-has-discount="${Boolean(p.hasDiscount)}"
+                         data-in-stock="${!p.outOfStock}"
+                         data-original-index="${index}">
+                    <div class="sv-card__media relative overflow-hidden bg-slate-100">
+                        <a href="${detailUrl}" class="sv-card__track block w-full h-full">
+                            ${slidesHtml}
+                        </a>
+                        ${arrowsHtml}
+                        <div class="sv-card__badges absolute top-2.5 left-2.5 z-10 flex flex-col gap-1 pointer-events-none">
+                            ${discountBadgesHtml}
+                            ${statusBadgeHtml}
+                        </div>
+                        <button type="button"
+                                data-slug="${escHtml(storeSlug)}"
+                                data-id="${p.id}"
+                                onclick="toggleWishlistItem(this, this.getAttribute('data-slug'), this.getAttribute('data-id'))"
+                                class="sv-card__wishlist absolute top-2.5 right-2.5 z-10 w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm shadow-sm flex items-center justify-center text-slate-600 hover:text-red-500 transition"
+                                aria-label="Favoritos">
+                            <svg class="w-4 h-4 icon-heart-empty ${p.inWishlist ? 'hidden' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+                            <svg class="w-4 h-4 icon-heart-filled ${p.inWishlist ? 'text-red-500' : 'hidden'}" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L12 8.343l3.172-3.171a4 4 0 115.656 5.656L12 21.414l-8.828-8.828a4 4 0 010-5.656z" clip-rule="evenodd"></path></svg>
+                        </button>
+                    </div>
+                    <div class="sv-card__body p-3.5 sm:p-4 flex flex-col flex-1 justify-between gap-2.5">
+                        <div>
+                            <div class="sv-card__meta text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 flex items-center gap-1.5 truncate">
+                                <span class="sv-meta-cat">${escHtml(p.categoryName || 'Catálogo')}</span>
+                                ${p.brand ? `<span class="sv-meta-sep">·</span><span class="sv-meta-brand">${escHtml(p.brand)}</span>` : ''}
+                            </div>
+                            <a href="${detailUrl}">
+                                <h3 class="sv-card__title font-bold text-slate-900 text-sm leading-snug line-clamp-2 hover:text-brand transition-colors">${escHtml(p.name)}</h3>
+                            </a>
+                        </div>
+                        <div class="space-y-2.5 mt-auto pt-1">
+                            <div class="sv-card__prices flex items-baseline gap-2 flex-wrap">
+                                ${p.hasVariants ? `<span class="text-[10px] font-bold uppercase text-slate-400">Desde</span>` : ''}
+                                <span class="sv-card__price font-black text-slate-900 text-base sm:text-lg">${formatCOP(p.effectivePrice)}</span>
+                                ${p.hasDiscount ? `<span class="sv-card__old-price text-xs text-slate-400 line-through">${formatCOP(p.price)}</span>` : ''}
+                            </div>
+                            <div class="sv-card__actions">
+                                ${actionHtml}
+                            </div>
+                        </div>
+                    </div>
+                </article>
+            `;
+        }
+
+        const StorevoPagination = {
+            observers: new Map(),
+            inFlightControllers: new Map(),
+            loadedRequestKeys: new Map(),
+            lastConfiguredSize: null,
+
+            getConfig: function() {
+                const ds = document.body.dataset;
+                return {
+                    mode: ds.svPagMode || 'numbered',
+                    pageSize: Math.max(4, Math.min(parseInt(ds.svPagSize || '12', 10) || 12, 48)),
+                    shape: ds.svPagShape || 'rounded',
+                    btnSize: ds.svPagBtnSize || 'md',
+                    align: ds.svPagAlign || 'center',
+                    spacing: ds.svPagSpacing || 'md',
+                    borderWidth: ds.svPagBorderW || '1px',
+                    showCounter: ds.svPagCounter !== 'false',
+                    showPrevNext: ds.svPagPrevNext !== 'false'
+                };
+            },
+
+            initAll: function() {
+                this.cleanupObservers();
+                const cfg = this.getConfig();
+                this.lastConfiguredSize = cfg.pageSize;
+
+                document.querySelectorAll('.sv-pagination-host').forEach(host => {
+                    this.loadedRequestKeys.set(host, new Set());
+                    this.renderHost(host);
+                    this.bindToolbarEventsForHost(host);
+                });
+            },
+
+            cleanupObservers: function() {
+                this.observers.forEach(obs => {
+                    try { obs.disconnect(); } catch (e) {}
+                });
+                this.observers.clear();
+            },
+
+            bindToolbarEventsForHost: function(host) {
+                if (host.dataset.toolbarBound === 'true') return;
+                host.dataset.toolbarBound = 'true';
+
+                const scope = host.getAttribute('data-pagination-scope');
+                const sectionEl = host.closest('.storevo-theme-section') || document;
+                const searchInput = scope === 'catalog'
+                    ? document.getElementById('catalog-search-input')
+                    : sectionEl.querySelector('.sv-search-input');
+                const sortSelect = scope === 'catalog'
+                    ? document.getElementById('catalog-sort-select')
+                    : sectionEl.querySelector('.sv-sort-select');
+
+                let debounceTimer = null;
+                if (searchInput) {
+                    searchInput.addEventListener('input', () => {
+                        clearTimeout(debounceTimer);
+                        debounceTimer = setTimeout(() => {
+                            host.setAttribute('data-q', searchInput.value.trim());
+                            host.setAttribute('data-next-cursor', '');
+                            this.loadedRequestKeys.set(host, new Set());
+                            this.loadPage(host, 1, false, true);
+                        }, 320);
+                    });
+                }
+                if (sortSelect) {
+                    sortSelect.addEventListener('change', () => {
+                        host.setAttribute('data-sort', sortSelect.value || 'default');
+                        host.setAttribute('data-next-cursor', '');
+                        this.loadedRequestKeys.set(host, new Set());
+                        this.loadPage(host, 1, false, true);
+                    });
+                }
+            },
+
+            getHostState: function(host) {
+                const cfg = this.getConfig();
+                const gridId = host.getAttribute('data-target-grid');
+                const gridEl = gridId ? document.getElementById(gridId) : null;
+                const domCardsCount = gridEl ? gridEl.querySelectorAll('.product-card').length : 0;
+
+                const currentPage = Math.max(1, parseInt(host.getAttribute('data-current-page') || '1', 10));
+                const pageSize = Math.max(4, parseInt(host.getAttribute('data-page-size') || String(cfg.pageSize), 10));
+                const totalItems = Math.max(domCardsCount, parseInt(host.getAttribute('data-total-items') || String(domCardsCount), 10));
+                const totalPages = Math.max(1, parseInt(host.getAttribute('data-total-pages') || String(Math.ceil(totalItems / pageSize) || 1), 10));
+                const hasNext = host.getAttribute('data-has-next') === 'true' || currentPage < totalPages;
+                const nextCursor = host.getAttribute('data-next-cursor') || '';
+
+                return {
+                    cfg,
+                    gridEl,
+                    domCardsCount,
+                    currentPage,
+                    pageSize,
+                    totalItems,
+                    totalPages,
+                    hasNext,
+                    nextCursor
+                };
+            },
+
+            buildPageNumbers: function(current, total) {
+                if (total <= 7) {
+                    return Array.from({ length: total }, (_, i) => i + 1);
+                }
+                const pages = [1];
+                if (current > 3) pages.push('...');
+                const start = Math.max(2, current - 1);
+                const end = Math.min(total - 1, current + 1);
+                for (let i = start; i <= end; i++) pages.push(i);
+                if (current < total - 2) pages.push('...');
+                pages.push(total);
+                return pages;
+            },
+
+            renderHost: function(host) {
+                if (!host) return;
+                const prevObs = this.observers.get(host);
+                if (prevObs) {
+                    try { prevObs.disconnect(); } catch (e) {}
+                    this.observers.delete(host);
+                }
+
+                const st = this.getHostState(host);
+                const { cfg, domCardsCount, currentPage, pageSize, totalItems, totalPages, hasNext } = st;
+
+                // En tienda pública, si todo cabe en una sola página y no hay más páginas, ocultar controles innecesarios
+                if (!isPreviewDraft && totalPages <= 1 && !hasNext && totalItems <= pageSize) {
+                    if (cfg.showCounter && totalItems > 0) {
+                        host.innerHTML = `<div class="sv-pag-wrap"><span class="sv-pag-counter">Mostrando ${totalItems} de ${totalItems} producto${totalItems === 1 ? '' : 's'}</span></div>`;
+                    } else {
+                        host.innerHTML = '';
+                    }
+                    return;
+                }
+
+                // En la vista previa del editor visual, si el catálogo tiene pocos productos (totalPages == 1),
+                // mostramos al menos 3 páginas de demostración visual para que el comerciante vea el estilo de página activa e inactiva en vivo.
+                const displayTotalPages = (isPreviewDraft && totalPages <= 1) ? 3 : totalPages;
+                const displayTotalItems = (isPreviewDraft && totalItems <= pageSize) ? Math.max(totalItems, pageSize * 2) : totalItems;
+                const displayHasNext = (isPreviewDraft && totalPages <= 1) ? (currentPage < displayTotalPages) : hasNext;
+
+                const startItem = totalItems === 0 ? 0 : ((currentPage - 1) * pageSize) + 1;
+                const endItem = (cfg.mode === 'load_more' || cfg.mode === 'infinite' || cfg.mode === 'counter_more')
+                    ? Math.min(domCardsCount || pageSize, displayTotalItems)
+                    : Math.min(currentPage * pageSize, displayTotalItems);
+
+                const counterHtml = cfg.showCounter
+                    ? `<span class="sv-pag-counter" aria-live="polite">Mostrando <strong>${startItem}–${endItem}</strong> de <strong>${displayTotalItems}</strong> productos</span>`
+                    : '';
+
+                if (cfg.mode === 'numbered') {
+                    const pages = this.buildPageNumbers(currentPage, displayTotalPages);
+                    const prevBtn = cfg.showPrevNext
+                        ? `<button type="button" class="sv-pag-btn" data-pag-action="page" data-page="${currentPage - 1}" ${currentPage <= 1 ? 'disabled' : ''} aria-label="Página anterior">‹ <span class="hidden sm:inline">Anterior</span></button>`
+                        : '';
+                    const nextBtn = cfg.showPrevNext
+                        ? `<button type="button" class="sv-pag-btn" data-pag-action="page" data-page="${currentPage + 1}" ${!displayHasNext && currentPage >= displayTotalPages ? 'disabled' : ''} aria-label="Página siguiente"><span class="hidden sm:inline">Siguiente</span> ›</button>`
+                        : '';
+                    const numsHtml = pages.map(p => {
+                        if (p === '...') return `<span class="px-2 text-xs font-bold opacity-50 select-none">…</span>`;
+                        const isActive = p === currentPage;
+                        return `<button type="button" class="sv-pag-btn ${isActive ? 'is-active' : ''}" data-pag-action="page" data-page="${p}" ${isActive ? 'aria-current="page"' : ''}>${p}</button>`;
+                    }).join('');
+
+                    host.innerHTML = `
+                        <nav class="sv-pag-wrap" aria-label="Paginación de productos">
+                            ${counterHtml}
+                            <div class="sv-pag-controls">
+                                ${prevBtn}
+                                ${numsHtml}
+                                ${nextBtn}
+                            </div>
+                        </nav>
+                    `;
+                } else if (cfg.mode === 'compact') {
+                    const prevBtn = cfg.showPrevNext
+                        ? `<button type="button" class="sv-pag-btn" data-pag-action="page" data-page="${currentPage - 1}" ${currentPage <= 1 ? 'disabled' : ''} aria-label="Página anterior">‹ Anterior</button>`
+                        : '';
+                    const nextBtn = cfg.showPrevNext
+                        ? `<button type="button" class="sv-pag-btn" data-pag-action="page" data-page="${currentPage + 1}" ${!displayHasNext && currentPage >= displayTotalPages ? 'disabled' : ''} aria-label="Página siguiente">Siguiente ›</button>`
+                        : '';
+
+                    host.innerHTML = `
+                        <nav class="sv-pag-wrap" aria-label="Paginación compacta">
+                            ${counterHtml}
+                            <div class="sv-pag-controls">
+                                ${prevBtn}
+                                <span class="sv-pag-btn is-active pointer-events-none">Página ${currentPage} de ${displayTotalPages}</span>
+                                ${nextBtn}
+                            </div>
+                        </nav>
+                    `;
+                } else if (cfg.mode === 'arrows') {
+                    host.innerHTML = `
+                        <nav class="sv-pag-wrap" aria-label="Navegación por flechas">
+                            ${counterHtml}
+                            <div class="sv-pag-controls">
+                                <button type="button" class="sv-pag-btn" data-pag-action="page" data-page="${currentPage - 1}" ${currentPage <= 1 ? 'disabled' : ''} aria-label="Anterior">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M15 19l-7-7 7-7"></path></svg>
+                                    <span>Anterior</span>
+                                </button>
+                                <button type="button" class="sv-pag-btn is-active" data-pag-action="page" data-page="${currentPage + 1}" ${!displayHasNext && currentPage >= displayTotalPages ? 'disabled' : ''} aria-label="Siguiente">
+                                    <span>Siguiente</span>
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M9 5l7 7-7 7"></path></svg>
+                                </button>
+                            </div>
+                        </nav>
+                    `;
+                } else if (cfg.mode === 'load_more') {
+                    host.innerHTML = `
+                        <div class="sv-pag-wrap flex-col">
+                            ${counterHtml}
+                            ${displayHasNext
+                        ? `<button type="button" class="sv-pag-btn sv-pag-btn--cta" data-pag-action="append" data-page="${currentPage + 1}">
+                                       <span>Cargar más productos</span>
+                                   </button>`
+                        : `<span class="text-xs font-semibold opacity-60">Has visto todos los productos disponibles</span>`}
+                        </div>
+                    `;
+                } else if (cfg.mode === 'counter_more') {
+                    const pct = Math.min(100, Math.round((endItem / Math.max(1, displayTotalItems)) * 100));
+                    host.innerHTML = `
+                        <div class="sv-pag-wrap flex-col">
+                            <span class="sv-pag-counter" aria-live="polite">Has visto <strong>${endItem}</strong> de <strong>${displayTotalItems}</strong> productos</span>
+                            <div class="sv-pag-progress-track">
+                                <div class="sv-pag-progress-bar" style="width: ${pct}%;"></div>
+                            </div>
+                            ${displayHasNext
+                        ? `<button type="button" class="sv-pag-btn sv-pag-btn--cta mt-1" data-pag-action="append" data-page="${currentPage + 1}">
+                                       <span>Mostrar más productos</span>
+                                   </button>`
+                        : `<span class="text-xs font-semibold opacity-60">Catálogo completo</span>`}
+                        </div>
+                    `;
+                } else if (cfg.mode === 'infinite') {
+                    host.innerHTML = `
+                        <div class="sv-pag-wrap flex-col">
+                            ${counterHtml}
+                            ${displayHasNext
+                        ? `<div class="sv-infinite-sentinel py-3 flex items-center justify-center gap-2 text-xs font-bold opacity-75">
+                                       <span class="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" style="color: var(--sv-pag-active-bg, var(--brand-color));"></span>
+                                       <span>Cargando más productos al desplazar...</span>
+                                   </div>`
+                        : `<span class="text-xs font-semibold opacity-60">Fin del catálogo</span>`}
+                        </div>
+                    `;
+
+                    const sentinel = host.querySelector('.sv-infinite-sentinel');
+                    if (sentinel && displayHasNext && (!isPreviewDraft || totalPages > 1)) {
+                        const obs = new IntersectionObserver((entries) => {
+                            entries.forEach(entry => {
+                                if (entry.isIntersecting) {
+                                    this.loadPage(host, currentPage + 1, true, false);
+                                }
+                            });
+                        }, { rootMargin: '220px' });
+                        obs.observe(sentinel);
+                        this.observers.set(host, obs);
+                    }
+                }
+
+                host.querySelectorAll('[data-pag-action]').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const targetPage = parseInt(btn.getAttribute('data-page') || '1', 10);
+                        const action = btn.getAttribute('data-pag-action');
+                        if (isPreviewDraft && totalPages <= 1) {
+                            host.setAttribute('data-current-page', String(Math.max(1, Math.min(targetPage, displayTotalPages))));
+                            this.renderHost(host);
+                            return;
+                        }
+                        this.loadPage(host, targetPage, action === 'append', true);
+                    });
+                });
+            },
+
+            loadPage: function(host, targetPage, append, updateHistory) {
+                if (!host || !storeSlug) return;
+                if (host.dataset.isLoading === 'true') return;
+
+                const st = this.getHostState(host);
+                const cfg = st.cfg;
+                const scope = host.getAttribute('data-pagination-scope') || 'catalog';
+                const sectionId = host.getAttribute('data-section-id') || '';
+                const source = host.getAttribute('data-source') || '';
+                const categoryId = host.getAttribute('data-category-id') || new URLSearchParams(window.location.search).get('category') || '';
+                const brandId = host.getAttribute('data-brand-id') || '';
+                const brandName = host.getAttribute('data-brand-name') || new URLSearchParams(window.location.search).get('brand') || '';
+
+                const sectionEl = host.closest('.storevo-theme-section') || document;
+                const searchInput = scope === 'catalog'
+                    ? document.getElementById('catalog-search-input')
+                    : sectionEl.querySelector('.sv-search-input');
+                const sortSelect = scope === 'catalog'
+                    ? document.getElementById('catalog-sort-select')
+                    : sectionEl.querySelector('.sv-sort-select');
+
+                const qVal = searchInput ? searchInput.value.trim() : (host.getAttribute('data-q') || new URLSearchParams(window.location.search).get('q') || '');
+                const sortVal = sortSelect ? sortSelect.value : (host.getAttribute('data-sort') || new URLSearchParams(window.location.search).get('sort') || 'default');
+
+                const params = new URLSearchParams();
+                params.set('page', String(Math.max(1, targetPage)));
+                params.set('size', String(cfg.pageSize));
+                if (scope === 'grid' && sectionId) {
+                    params.set('sectionId', sectionId);
+                    params.set('pageKey', document.body.getAttribute('data-editor-page-key') || 'home');
+                }
+                if (source) params.set('source', source);
+                if (categoryId) params.set('category', categoryId);
+                if (brandId) params.set('brandId', brandId);
+                if (brandName) params.set('brand', brandName);
+                if (qVal) params.set('q', qVal);
+                if (sortVal && sortVal !== 'default') params.set('sort', sortVal);
+                if (isPreviewDraft) params.set('preview', 'draft');
+
+                // Paginación por cursor para carga progresiva cuando el orden es por defecto (más recientes)
+                if (append && (!sortVal || sortVal === 'default') && st.nextCursor && source !== 'MANUAL') {
+                    params.set('cursor', st.nextCursor);
+                }
+
+                const requestSignature = params.toString();
+                const loadedSet = this.loadedRequestKeys.get(host) || new Set();
+                if (append && loadedSet.has(requestSignature)) {
+                    return; // Evita solicitudes repetidas en Cargar más e Infinite Scroll
+                }
+
+                host.dataset.isLoading = 'true';
+                const activeBtn = host.querySelector('[data-pag-action="append"]');
+                if (activeBtn) {
+                    activeBtn.disabled = true;
+                    activeBtn.innerHTML = `<span>Cargando...</span>`;
+                }
+
+                const prevController = this.inFlightControllers.get(host);
+                if (prevController && !append) {
+                    try { prevController.abort(); } catch (e) {}
+                }
+                const controller = new AbortController();
+                this.inFlightControllers.set(host, controller);
+
+                fetch(`/s/${storeSlug}/api/catalog-page?${params.toString()}`, {
+                    headers: { 'Accept': 'application/json' },
+                    signal: controller.signal
+                })
+                    .then(r => {
+                        if (!r.ok) throw new Error('Error al cargar página');
+                        return r.json();
+                    })
+                    .then(data => {
+                        if (!data || !Array.isArray(data.items)) return;
+                        loadedSet.add(requestSignature);
+                        this.loadedRequestKeys.set(host, loadedSet);
+
+                        const gridEl = st.gridEl;
+                        if (gridEl) {
+                            const existingIds = new Set(
+                                append
+                                    ? Array.from(gridEl.querySelectorAll('.product-card[data-product-id]')).map(el => Number(el.getAttribute('data-product-id')))
+                                    : []
+                            );
+                            const newCardsHtml = data.items
+                                .filter(item => !append || !existingIds.has(Number(item.id)))
+                                .map((item, idx) => buildCardHtml(item, scope, idx))
+                                .join('');
+
+                            if (append) {
+                                gridEl.insertAdjacentHTML('beforeend', newCardsHtml);
+                            } else {
+                                gridEl.innerHTML = newCardsHtml;
+                                const scrollTarget = host.closest('.storevo-theme-section') || gridEl;
+                                if (scrollTarget && updateHistory) {
+                                    scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                }
+                            }
+                        }
+
+                        host.setAttribute('data-current-page', String(data.page || targetPage));
+                        host.setAttribute('data-page-size', String(data.size || cfg.pageSize));
+                        host.setAttribute('data-total-items', String(data.totalElements != null ? data.totalElements : 0));
+                        host.setAttribute('data-total-pages', String(data.totalPages || 1));
+                        host.setAttribute('data-has-next', String(Boolean(data.hasNext)));
+                        host.setAttribute('data-next-cursor', data.nextCursor ? String(data.nextCursor) : '');
+
+                        const visibleCounter = (scope === 'catalog')
+                            ? document.getElementById('catalog-visible-count')
+                            : (host.closest('.storevo-theme-section')?.querySelector('.sv-visible-count'));
+                        if (visibleCounter && data.totalElements != null) {
+                            visibleCounter.textContent = String(data.totalElements);
+                        }
+
+                        if (scope === 'catalog' && updateHistory && !append) {
+                            const url = new URL(window.location.href);
+                            if (targetPage > 1) url.searchParams.set('page', String(targetPage));
+                            else url.searchParams.delete('page');
+                            if (qVal) url.searchParams.set('q', qVal);
+                            else url.searchParams.delete('q');
+                            if (sortVal && sortVal !== 'default') url.searchParams.set('sort', sortVal);
+                            else url.searchParams.delete('sort');
+                            window.history.pushState({ storevoPagination: true, page: targetPage }, '', url.pathname + url.search);
+                        }
+                    })
+                    .catch(err => {
+                        if (err && err.name === 'AbortError') return;
+                        console.error('[StorevoPagination] Error cargando productos:', err);
+                    })
+                    .finally(() => {
+                        host.dataset.isLoading = 'false';
+                        this.renderHost(host);
+                    });
+            }
+        };
+
+        window.StorevoPagination = StorevoPagination;
+
+        document.addEventListener('DOMContentLoaded', () => StorevoPagination.initAll());
+        document.addEventListener('storevo:page-load', () => StorevoPagination.initAll());
+
+        window.addEventListener('popstate', () => {
+            const catHost = document.getElementById('catalog-pagination-host');
+            if (!catHost) return;
+            const urlParams = new URLSearchParams(window.location.search);
+            const p = parseInt(urlParams.get('page') || '1', 10) || 1;
+            StorevoPagination.loadPage(catHost, p, false, false);
+        });
+
+        document.addEventListener('storevo:pagination-config-updated', (e) => {
+            const cfg = StorevoPagination.getConfig();
+            const sizeChanged = StorevoPagination.lastConfiguredSize !== null && StorevoPagination.lastConfiguredSize !== cfg.pageSize;
+            StorevoPagination.lastConfiguredSize = cfg.pageSize;
+
+            document.querySelectorAll('.sv-pagination-host').forEach(host => {
+                host.setAttribute('data-page-size', String(cfg.pageSize));
+                if (sizeChanged) {
+                    StorevoPagination.loadedRequestKeys.set(host, new Set());
+                    host.setAttribute('data-next-cursor', '');
+                    StorevoPagination.loadPage(host, 1, false, false);
+                } else {
+                    StorevoPagination.renderHost(host);
+                }
+            });
+        });
     })();
 </script>
 <div id="storevo-page-scripts">

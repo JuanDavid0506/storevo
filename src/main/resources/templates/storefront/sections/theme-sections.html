@@ -894,6 +894,7 @@
          th:with="title=${sec.settingStr('title', 'Novedades')},
                   subtitle=${sec.settingStr('subtitle', '')},
                   source=${sec.settingStr('source', 'NEWEST')},
+                  columnsDesktop=${sec.settingStr('columnsDesktop', '4')},
                   showViewAll=${sec.settingBool('showViewAll', true)},
                   catId=${sec.settingLong('categoryId')},
                   brandName=${sec.settingStr('brandName', '')},
@@ -951,12 +952,14 @@
         </div>
     </div>
 
-    <div th:unless="${#lists.isEmpty(gridProducts)}" class="sv-catalog-grid grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+    <div th:unless="${#lists.isEmpty(gridProducts)}"
+         th:id="'sv-grid-' + ${sec.id}"
+         th:attr="data-cols=${columnsDesktop == '3' ? '3' : '4'}"
+         th:class="${'sv-catalog-grid grid gap-4 sm:gap-6 ' + (columnsDesktop == '3' ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-3' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4')}">
         <th:block th:each="p, pStat : ${gridProducts}">
             <div th:replace="~{components/storefront/product-card :: productCard(${p}, 'grid-' + ${sec.id}, ${pStat.index}, false, 'catalog-product-card', true)}"></div>
         </th:block>
     </div>
-
     <div th:if="${#lists.isEmpty(gridProducts)}" class="text-center text-slate-500 py-12 bg-white store-radius border border-slate-100">
         Aún no hay productos disponibles en esta sección.
     </div>
@@ -1728,6 +1731,18 @@
                 <div th:replace="~{components/storefront/product-card :: productCard(${p}, 'cat', ${pStat.index}, false, 'catalog-product-card', ${showDiscountPercent})}"></div>
             </th:block>
         </div>
+        <div th:unless="${#lists.isEmpty(products)}"
+             id="catalog-pagination-host"
+             class="sv-pagination-host"
+             th:attr="data-pagination-scope='catalog',
+                      data-target-grid='catalog-products-grid',
+                      data-category-id=${currentCategoryId != null ? currentCategoryId : ''},
+                      data-current-page=${catalogCurrentPage != null ? catalogCurrentPage : 1},
+                      data-page-size=${catalogPageSize != null ? catalogPageSize : 12},
+                      data-total-items=${catalogTotalItems != null ? catalogTotalItems : #lists.size(products)},
+                      data-total-pages=${catalogTotalPages != null ? catalogTotalPages : 1},
+                      data-has-next=${catalogHasNext != null ? catalogHasNext : false},
+                      data-next-cursor=${catalogNextCursor != null ? catalogNextCursor : ''}"></div>
     </div>
 </section>
 
