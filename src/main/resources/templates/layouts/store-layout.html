@@ -198,6 +198,16 @@
         .text-secondary { color: var(--brand-secondary) !important; }
         .border-secondary { border-color: var(--brand-secondary) !important; }
         .hover-bg-secondary:hover { filter: brightness(0.92); background-color: var(--brand-secondary) !important; }
+
+        @media (min-width: 1024px) {
+            .sv-catalog-grid[data-cols="3"] {
+                grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+            }
+            .sv-catalog-grid[data-cols="4"] {
+                grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+            }
+        }
+    </style>
     </style>
     <!-- Estilos exclusivos cuando la tienda se visualiza dentro del Editor Visual (preview=draft) -->
     <style th:if="${isDraftPreview}">

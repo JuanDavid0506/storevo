@@ -16,14 +16,21 @@ Storevo.ThemeEditor = {
         announcement_bar: {
             layoutSupport: { bg: false, spacing: false, width: false, anchor: true },
             label: 'Barra de Anuncio Superior',
-            description: 'Cintillo superior con hasta 3 mensajes rotativos para promociones o envíos gratis.',
+            description: 'Cintillo superior animado (Marquesina continua, carrusel vertical, giro 3D, máquina de escribir y más).',
             defaultSettings: {
                 text: '🚚 ¡Envío gratis en compras superiores a $150.000!',
                 text2: '',
                 text3: '',
+                animationMode: 'fade',
+                speed: 'normal',
+                barFormat: 'normal',
+                linkUrl: '/catalog',
+                linkText: 'Ver más',
+                linkStyle: 'underline',
+                showArrows: false,
+                dismissible: false,
                 bgColor: '#0f172a',
-                textColor: '#ffffff',
-                linkUrl: '/catalog'
+                textColor: '#ffffff'
             }
         },
         hero_banner: {
@@ -395,7 +402,7 @@ Storevo.ThemeEditor = {
         if (!/^#[0-9a-fA-F]{6}$/.test(clean)) return 'light';
         const r = parseInt(clean.substring(1, 3), 16) / 255;
         const g = parseInt(clean.substring(3, 5), 16) / 255;
-        const b = parseInt(clean.substring(5, 7), 16) / 255;
+        const b = parseInt(clean.substring(5, 7), 16) / 155;
         const toLinear = (c) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
         const luminance = (0.2126 * toLinear(r)) + (0.7152 * toLinear(g)) + (0.0722 * toLinear(b));
         return luminance < 0.179 ? 'dark' : 'light';
@@ -2366,15 +2373,50 @@ Storevo.ThemeEditor = {
         ];
 
         switch (type) {
-            case 'announcement_bar':
+            case 'announcement_bar': {
+                const hasLink = (s) => Boolean(s && String(s.linkUrl || '').trim() !== '');
+                const isRotatorMode = (s) => {
+                    const m = (s && s.animationMode) ? s.animationMode : 'fade';
+                    return m !== 'marquee' && m !== 'static';
+                };
                 return [
                     { key: 'text', label: 'Mensaje principal del anuncio', type: 'text', placeholder: 'Ej: 🚚 Envío gratis en compras mayores a $150.000' },
                     { key: 'text2', label: '2do mensaje rotativo (Opcional)', type: 'text', placeholder: 'Ej: 💳 Paga en línea o pide fácil por WhatsApp' },
                     { key: 'text3', label: '3er mensaje rotativo (Opcional)', type: 'text', placeholder: 'Ej: ✨ Nuevos lanzamientos disponibles hoy' },
+                    { key: 'animationMode', label: 'Animación del anuncio', type: 'select', defaultVal: 'fade', options: [
+                            { value: 'fade', label: '✨ Desvanecimiento suave (Fade)' },
+                            { value: 'slide_vertical', label: '⬆️ Carrusel vertical (Deslizar arriba)' },
+                            { value: 'slide_horizontal', label: '➡️ Deslizamiento lateral (Slide)' },
+                            { value: 'marquee', label: '🎞️ Cinta continua infinita (Marquee)' },
+                            { value: 'flip', label: '🔄 Giro 3D (Flip vertical)' },
+                            { value: 'typewriter', label: '⌨️ Máquina de escribir (Typewriter)' },
+                            { value: 'pulse_glow', label: '💫 Pulso / Zoom de atención' },
+                            { value: 'static', label: '📌 Estático (Sin animación)' }
+                        ]},
+                    { key: 'speed', label: 'Velocidad de la animación', type: 'select', defaultVal: 'normal', options: [
+                            { value: 'fast', label: 'Rápida (Dinámica)' },
+                            { value: 'normal', label: 'Normal (Recomendada)' },
+                            { value: 'slow', label: 'Pausada (Lectura calmada)' }
+                        ], showIf: (s) => (!s || s.animationMode !== 'static') },
+                    { key: 'barFormat', label: 'Tamaño y estilo tipográfico', type: 'select', defaultVal: 'normal', options: [
+                            { value: 'compact', label: 'Compacta y sutil' },
+                            { value: 'normal', label: 'Estándar (Recomendado)' },
+                            { value: 'uppercase', label: 'Impacto en MAYÚSCULAS (Espaciado amplio)' }
+                        ]},
                     { key: 'linkUrl', label: '¿A dónde lleva al hacer clic?', type: 'url', allowEmpty: true, defaultVal: '/catalog' },
+                    { key: 'linkText', label: 'Texto del botón / enlace', type: 'text', defaultVal: 'Ver más', placeholder: 'Ej: Ver más, Comprar ahora, Ver ofertas...', showIf: (s) => hasLink(s) && (!s || s.linkStyle !== 'full_bar') },
+                    { key: 'linkStyle', label: 'Estilo del enlace de acción', type: 'select', defaultVal: 'underline', options: [
+                            { value: 'underline', label: 'Texto subrayado clásico' },
+                            { value: 'pill', label: 'Botón tipo píldora destacado' },
+                            { value: 'arrow', label: 'Enlace con flecha (→)' },
+                            { value: 'full_bar', label: 'Toda la barra clicable (Sin botón separado)' }
+                        ], showIf: hasLink },
+                    { key: 'showArrows', label: 'Controles de navegación', type: 'checkbox', placeholder: 'Mostrar flechas (‹ ›) a los lados para cambiar de mensaje', defaultVal: false, showIf: isRotatorMode },
+                    { key: 'dismissible', label: 'Permitir cerrar anuncio', type: 'checkbox', placeholder: 'Mostrar botón (✕) para que el visitante pueda ocultar la barra', defaultVal: false },
                     { key: 'bgColor', label: 'Color de fondo', type: 'color', defaultVal: '#0f172a' },
                     { key: 'textColor', label: 'Color del texto', type: 'color', defaultVal: '#ffffff' }
                 ];
+            }
             case 'hero_banner':
                 return [
                     { key: 'heroLayout', label: 'Diseño del Banner Principal', type: 'select', defaultVal: 'classic', options: [
@@ -2405,13 +2447,21 @@ Storevo.ThemeEditor = {
                     { key: 'source', label: 'Qué productos mostrar', type: 'select', options: [
                             { value: 'NEWEST', label: 'Últimos productos agregados' },
                             { value: 'OFFERS', label: 'Solo productos en oferta / descuento' },
-                            { value: 'CATEGORY', label: 'Productos de una categoría específica' }
+                            { value: 'FEATURED', label: 'Productos destacados (★)' },
+                            { value: 'CATEGORY', label: 'Productos de una categoría específica' },
+                            { value: 'BRAND', label: 'Productos de una marca específica' },
+                            { value: 'MANUAL', label: 'Selección manual de productos' }
                         ]},
                     { key: 'categoryId', label: 'Categoría a mostrar', type: 'select', options: catOptions },
+                    { key: 'columnsDesktop', label: 'Columnas de productos en PC', type: 'select', defaultVal: '4', options: [
+                            { value: '4', label: '4 productos por fila (Estándar)' },
+                            { value: '3', label: '3 productos grandes por fila (Editorial)' }
+                        ]},
                     { key: 'limit', label: 'Cantidad máxima de productos', type: 'select', options: [
                             { value: '4', label: '4 productos (1 fila)' },
                             { value: '8', label: '8 productos (2 filas)' },
                             { value: '12', label: '12 productos (3 filas)' },
+                            { value: '16', label: '16 productos (4 filas)' },
                             { value: '24', label: '24 productos (Catálogo amplio)' }
                         ]},
                     { key: 'showFilters', label: 'Filtros Dinámicos y Buscador', type: 'checkbox', placeholder: 'Habilitar barra de filtros, tallas, colores y buscador en esta vitrina', defaultVal: false },
@@ -6882,6 +6932,16 @@ if (document.readyState === 'loading') {
             }
         }
 
+        function parseManualIds(raw) {
+            if (!raw) return [];
+            if (Array.isArray(raw)) {
+                return raw.map(x => parseInt(x, 10)).filter(n => !isNaN(n) && n > 0);
+            }
+            return String(raw).split(',')
+                .map(s => parseInt(s.trim(), 10))
+                .filter((n, idx, arr) => !isNaN(n) && n > 0 && arr.indexOf(n) === idx);
+        }
+
         TE.refreshBrands = function(cb) {
             if (!TE.slug) return;
             fetch(`/dashboard/${TE.slug}/template/brands`, { headers: { 'Accept': 'application/json' } })
@@ -6895,143 +6955,117 @@ if (document.readyState === 'loading') {
                 });
         };
 
-        TE.findActiveSectionById = function(sectionId) {
-            if (!sectionId || !TE.theme) return null;
-            const pageSections = (typeof TE.getCurrentPageSections === 'function')
-                ? TE.getCurrentPageSections()
-                : ((TE.theme.pages && TE.theme.pages[TE.currentPage]) || TE.theme.sections || []);
-            return (pageSections || []).find(s => s && s.id === sectionId) || null;
-        };
-
-        TE.triggerSectionChanged = function() {
-            if (typeof TE.markDirty === 'function') TE.markDirty();
-            if (typeof TE.scheduleAutoSave === 'function') {
-                TE.scheduleAutoSave();
-            } else if (typeof TE.saveDraft === 'function') {
-                clearTimeout(TE.__extAutoSaveTimer);
-                TE.__extAutoSaveTimer = setTimeout(() => TE.saveDraft(false), 450);
-            }
-        };
-
-        function parseManualIds(raw) {
-            if (!raw) return [];
-            if (Array.isArray(raw)) {
-                return raw.map(x => parseInt(x, 10)).filter(n => !isNaN(n) && n > 0);
-            }
-            return String(raw).split(',')
-                .map(s => parseInt(s.trim(), 10))
-                .filter((n, idx, arr) => !isNaN(n) && n > 0 && arr.indexOf(n) === idx);
+        function getActiveInspectedSection() {
+            if (!TE.activeSectionId) return null;
+            const list = TE.getActivePageSections(false) || [];
+            return list.find(s => s && s.id === TE.activeSectionId) || null;
         }
 
-        function enhanceProductGridForm(container) {
+        function materializeAndSave() {
+            if (TE.activePage && TE.activePage.startsWith('category:') && !TE.isCategoryCustomized(TE.activePage.substring(9))) {
+                TE.ensureCategoryMaterializedOnEdit(TE.activeSectionId);
+            }
+            TE.scheduleAutoSave(true);
+        }
+
+        function enhanceProductGridForm() {
+            const container = document.getElementById('inspector-fields-container');
             if (!container) return;
-            const activeSecId = TE.activeSectionId || container.getAttribute('data-section-id')
-                || (container.querySelector('[data-section-id]')?.getAttribute('data-section-id'));
-            const sec = TE.findActiveSectionById(activeSecId) || TE.activeSection;
+
+            const sec = getActiveInspectedSection();
             if (!sec || sec.type !== 'product_grid') return;
 
+            const sourceWrap = container.querySelector('[data-field-key="source"]');
+            const sourceSelect = sourceWrap ? sourceWrap.querySelector('select') : null;
+            if (!sourceSelect || sourceSelect.dataset.svEnhanced === 'true') return;
+
+            sourceSelect.dataset.svEnhanced = 'true';
             sec.settings = sec.settings || {};
 
-            // Localizar el <select> de source dentro del formulario de configuración de product_grid
-            const selects = Array.from(container.querySelectorAll('select'));
-            const sourceSelect = selects.find(sel => {
-                const nameOrKey = (sel.name || sel.getAttribute('data-setting') || sel.getAttribute('data-key') || sel.id || '').toLowerCase();
-                if (nameOrKey.includes('source')) return true;
-                const optValues = Array.from(sel.options).map(o => o.value);
-                return optValues.includes('NEWEST') && optValues.includes('OFFERS');
-            });
+            const catWrap = container.querySelector('[data-field-key="categoryId"]');
+            const colsWrap = container.querySelector('[data-field-key="columnsDesktop"]');
+            const colsSelect = colsWrap ? colsWrap.querySelector('select') : null;
+            const limitWrap = container.querySelector('[data-field-key="limit"]');
+            const limitSelect = limitWrap ? limitWrap.querySelector('select') : null;
 
-            if (!sourceSelect || sourceSelect.dataset.svEnhanced === 'true') return;
-            sourceSelect.dataset.svEnhanced = 'true';
+            // Función que adapta el selector de Cantidad máxima de productos (filas de 3 vs filas de 4)
+            function syncLimitOptionsForColumns(colsMode, convertRows) {
+                if (!limitSelect) return;
+                const isThreeCols = String(colsMode) === '3';
+                let currentLimit = parseInt(sec.settings.limit || limitSelect.value || (isThreeCols ? '6' : '8'), 10);
 
-            const desiredSources = [
-                { value: 'NEWEST', label: 'Más recientes (automático)' },
-                { value: 'OFFERS', label: 'Solo productos en oferta' },
-                { value: 'FEATURED', label: 'Productos destacados (★)' },
-                { value: 'CATEGORY', label: 'De una categoría específica' },
-                { value: 'BRAND', label: 'De una marca específica' },
-                { value: 'MANUAL', label: 'Selección manual de productos' }
-            ];
-
-            desiredSources.forEach(item => {
-                let opt = Array.from(sourceSelect.options).find(o => o.value === item.value);
-                if (!opt) {
-                    opt = document.createElement('option');
-                    opt.value = item.value;
-                    opt.textContent = item.label;
-                    sourceSelect.appendChild(opt);
+                if (convertRows) {
+                    if (isThreeCols) {
+                        const map4to3 = { 4: 3, 8: 6, 12: 9, 16: 12, 24: 24 };
+                        if (map4to3[currentLimit]) currentLimit = map4to3[currentLimit];
+                    } else {
+                        const map3to4 = { 3: 4, 6: 8, 9: 12, 12: 12, 15: 16, 24: 24 };
+                        if (map3to4[currentLimit]) currentLimit = map3to4[currentLimit];
+                    }
                 }
-            });
 
-            const currentSource = String(sec.settings.source || 'NEWEST').toUpperCase();
-            sourceSelect.value = desiredSources.some(d => d.value === currentSource) ? currentSource : 'NEWEST';
-
-            // Localizar el contenedor del selector de categoría para ocultarlo si no es CATEGORY
-            const catSelect = selects.find(sel => sel !== sourceSelect && (
-                (sel.name || sel.getAttribute('data-setting') || sel.getAttribute('data-key') || sel.id || '').toLowerCase().includes('category')
-            ));
-            const catWrapper = catSelect ? (catSelect.closest('div') || catSelect.parentElement) : null;
-
-            // Asegurar que el selector de límite (cantidad de productos) permita filas exactas de 3 y de 4 (3, 4, 6, 8, 9, 12, 16, 24)
-            const limitSelect = selects.find(sel => sel !== sourceSelect && (
-                (sel.name || sel.getAttribute('data-setting') || sel.getAttribute('data-key') || sel.id || '').toLowerCase().includes('limit')
-            ));
-            if (limitSelect && !limitSelect.dataset.svRowsEnhanced) {
-                limitSelect.dataset.svRowsEnhanced = 'true';
-                const currentLimitVal = String(sec.settings.limit || limitSelect.value || '8');
-                const limitOptions = [
-                    { v: '3', t: '3 productos (1 fila de 3)' },
-                    { v: '4', t: '4 productos (1 fila de 4)' },
-                    { v: '6', t: '6 productos (2 filas de 3)' },
-                    { v: '8', t: '8 productos (2 filas de 4)' },
-                    { v: '9', t: '9 productos (3 filas de 3)' },
-                    { v: '12', t: '12 productos (3 filas de 4 / 4 filas de 3)' },
-                    { v: '16', t: '16 productos (4 filas de 4)' },
-                    { v: '24', t: '24 productos' }
+                const optionsFor3 = [
+                    { v: 3, t: '3 productos (1 fila)' },
+                    { v: 6, t: '6 productos (2 filas)' },
+                    { v: 9, t: '9 productos (3 filas)' },
+                    { v: 12, t: '12 productos (4 filas)' },
+                    { v: 15, t: '15 productos (5 filas)' },
+                    { v: 24, t: '24 productos (8 filas)' }
                 ];
-                limitSelect.innerHTML = limitOptions.map(o =>
-                    `<option value="${o.v}" ${o.v === currentLimitVal ? 'selected' : ''}>${o.t}</option>`
-                ).join('');
-            }
+                const optionsFor4 = [
+                    { v: 4, t: '4 productos (1 fila)' },
+                    { v: 8, t: '8 productos (2 filas)' },
+                    { v: 12, t: '12 productos (3 filas)' },
+                    { v: 16, t: '16 productos (4 filas)' },
+                    { v: 24, t: '24 productos (6 filas)' }
+                ];
 
-            // Inyectar selector "Columnas en PC" (4 por fila Estándar vs 3 por fila Editorial) si no existe en la sección
-            const hasColsSelect = selects.some(sel =>
-                (sel.name || sel.getAttribute('data-setting') || sel.getAttribute('data-key') || sel.id || '').toLowerCase().includes('columnsdesktop')
-            );
-            if (!hasColsSelect && !container.querySelector('.sv-pg-cols-wrap')) {
-                const currentCols = String(sec.settings.columnsDesktop || '4') === '3' ? '3' : '4';
-                const colsWrap = document.createElement('div');
-                colsWrap.className = 'sv-pg-cols-wrap space-y-1.5 mt-3';
-                colsWrap.innerHTML = `
-                    <label class="block text-xs font-bold text-slate-300">Disposición en PC (Productos por fila)</label>
-                    <select class="sv-pg-cols-select w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-semibold text-white focus:border-indigo-500 focus:outline-none cursor-pointer">
-                        <option value="4" ${currentCols === '4' ? 'selected' : ''}>4 productos por fila (Estándar)</option>
-                        <option value="3" ${currentCols === '3' ? 'selected' : ''}>3 productos grandes por fila (Editorial)</option>
-                    </select>
-                `;
-                const targetAnchor = limitSelect ? (limitSelect.closest('div') || limitSelect.parentElement) : sourceSelect.closest('div');
-                targetAnchor.insertAdjacentElement('afterend', colsWrap);
-
-                const colsSelectEl = colsWrap.querySelector('.sv-pg-cols-select');
-                if (colsSelectEl) {
-                    colsSelectEl.addEventListener('change', () => {
-                        sec.settings.columnsDesktop = colsSelectEl.value === '3' ? '3' : '4';
-                        TE.triggerSectionChanged();
-                    });
+                const targetList = isThreeCols ? optionsFor3 : optionsFor4;
+                if (!targetList.some(o => o.v === currentLimit)) {
+                    currentLimit = isThreeCols ? 6 : 8;
                 }
+
+                limitSelect.innerHTML = targetList.map(o =>
+                    `<option value="${o.v}" ${o.v === currentLimit ? 'selected' : ''}>${o.t}</option>`
+                ).join('');
+                limitSelect.value = String(currentLimit);
+                sec.settings.limit = currentLimit;
             }
 
-            // Crear contenedor dinámico para BRAND y MANUAL
+            const initialCols = String(sec.settings.columnsDesktop || '4') === '3' ? '3' : '4';
+            sec.settings.columnsDesktop = initialCols;
+            if (colsSelect) {
+                colsSelect.value = initialCols;
+                syncLimitOptionsForColumns(initialCols, false);
+
+                colsSelect.addEventListener('change', () => {
+                    const nextCols = colsSelect.value === '3' ? '3' : '4';
+                    sec.settings.columnsDesktop = nextCols;
+                    syncLimitOptionsForColumns(nextCols, true);
+
+                    const iframe = document.getElementById('storefront-preview-iframe');
+                    if (iframe && iframe.contentDocument) {
+                        const gridEl = iframe.contentDocument.getElementById('sv-grid-' + sec.id)
+                            || iframe.contentDocument.querySelector(`[data-section-id="${sec.id}"] .sv-catalog-grid`);
+                        if (gridEl) {
+                            gridEl.setAttribute('data-cols', nextCols);
+                        }
+                    }
+                    materializeAndSave();
+                });
+            }
+
+            // Contenedor dinámico para BRAND, FEATURED y MANUAL
             const extraHost = document.createElement('div');
-            extraHost.className = 'space-y-3 mt-3 pt-3 border-t border-slate-800/80';
-            sourceSelect.closest('div').insertAdjacentElement('afterend', extraHost);
+            extraHost.className = 'space-y-3 mt-2 pt-2 border-t border-slate-800/80';
+            sourceWrap.insertAdjacentElement('afterend', extraHost);
 
             function renderSourceSpecificControls() {
-                const src = sourceSelect.value;
+                const src = String(sourceSelect.value || 'NEWEST').toUpperCase();
                 sec.settings.source = src;
 
-                if (catWrapper) {
-                    catWrapper.classList.toggle('hidden', src !== 'CATEGORY');
+                if (catWrap) {
+                    catWrap.classList.toggle('hidden', src !== 'CATEGORY');
                 }
 
                 extraHost.innerHTML = '';
@@ -7040,7 +7074,7 @@ if (document.readyState === 'loading') {
                     extraHost.innerHTML = `
                         <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-xs text-amber-200 leading-relaxed">
                             <p class="font-bold text-amber-300 mb-0.5">★ Productos Destacados</p>
-                            <p class="text-[11px] text-slate-300">Se mostrarán automáticamente los productos activos que marques con la estrella (★) en tu listado de Productos del Dashboard.</p>
+                            <p class="text-[11px] text-slate-300">Se mostrarán automáticamente los productos activos marcados con la estrella (★) en el listado de Productos del Dashboard.</p>
                         </div>
                     `;
                     return;
@@ -7077,7 +7111,7 @@ if (document.readyState === 'loading') {
                                 const opt = brandSel.options[brandSel.selectedIndex];
                                 sec.settings.brandId = brandSel.value || '';
                                 sec.settings.brandName = opt ? (opt.getAttribute('data-name') || '') : '';
-                                TE.triggerSectionChanged();
+                                materializeAndSave();
                             });
                         }
                         if (refreshBtn) {
@@ -7119,7 +7153,7 @@ if (document.readyState === 'loading') {
                         sec.settings.productIds = selectedIds.join(',');
                         if (countEl) countEl.textContent = String(selectedIds.length);
                         renderSelectedManualList();
-                        TE.triggerSectionChanged();
+                        materializeAndSave();
                     };
 
                     const renderSelectedManualList = () => {
@@ -7128,6 +7162,7 @@ if (document.readyState === 'loading') {
                             listEl.innerHTML = `<p class="text-[11px] text-slate-500 italic py-2 text-center bg-slate-950/60 rounded-lg border border-dashed border-slate-800">Aún no has seleccionado productos manuales.</p>`;
                             return;
                         }
+                        const lastIdx = selectedIds.length - 1;
                         listEl.innerHTML = selectedIds.map((id, idx) => {
                             const meta = TE.manualProductsCache.get(id) || { id, name: 'Producto #' + id, imageUrl: '/img/placeholder.jpg' };
                             return `
@@ -7141,7 +7176,7 @@ if (document.readyState === 'loading') {
                                     </div>
                                     <div class="flex items-center gap-1 flex-shrink-0">
                                         <button type="button" data-move-up="${idx}" ${idx === 0 ? 'disabled' : ''} class="px-1.5 py-1 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 disabled:opacity-30">↑</button>
-                                        <button type="button" data-move-down="${idx}" ${idx === selectedIds.length - 1 ? 'disabled' : ''} class="px-1.5 py-1 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 disabled:opacity-30">↓</button>
+                                        <button type="button" data-move-down="${idx}" ${idx === lastIdx ? 'disabled' : ''} class="px-1.5 py-1 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 disabled:opacity-30">↓</button>
                                         <button type="button" data-remove-id="${id}" class="px-1.5 py-1 rounded bg-red-500/10 hover:bg-red-500/20 text-red-400">✕</button>
                                     </div>
                                 </div>
@@ -7152,8 +7187,9 @@ if (document.readyState === 'loading') {
                             btn.addEventListener('click', () => {
                                 const i = parseInt(btn.getAttribute('data-move-up'), 10);
                                 if (i > 0) {
-                                    const tmp = selectedIds[i - 1];
-                                    selectedIds[i - 1] = selectedIds[i];
+                                    const prevIdx = i - 1;
+                                    const tmp = selectedIds[prevIdx];
+                                    selectedIds[prevIdx] = selectedIds[i];
                                     selectedIds[i] = tmp;
                                     syncManualIds();
                                 }
@@ -7162,9 +7198,11 @@ if (document.readyState === 'loading') {
                         listEl.querySelectorAll('[data-move-down]').forEach(btn => {
                             btn.addEventListener('click', () => {
                                 const i = parseInt(btn.getAttribute('data-move-down'), 10);
-                                if (i < selectedIds.length - 1) {
-                                    const tmp = selectedIds[i + 1];
-                                    selectedIds[i + 1] = selectedIds[i];
+                                const maxIdx = selectedIds.length - 1;
+                                if (i < maxIdx) {
+                                    const nextIdx = i + 1;
+                                    const tmp = selectedIds[nextIdx];
+                                    selectedIds[nextIdx] = selectedIds[i];
                                     selectedIds[i] = tmp;
                                     syncManualIds();
                                 }
@@ -7218,7 +7256,6 @@ if (document.readyState === 'loading') {
                             });
                     };
 
-                    // Hidratar nombres/imágenes de los productos ya guardados en productIds
                     if (selectedIds.length > 0 && TE.slug) {
                         fetch(`/dashboard/${TE.slug}/template/products-search?ids=${selectedIds.join(',')}`, {
                             headers: { 'Accept': 'application/json' }
@@ -7228,7 +7265,6 @@ if (document.readyState === 'loading') {
                                 if (Array.isArray(items)) {
                                     items.forEach(it => TE.manualProductsCache.set(Number(it.id), it));
                                     const validSet = new Set(items.map(it => Number(it.id)));
-                                    // Excluir en el editor los que hayan sido eliminados o inactivados
                                     selectedIds = selectedIds.filter(id => validSet.has(id));
                                 }
                                 renderSelectedManualList();
@@ -7252,37 +7288,22 @@ if (document.readyState === 'loading') {
 
             sourceSelect.addEventListener('change', () => {
                 renderSourceSpecificControls();
-                TE.triggerSectionChanged();
             });
 
             renderSourceSpecificControls();
         }
 
-        // Observar cambios en el panel lateral del editor para enriquecer product_grid al abrir su configuración
         const sidebar = document.getElementById('theme-editor-sidebar');
         if (sidebar) {
-            const obs = new MutationObserver(() => enhanceProductGridForm(sidebar));
+            const obs = new MutationObserver(() => enhanceProductGridForm());
             obs.observe(sidebar, { childList: true, subtree: true });
-            enhanceProductGridForm(sidebar);
+            enhanceProductGridForm();
         }
 
-        // Abrir directamente la categoría si el usuario entró con ?page=category:{id}
         const urlPage = new URLSearchParams(window.location.search).get('page');
         const initialPage = (urlPage || (bridge && bridge.getAttribute('data-initial-page')) || '').trim();
         if (initialPage && typeof TE.switchPage === 'function') {
             setTimeout(() => {
-                const pageSelect = document.getElementById('editor-page-select');
-                if (pageSelect) {
-                    if (!Array.from(pageSelect.options).some(o => o.value === initialPage) && initialPage.startsWith('category:')) {
-                        const catId = initialPage.substring(9);
-                        const catObj = (TE.categories || []).find(c => String(c.id) === String(catId));
-                        const opt = document.createElement('option');
-                        opt.value = initialPage;
-                        opt.textContent = '📁 Categoría: ' + (catObj ? catObj.name : ('#' + catId));
-                        pageSelect.appendChild(opt);
-                    }
-                    pageSelect.value = initialPage;
-                }
                 TE.switchPage(initialPage);
             }, 80);
         }
@@ -7294,6 +7315,7 @@ if (document.readyState === 'loading') {
         setTimeout(initProductGridAndCategoryExtension, 0);
     }
 })();
+
 /* ==========================================================================
    APARTADO GLOBAL: PAGINACIÓN Y CARGA DE PRODUCTOS (ESTILOS GLOBALES)
    ========================================================================== */
@@ -7346,18 +7368,12 @@ if (document.readyState === 'loading') {
         }
 
         function postLivePaginationStyles() {
-            const gs = ensureGlobalStylesObject();
-            const iframe = document.getElementById('theme-preview-iframe') || document.querySelector('#preview-frame-container iframe');
-            if (iframe && iframe.contentWindow) {
-                iframe.contentWindow.postMessage({
-                    type: 'storevo:live-styles',
-                    styles: gs
-                }, window.location.origin);
+            ensureGlobalStylesObject();
+            if (typeof TE.pushLiveStylesToIframe === 'function') {
+                TE.pushLiveStylesToIframe();
             }
-            if (typeof TE.triggerSectionChanged === 'function') {
-                TE.triggerSectionChanged();
-            } else if (typeof TE.markDirty === 'function') {
-                TE.markDirty();
+            if (typeof TE.scheduleAutoSave === 'function') {
+                TE.scheduleAutoSave(false);
             }
         }
 
@@ -7397,7 +7413,6 @@ if (document.readyState === 'loading') {
                     </svg>
                 </summary>
                 <div class="style-acc-body space-y-4 text-xs">
-                    <!-- 1. Modo de Paginación -->
                     <div>
                         <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-300 mb-1.5">Modo de paginación</label>
                         <select id="gs-pag-mode" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-bold text-white focus:border-storevo-500 focus:outline-none">
@@ -7410,7 +7425,6 @@ if (document.readyState === 'loading') {
                         </select>
                     </div>
 
-                    <!-- 2. Productos por página o por carga -->
                     <div>
                         <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-300 mb-1.5">Productos por página / por carga (Catálogo)</label>
                         <select id="gs-pag-size" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-semibold text-white focus:border-storevo-500 focus:outline-none">
@@ -7427,7 +7441,6 @@ if (document.readyState === 'loading') {
                         <p class="text-[10px] text-slate-500 mt-1">Las vitrinas de productos en Inicio respetan su propio límite de filas.</p>
                     </div>
 
-                    <!-- 3. Alineación y Espaciado -->
                     <div class="grid grid-cols-2 gap-3" data-pag-group="layout">
                         <div>
                             <label class="block text-[11px] font-bold text-slate-400 mb-1">Alineación</label>
@@ -7448,7 +7461,6 @@ if (document.readyState === 'loading') {
                         </div>
                     </div>
 
-                    <!-- 4. Forma, Tamaño y Borde de Botones (Oculto en infinite) -->
                     <div class="grid grid-cols-3 gap-2.5" data-pag-group="buttons">
                         <div>
                             <label class="block text-[11px] font-bold text-slate-400 mb-1">Forma</label>
@@ -7477,7 +7489,6 @@ if (document.readyState === 'loading') {
                         </div>
                     </div>
 
-                    <!-- 5. Origen de Colores (Automático con Colores de la Tienda vs Personalizado) -->
                     <div class="pt-2 border-t border-slate-800/80 space-y-3">
                         <div class="flex items-center justify-between gap-2">
                             <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-300">Colores de paginación</label>
@@ -7491,9 +7502,7 @@ if (document.readyState === 'loading') {
                             <option value="custom">Personalizar colores manualmente</option>
                         </select>
 
-                        <!-- Contenedor de selectores de color con Paleta + Código Hex -->
                         <div id="gs-pag-custom-colors-wrap" class="space-y-3 hidden pt-1">
-                            <!-- Colores de Página Activa / Botón Principal -->
                             <div class="grid grid-cols-2 gap-2.5" data-pag-group="active-colors">
                                 ${buildColorFieldHtml('gs-pag-active-bg', 'Fondo página activa')}
                                 <div data-pag-group="active-text-color">
@@ -7501,7 +7510,6 @@ if (document.readyState === 'loading') {
                                 </div>
                             </div>
 
-                            <!-- Colores de Botones Inactivos y Borde (Solo en modos multipágina) -->
                             <div class="grid grid-cols-2 gap-2.5" data-pag-group="inactive-colors">
                                 ${buildColorFieldHtml('gs-pag-bg', 'Fondo botón inactivo')}
                                 ${buildColorFieldHtml('gs-pag-text', 'Texto botón (Secundario)')}
@@ -7512,7 +7520,6 @@ if (document.readyState === 'loading') {
                         </div>
                     </div>
 
-                    <!-- 6. Controles de Visibilidad Pertinentes -->
                     <div class="space-y-2.5 pt-2 border-t border-slate-800/80" data-pag-group="toggles">
                         <label class="flex items-center justify-between gap-2 cursor-pointer" data-pag-toggle="counter">
                             <span class="text-xs font-medium text-slate-300">Mostrar contador de productos</span>
@@ -7674,7 +7681,6 @@ if (document.readyState === 'loading') {
                         gs[item.key] = el.value;
                     }
                     if (item.key === 'paginationColorMode' && gs.paginationColorMode === 'custom') {
-                        // Al pasar a personalizado, pre-cargar con los colores actuales de la tienda si no se habían personalizado
                         if (!isValidHex(gs.paginationActiveBgColor)) gs.paginationActiveBgColor = getStorePrimary();
                         if (!isValidHex(gs.paginationTextColor)) gs.paginationTextColor = getStoreSecondary();
                         syncInputsFromGlobalStyles();
@@ -7711,12 +7717,8 @@ if (document.readyState === 'loading') {
             if (e.origin !== window.location.origin || !e.data) return;
             if (e.data.type === 'storevo:page-loaded') {
                 syncInputsFromGlobalStyles();
-                const iframe = document.getElementById('theme-preview-iframe') || document.querySelector('#preview-frame-container iframe');
-                if (iframe && iframe.contentWindow && TE.theme && TE.theme.globalStyles) {
-                    iframe.contentWindow.postMessage({
-                        type: 'storevo:live-styles',
-                        styles: TE.theme.globalStyles
-                    }, window.location.origin);
+                if (typeof TE.pushLiveStylesToIframe === 'function') {
+                    TE.pushLiveStylesToIframe();
                 }
             }
         });

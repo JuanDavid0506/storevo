@@ -734,7 +734,7 @@
 </th:block>
 
 <!-- ======================================================================= -->
-<!-- 1. BARRA DE ANUNCIOS                                                    -->
+<!-- 1. BARRA DE ANUNCIOS (MULTI-ANIMACIÓN)                                  -->
 <!-- ======================================================================= -->
 <th:block th:fragment="announcement-bar(sec)"
           th:with="defaultAnnBg=${theme != null and theme.globalStyles != null and theme.globalStyles.secondaryColor != null ? theme.globalStyles.secondaryColor : '#0f172a'},
@@ -743,6 +743,14 @@
                    text=${sec.settingStr('text', '')},
                    text2=${sec.settingStr('text2', '')},
                    text3=${sec.settingStr('text3', '')},
+                   animMode=${sec.settingStr('animationMode', 'fade')},
+                   speed=${sec.settingStr('speed', 'normal')},
+                   barFormat=${sec.settingStr('barFormat', 'normal')},
+                   linkText=${sec.settingStr('linkText', 'Ver más')},
+                   linkStyle=${sec.settingStr('linkStyle', 'underline')},
+                   showArrows=${sec.settingBool('showArrows', false)},
+                   dismissible=${sec.settingBool('dismissible', false)},
+                   hasMultipleMsgs=${!#strings.isEmpty(text2) or !#strings.isEmpty(text3)},
                    waRaw=${settings.whatsapp != null ? #strings.replace(#strings.replace(#strings.replace(settings.whatsapp, ' ', ''), '+', ''), '-', '') : ''},
                    waPhone=${#strings.length(waRaw) == 10 ? '57' + waRaw : waRaw},
                    waUrl=${!#strings.isEmpty(waPhone) ? 'https://wa.me/' + waPhone : '/s/' + slug + '/catalog'},
@@ -750,37 +758,262 @@
                    isExtNoProto=${rawUrl.startsWith('www.') or rawUrl.startsWith('wa.me/')},
                    resolvedUrl=${rawUrl == '__whatsapp__' ? waUrl : (isExtNoProto ? 'https://' + rawUrl : (rawUrl.startsWith('http') or rawUrl.startsWith('#') or rawUrl.startsWith('mailto:') or rawUrl.startsWith('tel:') ? rawUrl : (rawUrl.startsWith('/s/' + slug) ? rawUrl : '/s/' + slug + (rawUrl.startsWith('/') ? rawUrl : '/' + rawUrl))))}">
     <div th:if="${!#strings.isEmpty(text) or (isDraftPreview == true)}"
+         th:id="'ann-bar-root-' + ${sec.id}"
          th:style="|background-color: ${bgColor}; color: ${textColor};|"
-         class="w-full py-2.5 px-4 text-center text-xs sm:text-sm font-bold tracking-wide transition-colors">
-        <div class="max-w-7xl mx-auto flex items-center justify-center gap-2 flex-wrap">
-            <span th:id="'ann-rotator-' + ${sec.id}"
-                  th:attr="data-msg1=${!#strings.isEmpty(text) ? text : 'Escribe aquí el texto de tu barra de anuncio...'},
-                           data-msg2=${text2},
-                           data-msg3=${text3}"
-                  class="transition-opacity duration-300"
-                  th:text="${!#strings.isEmpty(text) ? text : 'Escribe aquí el texto de tu barra de anuncio...'}">Anuncio</span>
-            <a th:if="${!#strings.isEmpty(rawUrl)}"
-               th:href="${resolvedUrl}"
-               class="underline font-black hover:opacity-80 transition ml-1">
-                Ver más
-            </a>
+         th:classappend="${barFormat == 'compact' ? 'py-1.5 text-[11px] sm:text-xs font-semibold tracking-normal' : (barFormat == 'uppercase' ? 'py-2.5 text-[11px] sm:text-xs font-black uppercase tracking-widest' : 'py-2.5 text-xs sm:text-sm font-bold tracking-wide')}"
+         class="sv-ann-bar relative w-full px-4 text-center overflow-hidden transition-colors select-none">
+
+        <style>
+            @keyframes svAnnMarqueeScroll {
+                0% { transform: translate3d(0, 0, 0); }
+                100% { transform: translate3d(-50%, 0, 0); }
+            }
+            .sv-ann-marquee-track {
+                display: flex;
+                width: max-content;
+                align-items: center;
+                will-change: transform;
+                animation-name: svAnnMarqueeScroll;
+                animation-timing-function: linear;
+                animation-iteration-count: infinite;
+            }
+            .sv-ann-bar:hover .sv-ann-marquee-track {
+                animation-play-state: paused;
+            }
+            .sv-ann-rotator-stage {
+                display: inline-block;
+                transition: opacity 0.28s ease, transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+                transform-origin: center center;
+                backface-visibility: hidden;
+            }
+            .sv-ann-cursor::after {
+                content: '|';
+                display: inline-block;
+                margin-left: 2px;
+                animation: svAnnBlink 0.75s infinite;
+            }
+            @keyframes svAnnBlink {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0; }
+            }
+        </style>
+
+        <!-- Enlace envolvente cuando linkStyle == 'full_bar' -->
+        <a th:if="${!#strings.isEmpty(rawUrl) and linkStyle == 'full_bar'}"
+           th:href="${resolvedUrl}"
+           aria-label="Ver promoción"
+           class="absolute inset-0 z-10 cursor-pointer"></a>
+
+        <!-- MODO 1: CINTA CONTINUA INFINITA (MARQUEE) -->
+        <div th:if="${animMode == 'marquee'}"
+             class="w-full overflow-hidden flex items-center">
+            <div class="sv-ann-marquee-track"
+                 th:style="|animation-duration: ${speed == 'fast' ? '16s' : (speed == 'slow' ? '38s' : '25s')};|">
+                <th:block th:each="rep : ${ {1, 2} }">
+                    <div class="flex items-center shrink-0">
+                        <th:block th:each="mItem : ${ {(!#strings.isEmpty(text) ? text : 'Escribe aquí el texto de tu barra de anuncio...'), text2, text3, (!#strings.isEmpty(text) ? text : 'Escribe aquí el texto de tu barra de anuncio...'), text2, text3} }">
+                            <span th:if="${!#strings.isEmpty(mItem)}" class="inline-flex items-center gap-3 mx-6 whitespace-nowrap">
+                                <span th:text="${mItem}">Mensaje</span>
+                                <a th:if="${!#strings.isEmpty(rawUrl) and linkStyle != 'full_bar'}"
+                                   th:href="${resolvedUrl}"
+                                   th:style="${linkStyle == 'pill'} ? |background-color: ${textColor}; color: ${bgColor};| : ''"
+                                   th:class="${linkStyle == 'pill' ? 'px-2.5 py-0.5 rounded-full text-[11px] font-extrabold shadow-sm hover:opacity-90 transition no-underline' : (linkStyle == 'arrow' ? 'font-black hover:opacity-80 transition no-underline inline-flex items-center gap-0.5' : 'underline font-black hover:opacity-80 transition')}">
+                                    <span th:text="${linkText}">Ver más</span>
+                                    <span th:if="${linkStyle == 'arrow'}">→</span>
+                                </a>
+                                <span class="opacity-35 text-[10px] ml-3">✦</span>
+                            </span>
+                        </th:block>
+                    </div>
+                </th:block>
+            </div>
         </div>
-        <script th:if="${!#strings.isEmpty(text2) or !#strings.isEmpty(text3)}" th:inline="javascript">
+
+        <!-- MODO 2: ROTADOR ANIMADO O ESTÁTICO (fade, slide_vertical, slide_horizontal, flip, typewriter, pulse_glow, static) -->
+        <div th:unless="${animMode == 'marquee'}"
+             class="max-w-7xl mx-auto flex items-center justify-center gap-3 relative z-20"
+             style="perspective: 600px;">
+
+            <button th:if="${showArrows and hasMultipleMsgs and animMode != 'static'}"
+                    type="button"
+                    class="sv-ann-prev p-1 rounded-full hover:bg-white/15 transition opacity-75 hover:opacity-100 flex-shrink-0"
+                    aria-label="Anuncio anterior">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path></svg>
+            </button>
+
+            <div class="flex items-center justify-center gap-2 flex-wrap min-h-[1.35rem] overflow-hidden">
+                <span th:id="'ann-rotator-' + ${sec.id}"
+                      th:attr="data-msg1=${!#strings.isEmpty(text) ? text : 'Escribe aquí el texto de tu barra de anuncio...'},
+                               data-msg2=${text2},
+                               data-msg3=${text3},
+                               data-anim=${animMode},
+                               data-speed=${speed}"
+                      class="sv-ann-rotator-stage"
+                      th:text="${!#strings.isEmpty(text) ? text : 'Escribe aquí el texto de tu barra de anuncio...'}">Anuncio</span>
+
+                <a th:if="${!#strings.isEmpty(rawUrl) and linkStyle != 'full_bar'}"
+                   th:href="${resolvedUrl}"
+                   th:style="${linkStyle == 'pill'} ? |background-color: ${textColor}; color: ${bgColor};| : ''"
+                   th:class="${linkStyle == 'pill' ? 'px-3 py-0.5 rounded-full text-[11px] font-extrabold shadow-sm hover:opacity-90 transition no-underline ml-1' : (linkStyle == 'arrow' ? 'font-black hover:opacity-80 transition no-underline inline-flex items-center gap-1 ml-1' : 'underline font-black hover:opacity-80 transition ml-1')}">
+                    <span th:text="${linkText}">Ver más</span>
+                    <span th:if="${linkStyle == 'arrow'}">→</span>
+                </a>
+            </div>
+
+            <button th:if="${showArrows and hasMultipleMsgs and animMode != 'static'}"
+                    type="button"
+                    class="sv-ann-next p-1 rounded-full hover:bg-white/15 transition opacity-75 hover:opacity-100 flex-shrink-0"
+                    aria-label="Siguiente anuncio">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
+            </button>
+        </div>
+
+        <!-- Botón opcional para cerrar la barra (✕) -->
+        <button th:if="${dismissible}"
+                type="button"
+                onclick="const b=this.closest('.sv-ann-bar');if(b)b.style.display='none';"
+                aria-label="Cerrar anuncio"
+                class=" absolute right-2.5 top-1/2 -translate-y-1/2 z-30 p-1 rounded-full hover:bg-white/15 opacity-70 hover:opacity-100 transition">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+
+        <script th:if="${animMode != 'marquee' and animMode != 'static'}" th:inline="javascript">
             (function() {
+                const root = document.getElementById(/*[[${'ann-bar-root-' + sec.id}]]*/ '');
                 const el = document.getElementById(/*[[${'ann-rotator-' + sec.id}]]*/ '');
-                if (!el) return;
+                if (!el || !root) return;
+
                 const msgs = [el.getAttribute('data-msg1'), el.getAttribute('data-msg2'), el.getAttribute('data-msg3')]
                     .filter(m => m && m.trim().length > 0);
-                if (msgs.length <= 1) return;
+                const anim = el.getAttribute('data-anim') || 'fade';
+                const speed = el.getAttribute('data-speed') || 'normal';
+                const delayMs = speed === 'fast' ? 2600 : (speed === 'slow' ? 5800 : 4000);
+
+                if (msgs.length <= 1 && anim !== 'typewriter' && anim !== 'pulse_glow') return;
+
                 let idx = 0;
-                setInterval(() => {
+                let typeTimer = null;
+
+                function typeText(targetStr) {
+                    if (typeTimer) clearInterval(typeTimer);
+                    el.classList.add('sv-ann-cursor');
+                    el.textContent = '';
+                    let charIdx = 0;
+                    const charSpeed = speed === 'fast' ? 28 : (speed === 'slow' ? 55 : 38);
+                    typeTimer = setInterval(() => {
+                        charIdx++;
+                        el.textContent = targetStr.slice(0, charIdx);
+                        if (charIdx >= targetStr.length) {
+                            clearInterval(typeTimer);
+                            setTimeout(() => el.classList.remove('sv-ann-cursor'), 900);
+                        }
+                    }, charSpeed);
+                }
+
+                function stepMessage(dir) {
+                    const nextIdx = (idx + dir + msgs.length) % msgs.length;
+                    const nextText = msgs[nextIdx];
+
+                    if (anim === 'typewriter') {
+                        idx = nextIdx;
+                        typeText(nextText);
+                        return;
+                    }
+
+                    if (anim === 'slide_vertical') {
+                        el.style.opacity = '0';
+                        el.style.transform = dir > 0 ? 'translateY(-100%)' : 'translateY(100%)';
+                        setTimeout(() => {
+                            idx = nextIdx;
+                            el.style.transition = 'none';
+                            el.textContent = nextText;
+                            el.style.transform = dir > 0 ? 'translateY(100%)' : 'translateY(-100%)';
+                            void el.offsetWidth;
+                            el.style.transition = 'opacity 0.28s ease, transform 0.28s cubic-bezier(0.22, 1, 0.36, 1)';
+                            el.style.opacity = '1';
+                            el.style.transform = 'translateY(0)';
+                        }, 240);
+                        return;
+                    }
+
+                    if (anim === 'slide_horizontal') {
+                        el.style.opacity = '0';
+                        el.style.transform = dir > 0 ? 'translateX(-36px)' : 'translateX(36px)';
+                        setTimeout(() => {
+                            idx = nextIdx;
+                            el.style.transition = 'none';
+                            el.textContent = nextText;
+                            el.style.transform = dir > 0 ? 'translateX(36px)' : 'translateX(-36px)';
+                            void el.offsetWidth;
+                            el.style.transition = 'opacity 0.28s ease, transform 0.28s cubic-bezier(0.22, 1, 0.36, 1)';
+                            el.style.opacity = '1';
+                            el.style.transform = 'translateX(0)';
+                        }, 240);
+                        return;
+                    }
+
+                    if (anim === 'flip') {
+                        el.style.opacity = '0';
+                        el.style.transform = 'rotateX(90deg)';
+                        setTimeout(() => {
+                            idx = nextIdx;
+                            el.textContent = nextText;
+                            el.style.opacity = '1';
+                            el.style.transform = 'rotateX(0deg)';
+                        }, 240);
+                        return;
+                    }
+
+                    if (anim === 'pulse_glow') {
+                        el.style.transform = 'scale(0.94)';
+                        el.style.opacity = '0.35';
+                        setTimeout(() => {
+                            idx = nextIdx;
+                            el.textContent = nextText;
+                            el.style.transform = 'scale(1.04)';
+                            el.style.opacity = '1';
+                            setTimeout(() => { el.style.transform = 'scale(1)'; }, 180);
+                        }, 200);
+                        return;
+                    }
+
+                    // Por defecto: fade
                     el.style.opacity = '0';
                     setTimeout(() => {
-                        idx = (idx + 1) % msgs.length;
-                        el.textContent = msgs[idx];
+                        idx = nextIdx;
+                        el.textContent = nextText;
                         el.style.opacity = '1';
                     }, 250);
-                }, 4000);
+                }
+
+                if (anim === 'typewriter') {
+                    typeText(msgs[0]);
+                }
+
+                let autoTimer = setInterval(() => stepMessage(1), delayMs);
+
+                root.addEventListener('mouseenter', () => clearInterval(autoTimer));
+                root.addEventListener('mouseleave', () => {
+                    clearInterval(autoTimer);
+                    autoTimer = setInterval(() => stepMessage(1), delayMs);
+                });
+
+                const prevBtn = root.querySelector('.sv-ann-prev');
+                const nextBtn = root.querySelector('.sv-ann-next');
+                if (prevBtn) {
+                    prevBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        stepMessage(-1);
+                    });
+                }
+                if (nextBtn) {
+                    nextBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        stepMessage(1);
+                    });
+                }
             })();
         </script>
     </div>
@@ -954,8 +1187,8 @@
 
     <div th:unless="${#lists.isEmpty(gridProducts)}"
          th:id="'sv-grid-' + ${sec.id}"
-         th:attr="data-cols=${columnsDesktop == '3' ? '3' : '4'}"
-         th:class="${'sv-catalog-grid grid gap-4 sm:gap-6 ' + (columnsDesktop == '3' ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-3' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4')}">
+         th:attr="data-cols=${sec.settingStr('columnsDesktop', '4') == '3' ? '3' : '4'}"
+         class="sv-catalog-grid grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
         <th:block th:each="p, pStat : ${gridProducts}">
             <div th:replace="~{components/storefront/product-card :: productCard(${p}, 'grid-' + ${sec.id}, ${pStat.index}, false, 'catalog-product-card', true)}"></div>
         </th:block>
