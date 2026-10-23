@@ -6860,3 +6860,388 @@ if (document.readyState === 'loading') {
 } else {
     Storevo.ThemeEditor.init();
 }
+/* ==========================================================================
+   EXTENSIÓN FASE PRODUCT_GRID (BRAND, MANUAL, FEATURED) + DEEP-LINK CATEGORÍAS
+   ========================================================================== */
+(function() {
+    function initProductGridAndCategoryExtension() {
+        if (!window.Storevo || !Storevo.ThemeEditor) return;
+        const TE = Storevo.ThemeEditor;
+        if (TE.__productGridExtended) return;
+        TE.__productGridExtended = true;
+
+        const bridge = document.getElementById('theme-editor-bridge');
+        TE.brands = [];
+        TE.manualProductsCache = new Map();
+
+        if (bridge) {
+            try {
+                TE.brands = JSON.parse(bridge.getAttribute('data-brands') || '[]');
+            } catch (e) {
+                TE.brands = [];
+            }
+        }
+
+        TE.refreshBrands = function(cb) {
+            if (!TE.slug) return;
+            fetch(`/dashboard/${TE.slug}/template/brands`, { headers: { 'Accept': 'application/json' } })
+                .then(r => r.ok ? r.json() : [])
+                .then(list => {
+                    if (Array.isArray(list)) TE.brands = list;
+                    if (typeof cb === 'function') cb(TE.brands);
+                })
+                .catch(() => {
+                    if (typeof cb === 'function') cb(TE.brands);
+                });
+        };
+
+        TE.findActiveSectionById = function(sectionId) {
+            if (!sectionId || !TE.theme) return null;
+            const pageSections = (typeof TE.getCurrentPageSections === 'function')
+                ? TE.getCurrentPageSections()
+                : ((TE.theme.pages && TE.theme.pages[TE.currentPage]) || TE.theme.sections || []);
+            return (pageSections || []).find(s => s && s.id === sectionId) || null;
+        };
+
+        TE.triggerSectionChanged = function() {
+            if (typeof TE.markDirty === 'function') TE.markDirty();
+            if (typeof TE.scheduleAutoSave === 'function') {
+                TE.scheduleAutoSave();
+            } else if (typeof TE.saveDraft === 'function') {
+                clearTimeout(TE.__extAutoSaveTimer);
+                TE.__extAutoSaveTimer = setTimeout(() => TE.saveDraft(false), 450);
+            }
+        };
+
+        function parseManualIds(raw) {
+            if (!raw) return [];
+            if (Array.isArray(raw)) {
+                return raw.map(x => parseInt(x, 10)).filter(n => !isNaN(n) && n > 0);
+            }
+            return String(raw).split(',')
+                .map(s => parseInt(s.trim(), 10))
+                .filter((n, idx, arr) => !isNaN(n) && n > 0 && arr.indexOf(n) === idx);
+        }
+
+        function enhanceProductGridForm(container) {
+            if (!container) return;
+            const activeSecId = TE.activeSectionId || container.getAttribute('data-section-id')
+                || (container.querySelector('[data-section-id]')?.getAttribute('data-section-id'));
+            const sec = TE.findActiveSectionById(activeSecId) || TE.activeSection;
+            if (!sec || sec.type !== 'product_grid') return;
+
+            sec.settings = sec.settings || {};
+
+            // Localizar el <select> de source dentro del formulario de configuración de product_grid
+            const selects = Array.from(container.querySelectorAll('select'));
+            const sourceSelect = selects.find(sel => {
+                const nameOrKey = (sel.name || sel.getAttribute('data-setting') || sel.getAttribute('data-key') || sel.id || '').toLowerCase();
+                if (nameOrKey.includes('source')) return true;
+                const optValues = Array.from(sel.options).map(o => o.value);
+                return optValues.includes('NEWEST') && optValues.includes('OFFERS');
+            });
+
+            if (!sourceSelect || sourceSelect.dataset.svEnhanced === 'true') return;
+            sourceSelect.dataset.svEnhanced = 'true';
+
+            const desiredSources = [
+                { value: 'NEWEST', label: 'Más recientes (automático)' },
+                { value: 'OFFERS', label: 'Solo productos en oferta' },
+                { value: 'FEATURED', label: 'Productos destacados (★)' },
+                { value: 'CATEGORY', label: 'De una categoría específica' },
+                { value: 'BRAND', label: 'De una marca específica' },
+                { value: 'MANUAL', label: 'Selección manual de productos' }
+            ];
+
+            desiredSources.forEach(item => {
+                let opt = Array.from(sourceSelect.options).find(o => o.value === item.value);
+                if (!opt) {
+                    opt = document.createElement('option');
+                    opt.value = item.value;
+                    opt.textContent = item.label;
+                    sourceSelect.appendChild(opt);
+                }
+            });
+
+            const currentSource = String(sec.settings.source || 'NEWEST').toUpperCase();
+            sourceSelect.value = desiredSources.some(d => d.value === currentSource) ? currentSource : 'NEWEST';
+
+            // Localizar el contenedor del selector de categoría para ocultarlo si no es CATEGORY
+            const catSelect = selects.find(sel => sel !== sourceSelect && (
+                (sel.name || sel.getAttribute('data-setting') || sel.getAttribute('data-key') || sel.id || '').toLowerCase().includes('category')
+            ));
+            const catWrapper = catSelect ? (catSelect.closest('div') || catSelect.parentElement) : null;
+
+            // Crear contenedor dinámico para BRAND y MANUAL
+            const extraHost = document.createElement('div');
+            extraHost.className = 'space-y-3 mt-3 pt-3 border-t border-slate-800/80';
+            sourceSelect.closest('div').insertAdjacentElement('afterend', extraHost);
+
+            function renderSourceSpecificControls() {
+                const src = sourceSelect.value;
+                sec.settings.source = src;
+
+                if (catWrapper) {
+                    catWrapper.classList.toggle('hidden', src !== 'CATEGORY');
+                }
+
+                extraHost.innerHTML = '';
+
+                if (src === 'FEATURED') {
+                    extraHost.innerHTML = `
+                        <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-xs text-amber-200 leading-relaxed">
+                            <p class="font-bold text-amber-300 mb-0.5">★ Productos Destacados</p>
+                            <p class="text-[11px] text-slate-300">Se mostrarán automáticamente los productos activos que marques con la estrella (★) en tu listado de Productos del Dashboard.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                if (src === 'BRAND') {
+                    const renderBrandSelect = () => {
+                        const selectedBrandId = String(sec.settings.brandId || '');
+                        const selectedBrandName = String(sec.settings.brandName || '');
+                        const optionsHtml = [`<option value="">— Selecciona una marca —</option>`]
+                            .concat((TE.brands || []).map(b => {
+                                const isSel = (selectedBrandId && String(b.id) === selectedBrandId)
+                                    || (!selectedBrandId && selectedBrandName && b.name.toLowerCase() === selectedBrandName.toLowerCase());
+                                return `<option value="${b.id}" data-name="${String(b.name).replace(/"/g, '&quot;')}" ${isSel ? 'selected' : ''}>${b.name} (${b.productCount || 0})</option>`;
+                            })).join('');
+
+                        extraHost.innerHTML = `
+                            <div class="space-y-1.5">
+                                <div class="flex items-center justify-between">
+                                    <label class="block text-xs font-bold text-slate-300">Marca a mostrar</label>
+                                    <button type="button" class="sv-refresh-brands-btn text-[11px] font-bold text-indigo-400 hover:text-indigo-300">↻ Actualizar marcas</button>
+                                </div>
+                                <select class="sv-brand-picker-select w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-indigo-500 focus:outline-none">
+                                    ${optionsHtml}
+                                </select>
+                            </div>
+                        `;
+
+                        const brandSel = extraHost.querySelector('.sv-brand-picker-select');
+                        const refreshBtn = extraHost.querySelector('.sv-refresh-brands-btn');
+
+                        if (brandSel) {
+                            brandSel.addEventListener('change', () => {
+                                const opt = brandSel.options[brandSel.selectedIndex];
+                                sec.settings.brandId = brandSel.value || '';
+                                sec.settings.brandName = opt ? (opt.getAttribute('data-name') || '') : '';
+                                TE.triggerSectionChanged();
+                            });
+                        }
+                        if (refreshBtn) {
+                            refreshBtn.addEventListener('click', () => {
+                                refreshBtn.textContent = 'Actualizando...';
+                                TE.refreshBrands(() => renderBrandSelect());
+                            });
+                        }
+                    };
+
+                    TE.refreshBrands(() => renderBrandSelect());
+                    return;
+                }
+
+                if (src === 'MANUAL') {
+                    let selectedIds = parseManualIds(sec.settings.productIds);
+
+                    extraHost.innerHTML = `
+                        <div class="space-y-2.5">
+                            <div class="flex items-center justify-between">
+                                <label class="block text-xs font-bold text-slate-300">Productos seleccionados (<span class="sv-manual-count">${selectedIds.length}</span>)</label>
+                                <span class="text-[10px] text-slate-500">Usa ↑/↓ para ordenar</span>
+                            </div>
+                            <div class="sv-manual-selected-list space-y-1.5 max-h-56 overflow-y-auto pr-1"></div>
+                            <div class="pt-1">
+                                <input type="text" placeholder="Buscar producto por nombre, marca o SKU..."
+                                       class="sv-manual-search-input w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none">
+                                <div class="sv-manual-search-results mt-2 space-y-1 max-h-48 overflow-y-auto"></div>
+                            </div>
+                        </div>
+                    `;
+
+                    const listEl = extraHost.querySelector('.sv-manual-selected-list');
+                    const countEl = extraHost.querySelector('.sv-manual-count');
+                    const searchInput = extraHost.querySelector('.sv-manual-search-input');
+                    const resultsEl = extraHost.querySelector('.sv-manual-search-results');
+
+                    const syncManualIds = () => {
+                        sec.settings.productIds = selectedIds.join(',');
+                        if (countEl) countEl.textContent = String(selectedIds.length);
+                        renderSelectedManualList();
+                        TE.triggerSectionChanged();
+                    };
+
+                    const renderSelectedManualList = () => {
+                        if (!listEl) return;
+                        if (selectedIds.length === 0) {
+                            listEl.innerHTML = `<p class="text-[11px] text-slate-500 italic py-2 text-center bg-slate-950/60 rounded-lg border border-dashed border-slate-800">Aún no has seleccionado productos manuales.</p>`;
+                            return;
+                        }
+                        listEl.innerHTML = selectedIds.map((id, idx) => {
+                            const meta = TE.manualProductsCache.get(id) || { id, name: 'Producto #' + id, imageUrl: '/img/placeholder.jpg' };
+                            return `
+                                <div class="flex items-center justify-between gap-2 p-2 rounded-lg bg-slate-950 border border-slate-800 text-xs">
+                                    <div class="flex items-center gap-2 min-w-0">
+                                        <img src="${meta.imageUrl || '/img/placeholder.jpg'}" class="w-8 h-8 rounded object-cover flex-shrink-0 border border-slate-800" alt="">
+                                        <div class="min-w-0">
+                                            <p class="font-bold text-white truncate">${meta.name}</p>
+                                            <p class="text-[10px] text-slate-400 truncate">${meta.sku ? 'SKU: ' + meta.sku : ''}</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-1 flex-shrink-0">
+                                        <button type="button" data-move-up="${idx}" ${idx === 0 ? 'disabled' : ''} class="px-1.5 py-1 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 disabled:opacity-30">↑</button>
+                                        <button type="button" data-move-down="${idx}" ${idx === selectedIds.length - 1 ? 'disabled' : ''} class="px-1.5 py-1 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 disabled:opacity-30">↓</button>
+                                        <button type="button" data-remove-id="${id}" class="px-1.5 py-1 rounded bg-red-500/10 hover:bg-red-500/20 text-red-400">✕</button>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+
+                        listEl.querySelectorAll('[data-move-up]').forEach(btn => {
+                            btn.addEventListener('click', () => {
+                                const i = parseInt(btn.getAttribute('data-move-up'), 10);
+                                if (i > 0) {
+                                    const tmp = selectedIds[i - 1];
+                                    selectedIds[i - 1] = selectedIds[i];
+                                    selectedIds[i] = tmp;
+                                    syncManualIds();
+                                }
+                            });
+                        });
+                        listEl.querySelectorAll('[data-move-down]').forEach(btn => {
+                            btn.addEventListener('click', () => {
+                                const i = parseInt(btn.getAttribute('data-move-down'), 10);
+                                if (i < selectedIds.length - 1) {
+                                    const tmp = selectedIds[i + 1];
+                                    selectedIds[i + 1] = selectedIds[i];
+                                    selectedIds[i] = tmp;
+                                    syncManualIds();
+                                }
+                            });
+                        });
+                        listEl.querySelectorAll('[data-remove-id]').forEach(btn => {
+                            btn.addEventListener('click', () => {
+                                const rmId = parseInt(btn.getAttribute('data-remove-id'), 10);
+                                selectedIds = selectedIds.filter(x => x !== rmId);
+                                syncManualIds();
+                                runPickerSearch(searchInput ? searchInput.value : '');
+                            });
+                        });
+                    };
+
+                    const runPickerSearch = (q) => {
+                        if (!resultsEl || !TE.slug) return;
+                        fetch(`/dashboard/${TE.slug}/template/products-search?q=${encodeURIComponent(q || '')}&limit=15`, {
+                            headers: { 'Accept': 'application/json' }
+                        })
+                            .then(r => r.ok ? r.json() : [])
+                            .then(items => {
+                                if (!Array.isArray(items)) return;
+                                items.forEach(it => TE.manualProductsCache.set(Number(it.id), it));
+                                const available = items.filter(it => !selectedIds.includes(Number(it.id)));
+                                if (available.length === 0) {
+                                    resultsEl.innerHTML = `<p class="text-[11px] text-slate-500 py-1.5 text-center">No hay más productos que coincidan.</p>`;
+                                    return;
+                                }
+                                resultsEl.innerHTML = available.map(it => `
+                                    <button type="button" data-add-prod-id="${it.id}"
+                                            class="w-full flex items-center justify-between gap-2 p-2 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-800 text-left text-xs transition">
+                                        <div class="flex items-center gap-2 min-w-0">
+                                            <img src="${it.imageUrl || '/img/placeholder.jpg'}" class="w-7 h-7 rounded object-cover flex-shrink-0" alt="">
+                                            <span class="font-medium text-slate-200 truncate">${it.name}</span>
+                                        </div>
+                                        <span class="text-[10px] font-bold text-indigo-400 flex-shrink-0">+ Agregar</span>
+                                    </button>
+                                `).join('');
+
+                                resultsEl.querySelectorAll('[data-add-prod-id]').forEach(btn => {
+                                    btn.addEventListener('click', () => {
+                                        const addId = parseInt(btn.getAttribute('data-add-prod-id'), 10);
+                                        if (!isNaN(addId) && !selectedIds.includes(addId)) {
+                                            selectedIds.push(addId);
+                                            syncManualIds();
+                                            runPickerSearch(searchInput ? searchInput.value : '');
+                                        }
+                                    });
+                                });
+                            });
+                    };
+
+                    // Hidratar nombres/imágenes de los productos ya guardados en productIds
+                    if (selectedIds.length > 0 && TE.slug) {
+                        fetch(`/dashboard/${TE.slug}/template/products-search?ids=${selectedIds.join(',')}`, {
+                            headers: { 'Accept': 'application/json' }
+                        })
+                            .then(r => r.ok ? r.json() : [])
+                            .then(items => {
+                                if (Array.isArray(items)) {
+                                    items.forEach(it => TE.manualProductsCache.set(Number(it.id), it));
+                                    const validSet = new Set(items.map(it => Number(it.id)));
+                                    // Excluir en el editor los que hayan sido eliminados o inactivados
+                                    selectedIds = selectedIds.filter(id => validSet.has(id));
+                                }
+                                renderSelectedManualList();
+                            })
+                            .catch(() => renderSelectedManualList());
+                    } else {
+                        renderSelectedManualList();
+                    }
+
+                    runPickerSearch('');
+
+                    let searchTimer = null;
+                    if (searchInput) {
+                        searchInput.addEventListener('input', () => {
+                            clearTimeout(searchTimer);
+                            searchTimer = setTimeout(() => runPickerSearch(searchInput.value.trim()), 250);
+                        });
+                    }
+                }
+            }
+
+            sourceSelect.addEventListener('change', () => {
+                renderSourceSpecificControls();
+                TE.triggerSectionChanged();
+            });
+
+            renderSourceSpecificControls();
+        }
+
+        // Observar cambios en el panel lateral del editor para enriquecer product_grid al abrir su configuración
+        const sidebar = document.getElementById('theme-editor-sidebar');
+        if (sidebar) {
+            const obs = new MutationObserver(() => enhanceProductGridForm(sidebar));
+            obs.observe(sidebar, { childList: true, subtree: true });
+            enhanceProductGridForm(sidebar);
+        }
+
+        // Abrir directamente la categoría si el usuario entró con ?page=category:{id}
+        const urlPage = new URLSearchParams(window.location.search).get('page');
+        const initialPage = (urlPage || (bridge && bridge.getAttribute('data-initial-page')) || '').trim();
+        if (initialPage && typeof TE.switchPage === 'function') {
+            setTimeout(() => {
+                const pageSelect = document.getElementById('editor-page-select');
+                if (pageSelect) {
+                    if (!Array.from(pageSelect.options).some(o => o.value === initialPage) && initialPage.startsWith('category:')) {
+                        const catId = initialPage.substring(9);
+                        const catObj = (TE.categories || []).find(c => String(c.id) === String(catId));
+                        const opt = document.createElement('option');
+                        opt.value = initialPage;
+                        opt.textContent = '📁 Categoría: ' + (catObj ? catObj.name : ('#' + catId));
+                        pageSelect.appendChild(opt);
+                    }
+                    pageSelect.value = initialPage;
+                }
+                TE.switchPage(initialPage);
+            }, 80);
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initProductGridAndCategoryExtension);
+    } else {
+        setTimeout(initProductGridAndCategoryExtension, 0);
+    }
+})();

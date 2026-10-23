@@ -1,15 +1,16 @@
 package com.storevo.backend.tenant.repository;
 
-import com.storevo.backend.tenant.model.Product;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.jpa.repository.Modifying;
 import com.storevo.backend.tenant.model.Brand;
-import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
+import com.storevo.backend.tenant.model.Product;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,8 +21,38 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     List<Product> findByIsActiveTrueAndIsDeletedFalseOrderByIdDesc();
 
+    @Query("SELECT p FROM Product p WHERE p.isActive = true AND p.isDeleted = false AND p.isDraft = false ORDER BY p.id DESC")
+    List<Product> findActiveNewestProducts(Pageable pageable);
+
+    @Query("SELECT p FROM Product p WHERE p.isActive = true AND p.isDeleted = false AND p.isDraft = false AND p.discountPrice IS NOT NULL AND p.discountPrice > 0 AND (p.price IS NULL OR p.discountPrice < p.price) ORDER BY p.id DESC")
+    List<Product> findActiveOfferProducts(Pageable pageable);
+
     @Query("SELECT p FROM Product p WHERE p.category.id IN :categoryIds AND p.isActive = true AND p.isDeleted = false ORDER BY p.id DESC")
     List<Product> findActiveProductsByCategoryIds(@Param("categoryIds") List<Long> categoryIds);
+
+    @Query("SELECT p FROM Product p WHERE p.category.id IN :categoryIds AND p.isActive = true AND p.isDeleted = false AND p.isDraft = false ORDER BY p.id DESC")
+    List<Product> findActiveProductsByCategoryIds(@Param("categoryIds") List<Long> categoryIds, Pageable pageable);
+
+    @Query("SELECT p FROM Product p LEFT JOIN p.brandRef b WHERE p.isActive = true AND p.isDeleted = false AND p.isDraft = false " +
+            "AND ((:brandId IS NOT NULL AND b.id = :brandId AND (b.isActive IS NULL OR b.isActive = true)) " +
+            "OR (:brandName IS NOT NULL AND :brandName <> '' AND LOWER(p.brand) = LOWER(:brandName) AND (b IS NULL OR b.isActive = true))) " +
+            "ORDER BY p.id DESC")
+    List<Product> findActiveProductsByBrand(@Param("brandId") Long brandId,
+                                            @Param("brandName") String brandName,
+                                            Pageable pageable);
+
+    @Query("SELECT p FROM Product p WHERE p.isActive = true AND p.isDeleted = false AND p.isDraft = false AND p.isFeatured = true ORDER BY p.id DESC")
+    List<Product> findActiveFeaturedProducts(Pageable pageable);
+
+    @Query("SELECT p FROM Product p WHERE p.id IN :ids AND p.isActive = true AND p.isDeleted = false AND p.isDraft = false")
+    List<Product> findActivePublicProductsByIdIn(@Param("ids") Collection<Long> ids);
+
+    @Query("SELECT p FROM Product p WHERE p.isActive = true AND p.isDeleted = false AND p.isDraft = false " +
+            "AND (:q IS NULL OR :q = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :q, '%')) " +
+            "OR LOWER(p.sku) LIKE LOWER(CONCAT('%', :q, '%')) " +
+            "OR LOWER(p.brand) LIKE LOWER(CONCAT('%', :q, '%'))) " +
+            "ORDER BY p.id DESC")
+    List<Product> searchActiveProductsForPicker(@Param("q") String q, Pageable pageable);
 
     @Query("SELECT p FROM Product p WHERE " +
             "(:q IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(p.sku) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(p.brand) LIKE LOWER(CONCAT('%', :q, '%'))) AND " +
@@ -32,6 +63,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             "(:quick IS NULL " +
             "  OR (:quick = 'out_of_stock' AND p.stock <= 0) " +
             "  OR (:quick = 'sale' AND p.discountPrice > 0) " +
+            "  OR (:quick = 'featured' AND p.isFeatured = true AND p.isDeleted = false) " +
             "  OR (:quick = 'active' AND p.isActive = true AND p.isDeleted = false AND p.isDraft = false)" +
             ")")
     Page<Product> searchProducts(
@@ -86,6 +118,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         Long getOcultos();
         Long getBorradores();
         Long getPapelera();
+        Long getDestacados();
     }
 
     @Query("SELECT " +
@@ -93,7 +126,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             "COUNT(CASE WHEN p.isActive = true AND p.isDeleted = false AND p.isDraft = false THEN 1 END) as activos, " +
             "COUNT(CASE WHEN p.isActive = false AND p.isDeleted = false AND p.isDraft = false THEN 1 END) as ocultos, " +
             "COUNT(CASE WHEN p.isDraft = true AND p.isDeleted = false THEN 1 END) as borradores, " +
-            "COUNT(CASE WHEN p.isDeleted = true THEN 1 END) as papelera " +
+            "COUNT(CASE WHEN p.isDeleted = true THEN 1 END) as papelera, " +
+            "COUNT(CASE WHEN p.isFeatured = true AND p.isDeleted = false THEN 1 END) as destacados " +
             "FROM Product p")
     ProductCountsProjection countProductsByStatus();
 }

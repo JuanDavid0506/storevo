@@ -148,6 +148,56 @@ Storevo.ProductsList = {
         this.syncTopPanel();
     },
 
+    toggleFeatured: function(btnElement, productId, event) {
+        if (event) {
+            event.stopPropagation();
+            event.preventDefault();
+        }
+        const pathParts = window.location.pathname.split('/');
+        const slug = pathParts[2];
+        const csrfToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+
+        btnElement.classList.add('opacity-50', 'pointer-events-none');
+
+        fetch(`/dashboard/${slug}/products/${productId}/featured`, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': csrfToken || ''
+            }
+        })
+            .then(res => {
+                if (!res.ok) throw new Error('Error al actualizar destacado');
+                return res.json();
+            })
+            .then(data => {
+                const isFeat = Boolean(data.isFeatured);
+                document.querySelectorAll(`[data-featured-btn="${productId}"]`).forEach(btn => {
+                    btn.setAttribute('data-featured', isFeat ? 'true' : 'false');
+                    btn.classList.toggle('text-amber-400', isFeat);
+                    btn.classList.toggle('border-amber-500/40', isFeat);
+                    btn.classList.toggle('bg-amber-500/10', isFeat);
+                    btn.classList.toggle('text-slate-500', !isFeat);
+                    const svg = btn.querySelector('svg');
+                    if (svg) {
+                        svg.setAttribute('fill', isFeat ? 'currentColor' : 'none');
+                    }
+                });
+                if (Storevo.UI && Storevo.UI.Toast) {
+                    Storevo.UI.Toast.show(isFeat ? 'Producto marcado como destacado' : 'Producto quitado de destacados', 'success');
+                }
+            })
+            .catch(() => {
+                if (Storevo.UI && Storevo.UI.Toast) {
+                    Storevo.UI.Toast.show('No se pudo actualizar el estado destacado', 'error');
+                }
+            })
+            .finally(() => {
+                btnElement.classList.remove('opacity-50', 'pointer-events-none');
+            });
+    },
+
     executeMassAction: function(action) {
         if (this.state.selectedIds.length === 0) return;
 

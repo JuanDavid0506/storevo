@@ -4,9 +4,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.storevo.backend.admin.model.Store;
 import com.storevo.backend.config.tenant.TenantContext;
 import com.storevo.backend.tenant.dto.ThemeConfigDto;
+import com.storevo.backend.tenant.model.Brand;
 import com.storevo.backend.tenant.model.Category;
+import com.storevo.backend.tenant.service.BrandService;
 import com.storevo.backend.tenant.service.CategoryService;
 import com.storevo.backend.tenant.service.CloudinaryService;
+import com.storevo.backend.tenant.service.ProductService;
 import com.storevo.backend.tenant.service.StoreThemeService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +28,8 @@ public class DashboardTemplateController {
 
     private final StoreThemeService storeThemeService;
     private final CategoryService categoryService;
+    private final BrandService brandService;
+    private final ProductService productService;
     private final CloudinaryService cloudinaryService;
     private final ObjectMapper objectMapper;
 
@@ -32,7 +37,11 @@ public class DashboardTemplateController {
     private static final List<String> ALLOWED_TYPES = Arrays.asList("image/jpeg", "image/png", "image/webp");
 
     @GetMapping
-    public String showEditor(@PathVariable String slug, HttpServletRequest request, Model model) {
+    public String showEditor(
+            @PathVariable String slug,
+            @RequestParam(name = "page", required = false) String page,
+            HttpServletRequest request,
+            Model model) {
         Store store = (Store) request.getAttribute("currentStore");
         if (store != null) {
             TenantContext.setCurrentTenant(store.getSchemaName());
@@ -65,13 +74,79 @@ public class DashboardTemplateController {
             e.printStackTrace();
         }
 
+        String brandsJson = "[]";
+        try {
+            if (store != null) {
+                TenantContext.setCurrentTenant(store.getSchemaName());
+            }
+            brandsJson = objectMapper.writeValueAsString(buildActiveBrandsList());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
         model.addAttribute("store", store);
         model.addAttribute("slug", slug);
         model.addAttribute("pageTitle", "Diseño de Tienda");
         model.addAttribute("themeJson", themeJson);
         model.addAttribute("categoriesJson", categoriesJson);
+        model.addAttribute("brandsJson", brandsJson);
+        model.addAttribute("initialPage", page != null ? page.trim() : "");
 
         return "dashboard/template/editor";
+    }
+
+    @GetMapping("/brands")
+    @ResponseBody
+    public ResponseEntity<List<Map<String, Object>>> getEditorBrands(HttpServletRequest request) {
+        Store store = (Store) request.getAttribute("currentStore");
+        if (store == null) {
+            return ResponseEntity.badRequest().body(Collections.emptyList());
+        }
+        TenantContext.setCurrentTenant(store.getSchemaName());
+        return ResponseEntity.ok(buildActiveBrandsList());
+    }
+
+    @GetMapping("/products-search")
+    @ResponseBody
+    public ResponseEntity<List<Map<String, Object>>> searchProductsForEditor(
+            @RequestParam(name = "q", required = false) String q,
+            @RequestParam(name = "ids", required = false) String ids,
+            @RequestParam(name = "limit", defaultValue = "20") int limit,
+            HttpServletRequest request) {
+        Store store = (Store) request.getAttribute("currentStore");
+        if (store == null) {
+            return ResponseEntity.badRequest().body(Collections.emptyList());
+        }
+        TenantContext.setCurrentTenant(store.getSchemaName());
+
+        List<Long> parsedIds = new ArrayList<>();
+        if (ids != null && !ids.isBlank()) {
+            for (String part : ids.split(",")) {
+                try {
+                    long id = Long.parseLong(part.trim());
+                    if (id > 0 && !parsedIds.contains(id)) {
+                        parsedIds.add(id);
+                    }
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+        return ResponseEntity.ok(productService.searchProductsForEditorPicker(q, parsedIds, limit));
+    }
+
+    private List<Map<String, Object>> buildActiveBrandsList() {
+        List<Brand> brands = brandService.getAllBrands();
+        Map<Long, Long> counts = brandService.getProductCountsByBrand();
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Brand b : brands) {
+            if (b == null || Boolean.FALSE.equals(b.getIsActive())) continue;
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", b.getId());
+            item.put("name", b.getName());
+            item.put("slug", b.getSlug());
+            item.put("productCount", counts.getOrDefault(b.getId(), 0L));
+            result.add(item);
+        }
+        return result;
     }
 
     @PostMapping("/save-draft")

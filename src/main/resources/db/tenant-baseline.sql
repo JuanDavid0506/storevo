@@ -43,6 +43,7 @@ CREATE TABLE products (
                           weight           DOUBLE,
                           has_variants     BOOLEAN         NOT NULL DEFAULT FALSE, -- MODO HÍBRIDO
                           is_made_to_order BOOLEAN         NOT NULL DEFAULT FALSE, -- BAJO PEDIDO
+                          is_featured      BOOLEAN         NOT NULL DEFAULT FALSE, -- DESTACADO EN VITRINAS
                           attributes_json  JSON,
                           is_active        BOOLEAN         NOT NULL DEFAULT TRUE,
                           is_deleted       BOOLEAN         NOT NULL DEFAULT FALSE,
@@ -51,7 +52,10 @@ CREATE TABLE products (
                           updated_at       TIMESTAMP       DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                           FOREIGN KEY (category_id) REFERENCES categories(id),
                           FOREIGN KEY (brand_id) REFERENCES brands(id) ON DELETE SET NULL,
-                          INDEX idx_products_visible (is_deleted, is_active, id)
+                          INDEX idx_products_visible (is_deleted, is_active, is_draft, id),
+                          INDEX idx_products_featured (is_deleted, is_active, is_draft, is_featured, id),
+                          INDEX idx_products_brand_id (brand_id, is_deleted, is_active, is_draft, id),
+                          INDEX idx_products_category_id (category_id, is_deleted, is_active, is_draft, id)
 );
 
 -- Opciones Relacionales

@@ -25,6 +25,7 @@ public class ProductDto {
     private Double weight;
     private Boolean isActive;
     private Boolean isDraft;
+    private Boolean isFeatured;
 
     // --- NUEVO: SOPORTE HÍBRIDO ---
     private Boolean hasVariants;

@@ -417,7 +417,7 @@
                            safeSize=${(size == 'sm' or size == 'md' or size == 'lg') ? size : 'md'},
                            isGray=${sec.settingBool('grayscale', false)},
                            isAuto=${sec.settingStr('source', 'MANUAL') == 'AUTO'},
-                           autoItems=${sec.resolvedBrands.![{'active': true, 'name': #this, 'img': (sec.resolvedBrandLogos.get(#this) ?: ''), 'url': '/catalog?q=' + #uris.escapeQueryParam(#this)}]},
+                           autoItems=${sec.resolvedBrands.![{'active': true, 'name': #this, 'img': '', 'url': '/catalog?q=' + #uris.escapeQueryParam(#this)}]},
                            waClean=${(settings != null and settings.whatsapp != null) ? #strings.replace(#strings.replace(settings.whatsapp, '+', ''), ' ', '') : ''},
                            i1Name=${sec.settingStr('item1Name', '')},
                            i1Img=${sec.settingStr('item1ImageUrl', '')},
@@ -479,6 +479,7 @@
                         <th:block th:each="b : ${brandItems}">
                             <div th:if="${b['active']}"
                                  th:with="rawUrl=${b['url']},
+                                          bImg=${!#strings.isEmpty(b['img']) ? b['img'] : (sec.resolvedBrandLogos != null and b['name'] != null ? (sec.resolvedBrandLogos.get(b['name']) ?: '') : '')},
                                           resolvedHref=${#strings.isEmpty(rawUrl)
                                               ? ''
                                               : (rawUrl == '__whatsapp__'
@@ -487,12 +488,12 @@
                                                       ? rawUrl
                                                       : (rawUrl == '/' ? '/s/' + store.slug : '/s/' + store.slug + (#strings.startsWith(rawUrl, '/') ? rawUrl : '/' + rawUrl))))}"
                                  class="sv-brand-card store-radius">
-                                <img th:if="${!#strings.isEmpty(b['img'])}"
-                                     th:src="${b['img']}"
+                                <img th:if="${!#strings.isEmpty(bImg)}"
+                                     th:src="${bImg}"
                                      th:alt="${!#strings.isEmpty(b['name']) ? b['name'] : store.name}"
                                      loading="lazy"
                                      class="sv-brand-logo" />
-                                <span th:if="${#strings.isEmpty(b['img']) and !#strings.isEmpty(b['name'])}"
+                                <span th:if="${#strings.isEmpty(bImg) and !#strings.isEmpty(b['name'])}"
                                       class="sv-brand-text-fallback"
                                       th:text="${b['name']}">Marca</span>
                                 <a th:if="${!#strings.isEmpty(resolvedHref)}"
@@ -895,7 +896,12 @@
                   source=${sec.settingStr('source', 'NEWEST')},
                   showViewAll=${sec.settingBool('showViewAll', true)},
                   catId=${sec.settingLong('categoryId')},
-                  viewAllHref=${(source == 'CATEGORY' or catId != null) and catId != null and source != 'OFFERS' ? '/s/' + slug + '/catalog?category=' + catId : '/s/' + slug + '/catalog'},
+                  brandName=${sec.settingStr('brandName', '')},
+                  viewAllHref=${(source == 'CATEGORY' and catId != null)
+                      ? '/s/' + slug + '/catalog?category=' + catId
+                      : (source == 'BRAND' and !#strings.isEmpty(brandName)
+                          ? '/s/' + slug + '/catalog?q=' + #uris.escapeQueryParam(brandName)
+                          : '/s/' + slug + '/catalog')},
                   gridProducts=${sec.resolvedProducts != null ? sec.resolvedProducts : products},
                   showFilters=${sec.settingBool('showFilters', true)},
                   gs=${theme != null and theme.globalStyles != null ? theme.globalStyles : null},

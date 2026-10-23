@@ -199,6 +199,7 @@ public class ProductController {
                 .weight(product.getWeight())
                 .isActive(product.getIsActive())
                 .isDraft(product.getIsDraft())
+                .isFeatured(Boolean.TRUE.equals(product.getIsFeatured()))
                 .existingImages(existingImages)
                 .imageOrder(imageOrder)
                 .mainImageRef(mainImageRef)
@@ -246,6 +247,20 @@ public class ProductController {
         } else {
             return "redirect:/dashboard/" + slug + "/products?deactivated=true";
         }
+    }
+
+    @PostMapping("/{id}/featured")
+    public Object toggleFeatured(
+            @PathVariable String slug,
+            @PathVariable Long id,
+            @RequestHeader(value = "X-Requested-With", required = false) String requestedWith,
+            @RequestHeader(value = "Accept", required = false) String accept) {
+        boolean isFeatured = productService.toggleFeatured(id);
+        if ("XMLHttpRequest".equalsIgnoreCase(requestedWith)
+                || (accept != null && accept.contains("application/json"))) {
+            return ResponseEntity.ok(Map.of("success", true, "isFeatured", isFeatured));
+        }
+        return "redirect:/dashboard/" + slug + "/products?" + (isFeatured ? "featured=true" : "unfeatured=true");
     }
 
     @PostMapping("/{id}/delete")

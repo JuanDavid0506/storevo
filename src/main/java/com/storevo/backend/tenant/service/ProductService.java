@@ -47,6 +47,7 @@ public class ProductService {
         draft.setName("");
         draft.setIsActive(false);
         draft.setHasVariants(false);
+        draft.setIsFeatured(false);
         draft.setStock(0);
         draft.setPrice(0.0);
         draft.setWeight(0.0);
@@ -65,6 +66,139 @@ public class ProductService {
         }
         List<Long> categoryIds = categoryService.getCategoryAndDescendantIds(categoryId);
         return productRepository.findActiveProductsByCategoryIds(categoryIds);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Product> getNewestPublicProducts(int limit) {
+        int safeLimit = Math.max(1, Math.min(limit, 24));
+        return productRepository.findActiveNewestProducts(PageRequest.of(0, safeLimit));
+    }
+
+    @Transactional(readOnly = true)
+    public List<Product> getOfferPublicProducts(int limit) {
+        int safeLimit = Math.max(1, Math.min(limit, 24));
+        return productRepository.findActiveOfferProducts(PageRequest.of(0, safeLimit));
+    }
+
+    @Transactional(readOnly = true)
+    public List<Product> getPublicCatalogLimited(Long categoryId, int limit) {
+        int safeLimit = Math.max(1, Math.min(limit, 24));
+        if (categoryId == null) {
+            return getNewestPublicProducts(safeLimit);
+        }
+        List<Long> categoryIds = categoryService.getCategoryAndDescendantIds(categoryId);
+        if (categoryIds == null || categoryIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return productRepository.findActiveProductsByCategoryIds(categoryIds, PageRequest.of(0, safeLimit));
+    }
+
+    @Transactional(readOnly = true)
+    public List<Product> getPublicProductsByBrand(Long brandId, String brandName, int limit) {
+        int safeLimit = Math.max(1, Math.min(limit, 24));
+        String resolvedName = (brandName != null && !brandName.isBlank()) ? brandName.trim() : null;
+        Long resolvedId = brandId;
+
+        if (resolvedId != null) {
+            final Long targetId = resolvedId;
+            Brand b = brandService.getAllBrands().stream()
+                    .filter(item -> targetId.equals(item.getId()))
+                    .findFirst()
+                    .orElse(null);
+            if (b == null || Boolean.FALSE.equals(b.getIsActive())) {
+                return Collections.emptyList();
+            }
+            if (resolvedName == null) {
+                resolvedName = b.getName();
+            }
+        } else if (resolvedName != null) {
+            String targetSlug = BrandService.slugify(resolvedName);
+            final String searchName = resolvedName;
+            Brand b = brandService.getAllBrands().stream()
+                    .filter(item -> targetSlug.equalsIgnoreCase(item.getSlug()) || searchName.equalsIgnoreCase(item.getName()))
+                    .findFirst()
+                    .orElse(null);
+            if (b != null) {
+                if (Boolean.FALSE.equals(b.getIsActive())) {
+                    return Collections.emptyList();
+                }
+                resolvedId = b.getId();
+                resolvedName = b.getName();
+            }
+        }
+
+        if (resolvedId == null && (resolvedName == null || resolvedName.isEmpty())) {
+            return Collections.emptyList();
+        }
+        return productRepository.findActiveProductsByBrand(resolvedId, resolvedName, PageRequest.of(0, safeLimit));
+    }
+
+    @Transactional(readOnly = true)
+    public List<Product> getFeaturedPublicProducts(int limit) {
+        int safeLimit = Math.max(1, Math.min(limit, 24));
+        return productRepository.findActiveFeaturedProducts(PageRequest.of(0, safeLimit));
+    }
+
+    @Transactional(readOnly = true)
+    public List<Product> getManualPublicProductsInOrder(List<Long> orderedIds, int limit) {
+        if (orderedIds == null || orderedIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        int safeLimit = Math.max(1, Math.min(limit, 24));
+        List<Long> uniqueIds = orderedIds.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        if (uniqueIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Product> found = productRepository.findActivePublicProductsByIdIn(uniqueIds);
+        Map<Long, Product> byId = new HashMap<>();
+        for (Product p : found) {
+            if (p != null && p.getId() != null) {
+                byId.put(p.getId(), p);
+            }
+        }
+
+        List<Product> ordered = new ArrayList<>();
+        for (Long id : uniqueIds) {
+            Product p = byId.get(id);
+            if (p != null) {
+                ordered.add(p);
+                if (ordered.size() >= safeLimit) break;
+            }
+        }
+        return ordered;
+    }
+
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> searchProductsForEditorPicker(String query, List<Long> specificIds, int limit) {
+        List<Product> results;
+        if (specificIds != null && !specificIds.isEmpty()) {
+            results = getManualPublicProductsInOrder(specificIds, Math.min(specificIds.size(), 50));
+        } else {
+            int safeLimit = Math.max(1, Math.min(limit, 30));
+            String cleanQuery = (query != null && !query.isBlank()) ? query.trim() : null;
+            results = productRepository.searchActiveProductsForPicker(cleanQuery, PageRequest.of(0, safeLimit));
+        }
+
+        List<Map<String, Object>> items = new ArrayList<>();
+        for (Product p : results) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", p.getId());
+            item.put("name", p.getName() != null ? p.getName() : "");
+            item.put("sku", p.getSku() != null ? p.getSku() : "");
+            item.put("brand", p.getBrand() != null ? p.getBrand() : "");
+            item.put("price", p.getPrice() != null ? p.getPrice() : 0.0);
+            item.put("discountPrice", p.getDiscountPrice());
+            item.put("isFeatured", Boolean.TRUE.equals(p.getIsFeatured()));
+            String img = p.getMainImageThumbnailUrl() != null ? p.getMainImageThumbnailUrl()
+                    : (p.getMainImageUrl() != null ? p.getMainImageUrl() : "/img/placeholder.jpg");
+            item.put("imageUrl", img);
+            items.add(item);
+        }
+        return items;
     }
 
     @Transactional(readOnly = true)
@@ -136,6 +270,11 @@ public class ProductService {
         product.setHasVariants(dto.getHasVariants() != null ? dto.getHasVariants() : false);
         product.setIsMadeToOrder(dto.getIsMadeToOrder() != null ? dto.getIsMadeToOrder() : false);
         product.setIsDraft(dto.getIsDraft() != null ? dto.getIsDraft() : false);
+        if (dto.getIsFeatured() != null) {
+            product.setIsFeatured(dto.getIsFeatured());
+        } else if (isNew || product.getIsFeatured() == null) {
+            product.setIsFeatured(false);
+        }
 
         if (dto.getCategoryId() != null) {
             Category category = categoryRepository.findById(dto.getCategoryId())
@@ -169,9 +308,6 @@ public class ProductService {
         if (!product.getHasVariants()) {
             product.setPrice(dto.getPrice() != null ? dto.getPrice() : 0.0);
             product.setDiscountPrice(dto.getDiscountPrice());
-            // Bajo pedido: el stock no significa nada (nunca se valida ni se
-            // descuenta), así que lo dejamos en 0 sin importar qué haya mandado el
-            // formulario — el campo ni siquiera se muestra en ese caso.
             product.setStock(Boolean.TRUE.equals(product.getIsMadeToOrder()) ? 0 : (dto.getStock() != null ? dto.getStock() : 0));
             product.setWeight(dto.getWeight());
 
@@ -276,10 +412,6 @@ public class ProductService {
                 }
             }
 
-            // =========================================================================
-            // SOLUCIÓN HIBERNATE: En lugar de destruir y recrear, actualizamos y fusionamos
-            // las Opciones para no perder las referencias con las Variantes existentes.
-            // =========================================================================
             Map<String, ProductOption> existingOptionsMap = new HashMap<>();
             if (product.getOptions() != null) {
                 for (ProductOption opt : product.getOptions()) {
@@ -335,7 +467,6 @@ public class ProductService {
             }
             product.getOptions().clear();
             product.getOptions().addAll(newOptionsList);
-            // =========================================================================
 
             List<ProductVariant> newVariantsList = new ArrayList<>();
             double minPrice = Double.MAX_VALUE;
@@ -477,6 +608,15 @@ public class ProductService {
         return product.getIsActive();
     }
 
+    @Transactional
+    public boolean toggleFeatured(Long id) {
+        Product product = getProductById(id);
+        boolean nextState = !Boolean.TRUE.equals(product.getIsFeatured());
+        product.setIsFeatured(nextState);
+        productRepository.save(product);
+        return nextState;
+    }
+
     public Page<Product> searchProducts(String q, Long categoryId, Boolean isActive, Boolean isDeleted, Boolean isDraft, String quick, String sortStr, Pageable pageable) {
         Sort sort;
         switch (sortStr) {
@@ -518,6 +658,12 @@ public class ProductService {
                 case "delete":
                     p.setIsDeleted(true);
                     p.setIsActive(false);
+                    break;
+                case "feature":
+                    p.setIsFeatured(true);
+                    break;
+                case "unfeature":
+                    p.setIsFeatured(false);
                     break;
             }
         }

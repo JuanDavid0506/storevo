@@ -82,11 +82,33 @@ public class StoreFrontController {
             theme = storeThemeService.getRawThemeConfig(store, isDraft);
             model.addAttribute("theme", theme);
         }
+        String activePageKey = (String) model.getAttribute("editorPageKey");
         if (theme != null && store != null) {
             storeThemeService.hydrateThemeSections(store, theme);
         }
-        List<Product> allForFilters = (pageProducts != null && !pageProducts.isEmpty())
-                ? pageProducts : productService.getPublicCatalog(null);
+        LinkedHashMap<Long, Product> filterProductsMap = new LinkedHashMap<>();
+        if (pageProducts != null) {
+            for (Product p : pageProducts) {
+                if (p != null && p.getId() != null) filterProductsMap.put(p.getId(), p);
+            }
+        }
+        if (theme != null) {
+            List<com.storevo.backend.tenant.dto.ThemeSectionDto> secs = activePageKey != null
+                    ? theme.getPageSections(activePageKey)
+                    : theme.getSections();
+            if (secs != null) {
+                for (var sec : secs) {
+                    if (sec != null && sec.getResolvedProducts() != null) {
+                        for (Product rp : sec.getResolvedProducts()) {
+                            if (rp != null && rp.getId() != null) filterProductsMap.putIfAbsent(rp.getId(), rp);
+                        }
+                    }
+                }
+            }
+        }
+        List<Product> allForFilters = !filterProductsMap.isEmpty()
+                ? new ArrayList<>(filterProductsMap.values())
+                : productService.getPublicCatalog(null);
         model.addAttribute("allCatalogProducts", allForFilters);
         model.addAttribute("catalogFilterDataJson",
                 storeThemeService.buildCatalogFilterDataJson(store, theme, allForFilters));

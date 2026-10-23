@@ -85,6 +85,10 @@ public class Product {
     @Builder.Default
     private Boolean isMadeToOrder = false;
 
+    @Column(name = "is_featured", nullable = false, columnDefinition = "boolean default false")
+    @Builder.Default
+    private Boolean isFeatured = false;
+
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("sortPosition ASC")
     @Builder.Default

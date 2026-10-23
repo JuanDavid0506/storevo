@@ -122,6 +122,9 @@ public class StoreThemeService {
     private static final Set<String> ALLOWED_GALLERY_ASPECTS = Set.of("square", "portrait", "landscape");
     private static final Set<String> ALLOWED_BRAND_DISPLAY_MODES = Set.of("grid", "carousel");
     private static final Set<String> ALLOWED_BRAND_LOGO_SIZES = Set.of("sm", "md", "lg");
+    private static final Set<String> ALLOWED_PRODUCT_GRID_SOURCES = Set.of(
+            "NEWEST", "OFFERS", "CATEGORY", "BRAND", "MANUAL", "FEATURED"
+    );
     private static final java.util.regex.Pattern YOUTUBE_ID_PATTERN = java.util.regex.Pattern.compile(
             "(?:youtube(?:-nocookie)?\\.com/(?:watch\\?(?:.*&)?v=|embed/|shorts/|live/)|youtu\\.be/)([a-zA-Z0-9_-]{11})"
     );
@@ -199,21 +202,56 @@ public class StoreThemeService {
         }
     }
 
+    public Set<Long> getCustomCategoryIds(Store store) {
+        Set<Long> result = new HashSet<>();
+        if (store == null) return result;
+        ThemeConfigDto config = getRawThemeConfig(store, true);
+        if (config != null && config.getPages() != null) {
+            for (Map.Entry<String, List<ThemeSectionDto>> entry : config.getPages().entrySet()) {
+                String key = entry.getKey();
+                List<ThemeSectionDto> secs = entry.getValue();
+                if (key != null && key.startsWith("category:") && secs != null && !secs.isEmpty()) {
+                    try {
+                        Long catId = Long.parseLong(key.substring(9).trim());
+                        result.add(catId);
+                    } catch (NumberFormatException ignored) {}
+                }
+            }
+        }
+        return result;
+    }
+
     public void hydrateThemeSections(Store store, ThemeConfigDto theme) {
+        hydrateThemeSectionsForPage(store, theme, null, null);
+    }
+
+    public void hydrateThemeSectionsForPage(Store store, ThemeConfigDto theme, String activePageKey, List<Product> preloadedProducts) {
         if (theme == null) return;
         if (store != null && store.getSchemaName() != null) {
             TenantContext.setCurrentTenant(store.getSchemaName());
         }
 
-        List<Product> allProducts = productService.getPublicCatalog(null);
+        Map<String, List<Product>> queryCache = new HashMap<>();
         Set<ThemeSectionDto> visited = Collections.newSetFromMap(new IdentityHashMap<>());
+
+        if (activePageKey != null && !activePageKey.isBlank()) {
+            List<ThemeSectionDto> targetSections = theme.getPageSections(activePageKey);
+            if (targetSections != null) {
+                for (ThemeSectionDto sec : targetSections) {
+                    if (visited.add(sec)) {
+                        hydrateSingleSection(sec, preloadedProducts, queryCache);
+                    }
+                }
+            }
+            return;
+        }
 
         if (theme.getPages() != null) {
             for (List<ThemeSectionDto> pageSections : theme.getPages().values()) {
                 if (pageSections != null) {
                     for (ThemeSectionDto sec : pageSections) {
                         if (visited.add(sec)) {
-                            hydrateSingleSection(sec, allProducts);
+                            hydrateSingleSection(sec, preloadedProducts, queryCache);
                         }
                     }
                 }
@@ -224,7 +262,7 @@ public class StoreThemeService {
                 if (cp != null && cp.getSections() != null) {
                     for (ThemeSectionDto sec : cp.getSections()) {
                         if (visited.add(sec)) {
-                            hydrateSingleSection(sec, allProducts);
+                            hydrateSingleSection(sec, preloadedProducts, queryCache);
                         }
                     }
                 }
@@ -233,18 +271,21 @@ public class StoreThemeService {
         if (theme.getSections() != null) {
             for (ThemeSectionDto sec : theme.getSections()) {
                 if (visited.add(sec)) {
-                    hydrateSingleSection(sec, allProducts);
+                    hydrateSingleSection(sec, preloadedProducts, queryCache);
                 }
             }
         }
     }
 
-    private void hydrateSingleSection(ThemeSectionDto section, List<Product> allProducts) {
+    private void hydrateSingleSection(ThemeSectionDto section, List<Product> preloadedProducts, Map<String, List<Product>> queryCache) {
         if (section == null || !Boolean.TRUE.equals(section.getEnabled())) return;
         if ("brand_carousel".equalsIgnoreCase(section.getType())
                 && "AUTO".equalsIgnoreCase(section.settingStr("source", "MANUAL"))) {
+            List<Product> baseProducts = preloadedProducts != null
+                    ? preloadedProducts
+                    : queryCache.computeIfAbsent("ALL_CATALOG", k -> productService.getPublicCatalog(null));
             TreeMap<String, String> brandsByName = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-            for (Product p : allProducts) {
+            for (Product p : baseProducts) {
                 String b = p.getBrand() == null ? "" : p.getBrand().trim();
                 if (!b.isEmpty()) brandsByName.putIfAbsent(b, b);
             }
@@ -257,7 +298,7 @@ public class StoreThemeService {
                         .forEach(b -> bySlug.put(b.getSlug(), b));
                 for (String n : names) {
                     Brand b = bySlug.get(BrandService.slugify(n));
-                    if (b != null && Boolean.FALSE.equals(b.getIsActive())) continue; // oculta desde el dashboard
+                    if (b != null && Boolean.FALSE.equals(b.getIsActive())) continue;
                     visible.add(n);
                     if (b != null && b.getLogoUrl() != null && !b.getLogoUrl().isBlank()) {
                         logos.put(n, b.getLogoUrl());
@@ -271,21 +312,65 @@ public class StoreThemeService {
             return;
         }
         if ("product_grid".equalsIgnoreCase(section.getType())) {
-            String source = section.settingStr("source", "NEWEST");
+            String rawSource = section.settingStr("source", "NEWEST").toUpperCase(Locale.ROOT);
+            String source = ALLOWED_PRODUCT_GRID_SOURCES.contains(rawSource) ? rawSource : "NEWEST";
             Long categoryId = section.settingLong("categoryId");
             int limit = Math.max(1, Math.min(section.settingInt("limit", 8), 24));
 
-            List<Product> candidates;
-            if (("CATEGORY".equalsIgnoreCase(source) || categoryId != null) && categoryId != null && !"OFFERS".equalsIgnoreCase(source)) {
-                candidates = productService.getPublicCatalog(categoryId);
-            } else if ("OFFERS".equalsIgnoreCase(source)) {
-                candidates = allProducts.stream()
-                        .filter(p -> p.getDiscountPrice() != null && p.getDiscountPrice() > 0)
-                        .collect(Collectors.toList());
-            } else {
-                candidates = allProducts;
+            if ("NEWEST".equals(source) && categoryId != null) {
+                source = "CATEGORY";
             }
-            section.setResolvedProducts(candidates.stream().limit(limit).collect(Collectors.toList()));
+
+            List<Product> resolved;
+            switch (source) {
+                case "CATEGORY": {
+                    if (categoryId != null) {
+                        String cacheKey = "CATEGORY:" + categoryId + ":" + limit;
+                        resolved = queryCache.computeIfAbsent(cacheKey,
+                                k -> productService.getPublicCatalogLimited(categoryId, limit));
+                    } else {
+                        String cacheKey = "NEWEST:" + limit;
+                        resolved = queryCache.computeIfAbsent(cacheKey,
+                                k -> productService.getNewestPublicProducts(limit));
+                    }
+                    break;
+                }
+                case "OFFERS": {
+                    String cacheKey = "OFFERS:" + limit;
+                    resolved = queryCache.computeIfAbsent(cacheKey,
+                            k -> productService.getOfferPublicProducts(limit));
+                    break;
+                }
+                case "BRAND": {
+                    Long brandId = section.settingLong("brandId");
+                    String brandName = section.settingStr("brandName", "");
+                    String cacheKey = "BRAND:" + (brandId != null ? brandId : "") + ":" + brandName.toLowerCase(Locale.ROOT) + ":" + limit;
+                    resolved = queryCache.computeIfAbsent(cacheKey,
+                            k -> productService.getPublicProductsByBrand(brandId, brandName, limit));
+                    break;
+                }
+                case "FEATURED": {
+                    String cacheKey = "FEATURED:" + limit;
+                    resolved = queryCache.computeIfAbsent(cacheKey,
+                            k -> productService.getFeaturedPublicProducts(limit));
+                    break;
+                }
+                case "MANUAL": {
+                    List<Long> manualIds = section.settingLongList("productIds");
+                    String cacheKey = "MANUAL:" + manualIds.toString() + ":" + limit;
+                    resolved = queryCache.computeIfAbsent(cacheKey,
+                            k -> productService.getManualPublicProductsInOrder(manualIds, limit));
+                    break;
+                }
+                case "NEWEST":
+                default: {
+                    String cacheKey = "NEWEST:" + limit;
+                    resolved = queryCache.computeIfAbsent(cacheKey,
+                            k -> productService.getNewestPublicProducts(limit));
+                    break;
+                }
+            }
+            section.setResolvedProducts(resolved);
         }
     }
 
@@ -1197,6 +1282,19 @@ public class StoreThemeService {
             s.put("tiktokUrl", normalizeSocialProfileUrl(sec.settingStr("tiktokUrl", ""), "tiktok"));
             s.put("facebookUrl", normalizeSocialProfileUrl(sec.settingStr("facebookUrl", ""), "facebook"));
             s.put("showWhatsapp", sec.settingBool("showWhatsapp", true));
+        } else if ("product_grid".equalsIgnoreCase(type)) {
+            String rawSource = sec.settingStr("source", "NEWEST").toUpperCase(Locale.ROOT);
+            if (!ALLOWED_PRODUCT_GRID_SOURCES.contains(rawSource)) {
+                rawSource = "NEWEST";
+            }
+            s.put("source", rawSource);
+
+            List<Long> cleanIds = sec.settingLongList("productIds");
+            if (cleanIds.size() > 24) {
+                cleanIds = new ArrayList<>(cleanIds.subList(0, 24));
+            }
+            String csvIds = cleanIds.stream().map(String::valueOf).collect(Collectors.joining(","));
+            s.put("productIds", csvIds);
         }
     }
 

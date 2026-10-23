@@ -8,10 +8,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Data
 @Builder
@@ -82,5 +79,36 @@ public class ThemeSectionDto {
             return defaultValue;
         }
         return Boolean.parseBoolean(String.valueOf(settings.get(key)).trim());
+    }
+    public List<Long> settingLongList(String key) {
+        if (settings == null || !settings.containsKey(key) || settings.get(key) == null) {
+            return new ArrayList<>();
+        }
+        Object raw = settings.get(key);
+        List<Long> result = new ArrayList<>();
+        if (raw instanceof Collection<?> col) {
+            for (Object item : col) {
+                if (item == null) continue;
+                try {
+                    long val = Long.parseLong(String.valueOf(item).trim());
+                    if (val > 0 && !result.contains(val)) {
+                        result.add(val);
+                    }
+                } catch (NumberFormatException ignored) {}
+            }
+        } else {
+            String str = String.valueOf(raw).trim();
+            if (!str.isEmpty()) {
+                for (String part : str.split(",")) {
+                    try {
+                        long val = Long.parseLong(part.trim());
+                        if (val > 0 && !result.contains(val)) {
+                            result.add(val);
+                        }
+                    } catch (NumberFormatException ignored) {}
+                }
+            }
+        }
+        return result;
     }
 }

@@ -150,6 +150,16 @@
                                   class="px-2 py-0.5 text-[10px] font-bold uppercase bg-slate-800 text-slate-500 rounded border border-slate-700">
                                 Oculta
                             </span>
+                            <span th:if="${customDesignedCategoryIds != null and customDesignedCategoryIds.contains(cat.id)}"
+                                  title="Esta categoría tiene un diseño propio configurado en el editor visual"
+                                  class="px-2 py-0.5 text-[10px] font-bold bg-indigo-500/15 text-indigo-300 rounded border border-indigo-500/30">
+                                Diseño propio
+                            </span>
+                            <span th:unless="${customDesignedCategoryIds != null and customDesignedCategoryIds.contains(cat.id)}"
+                                  title="Esta categoría hereda automáticamente el diseño del Catálogo General"
+                                  class="px-2 py-0.5 text-[10px] font-medium bg-slate-800/80 text-slate-400 rounded border border-slate-700">
+                                Hereda catálogo
+                            </span>
                         </div>
                         <p class="text-sm text-slate-500 mt-0.5 truncate" th:text="${cat.description != null and !#strings.isEmpty(cat.description) ? cat.description : 'Categoría Principal'}"></p>
                     </div>
@@ -157,6 +167,18 @@
 
                 <!-- Acciones Nivel 1 -->
                 <div class="flex items-center gap-1.5 pl-12 sm:pl-0 flex-wrap flex-shrink-0" onclick="event.stopPropagation();">
+                    <a th:href="@{/dashboard/{slug}/template(slug=${slug}, page=${'category:' + cat.id})}"
+                       class="text-xs font-bold px-2.5 py-1.5 bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20 rounded-lg transition-colors border border-indigo-500/25 flex items-center gap-1"
+                       title="Diseñar esta categoría en el editor visual">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path></svg>
+                        <span>Diseñar esta categoría</span>
+                    </a>
+                    <a th:href="@{/s/{slug}/catalog(slug=${slug}, category=${cat.id})}"
+                       target="_blank" rel="noopener"
+                       class="p-1.5 text-slate-400 hover:text-emerald-400 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors"
+                       title="Ver en tienda">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                    </a>
                     <form th:action="@{|/dashboard/${slug}/categories/${cat.id}/reorder?direction=up|}" method="post" class="m-0 p-0 cat-state-form">
                         <button type="submit" th:disabled="${catStat.first}" class="p-1.5 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-slate-800" title="Subir">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.5 15.75l7.5-7.5 7.5 7.5"></path></svg>
@@ -226,10 +248,26 @@
 
                                 <span th:if="${sub.showInNav}" class="px-2 py-0.5 text-[10px] uppercase font-bold bg-blue-500/10 text-blue-400 rounded border border-blue-500/20">Menú Navbar</span>
                                 <span th:unless="${sub.isActive}" class="px-2 py-0.5 text-[10px] uppercase font-bold bg-slate-800 text-slate-500 rounded border border-slate-700">Inactiva</span>
+                                <span th:if="${customDesignedCategoryIds != null and customDesignedCategoryIds.contains(sub.id)}"
+                                      class="px-2 py-0.5 text-[10px] font-bold bg-indigo-500/15 text-indigo-300 rounded border border-indigo-500/30">Diseño propio</span>
+                                <span th:unless="${customDesignedCategoryIds != null and customDesignedCategoryIds.contains(sub.id)}"
+                                      class="px-2 py-0.5 text-[10px] font-medium bg-slate-800/80 text-slate-400 rounded border border-slate-700">Hereda catálogo</span>
                             </div>
 
                             <!-- Acciones Nivel 2 -->
-                            <div class="flex items-center gap-1.5">
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                <a th:href="@{/dashboard/{slug}/template(slug=${slug}, page=${'category:' + sub.id})}"
+                                   class="text-[10px] font-bold px-2.5 py-1.5 bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20 rounded-lg transition-colors border border-indigo-500/25 flex items-center gap-1"
+                                   title="Diseñar esta categoría">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path></svg>
+                                    <span class="hidden sm:inline">Diseñar esta categoría</span>
+                                </a>
+                                <a th:href="@{/s/{slug}/catalog(slug=${slug}, category=${sub.id})}"
+                                   target="_blank" rel="noopener"
+                                   class="p-1.5 text-slate-400 hover:text-emerald-400 transition-colors"
+                                   title="Ver en tienda">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                                </a>
                                 <form th:action="@{|/dashboard/${slug}/categories/${sub.id}/reorder?direction=up|}" method="post" class="m-0 p-0 cat-state-form">
                                     <button type="submit" th:disabled="${subStat.first}" class="p-1.5 text-slate-400 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title="Subir">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.5 15.75l7.5-7.5 7.5 7.5"></path></svg>
@@ -294,10 +332,26 @@
                                     <span th:if="${subsub.showInNav}" class="px-2 py-0.5 text-[10px] uppercase font-bold bg-blue-500/10 text-blue-400 rounded border border-blue-500/20">Menú Navbar</span>
                                     <span th:unless="${subsub.isActive}" class="px-2 py-0.5 text-[10px] uppercase font-bold bg-slate-800 text-slate-500 rounded border border-slate-700">Inactiva</span>
                                     <span class="px-2 py-0.5 text-[10px] uppercase font-bold bg-slate-800/50 text-slate-600 rounded border border-slate-800" title="Ya no admite más subcategorías (límite de 3 niveles)">Nivel máximo</span>
+                                    <span th:if="${customDesignedCategoryIds != null and customDesignedCategoryIds.contains(subsub.id)}"
+                                          class="px-2 py-0.5 text-[10px] font-bold bg-indigo-500/15 text-indigo-300 rounded border border-indigo-500/30">Diseño propio</span>
+                                    <span th:unless="${customDesignedCategoryIds != null and customDesignedCategoryIds.contains(subsub.id)}"
+                                          class="px-2 py-0.5 text-[10px] font-medium bg-slate-800/80 text-slate-400 rounded border border-slate-700">Hereda catálogo</span>
                                 </div>
 
                                 <!-- Acciones Nivel 3 -->
-                                <div class="flex items-center gap-1.5">
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    <a th:href="@{/dashboard/{slug}/template(slug=${slug}, page=${'category:' + subsub.id})}"
+                                       class="text-[10px] font-bold px-2.5 py-1.5 bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20 rounded-lg transition-colors border border-indigo-500/25 flex items-center gap-1"
+                                       title="Diseñar esta categoría">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path></svg>
+                                        <span class="hidden sm:inline">Diseñar esta categoría</span>
+                                    </a>
+                                    <a th:href="@{/s/{slug}/catalog(slug=${slug}, category=${subsub.id})}"
+                                       target="_blank" rel="noopener"
+                                       class="p-1.5 text-slate-400 hover:text-emerald-400 transition-colors"
+                                       title="Ver en tienda">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                                    </a>
                                     <form th:action="@{|/dashboard/${slug}/categories/${subsub.id}/reorder?direction=up|}" method="post" class="m-0 p-0 cat-state-form">
                                         <button type="submit" th:disabled="${ssStat.first}" class="p-1.5 text-slate-400 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title="Subir">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.5 15.75l7.5-7.5 7.5 7.5"></path></svg>

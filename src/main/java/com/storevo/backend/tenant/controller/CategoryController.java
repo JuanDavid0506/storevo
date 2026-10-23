@@ -26,6 +26,7 @@ public class CategoryController {
 
     // Inyectamos el repositorio para el endpoint de guardado rápido (AJAX)
     private final CategoryRepository categoryRepository;
+    private final com.storevo.backend.tenant.service.StoreThemeService storeThemeService;
 
     @ModelAttribute
     public void setupTenant(@PathVariable String slug, Model model, HttpServletRequest request) {
@@ -39,10 +40,16 @@ public class CategoryController {
     }
 
     @GetMapping
-    public String listCategories(Model model) {
+    public String listCategories(HttpServletRequest request, Model model) {
+        Store store = (Store) request.getAttribute("currentStore");
+        java.util.Set<Long> customDesignedCategoryIds = storeThemeService.getCustomCategoryIds(store);
+        if (store != null) {
+            TenantContext.setCurrentTenant(store.getSchemaName());
+        }
         // Solo mandamos la raíz, Thymeleaf se encarga de dibujar las hijas automáticamente
         model.addAttribute("rootCategories", categoryService.getRootCategories());
         model.addAttribute("productCounts", categoryService.getProductCountsByCategory());
+        model.addAttribute("customDesignedCategoryIds", customDesignedCategoryIds);
         model.addAttribute("pageTitle", "Organización del Catálogo");
         return "dashboard/categories/index";
     }
