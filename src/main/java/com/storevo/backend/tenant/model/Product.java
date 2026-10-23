@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -46,6 +48,14 @@ public class Product {
 
     @Column(length = 100)
     private String brand;
+
+    // Marca normalizada. La columna "brand" se mantiene sincronizada con su nombre
+    // para que tarjetas, filtros y buscador sigan funcionando sin cambios.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "brand_id")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private Brand brandRef;
 
     @Column(length = 50)
     private String sku;

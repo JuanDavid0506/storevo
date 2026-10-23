@@ -125,6 +125,13 @@
                         <label class="block text-sm font-medium text-slate-300 mb-1.5">Descripción <span class="text-slate-600 text-xs font-normal">(opcional)</span></label>
                         <textarea th:field="*{description}" rows="4" placeholder="Materiales, cuidados, qué lo hace especial..." class="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-700 focus:outline-none focus:ring-2 focus:ring-storevo-500/40 focus:border-storevo-500/60 transition resize-y text-sm"></textarea>
                     </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-1.5">Marca <span class="text-slate-600 text-xs font-normal">(opcional) — escribe una nueva o elige una existente</span></label>
+                        <input type="text" th:field="*{brand}" id="input-brand" list="brand-options" maxlength="100" autocomplete="off" placeholder="Ej: Nike" class="w-full lg:w-1/2 px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm placeholder-slate-700 focus:outline-none focus:ring-2 focus:ring-storevo-500/40 transition">
+                        <datalist id="brand-options">
+                            <option th:each="b : ${brands}" th:value="${b.name}"></option>
+                        </datalist>
+                    </div>
                 </div>
             </section>
 

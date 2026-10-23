@@ -17,7 +17,18 @@ CREATE TABLE categories (
                             FOREIGN KEY (parent_id) REFERENCES categories(id) ON DELETE SET NULL
 );
 
+CREATE TABLE brands (
+                        id         BIGINT AUTO_INCREMENT PRIMARY KEY,
+                        name       VARCHAR(100) NOT NULL,
+                        slug       VARCHAR(120) NOT NULL,
+                        logo_url   VARCHAR(500),
+                        is_active  BOOLEAN      NOT NULL DEFAULT TRUE,
+                        created_at TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE KEY uk_brands_slug (slug)
+);
+
 -- Se añade has_variants e is_made_to_order para compatibilidad
+
 CREATE TABLE products (
                           id               BIGINT AUTO_INCREMENT PRIMARY KEY,
                           category_id      BIGINT,
@@ -27,6 +38,7 @@ CREATE TABLE products (
                           discount_price   DOUBLE          DEFAULT 0.00,
                           stock            INT             NOT NULL DEFAULT 0,
                           brand            VARCHAR(100),
+                          brand_id         BIGINT,
                           sku              VARCHAR(50),
                           weight           DOUBLE,
                           has_variants     BOOLEAN         NOT NULL DEFAULT FALSE, -- MODO HÍBRIDO
@@ -37,7 +49,9 @@ CREATE TABLE products (
                           is_draft         BOOLEAN         NOT NULL DEFAULT FALSE,
                           created_at       TIMESTAMP       DEFAULT CURRENT_TIMESTAMP,
                           updated_at       TIMESTAMP       DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                          FOREIGN KEY (category_id) REFERENCES categories(id)
+                          FOREIGN KEY (category_id) REFERENCES categories(id),
+                          FOREIGN KEY (brand_id) REFERENCES brands(id) ON DELETE SET NULL,
+                          INDEX idx_products_visible (is_deleted, is_active, id)
 );
 
 -- Opciones Relacionales

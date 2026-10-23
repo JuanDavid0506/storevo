@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/dashboard-layout}">
+<head>
+    <title>Marcas</title>
+</head>
+<body>
+<div layout:fragment="content" class="space-y-6">
+
+    <div th:if="${errorMessage}" class="flex items-start gap-3 bg-red-500/10 border border-red-500/30 text-red-300 text-sm font-semibold p-4 rounded-xl">
+        <span th:text="${errorMessage}"></span>
+    </div>
+    <div th:if="${successMessage}" class="flex items-start gap-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-sm font-semibold p-4 rounded-xl">
+        <span th:text="${successMessage}"></span>
+    </div>
+
+    <!-- CABECERA + NUEVA MARCA -->
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div>
+            <h2 class="text-2xl font-bold text-white flex items-center gap-3">
+                Marcas
+                <span class="bg-slate-800 text-storevo-400 text-xs font-black px-2.5 py-1 rounded-full border border-slate-700"
+                      th:text="${#lists.size(brands)}">0</span>
+            </h2>
+            <p class="text-sm text-slate-400 mt-1">Las marcas se crean solas al guardar un producto. Aquí les subes el logo y controlas si aparecen en el carrusel de marcas de tu tienda.</p>
+        </div>
+        <form th:action="@{|/dashboard/${slug}/brands/new|}" method="post" class="flex items-center gap-2">
+            <input type="text" name="name" maxlength="100" required placeholder="Nueva marca (Ej: Nike)"
+                   class="w-full sm:w-64 px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm placeholder-slate-700 focus:outline-none focus:ring-2 focus:ring-storevo-500/40 transition">
+            <button type="submit"
+                    class="bg-storevo-500 hover:bg-storevo-600 text-white font-bold py-2.5 px-5 rounded-xl transition shadow-lg shadow-storevo-500/20 whitespace-nowrap">
+                Agregar
+            </button>
+        </form>
+    </div>
+
+    <!-- ESTADO VACÍO -->
+    <div th:if="${#lists.isEmpty(brands)}"
+         class="bg-slate-900 border border-dashed border-slate-700 rounded-2xl p-10 text-center">
+        <p class="text-slate-300 font-semibold">Aún no tienes marcas</p>
+        <p class="text-sm text-slate-500 mt-1">Escribe una marca al crear un producto, o agrégala aquí arriba.</p>
+    </div>
+
+    <!-- LISTA DE MARCAS -->
+    <div th:if="${not #lists.isEmpty(brands)}" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div th:each="b : ${brands}" class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+
+            <form th:id="${'upd-' + b.id}"
+                  th:action="@{|/dashboard/${slug}/brands/${b.id}/update|}"
+                  method="post" enctype="multipart/form-data" class="space-y-4">
+
+                <div class="flex items-center gap-4">
+                    <div class="w-16 h-16 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center overflow-hidden flex-shrink-0">
+                        <img th:if="${b.logoUrl != null and !#strings.isEmpty(b.logoUrl)}"
+                             th:src="${b.logoUrl}" th:alt="${b.name}" class="max-w-full max-h-full object-contain">
+                        <span th:unless="${b.logoUrl != null and !#strings.isEmpty(b.logoUrl)}"
+                              class="text-xl font-black text-slate-600"
+                              th:text="${#strings.toUpperCase(#strings.substring(b.name, 0, 1))}">M</span>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <input type="text" name="name" th:value="${b.name}" maxlength="100" required
+                               class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-storevo-500/40 transition">
+                        <p class="text-xs text-slate-500 mt-1">
+                            <span th:text="${productCounts.get(b.id) ?: 0}">0</span> producto(s)
+                        </p>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Logo (JPG, PNG o WEBP, máx. 5 MB)</label>
+                    <input type="file" name="logo" accept="image/jpeg,image/png,image/webp"
+                           class="block w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700">
+                </div>
+
+                <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-slate-300">
+                    <label class="inline-flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="isActive" th:checked="${b.isActive}"
+                               class="rounded border-slate-700 bg-slate-900 text-storevo-500">
+                        Visible en el carrusel de marcas
+                    </label>
+                    <label th:if="${b.logoUrl != null and !#strings.isEmpty(b.logoUrl)}"
+                           class="inline-flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="removeLogo"
+                               class="rounded border-slate-700 bg-slate-900 text-storevo-500">
+                        Quitar logo
+                    </label>
+                </div>
+            </form>
+
+            <div class="flex items-center justify-between gap-3 pt-1">
+                <button type="submit" th:attr="form=${'upd-' + b.id}"
+                        class="bg-storevo-500 hover:bg-storevo-600 text-white text-sm font-bold py-2 px-4 rounded-xl transition">
+                    Guardar
+                </button>
+                <form th:action="@{|/dashboard/${slug}/brands/${b.id}/delete|}" method="post"
+                      onsubmit="return confirm('¿Eliminar esta marca? Solo se puede si ningún producto la usa.');">
+                    <button type="submit" class="text-xs font-semibold text-red-400 hover:text-red-300 transition">Eliminar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

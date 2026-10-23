@@ -286,6 +286,7 @@ Storevo.ThemeEditor = {
             description: 'Muestra los logotipos o nombres de las marcas que comercializa tu tienda en cuadrícula o carrusel.',
             defaultSettings: {
                 title: 'Marcas que Comercializamos',
+                source: 'MANUAL',
                 subtitle: 'Productos originales con respaldo y garantía',
                 displayMode: 'grid',
                 logoSize: 'md',
@@ -2605,9 +2606,14 @@ Storevo.ThemeEditor = {
                 return fields;
             }
             case 'brand_carousel': {
+                const isManualBrands = (s) => !s || String(s.source || 'MANUAL').toUpperCase() !== 'AUTO';
                 const brandFields = [
                     { key: 'title', label: 'Título de la sección (Opcional)', type: 'text', placeholder: 'Marcas que Comercializamos' },
                     { key: 'subtitle', label: 'Subtítulo opcional', type: 'text', placeholder: 'Productos originales con respaldo y garantía' },
+                    { key: 'source', label: 'Origen de las marcas', type: 'select', defaultVal: 'MANUAL', options: [
+                            { value: 'MANUAL', label: 'Manual (yo cargo nombre, logo y enlace)' },
+                            { value: 'AUTO', label: 'Automático (marcas de mis productos activos)' }
+                        ]},
                     { key: 'displayMode', label: 'Formato de visualización', type: 'select', defaultVal: 'grid', options: [
                             { value: 'grid', label: 'Cuadrícula adaptable centrada' },
                             { value: 'carousel', label: 'Carrusel deslizable con flechas' }
@@ -2622,10 +2628,10 @@ Storevo.ThemeEditor = {
                 for (let i = 1; i <= 6; i++) {
                     const nameKey = `item${i}Name`;
                     const imgKey = `item${i}ImageUrl`;
-                    const hasBrandData = (s) => Boolean(s && (String(s[nameKey] || '').trim() || String(s[imgKey] || '').trim()));
+                    const hasBrandData = (s) => isManualBrands(s) && Boolean(s && (String(s[nameKey] || '').trim() || String(s[imgKey] || '').trim()));
                     brandFields.push(
-                        { key: nameKey, label: `Marca ${i}: Nombre${i > 4 ? ' (Opcional)' : ''}`, type: 'text', placeholder: `Ej: Marca ${i}` },
-                        { key: imgKey, label: `Marca ${i}: Logotipo (Opcional)`, type: 'image' },
+                        { key: nameKey, label: `Marca ${i}: Nombre${i > 4 ? ' (Opcional)' : ''}`, type: 'text', placeholder: `Ej: Marca ${i}`, showIf: isManualBrands },
+                        { key: imgKey, label: `Marca ${i}: Logotipo (Opcional)`, type: 'image', showIf: isManualBrands },
                         { key: `item${i}LinkUrl`, label: `Marca ${i}: Enlace al hacer clic (Opcional)`, type: 'url', allowEmpty: true, defaultVal: '', showIf: hasBrandData }
                     );
                 }

@@ -33,6 +33,7 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
     private final CategoryService categoryService;
+    private final BrandService brandService;
     private final CloudinaryService cloudinaryService;
 
     @Transactional(readOnly = true)
@@ -116,7 +117,20 @@ public class ProductService {
 
         product.setName(dto.getName());
         product.setDescription(dto.getDescription());
-        product.setBrand(dto.getBrand());
+        // --- MARCA: se normaliza contra la tabla de marcas (Nike = nike = NIKE) ---
+        String rawBrand = dto.getBrand();
+        if ((rawBrand == null || rawBrand.isBlank()) && dto.getAttrKeys() != null && dto.getAttrValues() != null) {
+            for (int i = 0; i < dto.getAttrKeys().size() && i < dto.getAttrValues().size(); i++) {
+                String k = dto.getAttrKeys().get(i);
+                if (k != null && k.trim().equalsIgnoreCase("marca")) {
+                    rawBrand = dto.getAttrValues().get(i);
+                    break;
+                }
+            }
+        }
+        Brand brandEntity = brandService.resolveOrCreate(rawBrand);
+        product.setBrandRef(brandEntity);
+        product.setBrand(brandEntity != null ? brandEntity.getName() : null);
         product.setSku(dto.getSku());
         product.setIsActive(dto.getIsActive() != null ? dto.getIsActive() : false);
         product.setHasVariants(dto.getHasVariants() != null ? dto.getHasVariants() : false);
@@ -139,6 +153,7 @@ public class ProductService {
 
                 String key = (k != null) ? k.trim() : "";
                 String value = (v != null) ? v.trim() : "";
+                if (key.equalsIgnoreCase("marca")) continue; // la marca ya no vive en la ficha técnica
 
                 if (Boolean.TRUE.equals(product.getIsDraft())) {
                     attributes.put(key, value);

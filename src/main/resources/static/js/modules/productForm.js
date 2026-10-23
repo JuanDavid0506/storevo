@@ -3,11 +3,11 @@ window.Storevo = window.Storevo || {};
 Storevo.ProductForm = {
     // --- FICHA TÉCNICA ---
     SPEC_TEMPLATES: {
-        ropa: ['Marca', 'Material', 'Talla', 'Color', 'Género'],
-        calzado: ['Marca', 'Material', 'Talla', 'Color', 'Tipo de suela'],
-        perfume: ['Marca', 'Contenido (ml)', 'Familia olfativa', 'Género'],
-        accesorios: ['Marca', 'Material', 'Color', 'Dimensiones'],
-        tecnologia: ['Marca', 'Modelo', 'Estado', 'Garantía'],
+        ropa: ['Material', 'Talla', 'Color', 'Género'],
+        calzado: ['Material', 'Talla', 'Color', 'Tipo de suela'],
+        perfume: ['Contenido (ml)', 'Familia olfativa', 'Género'],
+        accesorios: ['Material', 'Color', 'Dimensiones'],
+        tecnologia: ['Modelo', 'Estado', 'Garantía'],
         personalizado: []
     },
 

@@ -8,6 +8,7 @@ import com.storevo.backend.tenant.dto.ThemeConfigDto;
 import com.storevo.backend.tenant.dto.ThemeCustomPageDto;
 import com.storevo.backend.tenant.dto.ThemeGlobalStylesDto;
 import com.storevo.backend.tenant.dto.ThemeSectionDto;
+import com.storevo.backend.tenant.model.Brand;
 import com.storevo.backend.tenant.model.Product;
 import com.storevo.backend.tenant.model.ProductOption;
 import com.storevo.backend.tenant.model.ProductOptionValue;
@@ -240,6 +241,35 @@ public class StoreThemeService {
 
     private void hydrateSingleSection(ThemeSectionDto section, List<Product> allProducts) {
         if (section == null || !Boolean.TRUE.equals(section.getEnabled())) return;
+        if ("brand_carousel".equalsIgnoreCase(section.getType())
+                && "AUTO".equalsIgnoreCase(section.settingStr("source", "MANUAL"))) {
+            TreeMap<String, String> brandsByName = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+            for (Product p : allProducts) {
+                String b = p.getBrand() == null ? "" : p.getBrand().trim();
+                if (!b.isEmpty()) brandsByName.putIfAbsent(b, b);
+            }
+            List<String> names = new ArrayList<>(brandsByName.values());
+            Map<String, String> logos = new LinkedHashMap<>();
+            List<String> visible = new ArrayList<>();
+            try {
+                Map<String, Brand> bySlug = new HashMap<>();
+                entityManager.createQuery("SELECT b FROM Brand b", Brand.class).getResultList()
+                        .forEach(b -> bySlug.put(b.getSlug(), b));
+                for (String n : names) {
+                    Brand b = bySlug.get(BrandService.slugify(n));
+                    if (b != null && Boolean.FALSE.equals(b.getIsActive())) continue; // oculta desde el dashboard
+                    visible.add(n);
+                    if (b != null && b.getLogoUrl() != null && !b.getLogoUrl().isBlank()) {
+                        logos.put(n, b.getLogoUrl());
+                    }
+                }
+            } catch (Exception e) {
+                visible = new ArrayList<>(names);
+            }
+            section.setResolvedBrands(visible.size() > 24 ? new ArrayList<>(visible.subList(0, 24)) : visible);
+            section.setResolvedBrandLogos(logos);
+            return;
+        }
         if ("product_grid".equalsIgnoreCase(section.getType())) {
             String source = section.settingStr("source", "NEWEST");
             Long categoryId = section.settingLong("categoryId");
@@ -270,12 +300,29 @@ public class StoreThemeService {
             Map<String, Map<String, Object>> productsMap = new LinkedHashMap<>();
             long fingerprint = 1125899906842597L;
 
+            // Una sola consulta para todos los productos (antes era un find por producto)
+            Map<Long, Product> managedById = new LinkedHashMap<>();
+            if (products != null && !products.isEmpty()) {
+                try {
+                    List<Long> ids = products.stream()
+                            .filter(x -> x != null && x.getId() != null)
+                            .map(Product::getId)
+                            .collect(Collectors.toList());
+                    if (!ids.isEmpty()) {
+                        entityManager.createQuery("SELECT p FROM Product p WHERE p.id IN :ids", Product.class)
+                                .setParameter("ids", ids)
+                                .getResultList()
+                                .forEach(m -> managedById.put(m.getId(), m));
+                    }
+                } catch (Exception ignored) {}
+            }
+
             if (products != null) {
                 for (Product p : products) {
                     if (p == null || p.getId() == null) continue;
                     Product managed = p;
                     try {
-                        Product found = entityManager.find(Product.class, p.getId());
+                        Product found = managedById.get(p.getId());
                         if (found != null) {
                             managed = found;
                             if (found.getImages() != null) {
@@ -1140,6 +1187,7 @@ public class StoreThemeService {
             if (!ALLOWED_BRAND_DISPLAY_MODES.contains(sec.settingStr("displayMode", ""))) {
                 s.put("displayMode", "grid");
             }
+            s.put("source", "AUTO".equalsIgnoreCase(sec.settingStr("source", "MANUAL")) ? "AUTO" : "MANUAL");
             if (!ALLOWED_BRAND_LOGO_SIZES.contains(sec.settingStr("logoSize", ""))) {
                 s.put("logoSize", "md");
             }

@@ -493,10 +493,10 @@ Storevo.ProductWizard = {
             defaultSpecs = ['Material', 'Género', 'Estilo'];
         } else if (templateId === 'perfume') {
             Storevo.VariantBuilder.state.options = [{ name: 'Presentación', values: [] }];
-            defaultSpecs = ['Marca', 'Familia olfativa', 'Volumen'];
+            defaultSpecs = ['Familia olfativa', 'Volumen'];
         } else if (templateId === 'tecnologia') {
             Storevo.VariantBuilder.state.options = [{ name: 'Capacidad', values: [] }, { name: 'Color', values: [] }];
-            defaultSpecs = ['Marca', 'Modelo', 'Garantía', 'Sistema Operativo'];
+            defaultSpecs = ['Modelo', 'Garantía', 'Sistema Operativo'];
         } else if (templateId === 'accesorios') {
             Storevo.VariantBuilder.state.options = [{ name: 'Material', values: [] }, { name: 'Color', values: [] }];
             defaultSpecs = ['Material', 'Género', 'Estilo'];

@@ -3,6 +3,8 @@ package com.storevo.backend.tenant.repository;
 import com.storevo.backend.tenant.model.Product;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Modifying;
+import com.storevo.backend.tenant.model.Brand;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.data.domain.Page;
@@ -22,7 +24,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> findActiveProductsByCategoryIds(@Param("categoryIds") List<Long> categoryIds);
 
     @Query("SELECT p FROM Product p WHERE " +
-            "(:q IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(p.sku) LIKE LOWER(CONCAT('%', :q, '%'))) AND " +
+            "(:q IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(p.sku) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(p.brand) LIKE LOWER(CONCAT('%', :q, '%'))) AND " +
             "(:categoryIds IS NULL OR p.category.id IN :categoryIds) AND " +
             "(:isActive IS NULL OR p.isActive = :isActive) AND " +
             "(p.isDeleted = :isDeleted) AND " +
@@ -42,6 +44,21 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             Pageable pageable);
 
     Optional<Product> findTopByOrderByIdDesc();
+
+    // ===== MARCAS =====
+    @Query("SELECT p.brandRef.id, COUNT(p) FROM Product p WHERE p.isDeleted = false AND p.brandRef IS NOT NULL GROUP BY p.brandRef.id")
+    List<Object[]> countProductsGroupedByBrand();
+
+    @Query("SELECT COUNT(p) FROM Product p WHERE p.brandRef.id = :brandId AND p.isDeleted = false")
+    long countActiveByBrand(@Param("brandId") Long brandId);
+
+    @Modifying
+    @Query("UPDATE Product p SET p.brand = :name WHERE p.brandRef = :brand")
+    int syncBrandName(@Param("brand") Brand brand, @Param("name") String name);
+
+    @Modifying
+    @Query("UPDATE Product p SET p.brand = NULL, p.brandRef = NULL WHERE p.brandRef = :brand")
+    int clearBrand(@Param("brand") Brand brand);
 
     List<Product> findByCategoryId(Long categoryId);
 

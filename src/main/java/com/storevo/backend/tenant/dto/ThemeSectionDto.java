@@ -37,6 +37,15 @@ public class ThemeSectionDto {
     @Builder.Default
     private List<Product> resolvedProducts = new ArrayList<>();
 
+    // Nombres de marcas resueltos en tiempo de ejecución (carrusel de marcas automático)
+    @JsonIgnore
+    @Builder.Default
+    private List<String> resolvedBrands = new ArrayList<>();
+
+    @JsonIgnore
+    @Builder.Default
+    private Map<String, String> resolvedBrandLogos = new LinkedHashMap<>();
+
     public String settingStr(String key, String defaultValue) {
         if (settings == null || !settings.containsKey(key) || settings.get(key) == null) {
             return defaultValue;

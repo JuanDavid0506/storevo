@@ -8,6 +8,7 @@ import com.storevo.backend.tenant.dto.ProductDto;
 import com.storevo.backend.tenant.dto.TemplateRecommendationResponse;
 import com.storevo.backend.tenant.model.Product;
 import com.storevo.backend.tenant.model.ProductImage;
+import com.storevo.backend.tenant.service.BrandService;
 import com.storevo.backend.tenant.service.CategoryService;
 import com.storevo.backend.tenant.service.ProductService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -40,7 +41,7 @@ public class ProductController {
     private final StoreSettingsService storeSettingsService;
     private final ObjectMapper objectMapper;
     private final TemplateRecommendationService templateRecommendationService;
-
+    private final BrandService brandService;
     @ModelAttribute
     public void setupTenant(@PathVariable String slug, Model model, HttpServletRequest request) {
         Store store = (Store) request.getAttribute("currentStore");
@@ -67,6 +68,7 @@ public class ProductController {
 
         model.addAttribute("product", dto);
         model.addAttribute("categories", categoryService.getAllCategories());
+        model.addAttribute("brands", brandService.getAllBrands());
         model.addAttribute("pageTitle", "Nuevo Producto");
         return "dashboard/products/form";
     }
@@ -209,6 +211,7 @@ public class ProductController {
 
         model.addAttribute("product", dto);
         model.addAttribute("categories", categoryService.getAllCategories());
+        model.addAttribute("brands", brandService.getAllBrands());
         model.addAttribute("pageTitle", "Editar Producto");
         return "dashboard/products/form";
     }
