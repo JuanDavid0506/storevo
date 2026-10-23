@@ -317,6 +317,28 @@ public class StoreThemeService {
             section.setResolvedBrandLogos(logos);
             return;
         }
+        if ("spotlight_product".equalsIgnoreCase(section.getType())) {
+            String rawProdId = section.settingStr("productId", "");
+            Long targetId = section.settingLong("productId");
+            List<Product> matched = new ArrayList<>();
+            try {
+                if (targetId != null && targetId > 0) {
+                    Product found = productService.getProductById(targetId);
+                    if (found != null && Boolean.TRUE.equals(found.getIsActive()) && !Boolean.TRUE.equals(found.getIsDeleted()) && !Boolean.TRUE.equals(found.getIsDraft())) {
+                        matched.add(found);
+                    }
+                } else if ("__offer__".equalsIgnoreCase(rawProdId)) {
+                    matched.addAll(productService.getOfferPublicProducts(1));
+                }
+                if (matched.isEmpty()) {
+                    matched.addAll(productService.getNewestPublicProducts(1));
+                }
+            } catch (Exception ignored) {
+                matched.addAll(productService.getNewestPublicProducts(1));
+            }
+            section.setResolvedProducts(matched);
+            return;
+        }
         if ("product_grid".equalsIgnoreCase(section.getType())) {
             String rawSource = section.settingStr("source", "NEWEST").toUpperCase(Locale.ROOT);
             String source = ALLOWED_PRODUCT_GRID_SOURCES.contains(rawSource) ? rawSource : "NEWEST";

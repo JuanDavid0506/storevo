@@ -855,6 +855,11 @@ video {
   margin-right: 1rem;
 }
 
+.mx-6 {
+  margin-left: 1.5rem;
+  margin-right: 1.5rem;
+}
+
 .mx-auto {
   margin-left: auto;
   margin-right: auto;
@@ -868,11 +873,6 @@ video {
 .my-4 {
   margin-top: 1rem;
   margin-bottom: 1rem;
-}
-
-.mx-6 {
-  margin-left: 1.5rem;
-  margin-right: 1.5rem;
 }
 
 .-mr-4 {
@@ -1240,6 +1240,10 @@ video {
   max-height: 100%;
 }
 
+.min-h-\[1\.35rem\] {
+  min-height: 1.35rem;
+}
+
 .min-h-\[340px\] {
   min-height: 340px;
 }
@@ -1258,10 +1262,6 @@ video {
 
 .min-h-screen {
   min-height: 100vh;
-}
-
-.min-h-\[1\.35rem\] {
-  min-height: 1.35rem;
 }
 
 .w-1 {
@@ -3085,6 +3085,10 @@ video {
   line-height: 1.25;
 }
 
+.tracking-normal {
+  letter-spacing: 0em;
+}
+
 .tracking-tight {
   letter-spacing: -0.025em;
 }
@@ -3099,10 +3103,6 @@ video {
 
 .tracking-widest {
   letter-spacing: 0.1em;
-}
-
-.tracking-normal {
-  letter-spacing: 0em;
 }
 
 .text-amber-200 {
@@ -3419,6 +3419,10 @@ video {
   opacity: 0.25;
 }
 
+.opacity-35 {
+  opacity: 0.35;
+}
+
 .opacity-40 {
   opacity: 0.4;
 }
@@ -3457,10 +3461,6 @@ video {
 
 .opacity-95 {
   opacity: 0.95;
-}
-
-.opacity-35 {
-  opacity: 0.35;
 }
 
 .shadow {
@@ -4092,12 +4092,12 @@ video {
   background-color: rgb(255 255 255 / var(--tw-bg-opacity, 1));
 }
 
-.hover\:bg-white\/20:hover {
-  background-color: rgb(255 255 255 / 0.2);
-}
-
 .hover\:bg-white\/15:hover {
   background-color: rgb(255 255 255 / 0.15);
+}
+
+.hover\:bg-white\/20:hover {
+  background-color: rgb(255 255 255 / 0.2);
 }
 
 .hover\:from-storevo-500:hover {

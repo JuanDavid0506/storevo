@@ -1208,9 +1208,9 @@
                   customTitle=${sec.settingStr('customTitle', '')},
                   customSubtitle=${sec.settingStr('customSubtitle', '')},
                   imageSide=${sec.settingStr('imageSide', 'left')},
-                  matchedList=${new java.util.ArrayList()}"
+                  matchedList=${sec.resolvedProducts != null and not #lists.isEmpty(sec.resolvedProducts) ? sec.resolvedProducts : new java.util.ArrayList()}"
          class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-    <th:block th:if="${products != null and not #lists.isEmpty(products)}">
+    <th:block th:if="${#lists.isEmpty(matchedList) and products != null and not #lists.isEmpty(products)}">
         <th:block th:each="cand : ${products}">
             <th:block th:if="${targetId != null and cand.id == targetId and matchedList.isEmpty()}"
                       th:with="ign=${matchedList.add(cand)}"></th:block>
@@ -1300,7 +1300,7 @@
                    cols=${sec.settingStr('columns', '4')},
                    gridColsClass=${cols == '3' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4'},
                    displayCats=${not #lists.isEmpty(navCategories) ? navCategories : categories},
-                   catImgMap=${new java.util.HashMap()}">
+                   catImgMap=${categoryImageMap != null ? new java.util.HashMap(categoryImageMap) : new java.util.HashMap()}">
     <section th:if="${not #lists.isEmpty(displayCats) or (isDraftPreview == true)}"
              class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <th:block th:if="${products != null}" th:each="prod : ${products}">
@@ -1310,6 +1310,8 @@
                           th:with="ign=${catImgMap.put(prod.category.id, pImg)}"></th:block>
                 <th:block th:if="${prod.category.parentCategory != null and !catImgMap.containsKey(prod.category.parentCategory.id)}"
                           th:with="ign2=${catImgMap.put(prod.category.parentCategory.id, pImg)}"></th:block>
+                <th:block th:if="${prod.category.parentCategory != null and prod.category.parentCategory.parentCategory != null and !catImgMap.containsKey(prod.category.parentCategory.parentCategory.id)}"
+                          th:with="ign3=${catImgMap.put(prod.category.parentCategory.parentCategory.id, pImg)}"></th:block>
             </th:block>
         </th:block>
         <div class="text-center mb-8">

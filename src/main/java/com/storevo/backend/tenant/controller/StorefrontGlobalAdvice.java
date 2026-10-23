@@ -95,9 +95,10 @@ public class StorefrontGlobalAdvice {
         // 2. Bajar el switch: Cambiar al esquema del Tenant
         TenantContext.setCurrentTenant(store.getSchemaName());
 
-        // 3. Consultar base de datos del TENANT para Navbar y Colecciones
+        // 3. Consultar base de datos del TENANT para Navbar y Colecciones (con fotos en los 3 niveles)
         model.addAttribute("categories", categoryService.getAllCategories());
         model.addAttribute("navCategories", categoryService.getNavCategories());
+        model.addAttribute("categoryImageMap", categoryService.getCategoryImagesMap());
 
         // 4. Contadores de Bolsa y Favoritos del visitante
         model.addAttribute("cartCount", cartManager.getCartCount(guestId));

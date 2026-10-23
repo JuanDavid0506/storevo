@@ -495,7 +495,7 @@
 <div id="storevo-navbar-advanced-bridge" class="hidden"
      th:with="gs=${theme != null and theme.globalStyles != null ? theme.globalStyles : null},
               allCats=${categories != null and not #lists.isEmpty(categories) ? categories : navCategories},
-              catImgMap=${new java.util.HashMap()},
+              catImgMap=${categoryImageMap != null ? new java.util.HashMap(categoryImageMap) : new java.util.HashMap()},
               waRaw=${settings != null and settings.whatsapp != null ? #strings.replace(#strings.replace(#strings.replace(settings.whatsapp, ' ', ''), '+', ''), '-', '') : ''},
               waPhone=${#strings.length(waRaw) == 10 ? '57' + waRaw : waRaw}"
      th:attr="data-slug=${slug},
@@ -519,6 +519,8 @@
                       th:with="ign=${catImgMap.put(prod.category.id, pImg)}"></th:block>
             <th:block th:if="${prod.category.parentCategory != null and !catImgMap.containsKey(prod.category.parentCategory.id)}"
                       th:with="ign2=${catImgMap.put(prod.category.parentCategory.id, pImg)}"></th:block>
+            <th:block th:if="${prod.category.parentCategory != null and prod.category.parentCategory.parentCategory != null and !catImgMap.containsKey(prod.category.parentCategory.parentCategory.id)}"
+                      th:with="ign3=${catImgMap.put(prod.category.parentCategory.parentCategory.id, pImg)}"></th:block>
         </th:block>
     </th:block>
     <th:block th:if="${allCats != null}">

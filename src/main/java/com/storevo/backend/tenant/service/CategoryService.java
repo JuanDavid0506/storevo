@@ -119,6 +119,40 @@ public class CategoryService {
         return total;
     }
 
+    // Mapa categoryId -> URL de imagen (propaga automáticamente la foto del producto por los 3 niveles: Nivel 3 -> Nivel 2 -> Nivel 1)
+    @Transactional(readOnly = true)
+    public Map<Long, String> getCategoryImagesMap() {
+        Map<Long, String> imageMap = new HashMap<>();
+
+        List<Category> allCategories = categoryRepository.findAllByOrderByDisplayOrderAsc();
+        for (Category cat : allCategories) {
+            if (cat != null && cat.getId() != null && cat.getImageUrl() != null && !cat.getImageUrl().isBlank()) {
+                imageMap.put(cat.getId(), cat.getImageUrl().trim());
+            }
+        }
+
+        List<com.storevo.backend.tenant.model.Product> activeProducts = productRepository.findByIsActiveTrueAndIsDeletedFalseOrderByIdDesc();
+        for (com.storevo.backend.tenant.model.Product prod : activeProducts) {
+            if (prod == null || prod.getCategory() == null || Boolean.TRUE.equals(prod.getIsDraft())) continue;
+            String img = (prod.getMainImageThumbnailUrl() != null && !prod.getMainImageThumbnailUrl().isBlank())
+                    ? prod.getMainImageThumbnailUrl()
+                    : prod.getMainImageUrl();
+            if (img == null || img.isBlank()) continue;
+
+            Category current = prod.getCategory();
+            int depth = 0;
+            while (current != null && depth < 5) {
+                if (current.getId() != null) {
+                    imageMap.putIfAbsent(current.getId(), img);
+                }
+                current = current.getParentCategory();
+                depth++;
+            }
+        }
+
+        return imageMap;
+    }
+
     // true si esta categoría todavía puede recibir subcategorías sin romper
     // el límite de 3 niveles (Principal > Sub > Sub-sub).
     public boolean canHaveChildren(Long categoryId) {
