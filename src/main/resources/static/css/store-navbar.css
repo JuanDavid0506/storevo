@@ -43,16 +43,21 @@
 
 /* ---------- Estilos de color ---------- */
 .sv-nav[data-nav-style="glass"] {
-    --nav-bg: rgba(255, 255, 255, 0.78);
-    --nav-blur: blur(14px) saturate(160%);
+    --nav-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.52) 0%, rgba(241, 245, 249, 0.36) 100%);
+    --nav-blur: blur(18px) saturate(190%);
     --nav-fg: var(--store-text);
     --nav-link: var(--store-text);
-    --nav-border: rgba(128, 128, 128, 0.2);
-    --nav-shadow: none;
+    --nav-border: rgba(148, 163, 184, 0.28);
+    --nav-shadow: 0 8px 28px -6px rgba(15, 23, 42, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.75);
+    --nav-field-bg: rgba(255, 255, 255, 0.55);
 }
 @supports (background: color-mix(in srgb, red, blue)) {
     .sv-nav[data-nav-style="glass"] {
-        --nav-bg: color-mix(in srgb, var(--store-bg) 78%, transparent);
+        --nav-bg: linear-gradient(
+                135deg,
+                color-mix(in srgb, var(--brand-color) 7%, rgba(255, 255, 255, 0.54)) 0%,
+                color-mix(in srgb, var(--store-bg) 42%, transparent) 100%
+        );
     }
 }
 
@@ -507,7 +512,7 @@ body[data-sv-nav-layout="double_bar"] .sv-nav-double-strip {
 @media (min-width: 768px) {
     body[data-sv-nav-layout="hero_overlay"].sv-has-hero-first:not(.sv-is-scrolled) .sv-nav {
         position: fixed !important;
-        top: 0;
+        top: var(--sv-hero-nav-top, 0px) !important;
         left: 0;
         right: 0;
         z-index: 50;
@@ -518,16 +523,25 @@ body[data-sv-nav-layout="double_bar"] .sv-nav-double-strip {
         --nav-hover: #ffffff;
         --nav-accent: #ffffff;
         --nav-pill: rgba(255, 255, 255, 0.18);
-        --nav-field-bg: rgba(15, 23, 42, 0.45);
+        --nav-field-bg: rgba(255, 255, 255, 0.16);
         --nav-field-fg: #ffffff;
-        --nav-field-ph: rgba(255, 255, 255, 0.8);
+        --nav-field-ph: rgba(255, 255, 255, 0.85);
     }
-    body[data-sv-nav-layout="hero_overlay"].sv-has-hero-first:not(.sv-is-scrolled) .sv-nav::before {
-        background: linear-gradient(to bottom, rgba(15, 23, 42, 0.62), rgba(15, 23, 42, 0.25)) !important;
-        -webkit-backdrop-filter: blur(8px) !important;
-        backdrop-filter: blur(8px) !important;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.16) !important;
+    /* Transparente puro sobre el Hero Banner */
+    body[data-sv-nav-layout="hero_overlay"].sv-has-hero-first:not(.sv-is-scrolled) .sv-nav:not([data-nav-style="glass"])::before {
+        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.28) 0%, rgba(0, 0, 0, 0) 100%) !important;
+        -webkit-backdrop-filter: none !important;
+        backdrop-filter: none !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
         box-shadow: none !important;
+    }
+    /* Si además de Transparente Hero elige "Cristal translúcido", aplica cristal esmerilado sobre el banner */
+    body[data-sv-nav-layout="hero_overlay"].sv-has-hero-first:not(.sv-is-scrolled) .sv-nav[data-nav-style="glass"]::before {
+        background: rgba(255, 255, 255, 0.14) !important;
+        -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+        backdrop-filter: blur(16px) saturate(180%) !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.25) !important;
+        box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.18) !important;
     }
     body[data-sv-nav-layout="hero_overlay"].sv-has-hero-first:not(.sv-is-scrolled) .sv-nav .sv-nav__bar {
         background-color: transparent !important;

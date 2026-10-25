@@ -21,6 +21,7 @@ Storevo.ThemeEditor = {
                 text: '🚚 ¡Envío gratis en compras superiores a $150.000!',
                 text2: '',
                 text3: '',
+                headerPosition: 'below_menu',
                 animationMode: 'fade',
                 speed: 'normal',
                 barFormat: 'normal',
@@ -1355,27 +1356,93 @@ Storevo.ThemeEditor = {
         }
     },
 
+    moveSectionByStep: function(sectionId, delta) {
+        const list = this.getActivePageSections(true);
+        const idx = list.findIndex(s => s && s.id === sectionId);
+        if (idx === -1) return;
+        const targetIdx = idx + delta;
+        if (targetIdx < 0 || targetIdx >= list.length) return;
+        const temp = list[idx];
+        list[idx] = list[targetIdx];
+        list[targetIdx] = temp;
+        this.setActivePageSections(list);
+        this.renderSectionsList();
+        this.scheduleAutoSave(true);
+    },
+
+    applyDomOrderToSections: function(container) {
+        if (!container) return;
+        const currentList = this.getActivePageSections(true);
+        const orderedIds = Array.from(container.querySelectorAll('[data-sec-id]'))
+            .map(el => el.getAttribute('data-sec-id'));
+
+        const reordered = [];
+        orderedIds.forEach(id => {
+            const found = currentList.find(s => s && s.id === id);
+            if (found) reordered.push(found);
+        });
+        if (reordered.length === currentList.length) {
+            this.setActivePageSections(reordered);
+            this.renderSectionsList();
+            this.scheduleAutoSave(true);
+        }
+    },
+
     initSortable: function() {
         const container = document.getElementById('sortable-sections-container');
-        if (!container || typeof Sortable === 'undefined') return;
+        if (!container) return;
 
-        Sortable.create(container, {
-            handle: '.drag-handle',
-            animation: 180,
-            ghostClass: 'sortable-ghost',
-            onEnd: () => {
-                const currentList = this.getActivePageSections(true);
-                const orderedIds = Array.from(container.querySelectorAll('[data-sec-id]'))
-                    .map(el => el.getAttribute('data-sec-id'));
+        if (this._sortableInstance && typeof this._sortableInstance.destroy === 'function') {
+            try { this._sortableInstance.destroy(); } catch (e) {}
+            this._sortableInstance = null;
+        }
 
-                const reordered = [];
-                orderedIds.forEach(id => {
-                    const found = currentList.find(s => s.id === id);
-                    if (found) reordered.push(found);
-                });
-                this.setActivePageSections(reordered);
-                this.scheduleAutoSave();
+        if (typeof Sortable !== 'undefined') {
+            this._sortableInstance = Sortable.create(container, {
+                handle: '.drag-handle',
+                animation: 180,
+                forceFallback: true,
+                fallbackOnBody: true,
+                fallbackTolerance: 4,
+                ghostClass: 'sortable-ghost',
+                onEnd: () => {
+                    this.applyDomOrderToSections(container);
+                }
+            });
+            return;
+        }
+
+        // Respaldo nativo HTML5 Drag & Drop si el CDN de Sortable no cargó
+        if (container.dataset.nativeDndBound === 'true') return;
+        container.dataset.nativeDndBound = 'true';
+        let draggedRow = null;
+
+        container.addEventListener('dragstart', (e) => {
+            const row = e.target.closest('[data-sec-id]');
+            if (!row) return;
+            draggedRow = row;
+            row.classList.add('sortable-ghost');
+            if (e.dataTransfer) {
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', row.getAttribute('data-sec-id') || '');
             }
+        });
+
+        container.addEventListener('dragover', (e) => {
+            if (!draggedRow) return;
+            e.preventDefault();
+            const targetRow = e.target.closest('[data-sec-id]');
+            if (!targetRow || targetRow === draggedRow) return;
+            const rect = targetRow.getBoundingClientRect();
+            const isAfter = (e.clientY - rect.top) > (rect.height / 2);
+            container.insertBefore(draggedRow, isAfter ? targetRow.nextSibling : targetRow);
+        });
+
+        container.addEventListener('dragend', () => {
+            if (!draggedRow) return;
+            draggedRow.classList.remove('sortable-ghost');
+            draggedRow = null;
+            this.applyDomOrderToSections(container);
         });
     },
 
@@ -1406,8 +1473,10 @@ Storevo.ThemeEditor = {
                 : ((sec.settings && (sec.settings.title || sec.settings.customTitle || sec.settings.badgeText || sec.settings.text || sec.settings.card1Title || sec.settings.headerTitle)) || def.label);
             const isEnabled = isLocked ? true : (sec.enabled !== false);
 
+            const secIdx = currentList.indexOf(sec);
             const row = document.createElement('div');
             row.setAttribute('data-sec-id', sec.id);
+            row.setAttribute('draggable', 'true');
             row.className = `group flex items-center justify-between gap-2 p-3 rounded-xl border transition-all ${
                 isLocked
                     ? 'bg-slate-950 border-storevo-500/40 hover:border-storevo-500'
@@ -1416,9 +1485,24 @@ Storevo.ThemeEditor = {
                         : 'bg-slate-950/50 border-slate-800/50 opacity-50')
             }`;
 
+            const moveArrowsHtml = `
+                <div class="flex flex-col gap-0.5 mr-0.5">
+                    <button type="button" class="sec-move-up-btn p-0.5 text-slate-500 hover:text-white disabled:opacity-20 transition" ${secIdx === 0 ? 'disabled' : ''} title="Subir sección">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 15l7-7 7 7"></path></svg>
+                    </button>
+                    <button type="button" class="sec-move-down-btn p-0.5 text-slate-500 hover:text-white disabled:opacity-20 transition" ${secIdx === currentList.length - 1 ? 'disabled' : ''} title="Bajar sección">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                </div>
+            `;
+
             const actionsHtml = isLocked
-                ? `<span class="px-2 py-0.5 rounded-md bg-storevo-500/15 text-storevo-300 border border-storevo-500/30 text-[10px] font-bold flex-shrink-0" title="Esta sección es obligatoria en esta vista, pero puedes moverla y personalizar sus opciones">Fija</span>`
+                ? `<div class="flex items-center gap-1 flex-shrink-0">
+                    ${moveArrowsHtml}
+                    <span class="px-2 py-0.5 rounded-md bg-storevo-500/15 text-storevo-300 border border-storevo-500/30 text-[10px] font-bold" title="Esta sección es obligatoria en esta vista, pero puedes moverla y personalizar sus opciones">Fija</span>
+                   </div>`
                 : `<div class="flex items-center gap-0.5 flex-shrink-0">
+                    ${moveArrowsHtml}
                     <button type="button" class="sec-dup-btn p-1.5 text-slate-500 hover:text-storevo-400 rounded-lg hover:bg-slate-800 transition" title="Duplicar sección">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                     </button>
@@ -1435,9 +1519,9 @@ Storevo.ThemeEditor = {
 
             row.innerHTML = `
                 <div class="flex items-center gap-2.5 min-w-0 flex-1">
-                    <button type="button" class="drag-handle p-1 text-slate-500 hover:text-slate-300 cursor-move flex-shrink-0" title="Arrastrar para mover">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path></svg>
-                    </button>
+                    <span class="drag-handle p-1.5 text-slate-400 hover:text-white cursor-grab active:cursor-grabbing flex-shrink-0 select-none" title="Arrastrar para mover">
+                        <svg class="w-4 h-4 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path></svg>
+                    </span>
                     <button type="button" class="sec-edit-trigger text-left min-w-0 flex-1">
                         <p class="text-xs font-bold text-white truncate">${this.escapeHtml(def.label)}</p>
                         <p class="text-[11px] text-slate-500 truncate mt-0.5">${this.escapeHtml(subtitle)}</p>
@@ -1447,6 +1531,20 @@ Storevo.ThemeEditor = {
             `;
 
             row.querySelector('.sec-edit-trigger').addEventListener('click', () => this.openInspector(sec.id));
+            const upBtn = row.querySelector('.sec-move-up-btn');
+            const downBtn = row.querySelector('.sec-move-down-btn');
+            if (upBtn) {
+                upBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.moveSectionByStep(sec.id, -1);
+                });
+            }
+            if (downBtn) {
+                downBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.moveSectionByStep(sec.id, 1);
+                });
+            }
             if (!isLocked) {
                 row.querySelector('.sec-dup-btn').addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -2379,7 +2477,15 @@ Storevo.ThemeEditor = {
                     const m = (s && s.animationMode) ? s.animationMode : 'fade';
                     return m !== 'marquee' && m !== 'static';
                 };
+                const isFirstSectionOnPage = () => {
+                    const list = this.getActivePageSections(false) || [];
+                    return list.length > 0 && list[0] && list[0].id === this.activeSectionId;
+                };
                 return [
+                    { key: 'headerPosition', label: 'Ubicación del anuncio en el encabezado', type: 'select', defaultVal: 'below_menu', options: [
+                            { value: 'below_menu', label: 'Debajo del menú de la tienda y arriba del Banner (Predeterminado)' },
+                            { value: 'above_menu', label: 'Arriba del todo (Encima del menú de la tienda)' }
+                        ], showIf: isFirstSectionOnPage },
                     { key: 'text', label: 'Mensaje principal del anuncio', type: 'text', placeholder: 'Ej: 🚚 Envío gratis en compras mayores a $150.000' },
                     { key: 'text2', label: '2do mensaje rotativo (Opcional)', type: 'text', placeholder: 'Ej: 💳 Paga en línea o pide fácil por WhatsApp' },
                     { key: 'text3', label: '3er mensaje rotativo (Opcional)', type: 'text', placeholder: 'Ej: ✨ Nuevos lanzamientos disponibles hoy' },
@@ -2805,6 +2911,26 @@ Storevo.ThemeEditor = {
             };
         }
 
+        const showHomeChk = document.getElementById('style-navbar-show-home');
+        if (showHomeChk) {
+            showHomeChk.checked = gs.navbarShowHome !== false;
+            showHomeChk.onchange = () => {
+                gs.navbarShowHome = showHomeChk.checked;
+                this.pushLiveStylesToIframe();
+                this.scheduleAutoSave(false);
+            };
+        }
+
+        const showCatalogChk = document.getElementById('style-navbar-show-catalog');
+        if (showCatalogChk) {
+            showCatalogChk.checked = gs.navbarShowCatalog !== false;
+            showCatalogChk.onchange = () => {
+                gs.navbarShowCatalog = showCatalogChk.checked;
+                this.pushLiveStylesToIframe();
+                this.scheduleAutoSave(false);
+            };
+        }
+
         bindSelect('style-heading-font', 'headingFont', 'Inter', true);
         bindSelect('style-body-font', 'bodyFont', 'Inter', true);
         bindSelect('style-heading-transform', 'headingTransform', 'none');
@@ -2821,6 +2947,19 @@ Storevo.ThemeEditor = {
                 btn.classList.toggle('is-selected', val === currentNavLayout);
                 btn.onclick = () => {
                     gs.navbarLayout = val;
+                    // Ajustes de submenú al elegir Boutique Izquierdo o Departamentos Ancho (respetando Inicio y Catálogo tal como el usuario los tenga)
+                    if (val === 'retail_left') {
+                        gs.navbarDropdownStyle = 'dual_drawer';
+                        gs.navbarTrigger = 'click';
+                        const ddSel = document.getElementById('style-navbar-dropdown-style');
+                        const trSel = document.getElementById('style-navbar-trigger');
+                        if (ddSel) ddSel.value = 'dual_drawer';
+                        if (trSel) trSel.value = 'click';
+                    } else if (val === 'department_strip') {
+                        gs.navbarDropdownStyle = 'full_columns';
+                        const ddSel = document.getElementById('style-navbar-dropdown-style');
+                        if (ddSel) ddSel.value = 'full_columns';
+                    }
                     navLayoutContainer.querySelectorAll('.nav-layout-opt').forEach(b => b.classList.toggle('is-selected', b === btn));
                     this.pushLiveStylesToIframe();
                     this.scheduleAutoSave(true);
@@ -2876,6 +3015,8 @@ Storevo.ThemeEditor = {
                 gs.navbarTrigger = 'hover';
                 gs.navbarSpeed = 'normal';
                 gs.navbarCompactOnScroll = false;
+                gs.navbarShowHome = true;
+                gs.navbarShowCatalog = true;
                 this.initGlobalStylesInputs();
                 this.pushLiveStylesToIframe();
                 this.scheduleAutoSave(true);

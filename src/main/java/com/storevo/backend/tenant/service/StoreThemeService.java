@@ -74,7 +74,8 @@ public class StoreThemeService {
     private static final Set<String> ALLOWED_DETAIL_RELATED_COLS = Set.of("3", "4");
     private static final Set<String> ALLOWED_NAV_LAYOUTS = Set.of(
             "classic", "centered", "marketplace", "minimal",
-            "editorial", "compact", "double_bar", "hero_overlay"
+            "editorial", "compact", "double_bar", "hero_overlay",
+            "retail_left", "department_strip"
     );
     private static final Set<String> ALLOWED_NAV_STYLES = Set.of("light", "glass", "secondary", "primary", "page");
     private static final Set<String> ALLOWED_NAV_LINK_FORMATS = Set.of("normal", "uppercase", "bold");
@@ -83,7 +84,8 @@ public class StoreThemeService {
             "underline_center", "underline_slide", "slide_bg", "opacity"
     );
     private static final Set<String> ALLOWED_NAV_DROPDOWN_STYLES = Set.of(
-            "mega", "flyout", "accordion", "split", "cascade", "strip", "drawer", "none"
+            "mega", "flyout", "accordion", "split", "cascade", "strip", "drawer", "none",
+            "dual_drawer", "full_columns"
     );
     private static final Set<String> ALLOWED_NAV_DROPDOWN_ANIMS = Set.of(
             "fade", "slide_up", "slide_down", "scale", "reveal", "stagger"
@@ -894,6 +896,12 @@ public class StoreThemeService {
         }
         if (gs.getNavbarCompactOnScroll() == null) {
             gs.setNavbarCompactOnScroll(false);
+        }
+        if (gs.getNavbarShowHome() == null) {
+            gs.setNavbarShowHome(true);
+        }
+        if (gs.getNavbarShowCatalog() == null) {
+            gs.setNavbarShowCatalog(true);
         }
 
         if (gs.getSearchEnabled() == null) {

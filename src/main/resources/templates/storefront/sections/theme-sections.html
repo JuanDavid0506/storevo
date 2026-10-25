@@ -759,6 +759,7 @@
                    resolvedUrl=${rawUrl == '__whatsapp__' ? waUrl : (isExtNoProto ? 'https://' + rawUrl : (rawUrl.startsWith('http') or rawUrl.startsWith('#') or rawUrl.startsWith('mailto:') or rawUrl.startsWith('tel:') ? rawUrl : (rawUrl.startsWith('/s/' + slug) ? rawUrl : '/s/' + slug + (rawUrl.startsWith('/') ? rawUrl : '/' + rawUrl))))}">
     <div th:if="${!#strings.isEmpty(text) or (isDraftPreview == true)}"
          th:id="'ann-bar-root-' + ${sec.id}"
+         th:attr="data-header-pos=${sec.settingStr('headerPosition', 'below_menu')}"
          th:style="|background-color: ${bgColor}; color: ${textColor};|"
          th:classappend="${barFormat == 'compact' ? 'py-1.5 text-[11px] sm:text-xs font-semibold tracking-normal' : (barFormat == 'uppercase' ? 'py-2.5 text-[11px] sm:text-xs font-black uppercase tracking-widest' : 'py-2.5 text-xs sm:text-sm font-bold tracking-wide')}"
          class="sv-ann-bar relative w-full px-4 text-center overflow-hidden transition-colors select-none">

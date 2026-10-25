@@ -299,7 +299,9 @@
                data-sv-dropdown-anim=${gs != null and gs.navbarDropdownAnim != null ? gs.navbarDropdownAnim : 'slide_up'},
                data-sv-nav-trigger=${gs != null and gs.navbarTrigger != null ? gs.navbarTrigger : 'hover'},
                data-sv-nav-speed=${gs != null and gs.navbarSpeed != null ? gs.navbarSpeed : 'normal'},
-               data-sv-nav-compact=${gs != null and gs.navbarCompactOnScroll != null ? gs.navbarCompactOnScroll : false},
+                data-sv-nav-compact=${gs != null and gs.navbarCompactOnScroll != null ? gs.navbarCompactOnScroll : false},
+                data-sv-nav-show-home=${gs == null or gs.navbarShowHome == null or gs.navbarShowHome},
+                data-sv-nav-show-catalog=${gs == null or gs.navbarShowCatalog == null or gs.navbarShowCatalog},
                data-sv-filter-enabled=${gs == null or gs.filterEnabled == null or gs.filterEnabled},
                data-sv-filter-layout=${gs != null and gs.filterLayout != null ? gs.filterLayout : 'drawer'},
                data-sv-filter-search=${gs == null or gs.filterShowSearch == null or gs.filterShowSearch},
@@ -511,7 +513,9 @@
               data-dropdown-anim=${gs != null and gs.navbarDropdownAnim != null ? gs.navbarDropdownAnim : 'slide_up'},
               data-nav-trigger=${gs != null and gs.navbarTrigger != null ? gs.navbarTrigger : 'hover'},
               data-nav-speed=${gs != null and gs.navbarSpeed != null ? gs.navbarSpeed : 'normal'},
-              data-nav-compact=${gs != null and gs.navbarCompactOnScroll != null ? gs.navbarCompactOnScroll : false}">
+              data-nav-compact=${gs != null and gs.navbarCompactOnScroll != null ? gs.navbarCompactOnScroll : false},
+              data-nav-show-home=${gs == null or gs.navbarShowHome == null or gs.navbarShowHome},
+              data-nav-show-catalog=${gs == null or gs.navbarShowCatalog == null or gs.navbarShowCatalog}">
     <th:block th:with="bridgeProds=${allCatalogProducts != null ? allCatalogProducts : products}" th:if="${bridgeProds != null}" th:each="prod : ${bridgeProds}">
         <th:block th:if="${prod.category != null and (prod.mainImageUrl != null or prod.getMainImageThumbnailUrl() != null)}"
                   th:with="pImg=${prod.getMainImageThumbnailUrl() != null ? prod.getMainImageThumbnailUrl() : prod.mainImageUrl}">
@@ -923,7 +927,7 @@
             const doubleStrip = document.createElement('div');
             doubleStrip.className = 'sv-nav-double-strip';
             const topStripLinks = [];
-            topStripLinks.push(`<a href="/s/${slug}/catalog${previewSuffix}">Todo el Catálogo</a>`);
+            topStripLinks.push(`<a href="/s/${slug}/catalog${previewSuffix}" data-sv-nav-item="catalog">Catálogo</a>`);
             rootCats.slice(0, 5).forEach(rc => {
                 topStripLinks.push(`<a href="${esc(rc.url)}">${esc(rc.name)}</a>`);
             });
@@ -997,7 +1001,7 @@
                 <div class="p-5 overflow-y-auto flex-1 space-y-4">
                     <div>
                         <p class="text-[11px] font-black uppercase tracking-wider text-slate-400 mb-2">Categorías</p>
-                        <a href="/s/${slug}/catalog${previewSuffix}" class="block py-2 text-sm font-black text-brand border-b border-slate-100">Ver Todo el Catálogo</a>
+                        <a href="/s/${slug}/catalog${previewSuffix}" class="block py-2 text-sm font-black text-brand border-b border-slate-100">Ver Catálogo</a>
                         ${drawerCatsHtml}
                     </div>
                     ${drawerPagesHtml ? `<div><p class="text-[11px] font-black uppercase tracking-wider text-slate-400 mb-2">Páginas</p>${drawerPagesHtml}</div>` : ''}
@@ -1186,6 +1190,55 @@
                 return;
             }
 
+            if (styleMode === 'full_columns') {
+                setPanelClass(panelEl, 'is-full-columns');
+
+                // Extraer únicamente las marcas reales de los productos del cliente
+                const brandSet = new Set();
+                document.querySelectorAll('.product-card[data-brand]').forEach(el => {
+                    const b = (el.getAttribute('data-brand') || '').trim();
+                    if (b) brandSet.add(b.charAt(0).toUpperCase() + b.slice(1));
+                });
+                const brandsList = Array.from(brandSet).slice(0, 10);
+
+                // Mostrar únicamente las categorías / subcategorías reales creadas por el cliente
+                const colsMarkup = items.map((sub, idx) => {
+                    const l3Links = (sub.children && sub.children.length > 0)
+                        ? sub.children.map(l3 => `<a href="${esc(l3.url)}" class="sv-fullcols-link">${esc(l3.name)}</a>`).join('')
+                        : `<a href="${esc(sub.url)}" class="sv-fullcols-link">Ver ${esc(sub.name)}</a>`;
+                    return `
+                        <div class="sv-fullcols-col sv-stagger-item" style="--stagger-idx:${idx}">
+                            <a href="${esc(sub.url)}" class="sv-fullcols-heading">${esc(sub.name)}</a>
+                            ${l3Links}
+                        </div>
+                    `;
+                }).join('');
+
+                // Si existen páginas personalizadas en el menú (ej. Promociones), mostrarlas como columna real
+                const pagesColMarkup = customPages.length > 0 ? `
+                    <div class="sv-fullcols-col">
+                        <span class="sv-fullcols-heading">PÁGINAS</span>
+                        ${customPages.map(cp => `<a href="${esc(cp.href)}" class="sv-fullcols-link">${esc(cp.title)}</a>`).join('')}
+                    </div>
+                ` : '';
+
+                const brandsColMarkup = brandsList.length > 0 ? `
+                    <div class="sv-fullcols-col">
+                        <span class="sv-fullcols-heading">MARCAS</span>
+                        ${brandsList.map(b => `<a href="/s/${slug}/catalog?brand=${encodeURIComponent(b)}${isPreview ? '&preview=draft' : ''}" class="sv-fullcols-link">${esc(b)}</a>`).join('')}
+                    </div>
+                ` : '';
+
+                panelEl.innerHTML = `
+                    <div class="sv-fullcols-inner">
+                        ${colsMarkup}
+                        ${brandsColMarkup}
+                        ${pagesColMarkup}
+                    </div>
+                `;
+                return;
+            }
+
             if (styleMode === 'strip') {
                 setPanelClass(panelEl, 'is-strip');
                 panelEl.innerHTML = items.map((item, idx) => {
@@ -1331,25 +1384,159 @@
             }
         });
 
+        // Asegurar que el logo o nombre de la tienda siempre lleve al Inicio de la tienda
+        const logoLink = navRoot.querySelector('a.sv-nav__logo');
+        if (logoLink) {
+            logoLink.setAttribute('href', `/s/${slug}${previewSuffix}`);
+            logoLink.setAttribute('title', 'Ir al Inicio');
+        }
+
+        // Construir Panel Lateral Doble Interactivo por Clic (dual_drawer) solo con datos reales de la tienda
+        const customPagesFooterHtml = customPages.length > 0
+            ? `<div class="sv-dual-footer">
+                   ${customPages.map(cp => `<a href="${esc(cp.href)}" class="sv-dual-item"><span>${esc(cp.title)}</span></a>`).join('')}
+               </div>`
+            : '';
+
+        const dualBackdrop = document.createElement('div');
+        dualBackdrop.className = 'sv-dual-drawer-backdrop';
+        dualBackdrop.innerHTML = `
+            <div class="sv-dual-drawer" role="dialog" aria-label="Menú de categoría">
+                <div class="sv-dual-col1">
+                    <div class="sv-dual-col1-top space-y-0.5"></div>
+                    ${customPagesFooterHtml}
+                </div>
+                <div class="sv-dual-col2"></div>
+            </div>
+        `;
+        document.body.appendChild(dualBackdrop);
+
+        const dualCol1Top = dualBackdrop.querySelector('.sv-dual-col1-top');
+        const dualCol2 = dualBackdrop.querySelector('.sv-dual-col2');
+        let activeDualRootId = null;
+        let activeDualSubName = '';
+
+        function updateDualDrawerTopOffset() {
+            const rect = navRoot.getBoundingClientRect();
+            const bottomPx = Math.max(0, Math.round(rect.bottom));
+            dualBackdrop.style.setProperty('--sv-dual-top', bottomPx + 'px');
+        }
+
+        function closeDualDrawer() {
+            activeDualRootId = null;
+            dualBackdrop.classList.remove('is-open');
+            domNavParents.forEach(p => p.classList.remove('is-dual-active'));
+            if (menuWrap) menuWrap.classList.remove('is-dual-active');
+        }
+
+        dualBackdrop.addEventListener('click', (e) => {
+            if (e.target === dualBackdrop) closeDualDrawer();
+        });
+
+        function renderDualCol2ForSub(subCat) {
+            if (!subCat || !subCat.children || subCat.children.length === 0) {
+                dualCol2.classList.remove('is-visible');
+                dualCol2.innerHTML = '';
+                return;
+            }
+            dualCol2.classList.add('is-visible');
+            dualCol2.innerHTML = `
+                <a href="${esc(subCat.url)}" class="sv-dual-subitem sv-dual-subitem--all">Ver todo ${esc(subCat.name)}</a>
+                ${subCat.children.map(l3 => `<a href="${esc(l3.url)}" class="sv-dual-subitem">${esc(l3.name)}</a>`).join('')}
+            `;
+        }
+
+        function openDualDrawerForRoot(rootCatObj, parentDomEl) {
+            if (!rootCatObj) return;
+            updateDualDrawerTopOffset();
+            activeDualRootId = String(rootCatObj.id);
+
+            domNavParents.forEach(p => p.classList.toggle('is-dual-active', p === parentDomEl));
+            if (menuWrap) menuWrap.classList.toggle('is-dual-active', parentDomEl === menuWrap);
+
+            const subItems = (rootCatObj.children && rootCatObj.children.length > 0) ? rootCatObj.children : [];
+            const rootUrl = rootCatObj.url || `/s/${slug}/catalog${previewSuffix}`;
+
+            // Si al cambiar de Mujer a Hombre existe una subcategoría con el mismo nombre (ej. Jeans o Camisas), mantenerla abierta
+            let matchedSub = null;
+            if (activeDualSubName && subItems.length > 0) {
+                matchedSub = subItems.find(s => s.name.trim().toLowerCase() === activeDualSubName.trim().toLowerCase()) || null;
+            }
+            // Si no había ninguna seleccionada aún y la primera subcategoría tiene Nivel 3, preseleccionar la primera para mostrar su árbol
+            if (!matchedSub && subItems.length > 0 && subItems[0].children && subItems[0].children.length > 0) {
+                matchedSub = subItems[0];
+                activeDualSubName = matchedSub.name || '';
+            }
+
+            const verTodoRootHtml = `
+                <a href="${esc(rootUrl)}" class="sv-dual-item font-bold border-b border-slate-100 pb-2 mb-1">
+                    <span>Ver todo ${esc(rootCatObj.name)}</span>
+                </a>
+            `;
+
+            const subsHtml = subItems.map(sub => {
+                const hasL3 = sub.children && sub.children.length > 0;
+                const isSel = matchedSub && String(matchedSub.id) === String(sub.id);
+                if (hasL3) {
+                    return `
+                        <button type="button" data-dual-sub-id="${esc(sub.id)}" data-dual-sub-name="${esc(sub.name)}"
+                                class="sv-dual-item ${isSel ? 'is-selected' : ''}">
+                            <span>${esc(sub.name)}</span>
+                            <span class="text-xs opacity-60">›</span>
+                        </button>
+                    `;
+                }
+                return `
+                    <a href="${esc(sub.url)}" data-dual-sub-name="${esc(sub.name)}" class="sv-dual-item ${isSel ? 'is-selected' : ''}">
+                        <span>${esc(sub.name)}</span>
+                    </a>
+                `;
+            }).join('');
+
+            dualCol1Top.innerHTML = verTodoRootHtml + subsHtml;
+
+            if (matchedSub && matchedSub.children && matchedSub.children.length > 0) {
+                renderDualCol2ForSub(matchedSub);
+            } else {
+                dualCol2.classList.remove('is-visible');
+                dualCol2.innerHTML = '';
+            }
+
+            dualCol1Top.querySelectorAll('button[data-dual-sub-id]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const subId = btn.getAttribute('data-dual-sub-id');
+                    const subObj = subItems.find(s => String(s.id) === String(subId));
+                    if (!subObj) return;
+                    activeDualSubName = subObj.name || '';
+                    dualCol1Top.querySelectorAll('.sv-dual-item').forEach(el => el.classList.toggle('is-selected', el === btn));
+                    renderDualCol2ForSub(subObj);
+                });
+            });
+
+            dualBackdrop.classList.add('is-open');
+        }
+
         function renderDropdownContent(styleMode) {
             const effectiveStyle = styleMode || 'mega';
-
+            if (effectiveStyle !== 'dual_drawer') {
+                closeDualDrawer();
+            }
             if (dropdownPanel && menuWrap) {
-                if (effectiveStyle === 'none' || effectiveStyle === 'drawer') {
+                if (effectiveStyle === 'none' || effectiveStyle === 'drawer' || effectiveStyle === 'dual_drawer') {
                     dropdownPanel.innerHTML = '';
                     menuWrap.classList.remove('sv-catalog-menu-open', 'is-open');
                 } else {
                     buildPanelMarkup(dropdownPanel, rootCats, effectiveStyle, rootCats[0]);
                 }
             }
-
             domNavParents.forEach(parentEl => {
                 const catId = parentEl.getAttribute('data-cat-id');
                 const catObj = catMap.get(catId);
                 const customPanel = parentEl._customPanel || parentEl.querySelector(':scope > .sv-cat-custom-panel');
                 if (!catObj || !catObj.children || catObj.children.length === 0 || !customPanel) return;
-
-                if (effectiveStyle === 'none' || effectiveStyle === 'drawer') {
+                if (effectiveStyle === 'none' || effectiveStyle === 'drawer' || effectiveStyle === 'dual_drawer') {
                     customPanel.innerHTML = '';
                     parentEl.classList.remove('is-open');
                     return;
@@ -1407,20 +1594,26 @@
         allMenuParents.forEach(parentEl => {
             let hoverTimer = null;
             const linkEl = parentEl.querySelector(':scope > a.sv-nav__link');
-            if (!linkEl || !parentEl._customPanel) return;
+            if (!linkEl) return;
 
             parentEl.addEventListener('mouseenter', () => {
                 const trigger = document.body.getAttribute('data-sv-nav-trigger') || 'hover';
                 const dStyle = document.body.getAttribute('data-sv-dropdown-style') || 'mega';
-                if (trigger === 'hover' && dStyle !== 'none' && dStyle !== 'drawer') {
+                // En dual_drawer jamás se abre por hover (solo resalta dónde está el mouse)
+                if (trigger === 'hover' && dStyle !== 'none' && dStyle !== 'drawer' && dStyle !== 'dual_drawer') {
                     clearTimeout(hoverTimer);
+                    if (dStyle === 'full_columns' && parentEl._customPanel) {
+                        const rect = navRoot.getBoundingClientRect();
+                        parentEl._customPanel.style.top = Math.max(0, Math.round(rect.bottom)) + 'px';
+                    }
                     setParentMenuOpen(parentEl, true);
                 }
             });
 
             parentEl.addEventListener('mouseleave', () => {
                 const trigger = document.body.getAttribute('data-sv-nav-trigger') || 'hover';
-                if (trigger === 'hover') {
+                const dStyle = document.body.getAttribute('data-sv-dropdown-style') || 'mega';
+                if (trigger === 'hover' && dStyle !== 'dual_drawer') {
                     hoverTimer = setTimeout(() => {
                         setParentMenuOpen(parentEl, false);
                     }, 150);
@@ -1434,11 +1627,33 @@
                 const clickedArrow = Boolean(e.target && e.target.closest && e.target.closest('.nav-arrow'));
 
                 if (dStyle === 'none') return;
+
+                if (dStyle === 'dual_drawer') {
+                    const catId = parentEl.getAttribute('data-cat-id');
+                    const catObj = catId ? catMap.get(catId) : { id: 'catalog', name: 'Catálogo', url: `/s/${slug}/catalog${previewSuffix}`, children: rootCats };
+                    if (catObj && catObj.children && catObj.children.length > 0) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (dualBackdrop.classList.contains('is-open') && activeDualRootId === String(catObj.id)) {
+                            closeDualDrawer();
+                        } else {
+                            openDualDrawerForRoot(catObj, parentEl);
+                        }
+                        return;
+                    }
+                    return;
+                }
+
                 if (dStyle === 'drawer') {
                     e.preventDefault();
                     e.stopPropagation();
                     drawerBackdrop.classList.add('is-open');
                     return;
+                }
+
+                if (dStyle === 'full_columns' && parentEl._customPanel) {
+                    const rect = navRoot.getBoundingClientRect();
+                    parentEl._customPanel.style.top = Math.max(0, Math.round(rect.bottom)) + 'px';
                 }
                 if (clickedArrow) {
                     e.preventDefault();
@@ -1471,15 +1686,95 @@
             }
         });
 
-        // 8. Detectar si la primera sección de la página es un Hero Banner (para Navbar Transparente Seguro)
+        // 8. Sincronizar ubicación de la Barra de Anuncio (Encima del menú vs Debajo del menú) y Transparente Hero
+        let topAnnHost = document.getElementById('storevoTopAnnouncementHost');
+        if (!topAnnHost && navRoot && navRoot.parentNode) {
+            topAnnHost = document.createElement('div');
+            topAnnHost.id = 'storevoTopAnnouncementHost';
+            navRoot.parentNode.insertBefore(topAnnHost, navRoot);
+        }
+
+        function syncTopAnnouncementPlacement() {
+            const mainEl = document.getElementById('storevoMainContent') || document.querySelector('main');
+            if (!mainEl || !topAnnHost) return;
+
+            // Si ya había un anuncio arriba del menú, verificar si el editor refrescó <main> o devolverlo a su orden original antes de evaluar
+            const currentHoisted = topAnnHost.querySelector('.storevo-theme-section');
+            if (currentHoisted) {
+                const hoistedId = currentHoisted.getAttribute('data-section-id');
+                const duplicateInMain = hoistedId ? mainEl.querySelector(`.storevo-theme-section[data-section-id="${hoistedId}"]`) : null;
+                if (duplicateInMain) {
+                    topAnnHost.innerHTML = '';
+                } else {
+                    mainEl.insertBefore(currentHoisted, mainEl.firstElementChild);
+                }
+            }
+
+            // Limpiar clases previas
+            Array.from(mainEl.querySelectorAll('.storevo-theme-section')).forEach(s => {
+                s.classList.remove('sv-ann-below-hero-nav');
+            });
+
+            // Revisar únicamente la PRIMERA sección de la página
+            const firstSec = mainEl.querySelector('.storevo-theme-section');
+            if (firstSec && firstSec.getAttribute('data-section-type') === 'announcement_bar') {
+                const annBarEl = firstSec.querySelector('.sv-ann-bar');
+                const pos = annBarEl ? (annBarEl.getAttribute('data-header-pos') || 'below_menu') : 'below_menu';
+                if (pos === 'above_menu') {
+                    // Mover físicamente encima del menú de la tienda (funciona en TODOS los diseños de navbar)
+                    topAnnHost.appendChild(firstSec);
+                } else {
+                    // Queda debajo del menú y arriba del Banner Principal
+                    firstSec.classList.add('sv-ann-below-hero-nav');
+                }
+            }
+        }
+
+        function updateHeroNavTopOffset() {
+            let aboveHeight = 0;
+            if (topAnnHost && topAnnHost.children.length > 0) {
+                const rect = topAnnHost.getBoundingClientRect();
+                if (rect.bottom > 0) {
+                    aboveHeight = Math.max(0, rect.bottom - Math.max(0, rect.top));
+                }
+            }
+            document.documentElement.style.setProperty('--sv-hero-nav-top', Math.round(aboveHeight) + 'px');
+
+            if (navRoot) {
+                const navRect = navRoot.getBoundingClientRect();
+                if (navRect.height > 0) {
+                    document.documentElement.style.setProperty('--sv-nav-h', Math.round(navRect.height) + 'px');
+                }
+            }
+        }
+
         function checkHeroOverlayEligibility() {
-            const firstSection = document.querySelector('main .storevo-theme-section');
-            const isHeroFirst = Boolean(firstSection && firstSection.getAttribute('data-section-type') === 'hero_banner');
+            syncTopAnnouncementPlacement();
+            const mainSecs = Array.from(document.querySelectorAll('main .storevo-theme-section'));
+            const firstMainSec = mainSecs[0] || null;
+            const secondMainSec = mainSecs[1] || null;
+
+            let heroSec = null;
+            if (firstMainSec && firstMainSec.getAttribute('data-section-type') === 'hero_banner') {
+                heroSec = firstMainSec;
+            } else if (firstMainSec && firstMainSec.getAttribute('data-section-type') === 'announcement_bar'
+                && secondMainSec && secondMainSec.getAttribute('data-section-type') === 'hero_banner') {
+                heroSec = secondMainSec;
+            }
+
+            const isHeroFirst = Boolean(heroSec);
+            mainSecs.forEach(sec => {
+                sec.classList.toggle('sv-hero-overlay-target', isHeroFirst && sec === heroSec);
+            });
             document.body.classList.toggle('sv-has-hero-first', isHeroFirst);
+            updateHeroNavTopOffset();
         }
 
         function handleScrollState() {
             document.body.classList.toggle('sv-is-scrolled', window.scrollY > 24);
+            if (document.body.getAttribute('data-sv-nav-layout') === 'hero_overlay') {
+                updateHeroNavTopOffset();
+            }
         }
         window.addEventListener('scroll', handleScrollState, { passive: true });
         document.addEventListener('storevo:page-load', () => {
@@ -1502,6 +1797,13 @@
                 ? String(s.navbarCompactOnScroll) === 'true'
                 : document.body.getAttribute('data-sv-nav-compact') === 'true';
 
+            const showHome = s.navbarShowHome !== undefined
+                ? String(s.navbarShowHome) !== 'false'
+                : document.body.getAttribute('data-sv-nav-show-home') !== 'false';
+            const showCatalog = s.navbarShowCatalog !== undefined
+                ? String(s.navbarShowCatalog) !== 'false'
+                : document.body.getAttribute('data-sv-nav-show-catalog') !== 'false';
+
             document.body.setAttribute('data-sv-nav-layout', layout);
             document.body.setAttribute('data-sv-nav-hover', hover);
             document.body.setAttribute('data-sv-dropdown-style', dStyle);
@@ -1509,6 +1811,15 @@
             document.body.setAttribute('data-sv-nav-trigger', trigger);
             document.body.setAttribute('data-sv-nav-speed', speed);
             document.body.setAttribute('data-sv-nav-compact', compact ? 'true' : 'false');
+            document.body.setAttribute('data-sv-nav-show-home', showHome ? 'true' : 'false');
+            document.body.setAttribute('data-sv-nav-show-catalog', showCatalog ? 'true' : 'false');
+
+            document.querySelectorAll('[data-sv-nav-item="home"]').forEach(el => {
+                el.classList.toggle('hidden', !showHome);
+            });
+            document.querySelectorAll('[data-sv-nav-item="catalog"]').forEach(el => {
+                el.classList.toggle('hidden', !showCatalog);
+            });
 
             checkHeroOverlayEligibility();
             renderDropdownContent(dStyle);

@@ -9,6 +9,8 @@
               navLinkFormat=${gs != null and gs.navbarLinkFormat != null ? gs.navbarLinkFormat : 'normal'},
               navLinkHover=${gs != null and gs.navbarLinkHover != null ? gs.navbarLinkHover : 'color'},
               navSticky=${gs == null or gs.navbarSticky},
+              showHome=${gs == null or gs.navbarShowHome == null or gs.navbarShowHome or #lists.isEmpty(navCategories)},
+              showCatalog=${gs == null or gs.navbarShowCatalog == null or gs.navbarShowCatalog or #lists.isEmpty(navCategories)},
               previewParam=${isDraftPreview == true ? 'draft' : null},
               waRaw=${settings != null and settings.whatsapp != null ? #strings.replace(#strings.replace(#strings.replace(settings.whatsapp, ' ', ''), '+', ''), '-', '') : ''},
               waPhone=${#strings.length(waRaw) == 10 ? '57' + waRaw : waRaw}"
@@ -22,7 +24,9 @@
     <div class="sv-nav-double-strip" data-ssr-mounted="true">
         <div class="sv-nav-double-strip__inner">
             <div class="sv-nav-double-strip__links">
-                <a th:href="@{/s/{slug}/catalog(slug=${slug}, preview=${previewParam})}">Todo el Catálogo</a>
+                <a th:href="@{/s/{slug}/catalog(slug=${slug}, preview=${previewParam})}"
+                   th:classappend="${!showCatalog ? 'hidden' : ''}"
+                   data-sv-nav-item="catalog">Catálogo</a>
                 <th:block th:if="${navCategories != null}">
                     <a th:each="rc, iterStat : ${navCategories}"
                        th:if="${iterStat.index < 5}"
@@ -77,18 +81,21 @@
             <div class="sv-nav__menu sv-nav-links-group" data-custom-pages-mounted="true">
                 <a th:href="@{/s/{slug}(slug=${slug}, preview=${previewParam})}"
                    class="sv-nav__link sv-interactive-link"
-                   th:classappend="${editorPageKey == 'home'} ? ' is-active' : ''"
-                   th:attr="data-sv-nav-link='home', aria-current=${editorPageKey == 'home' ? 'page' : null}">
+                   th:classappend="${(editorPageKey == 'home' ? ' is-active' : '') + (!showHome ? ' hidden' : '')}"
+                   th:attr="data-sv-nav-link='home', data-sv-nav-item='home', aria-current=${editorPageKey == 'home' ? 'page' : null}">
                     <span class="sv-nav__label">Inicio</span>
                 </a>
 
-                <!-- Todo el Catálogo con wrapper y flecha pre-renderizados si existen categorías -->
-                <div th:if="${not #lists.isEmpty(navCategories)}" class="nav-parent sv-catalog-menu-trigger-wrap sv-nav-links-group">
+                <!-- Catálogo con wrapper y flecha pre-renderizados si existen categorías -->
+                <div th:if="${not #lists.isEmpty(navCategories)}"
+                     class="nav-parent sv-catalog-menu-trigger-wrap sv-nav-links-group"
+                     th:classappend="${!showCatalog ? 'hidden' : ''}"
+                     data-sv-nav-item="catalog">
                     <a th:href="@{/s/{slug}/catalog(slug=${slug}, preview=${previewParam})}"
                        class="sv-nav__link sv-interactive-link"
                        th:classappend="${editorPageKey == 'catalog'} ? ' is-active' : ''"
                        th:attr="data-sv-nav-link='catalog', aria-current=${editorPageKey == 'catalog' ? 'page' : null}">
-                        <span class="sv-nav__label">Todo el Catálogo</span>
+                        <span class="sv-nav__label">Catálogo</span>
                         <svg class="nav-arrow sv-catalog-chevron w-4 h-4 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </a>
                     <div class="sv-dropdown-panel is-mega"></div>
@@ -97,8 +104,8 @@
                    th:href="@{/s/{slug}/catalog(slug=${slug}, preview=${previewParam})}"
                    class="sv-nav__link sv-interactive-link"
                    th:classappend="${editorPageKey == 'catalog'} ? ' is-active' : ''"
-                   th:attr="data-sv-nav-link='catalog', aria-current=${editorPageKey == 'catalog' ? 'page' : null}">
-                    <span class="sv-nav__label">Todo el Catálogo</span>
+                   th:attr="data-sv-nav-link='catalog', data-sv-nav-item='catalog', aria-current=${editorPageKey == 'catalog' ? 'page' : null}">
+                    <span class="sv-nav__label">Catálogo</span>
                 </a>
 
                 <!-- Categorías Raíz y Subcategorías -->
@@ -246,8 +253,14 @@
 
         <!-- Árbol de Categorías (hasta 3 niveles) + Páginas Personalizadas en SSR -->
         <div id="mobile-menu-links" class="p-4 flex flex-col gap-1 flex-1" data-custom-pages-mounted="true">
-            <a th:href="@{/s/{slug}(slug=${slug}, preview=${previewParam})}" class="sv-drawer__link font-bold py-3">Inicio</a>
-            <a th:href="@{/s/{slug}/catalog(slug=${slug}, preview=${previewParam})}" class="sv-drawer__link font-bold py-3">Todo el Catálogo</a>
+            <a th:href="@{/s/{slug}(slug=${slug}, preview=${previewParam})}"
+               th:classappend="${!showHome ? 'hidden' : ''}"
+               data-sv-nav-item="home"
+               class="sv-drawer__link font-bold py-3">Inicio</a>
+            <a th:href="@{/s/{slug}/catalog(slug=${slug}, preview=${previewParam})}"
+               th:classappend="${!showCatalog ? 'hidden' : ''}"
+               data-sv-nav-item="catalog"
+               class="sv-drawer__link font-bold py-3">Catálogo</a>
 
             <div th:each="cat : ${navCategories}" class="sv-drawer__group">
                 <a th:if="${#lists.isEmpty(cat.subCategories)}"

@@ -127,8 +127,21 @@ body {
 }
 
 @media (min-width: 768px) {
+    body[data-sv-nav-layout="hero_overlay"].sv-has-hero-first main .storevo-theme-section.sv-hero-overlay-target > section,
     body[data-sv-nav-layout="hero_overlay"].sv-has-hero-first main .storevo-theme-section[data-section-type="hero_banner"]:first-of-type > section {
         padding-top: calc(var(--sv-nav-h, 4.5rem) + 3.5rem) !important;
+    }
+    /* Si en Transparente Hero la barra de anuncio está configurada "Debajo del menú y arriba del Banner", colocarla justo debajo del menú transparente sin que el menú la tape */
+    body[data-sv-nav-layout="hero_overlay"].sv-has-hero-first main .storevo-theme-section.sv-ann-below-hero-nav {
+        position: relative;
+        z-index: 45;
+        margin-top: var(--sv-nav-h, 4.25rem);
+    }
+    body[data-sv-nav-layout="hero_overlay"].sv-has-hero-first main .storevo-theme-section.sv-ann-below-hero-nav + .storevo-theme-section.sv-hero-overlay-target {
+        margin-top: calc(-1 * var(--sv-nav-h, 4.25rem));
+    }
+    body[data-sv-nav-layout="hero_overlay"].sv-has-hero-first main .storevo-theme-section.sv-ann-below-hero-nav + .storevo-theme-section.sv-hero-overlay-target > section {
+        padding-top: calc(var(--sv-nav-h, 4.5rem) + 4.5rem) !important;
     }
 }
 
@@ -743,4 +756,312 @@ body[data-sv-nav-hover="underline_slide"] .sv-interactive-link[aria-current="pag
 /* Elevar stacking context del navbar únicamente mientras el drawer móvil esté abierto */
 #storeNavbar:has(#mobile-menu:not(.-translate-x-full)) {
     z-index: 80 !important;
+}
+/* ==========================================================================
+   11) NUEVOS DISEÑOS DE CABECERA: BOUTIQUE IZQUIERDO Y DEPARTAMENTOS ANCHO
+   ========================================================================== */
+
+/* Ocultar Inicio o Catálogo con prioridad absoluta (!important) cuando el usuario desmarca las opciones */
+[data-sv-nav-item="home"].hidden,
+[data-sv-nav-item="catalog"].hidden,
+body[data-sv-nav-show-home="false"] [data-sv-nav-item="home"],
+body[data-sv-nav-show-catalog="false"] [data-sv-nav-item="catalog"] {
+    display: none !important;
+}
+
+/* Asegurar que el logo o nombre de la tienda siempre actúe visualmente como botón de Inicio */
+.sv-nav__logo {
+    cursor: pointer !important;
+    transition: opacity 0.15s ease;
+}
+.sv-nav__logo:hover {
+    opacity: 0.85;
+}
+
+/* Ocultar flechas de desplegable cuando el submenú es dual_drawer (apertura limpia tipo pestaña) */
+body[data-sv-dropdown-style="dual_drawer"] .sv-dropdown-panel,
+body[data-sv-dropdown-style="dual_drawer"] .nav-arrow,
+body[data-sv-dropdown-style="dual_drawer"] .sv-catalog-chevron {
+    display: none !important;
+}
+
+/* 11.1 Diseño: BOUTIQUE IZQUIERDO (retail_left) */
+@media (min-width: 768px) {
+    .sv-nav[data-nav-layout="retail_left"] .sv-nav__grid {
+        grid-template-columns: auto minmax(0, 1fr) auto auto !important;
+        grid-template-areas: "logo menu search actions" !important;
+        column-gap: 2.25rem !important;
+        min-height: 3.75rem !important;
+    }
+    .sv-nav[data-nav-layout="retail_left"] .sv-nav__menu {
+        justify-content: flex-start !important;
+        column-gap: 1.75rem !important;
+    }
+    .sv-nav[data-nav-layout="retail_left"] .sv-nav__link {
+        padding: 1.05rem 0 !important;
+        font-size: 0.92rem !important;
+        font-weight: 500 !important;
+        position: relative;
+    }
+    .sv-nav[data-nav-layout="retail_left"] .sv-nav__link.is-active,
+    .sv-nav[data-nav-layout="retail_left"] .nav-parent.is-dual-active > .sv-nav__link {
+        font-weight: 800 !important;
+        color: var(--nav-fg, #0f172a) !important;
+    }
+    .sv-nav[data-nav-layout="retail_left"] .nav-parent.is-dual-active > .sv-nav__link .sv-nav__label::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: -6px;
+        height: 2px;
+        background: var(--nav-fg, #0f172a);
+        transform: scaleX(1) !important;
+    }
+}
+
+/* 11.2 Diseño: DEPARTAMENTOS ANCHO (department_strip) */
+@media (min-width: 768px) {
+    .sv-nav[data-nav-layout="department_strip"] .sv-nav__grid {
+        grid-template-columns: auto minmax(0, 1fr) auto !important;
+        grid-template-areas:
+            "logo search actions"
+            "menu menu menu" !important;
+        grid-template-rows: 4.5rem auto !important;
+        row-gap: 0 !important;
+    }
+    .sv-nav[data-nav-layout="department_strip"] .sv-nav__search {
+        display: flex !important;
+        width: 100% !important;
+        max-width: 36rem !important;
+        justify-self: center !important;
+    }
+    .sv-nav[data-nav-layout="department_strip"] .sv-nav__search input {
+        width: 100% !important;
+        border-radius: 0.375rem !important;
+        padding: 0.55rem 1rem 0.55rem 2.5rem !important;
+        border: 1px solid rgba(148, 163, 184, 0.35) !important;
+    }
+    .sv-nav[data-nav-layout="department_strip"] .sv-nav__menu {
+        justify-content: space-around !important;
+        border-top: 1px solid var(--nav-border, #e2e8f0) !important;
+        width: 100% !important;
+        column-gap: 0.5rem !important;
+    }
+    .sv-nav[data-nav-layout="department_strip"] .sv-nav__link {
+        padding: 0.7rem 1.25rem !important;
+        font-size: 0.76rem !important;
+        font-weight: 700 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.06em !important;
+        transition: background-color 0.18s ease, color 0.18s ease !important;
+    }
+    .sv-nav[data-nav-layout="department_strip"] .nav-parent.is-open > .sv-nav__link,
+    .sv-nav[data-nav-layout="department_strip"] .nav-parent:hover > .sv-nav__link,
+    .sv-nav[data-nav-layout="department_strip"] .sv-nav__link.is-active {
+        background-color: rgba(15, 23, 42, 0.45) !important;
+        color: #ffffff !important;
+    }
+    .sv-nav[data-nav-layout="department_strip"] .nav-arrow {
+        display: none !important;
+    }
+}
+
+/* ==========================================================================
+   12) PANEL LATERAL DOBLE INTERACTIVO POR CLIC (dual_drawer)
+   Se abre debajo del navbar manteniendo visibles las categorías principales
+   ========================================================================== */
+.sv-dual-drawer-backdrop {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: var(--sv-dual-top, 4rem);
+    z-index: 65;
+    background: rgba(15, 23, 42, 0.22);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+.sv-dual-drawer-backdrop.is-open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+.sv-dual-drawer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    display: flex;
+    background: #ffffff;
+    color: #0f172a;
+    box-shadow: 18px 0 40px -10px rgba(15, 23, 42, 0.18);
+    border-top: 1px solid #e2e8f0;
+    transform: translateX(-16px);
+    opacity: 0;
+    transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.18s ease;
+    max-width: 96vw;
+}
+.sv-dual-drawer-backdrop.is-open .sv-dual-drawer {
+    transform: translateX(0);
+    opacity: 1;
+}
+.sv-dual-col1 {
+    width: 250px;
+    min-width: 235px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 1.5rem 1.25rem;
+    overflow-y: auto;
+    border-right: 1px solid #f1f5f9;
+    background: #ffffff;
+}
+.sv-dual-col2 {
+    width: 260px;
+    min-width: 240px;
+    height: 100%;
+    display: none;
+    flex-direction: column;
+    padding: 1.5rem 1.5rem;
+    overflow-y: auto;
+    background: #ffffff;
+    border-right: 1px solid #f1f5f9;
+}
+.sv-dual-col2.is-visible {
+    display: flex;
+}
+.sv-dual-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0.55rem 0.5rem;
+    font-size: 0.86rem;
+    font-weight: 400;
+    color: #1e293b !important;
+    text-decoration: none;
+    background: transparent;
+    border: 0;
+    text-align: left;
+    cursor: pointer;
+    border-radius: 0.375rem;
+    transition: color 0.15s ease, background-color 0.15s ease, font-weight 0.15s ease;
+}
+.sv-dual-item:hover {
+    background-color: #f8fafc;
+    color: #000000 !important;
+}
+.sv-dual-item.is-selected {
+    font-weight: 800 !important;
+    color: #000000 !important;
+    background-color: #f8fafc;
+}
+.sv-dual-item--sale {
+    color: #dc2626 !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.02em;
+}
+.sv-dual-item--sale:hover {
+    background-color: #fef2f2;
+    color: #b91c1c !important;
+}
+.sv-dual-footer {
+    margin-top: 1.5rem;
+    padding-top: 1.1rem;
+    border-top: 1px solid #f1f5f9;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+.sv-dual-subitem {
+    display: block;
+    padding: 0.45rem 0.5rem;
+    font-size: 0.82rem;
+    font-weight: 400;
+    color: #334155 !important;
+    text-decoration: none;
+    border-radius: 0.375rem;
+    transition: color 0.15s ease, transform 0.15s ease;
+}
+.sv-dual-subitem:hover {
+    color: #000000 !important;
+    font-weight: 600;
+    transform: translateX(2px);
+}
+.sv-dual-subitem--all {
+    font-weight: 600;
+    color: #0f172a !important;
+    margin-bottom: 0.25rem;
+}
+
+/* ==========================================================================
+   13) CORTINA DE ANCHO COMPLETO (full_columns) CON COLUMNAS + MARCAS + OFERTAS
+   ========================================================================== */
+.sv-dropdown-panel.is-full-columns {
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    border-radius: 0 !important;
+    border-left: 0 !important;
+    border-right: 0 !important;
+    border-top: 1px solid #e2e8f0 !important;
+    padding: 2rem 2.5rem 2.5rem !important;
+    box-shadow: 0 28px 60px -12px rgba(15, 23, 42, 0.28) !important;
+}
+.sv-fullcols-inner {
+    max-width: 76rem;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+    gap: 2rem;
+}
+.sv-fullcols-col {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+.sv-fullcols-heading {
+    font-size: 0.76rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #0f172a !important;
+    padding-bottom: 0.45rem;
+    margin-bottom: 0.25rem;
+    border-bottom: 1px solid #e2e8f0;
+    text-decoration: none;
+}
+.sv-fullcols-heading--highlight {
+    color: #b91c1c !important;
+}
+.sv-fullcols-link {
+    font-size: 0.8rem;
+    font-weight: 400;
+    color: #475569 !important;
+    text-decoration: none;
+    padding: 0.15rem 0;
+    transition: color 0.15s ease;
+}
+.sv-fullcols-link:hover {
+    color: #0f172a !important;
+    font-weight: 600;
+}
+.sv-fullcols-special {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #b91c1c !important;
+    text-decoration: none;
+    padding: 0.15rem 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+.sv-fullcols-special:hover {
+    text-decoration: underline;
 }

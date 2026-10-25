@@ -114,6 +114,12 @@ public class ThemeGlobalStylesDto {
     @Builder.Default
     private Boolean navbarCompactOnScroll = false;
 
+    @Builder.Default
+    private Boolean navbarShowHome = true;
+
+    @Builder.Default
+    private Boolean navbarShowCatalog = true;
+
 
     // =========================================================
     // CONFIGURACIÓN GLOBAL DEL SISTEMA DE FILTROS

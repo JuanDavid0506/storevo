@@ -522,6 +522,51 @@
                                     </svg>
                                     <span class="text-[11px] font-bold">Transparente Hero</span>
                                 </button>
+                                <button type="button" data-value="retail_left"
+                                        class="nav-layout-opt flex flex-col items-center gap-1.5 p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
+                                    <svg viewBox="0 0 64 36" class="w-full h-8" fill="currentColor">
+                                        <rect x="4" y="14" width="13" height="6" rx="1"/>
+                                        <rect x="21" y="15.5" width="7" height="3" rx="1"/>
+                                        <rect x="21" y="20" width="7" height="1.2" rx="0.5"/>
+                                        <rect x="31" y="15.5" width="7" height="3" rx="1" opacity=".45"/>
+                                        <circle cx="50" cy="17" r="1.8" opacity=".6"/>
+                                        <circle cx="55" cy="17" r="1.8" opacity=".6"/>
+                                        <circle cx="60" cy="17" r="1.8" opacity=".6"/>
+                                    </svg>
+                                    <span class="text-[11px] font-bold">Boutique Izquierdo</span>
+                                </button>
+                                <button type="button" data-value="department_strip"
+                                        class="nav-layout-opt flex flex-col items-center gap-1.5 p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
+                                    <svg viewBox="0 0 64 36" class="w-full h-8" fill="currentColor">
+                                        <rect x="6" y="5" width="12" height="6" rx="3"/>
+                                        <rect x="22" y="5.5" width="24" height="5" rx="1" opacity=".35"/>
+                                        <circle cx="54" cy="8" r="1.8" opacity=".6"/>
+                                        <circle cx="59" cy="8" r="1.8" opacity=".6"/>
+                                        <rect x="4" y="16" width="56" height="1" opacity=".2"/>
+                                        <rect x="6" y="19" width="9" height="5" rx="1"/>
+                                        <rect x="19" y="20" width="8" height="3" rx="1" opacity=".55"/>
+                                        <rect x="31" y="20" width="8" height="3" rx="1" opacity=".55"/>
+                                        <rect x="43" y="20" width="8" height="3" rx="1" opacity=".55"/>
+                                    </svg>
+                                    <span class="text-[11px] font-bold">Departamentos Ancho</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Visibilidad de enlaces fijos (Inicio y Catálogo: siempre activos por defecto, el usuario decide si ocultarlos) -->
+                        <div class="space-y-1.5 pt-1">
+                            <label class="block text-[11px] font-bold text-slate-400">Enlaces fijos del menú (El logo siempre lleva a Inicio)</label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <label class="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 cursor-pointer transition">
+                                    <span class="text-[11px] font-semibold text-slate-200">Mostrar / ocultar «Inicio»</span>
+                                    <input type="checkbox" id="style-navbar-show-home" checked
+                                           class="w-4 h-4 rounded border-slate-700 text-storevo-500 focus:ring-storevo-500">
+                                </label>
+                                <label class="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 cursor-pointer transition">
+                                    <span class="text-[11px] font-semibold text-slate-200">Mostrar / ocultar «Catálogo»</span>
+                                    <input type="checkbox" id="style-navbar-show-catalog" checked
+                                           class="w-4 h-4 rounded border-slate-700 text-storevo-500 focus:ring-storevo-500">
+                                </label>
                             </div>
                         </div>
 
@@ -568,6 +613,8 @@
                                 <label class="block text-xs font-bold text-slate-300 mb-1.5">Tipo de submenú para Categorías</label>
                                 <select id="style-navbar-dropdown-style" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:border-storevo-500">
                                     <option value="mega">Mega Menú con columnas e imagen destacada</option>
+                                    <option value="dual_drawer">Panel lateral doble interactivo (2 columnas por clic)</option>
+                                    <option value="full_columns">Cortina ancho completo (Columnas + Marcas + Ofertas)</option>
                                     <option value="flyout">Flotante clásico multinivel (Cajas laterales)</option>
                                     <option value="accordion">Acordeón progresivo (Expansión en 1 sola caja)</option>
                                     <option value="split">Panel dividido Maestro-Detalle (2 columnas)</option>
