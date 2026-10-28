@@ -2,10 +2,12 @@ package com.storevo.backend.tenant.controller;
 
 import com.storevo.backend.admin.model.Store;
 import com.storevo.backend.config.tenant.TenantContext;
+import com.storevo.backend.tenant.model.Brand;
 import com.storevo.backend.tenant.service.BrandService;
 import com.storevo.backend.tenant.service.CloudinaryService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -38,8 +40,15 @@ public class BrandController {
     }
 
     @GetMapping
-    public String list(Model model) {
-        model.addAttribute("brands", brandService.getAllBrands());
+    public String list(@RequestParam(required = false) String q,
+                       @RequestParam(required = false) String status,
+                       @RequestParam(defaultValue = "name_asc") String sort,
+                       @RequestParam(defaultValue = "0") int page,
+                       @RequestParam(defaultValue = "12") int size,
+                       Model model) {
+        Page<Brand> brands = brandService.search(q, status, sort, page, size);
+        model.addAttribute("brands", brands);
+        model.addAttribute("statusCounts", brandService.getStatusCounts());
         model.addAttribute("productCounts", brandService.getProductCountsByBrand());
         model.addAttribute("pageTitle", "Marcas");
         return "dashboard/brands/index";

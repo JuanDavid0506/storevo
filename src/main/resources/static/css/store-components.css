@@ -1773,3 +1773,15 @@ body[data-card-style="boutique"] .storevo-theme-section.sv-tone-dark .product-ca
         gap: 1.25rem;
     }
 }
+
+/* ---------- Producto Estrella: ajuste de la foto por sección (data-img-fit) ---------- */
+body .sv-spotlight-card[data-img-fit="contain"] .sv-spotlight-img {
+    object-fit: contain !important;
+    background-color: #ffffff;
+    padding: 1.1rem;
+}
+body .sv-spotlight-card[data-img-fit="cover"] .sv-spotlight-img {
+    object-fit: cover !important;
+    background-color: transparent;
+    padding: 0;
+}

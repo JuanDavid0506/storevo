@@ -1770,8 +1770,15 @@
             updateHeroNavTopOffset();
         }
 
+        let navScrolledState = false;
         function handleScrollState() {
-            document.body.classList.toggle('sv-is-scrolled', window.scrollY > 24);
+            const scrollTop = window.scrollY;
+            if (!navScrolledState && scrollTop > 96) {
+                navScrolledState = true;
+            } else if (navScrolledState && scrollTop < 12) {
+                navScrolledState = false;
+            }
+            document.body.classList.toggle('sv-is-scrolled', navScrolledState);
             if (document.body.getAttribute('data-sv-nav-layout') === 'hero_overlay') {
                 updateHeroNavTopOffset();
             }

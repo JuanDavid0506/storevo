@@ -121,6 +121,19 @@ public class ThemeGlobalStylesDto {
     private Boolean navbarShowCatalog = true;
 
 
+
+    @Builder.Default
+    private String navbarBrandMode = "logo";
+
+    @Builder.Default
+    private String navbarLogoUrl = "";
+
+    @Builder.Default
+    private String navbarLogoDarkUrl = "";
+
+    @Builder.Default
+    private String navbarLogoSize = "md";
+
     // =========================================================
     // CONFIGURACIÓN GLOBAL DEL SISTEMA DE FILTROS
     // =========================================================

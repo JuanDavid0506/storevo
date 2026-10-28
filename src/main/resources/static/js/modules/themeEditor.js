@@ -1764,20 +1764,127 @@ Storevo.ThemeEditor = {
                 : (field.defaultVal !== undefined ? field.defaultVal : '');
 
             if (field.type === 'image') {
+                // ---- Encuadre de la foto: marco con la proporción real de la sección donde se muestra ----
+                const getFrameSpec = () => {
+                    const s = sec.settings || {};
+                    switch (sec.type) {
+                        case 'hero_banner':
+                            return s.heroLayout === 'split'
+                                ? { pc: '4 / 3', mobile: '4 / 3', size: '1200×900 px', minW: 900 }
+                                : { pc: '16 / 6', mobile: '5 / 4', size: '1920×700 px', minW: 1600 };
+                        case 'promo_banner':
+                            return { pc: '4 / 3', mobile: '16 / 9', size: '1200×900 px', minW: 900 };
+                        case 'multi_banners':
+                            return { pc: '16 / 9', mobile: '16 / 9', size: '1200×675 px', minW: 900 };
+                        case 'featured_video':
+                            return s.aspectRatio === '9:16'
+                                ? { pc: '9 / 16', mobile: '9 / 16', size: '720×1280 px', minW: 700 }
+                                : { pc: '16 / 9', mobile: '16 / 9', size: '1280×720 px', minW: 1000 };
+                        case 'gallery_lookbook': {
+                            const a = s.imageAspect;
+                            if (a === 'square') return { pc: '1 / 1', mobile: '1 / 1', size: '1080×1080 px', minW: 800 };
+                            if (a === 'landscape') return { pc: '4 / 3', mobile: '4 / 3', size: '1200×900 px', minW: 900 };
+                            return { pc: '4 / 5', mobile: '4 / 5', size: '1080×1350 px', minW: 800 };
+                        }
+                        case 'social_showcase':
+                            return { pc: '1 / 1', mobile: '1 / 1', size: '1080×1080 px', minW: 800 };
+                        default:
+                            return null; // p. ej. logos de marcas: sin encuadre, se muestran completos
+                    }
+                };
+
+                const base = field.key.replace(/Url$/, '');
+                const kFit = base + 'Fit';
+                const kX = base + 'PosX';
+                const kY = base + 'PosY';
+                const kZoom = base + 'Zoom';
+                const clampNum = (v, d, lo, hi) => {
+                    const n = parseFloat(v);
+                    return isNaN(n) ? d : Math.min(hi, Math.max(lo, n));
+                };
+                const st0 = sec.settings || {};
+                const frameState = {
+                    fit: st0[kFit] === 'contain' ? 'contain' : 'cover',
+                    x: clampNum(st0[kX], 50, 0, 100),
+                    y: clampNum(st0[kY], 50, 0, 100),
+                    zoom: clampNum(st0[kZoom], 100, 100, 250)
+                };
+                let hasImage = Boolean(currentVal);
+                let viewMode = 'pc';
+
                 const imgBox = document.createElement('div');
                 imgBox.className = 'bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2.5';
 
-                const previewWrap = document.createElement('div');
-                previewWrap.className = currentVal ? 'relative h-24 rounded-lg overflow-hidden bg-slate-900 border border-slate-800' : 'hidden relative h-24 rounded-lg overflow-hidden bg-slate-900 border border-slate-800';
+                const smallBtnClass = (active) => 'px-2.5 py-1 rounded-lg text-[11px] font-bold border transition ' +
+                    (active ? 'bg-storevo-500 text-white border-storevo-500' : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white');
+
+                // Selector Vista PC / Móvil (solo si el recorte cambia entre pantallas)
+                const viewRow = document.createElement('div');
+                viewRow.className = 'hidden items-center gap-1.5';
+                const viewPcBtn = document.createElement('button');
+                viewPcBtn.type = 'button';
+                viewPcBtn.textContent = 'Vista computador';
+                const viewMobBtn = document.createElement('button');
+                viewMobBtn.type = 'button';
+                viewMobBtn.textContent = 'Vista celular';
+                viewRow.appendChild(viewPcBtn);
+                viewRow.appendChild(viewMobBtn);
+
+                // Marco de vista previa (usa el mismo CSS que la tienda: lo que ves es lo que se publica)
+                const frame = document.createElement('div');
+                frame.style.cssText = 'position:relative;overflow:hidden;width:100%;border-radius:10px;border:1px solid #1e293b;background:#0f172a;touch-action:none;';
                 const imgEl = document.createElement('img');
-                imgEl.src = currentVal || '';
-                imgEl.className = 'w-full h-full object-cover';
+                imgEl.draggable = false;
+                imgEl.alt = 'Vista previa';
+                imgEl.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;user-select:none;pointer-events:none;';
                 const removeBtn = document.createElement('button');
                 removeBtn.type = 'button';
                 removeBtn.className = 'absolute top-1.5 right-1.5 bg-red-500 hover:bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded shadow';
+                removeBtn.style.zIndex = '2';
                 removeBtn.textContent = 'Quitar imagen';
-                previewWrap.appendChild(imgEl);
-                previewWrap.appendChild(removeBtn);
+                frame.appendChild(imgEl);
+                frame.appendChild(removeBtn);
+
+                // Controles de encuadre
+                const controls = document.createElement('div');
+                controls.className = 'hidden space-y-2';
+                const dragHint = document.createElement('p');
+                dragHint.className = 'text-[11px] text-slate-400';
+                dragHint.textContent = 'Arrastra la foto para elegir qué parte se ve.';
+                const fitRow = document.createElement('div');
+                fitRow.className = 'flex items-center gap-1.5 flex-wrap';
+                const fitCoverBtn = document.createElement('button');
+                fitCoverBtn.type = 'button';
+                fitCoverBtn.textContent = 'Rellenar';
+                const fitContainBtn = document.createElement('button');
+                fitContainBtn.type = 'button';
+                fitContainBtn.textContent = 'Ver completa';
+                const resetBtn = document.createElement('button');
+                resetBtn.type = 'button';
+                resetBtn.className = 'px-2.5 py-1 rounded-lg text-[11px] font-bold text-slate-400 hover:text-white transition ml-auto';
+                resetBtn.textContent = 'Restablecer';
+                fitRow.appendChild(fitCoverBtn);
+                fitRow.appendChild(fitContainBtn);
+                fitRow.appendChild(resetBtn);
+
+                const zoomRow = document.createElement('div');
+                zoomRow.className = 'flex items-center gap-2';
+                const zoomLabel = document.createElement('span');
+                zoomLabel.className = 'text-[11px] font-bold text-slate-400 whitespace-nowrap';
+                const zoomRange = document.createElement('input');
+                zoomRange.type = 'range';
+                zoomRange.min = '100';
+                zoomRange.max = '250';
+                zoomRange.step = '5';
+                zoomRange.style.cssText = 'flex:1;min-width:0;';
+                zoomRow.appendChild(zoomLabel);
+                zoomRow.appendChild(zoomRange);
+                controls.appendChild(dragHint);
+                controls.appendChild(fitRow);
+                controls.appendChild(zoomRow);
+
+                const infoLine = document.createElement('p');
+                infoLine.className = 'text-[11px] text-slate-500';
 
                 const actionsRow = document.createElement('div');
                 actionsRow.className = 'flex items-center gap-2';
@@ -1798,6 +1905,146 @@ Storevo.ThemeEditor = {
                 urlInput.placeholder = 'O pega una URL de imagen (https://...)';
                 urlInput.className = 'w-full px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-300 focus:border-storevo-500 focus:outline-none';
 
+                // ---- Pintado ----
+                const applyFrame = () => {
+                    imgEl.style.objectFit = getFrameSpec() ? frameState.fit : 'contain';
+                    imgEl.style.objectPosition = `${frameState.x}% ${frameState.y}%`;
+                    imgEl.style.transformOrigin = `${frameState.x}% ${frameState.y}%`;
+                    imgEl.style.scale = frameState.zoom === 100 ? '' : String(frameState.zoom / 100);
+                    fitCoverBtn.className = smallBtnClass(frameState.fit === 'cover');
+                    fitContainBtn.className = smallBtnClass(frameState.fit === 'contain');
+                    zoomLabel.textContent = `Zoom ${Math.round(frameState.zoom)}%`;
+                    zoomRange.value = String(Math.round(frameState.zoom));
+                };
+
+                const applyRatio = () => {
+                    const spec = getFrameSpec();
+                    if (!spec) {
+                        frame.style.aspectRatio = '';
+                        frame.style.height = '96px';
+                        frame.style.width = '100%';
+                        frame.style.margin = '0';
+                        return;
+                    }
+                    const ratio = viewMode === 'mobile' ? spec.mobile : spec.pc;
+                    const parts = ratio.split('/').map(p => parseFloat(p));
+                    const r = parts[0] / parts[1];
+                    frame.style.height = '';
+                    frame.style.aspectRatio = ratio;
+                    frame.style.width = r < 0.9 ? '56%' : '100%';
+                    frame.style.margin = r < 0.9 ? '0 auto' : '0';
+                    const differs = spec.pc !== spec.mobile;
+                    viewRow.classList.toggle('hidden', !(differs && hasImage));
+                    viewRow.classList.toggle('flex', differs && hasImage);
+                    viewPcBtn.className = smallBtnClass(viewMode === 'pc');
+                    viewMobBtn.className = smallBtnClass(viewMode === 'mobile');
+                    infoLine.dataset.size = spec.size;
+                    infoLine.dataset.minW = String(spec.minW);
+                };
+
+                const paintInfo = () => {
+                    const spec = getFrameSpec();
+                    if (!spec) {
+                        infoLine.textContent = 'JPG, PNG o WEBP (máx. 10 MB). Se muestra completa, sin recortar.';
+                        infoLine.style.color = '';
+                        return;
+                    }
+                    let text = `Recomendado: ${spec.size} · JPG o WEBP · máx. 10 MB.`;
+                    infoLine.style.color = '';
+                    if (hasImage && imgEl.naturalWidth) {
+                        text += ` Tu foto: ${imgEl.naturalWidth}×${imgEl.naturalHeight} px.`;
+                        if (imgEl.naturalWidth < spec.minW) {
+                            text += ' Es pequeña y puede verse borrosa.';
+                            infoLine.style.color = '#fbbf24';
+                        }
+                    }
+                    infoLine.textContent = text;
+                };
+
+                const refreshAll = () => {
+                    const spec = getFrameSpec();
+                    frame.classList.toggle('hidden', !hasImage);
+                    controls.classList.toggle('hidden', !(hasImage && spec));
+                    applyRatio();
+                    applyFrame();
+                    paintInfo();
+                };
+
+                const commitFrame = () => {
+                    const isDefault = frameState.fit === 'cover' && Math.round(frameState.x) === 50
+                        && Math.round(frameState.y) === 50 && Math.round(frameState.zoom) === 100;
+                    commitSectionChange(kFit, frameState.fit === 'contain' ? 'contain' : null);
+                    commitSectionChange(kX, isDefault ? null : Math.round(frameState.x));
+                    commitSectionChange(kY, isDefault ? null : Math.round(frameState.y));
+                    commitSectionChange(kZoom, (isDefault || Math.round(frameState.zoom) === 100) ? null : Math.round(frameState.zoom));
+                };
+
+                const resetFrame = (commit) => {
+                    frameState.fit = 'cover';
+                    frameState.x = 50;
+                    frameState.y = 50;
+                    frameState.zoom = 100;
+                    applyFrame();
+                    if (commit) commitFrame();
+                };
+
+                imgEl.addEventListener('load', paintInfo);
+                if (currentVal) imgEl.src = currentVal;
+                refreshAll();
+
+                // ---- Interacción: arrastrar para mover el enfoque ----
+                let drag = null;
+                frame.style.cursor = 'grab';
+                frame.addEventListener('pointerenter', refreshAll);
+                frame.addEventListener('pointerdown', (e) => {
+                    if (!hasImage || !getFrameSpec() || e.target === removeBtn) return;
+                    drag = { sx: e.clientX, sy: e.clientY, x: frameState.x, y: frameState.y };
+                    try { frame.setPointerCapture(e.pointerId); } catch (err) {}
+                    frame.style.cursor = 'grabbing';
+                    e.preventDefault();
+                });
+                frame.addEventListener('pointermove', (e) => {
+                    if (!drag) return;
+                    const rect = frame.getBoundingClientRect();
+                    const nw = imgEl.naturalWidth || rect.width;
+                    const nh = imgEl.naturalHeight || rect.height;
+                    const k = frameState.fit === 'contain'
+                        ? Math.min(rect.width / nw, rect.height / nh)
+                        : Math.max(rect.width / nw, rect.height / nh);
+                    const z = frameState.zoom / 100;
+                    const ovX = nw * k * z - rect.width;
+                    const ovY = nh * k * z - rect.height;
+                    if (Math.abs(ovX) > 1) {
+                        frameState.x = Math.min(100, Math.max(0, drag.x - ((e.clientX - drag.sx) / ovX) * 100));
+                    }
+                    if (Math.abs(ovY) > 1) {
+                        frameState.y = Math.min(100, Math.max(0, drag.y - ((e.clientY - drag.sy) / ovY) * 100));
+                    }
+                    applyFrame();
+                });
+                const endDrag = () => {
+                    if (!drag) return;
+                    const moved = Math.round(drag.x) !== Math.round(frameState.x) || Math.round(drag.y) !== Math.round(frameState.y);
+                    drag = null;
+                    frame.style.cursor = 'grab';
+                    if (moved) commitFrame();
+                };
+                frame.addEventListener('pointerup', endDrag);
+                frame.addEventListener('pointercancel', endDrag);
+
+                viewPcBtn.addEventListener('click', () => { viewMode = 'pc'; applyRatio(); });
+                viewMobBtn.addEventListener('click', () => { viewMode = 'mobile'; applyRatio(); });
+
+                fitCoverBtn.addEventListener('click', () => { frameState.fit = 'cover'; applyFrame(); commitFrame(); });
+                fitContainBtn.addEventListener('click', () => { frameState.fit = 'contain'; applyFrame(); commitFrame(); });
+                resetBtn.addEventListener('click', () => resetFrame(true));
+                zoomRange.addEventListener('input', () => {
+                    frameState.zoom = clampNum(zoomRange.value, 100, 100, 250);
+                    applyFrame();
+                });
+                zoomRange.addEventListener('change', commitFrame);
+
+                // ---- Subir / quitar / URL ----
                 uploadBtn.addEventListener('click', () => fileInput.click());
 
                 fileInput.addEventListener('change', () => {
@@ -1818,9 +2065,12 @@ Storevo.ThemeEditor = {
                         .then(data => {
                             if (data.success && data.url) {
                                 urlInput.value = data.url;
+                                hasImage = true;
                                 imgEl.src = data.url;
-                                previewWrap.classList.remove('hidden');
+                                resetFrame(false); // foto nueva = encuadre nuevo
                                 commitSectionChange(field.key, data.url);
+                                commitFrame();
+                                refreshAll();
                                 if (Storevo.UI && Storevo.UI.Toast) {
                                     Storevo.UI.Toast.show('Imagen subida y aplicada', 'success');
                                 }
@@ -1842,25 +2092,32 @@ Storevo.ThemeEditor = {
 
                 removeBtn.addEventListener('click', () => {
                     urlInput.value = '';
-                    imgEl.src = '';
-                    previewWrap.classList.add('hidden');
+                    hasImage = false;
+                    imgEl.removeAttribute('src');
+                    resetFrame(false);
                     commitSectionChange(field.key, '');
+                    commitFrame();
+                    refreshAll();
                 });
 
                 urlInput.addEventListener('input', () => {
                     const val = urlInput.value.trim();
+                    hasImage = Boolean(val);
                     if (val) {
                         imgEl.src = val;
-                        previewWrap.classList.remove('hidden');
                     } else {
-                        previewWrap.classList.add('hidden');
+                        imgEl.removeAttribute('src');
                     }
+                    refreshAll();
                     commitSectionChange(field.key, val);
                 });
 
                 actionsRow.appendChild(fileInput);
                 actionsRow.appendChild(uploadBtn);
-                imgBox.appendChild(previewWrap);
+                imgBox.appendChild(viewRow);
+                imgBox.appendChild(frame);
+                imgBox.appendChild(controls);
+                imgBox.appendChild(infoLine);
                 imgBox.appendChild(actionsRow);
                 imgBox.appendChild(urlInput);
                 wrapper.appendChild(imgBox);
@@ -2582,6 +2839,10 @@ Storevo.ThemeEditor = {
                     { key: 'imageSide', label: 'Posición de la foto en PC', type: 'select', defaultVal: 'left', options: [
                             { value: 'left', label: 'Foto a la izquierda / Texto a la derecha' },
                             { value: 'right', label: 'Texto a la izquierda / Foto a la derecha' }
+                        ]},
+                    { key: 'imageFit', label: 'Ajuste de la foto del producto', type: 'select', defaultVal: 'contain', options: [
+                            { value: 'contain', label: 'Ver el producto completo (recomendado)' },
+                            { value: 'cover', label: 'Rellenar todo el espacio (puede recortar)' }
                         ]}
                 ];
             case 'featured_categories':
@@ -2900,6 +3161,99 @@ Storevo.ThemeEditor = {
         bindSelect('style-navbar-dropdown-anim', 'navbarDropdownAnim', 'slide_up');
         bindSelect('style-navbar-trigger', 'navbarTrigger', 'hover');
         bindSelect('style-navbar-speed', 'navbarSpeed', 'normal');
+
+        // ---- Identidad de la tienda: logo / nombre (Navegación y Cabecera) ----
+        bindSelect('style-navbar-brand-mode', 'navbarBrandMode', 'logo', true);
+        bindSelect('style-navbar-logo-size', 'navbarLogoSize', 'md', true);
+
+        const brandModeSel = document.getElementById('style-navbar-brand-mode');
+        const logoFields = document.getElementById('style-logo-fields');
+        const syncLogoFields = () => {
+            if (logoFields && brandModeSel) logoFields.classList.toggle('hidden', brandModeSel.value === 'text');
+        };
+        if (brandModeSel) {
+            brandModeSel.addEventListener('change', syncLogoFields);
+            syncLogoFields();
+        }
+
+        const bindLogoUploader = (prefix, prop) => {
+            const wrap = document.getElementById(prefix + '-wrap');
+            const preview = document.getElementById(prefix + '-preview');
+            const fileInput = document.getElementById(prefix + '-file');
+            const uploadBtn = document.getElementById(prefix + '-btn');
+            const removeBtn = document.getElementById(prefix + '-remove');
+            if (!wrap || !preview || !fileInput || !uploadBtn || !removeBtn) return;
+
+            const toast = (msg, type) => {
+                if (Storevo.UI && Storevo.UI.Toast) Storevo.UI.Toast.show(msg, type);
+            };
+            const paint = () => {
+                const url = gs[prop] || '';
+                preview.src = url;
+                wrap.classList.toggle('hidden', !url);
+                removeBtn.classList.toggle('hidden', !url);
+                const label = uploadBtn.querySelector('span');
+                if (label) label.textContent = url ? 'Cambiar logo' : 'Subir logo desde mi equipo';
+            };
+            paint();
+
+            uploadBtn.onclick = () => fileInput.click();
+
+            fileInput.onchange = () => {
+                const file = fileInput.files && fileInput.files[0];
+                if (!file) return;
+                if (!/^image\/(png|jpeg|webp)$/i.test(file.type)) {
+                    toast('Formato no permitido. Usa PNG, WEBP o JPG.', 'error');
+                    fileInput.value = '';
+                    return;
+                }
+                if (file.size > 10 * 1024 * 1024) {
+                    toast('El logo supera el límite de 10 MB.', 'error');
+                    fileInput.value = '';
+                    return;
+                }
+
+                const label = uploadBtn.querySelector('span');
+                const originalText = label ? label.textContent : '';
+                uploadBtn.disabled = true;
+                if (label) label.textContent = 'Subiendo logo...';
+
+                const formData = new FormData();
+                formData.append('file', file);
+
+                fetch(`/dashboard/${this.slug}/template/upload-image`, { method: 'POST', body: formData })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success && data.url) {
+                            gs[prop] = data.url;
+                            paint();
+                            this.scheduleAutoSave(true);
+                            toast('Logo subido y aplicado', 'success');
+                        } else {
+                            if (label) label.textContent = originalText;
+                            toast(data.message || 'Error al subir el logo', 'error');
+                        }
+                    })
+                    .catch(() => {
+                        if (label) label.textContent = originalText;
+                        toast('Error de conexión al subir el logo', 'error');
+                    })
+                    .finally(() => {
+                        uploadBtn.disabled = false;
+                        fileInput.value = '';
+                        paint();
+                    });
+            };
+
+            removeBtn.onclick = () => {
+                gs[prop] = '';
+                paint();
+                this.scheduleAutoSave(true);
+            };
+        };
+
+        bindLogoUploader('style-logo-light', 'navbarLogoUrl');
+        bindLogoUploader('style-logo-dark', 'navbarLogoDarkUrl');
 
         const compactScrollChk = document.getElementById('style-navbar-compact-scroll');
         if (compactScrollChk) {
@@ -6581,6 +6935,13 @@ Storevo.ThemeEditor = {
                     newSec.settings[k] = val;
                 }
             });
+
+            // El encuadre (ajuste, enfoque y zoom) viaja con su foto
+            Object.keys(match.settings).forEach(k => {
+                if (/[iI]mage(Fit|PosX|PosY|Zoom)$/.test(k)) {
+                    newSec.settings[k] = match.settings[k];
+                }
+            });
         });
     },
 
@@ -6643,9 +7004,16 @@ Storevo.ThemeEditor = {
             });
         }
 
+        // El logo y la identidad de la tienda no forman parte de una plantilla: se conservan
+        const prevGs = (this.theme && this.theme.globalStyles) || {};
+        const preservedBrand = {};
+        ['navbarBrandMode', 'navbarLogoUrl', 'navbarLogoDarkUrl', 'navbarLogoSize'].forEach(k => {
+            if (prevGs[k] !== undefined && prevGs[k] !== null && prevGs[k] !== '') preservedBrand[k] = prevGs[k];
+        });
+
         this.theme = nextTheme;
         this.theme.customPages = currentCustomPages;
-        this.theme.globalStyles = Object.assign({}, nextTheme.globalStyles || {});
+        this.theme.globalStyles = Object.assign({}, nextTheme.globalStyles || {}, preservedBrand);
         this.ensurePagesStructure();
 
         this.activePresetId = preset.id;
@@ -6946,6 +7314,24 @@ Storevo.ThemeEditor = {
                     const nextStrip = nextDoc.querySelector('#storeNavbar .sv-nav-double-strip');
                     if (currentStrip && nextStrip) {
                         currentStrip.innerHTML = nextStrip.innerHTML;
+                    }
+                    // 1.b. Sincronizar la identidad de la tienda (logo / nombre) en la cabecera y en el menú móvil
+                    const currentLogo = iDoc.querySelector('#storeNavbar .sv-nav__logo');
+                    const nextLogo = nextDoc.querySelector('#storeNavbar .sv-nav__logo');
+                    if (currentLogo && nextLogo) {
+                        currentLogo.className = nextLogo.className;
+                        const nextLogoSize = nextLogo.getAttribute('data-logo-size');
+                        if (nextLogoSize) {
+                            currentLogo.setAttribute('data-logo-size', nextLogoSize);
+                        } else {
+                            currentLogo.removeAttribute('data-logo-size');
+                        }
+                        currentLogo.innerHTML = nextLogo.innerHTML;
+                    }
+                    const currentDrawerBrand = iDoc.querySelector('#storeNavbar .sv-drawer__header > div:first-child');
+                    const nextDrawerBrand = nextDoc.querySelector('#storeNavbar .sv-drawer__header > div:first-child');
+                    if (currentDrawerBrand && nextDrawerBrand) {
+                        currentDrawerBrand.innerHTML = nextDrawerBrand.innerHTML;
                     }
 
                     // 2. Reemplazar el contenido principal (<main>) y puente de filtros

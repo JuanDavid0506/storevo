@@ -132,7 +132,12 @@ public class CategoryService {
         }
 
         List<com.storevo.backend.tenant.model.Product> activeProducts = productRepository.findByIsActiveTrueAndIsDeletedFalseOrderByIdDesc();
-        for (com.storevo.backend.tenant.model.Product prod : activeProducts) {
+        // Los productos destacados representan mejor a su categoría; dentro de cada grupo se mantiene
+        // el orden original (más nuevo primero). sort() es estable.
+        List<com.storevo.backend.tenant.model.Product> ordered = new java.util.ArrayList<>(activeProducts);
+        ordered.sort(java.util.Comparator.comparing(
+                (com.storevo.backend.tenant.model.Product p) -> !Boolean.TRUE.equals(p.getIsFeatured())));
+        for (com.storevo.backend.tenant.model.Product prod : ordered) {
             if (prod == null || prod.getCategory() == null || Boolean.TRUE.equals(prod.getIsDraft())) continue;
             String img = (prod.getMainImageThumbnailUrl() != null && !prod.getMainImageThumbnailUrl().isBlank())
                     ? prod.getMainImageThumbnailUrl()

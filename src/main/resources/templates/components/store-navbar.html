@@ -9,6 +9,13 @@
               navLinkFormat=${gs != null and gs.navbarLinkFormat != null ? gs.navbarLinkFormat : 'normal'},
               navLinkHover=${gs != null and gs.navbarLinkHover != null ? gs.navbarLinkHover : 'color'},
               navSticky=${gs == null or gs.navbarSticky},
+                            brandMode=${gs != null and gs.navbarBrandMode != null ? gs.navbarBrandMode : 'logo'},
+              brandLogo=${gs != null and not #strings.isEmpty(gs.navbarLogoUrl) ? gs.navbarLogoUrl : (settings != null and not #strings.isEmpty(settings.logoUrl) ? settings.logoUrl : '')},
+              brandLogoDark=${gs != null and not #strings.isEmpty(gs.navbarLogoDarkUrl) ? gs.navbarLogoDarkUrl : ''},
+              brandLogoSize=${gs != null and gs.navbarLogoSize != null ? gs.navbarLogoSize : 'md'},
+              brandName=${settings != null and settings.storeName != null ? settings.storeName : 'Mi Tienda'},
+              showBrandLogo=${brandMode != 'text' and not #strings.isEmpty(brandLogo)},
+              showBrandName=${brandMode == 'text' or brandMode == 'logo_text' or not showBrandLogo},
               showHome=${gs == null or gs.navbarShowHome == null or gs.navbarShowHome or #lists.isEmpty(navCategories)},
               showCatalog=${gs == null or gs.navbarShowCatalog == null or gs.navbarShowCatalog or #lists.isEmpty(navCategories)},
               previewParam=${isDraftPreview == true ? 'draft' : null},
@@ -67,14 +74,15 @@
             </button>
 
             <!-- Logo -->
-            <a th:href="@{/s/{slug}(slug=${slug}, preview=${previewParam})}" class="sv-nav__logo flex items-center">
-                <img th:if="${settings != null and not #strings.isEmpty(settings.logoUrl)}"
-                     th:src="${settings.logoUrl}"
-                     th:alt="${settings != null and settings.storeName != null ? settings.storeName : 'Tienda'}"
-                     class="h-8 w-auto max-h-8 object-contain">
-                <span th:if="${settings == null or #strings.isEmpty(settings.logoUrl)}"
-                      class="truncate"
-                      th:text="${settings != null and settings.storeName != null ? settings.storeName : 'Mi Tienda'}">Mi Tienda</span>
+            <a th:href="@{/s/{slug}(slug=${slug}, preview=${previewParam})}"
+               class="sv-nav__logo flex items-center"
+               th:classappend="${showBrandLogo and not #strings.isEmpty(brandLogoDark)} ? 'has-dark-logo' : ''"
+               th:attr="data-logo-size=${brandLogoSize}">
+                <img th:if="${showBrandLogo}" th:src="${brandLogo}" th:alt="${brandName}"
+                     class="sv-nav__logo-img sv-nav__logo-img--light">
+                <img th:if="${showBrandLogo and not #strings.isEmpty(brandLogoDark)}" th:src="${brandLogoDark}" alt=""
+                     class="sv-nav__logo-img sv-nav__logo-img--dark" aria-hidden="true">
+                <span th:if="${showBrandName}" class="sv-nav__logo-name truncate" th:text="${brandName}">Mi Tienda</span>
             </a>
 
             <!-- Navegación Desktop (SSR completo: Inicio + Catálogo + Categorías + Páginas Personalizadas) -->
@@ -227,13 +235,11 @@
     <div id="mobile-menu" class="sv-drawer fixed top-0 left-0 h-full w-4/5 max-w-sm shadow-2xl z-[70] transform -translate-x-full transition-transform duration-300 flex flex-col overflow-y-auto">
         <div class="sv-drawer__header p-4 flex justify-between items-center">
             <div class="flex items-center min-w-0 pr-2">
-                <img th:if="${settings != null and not #strings.isEmpty(settings.logoUrl)}"
-                     th:src="${settings.logoUrl}"
-                     th:alt="${settings != null and settings.storeName != null ? settings.storeName : 'Tienda'}"
-                     class="h-7 w-auto max-h-7 object-contain max-w-[180px]">
-                <span th:if="${settings == null or #strings.isEmpty(settings.logoUrl)}"
-                      class="font-black text-brand text-lg truncate"
-                      th:text="${settings != null and settings.storeName != null ? settings.storeName : 'Mi Tienda'}">Mi Tienda</span>
+                <img th:if="${showBrandLogo}" th:src="${brandLogo}" th:alt="${brandName}"
+                     style="height:30px;width:auto;max-width:180px;object-fit:contain;display:block;">
+                <span th:if="${showBrandName}" class="font-black text-brand text-lg truncate"
+                      th:style="${showBrandLogo} ? 'margin-left:0.6rem;' : null"
+                      th:text="${brandName}">Mi Tienda</span>
             </div>
             <button type="button" id="mobile-menu-close" class="sv-drawer__close p-2" aria-label="Cerrar menú">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>

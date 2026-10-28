@@ -92,6 +92,8 @@ public class StoreThemeService {
     );
     private static final Set<String> ALLOWED_NAV_TRIGGERS = Set.of("hover", "click");
     private static final Set<String> ALLOWED_NAV_SPEEDS = Set.of("fast", "normal", "slow");
+    private static final Set<String> ALLOWED_NAV_BRAND_MODES = Set.of("logo", "logo_text", "text");
+    private static final Set<String> ALLOWED_NAV_LOGO_SIZES = Set.of("sm", "md", "lg", "xl");
     private static final Set<String> ALLOWED_HEADING_TRANSFORMS = Set.of("none", "uppercase");
     private static final Set<String> ALLOWED_FONT_SCALES = Set.of("compact", "standard", "large");
     private static final Set<String> ALLOWED_SEARCH_MODES = Set.of(
@@ -904,6 +906,15 @@ public class StoreThemeService {
             gs.setNavbarShowCatalog(true);
         }
 
+        if (gs.getNavbarBrandMode() == null || !ALLOWED_NAV_BRAND_MODES.contains(gs.getNavbarBrandMode())) {
+            gs.setNavbarBrandMode("logo");
+        }
+        if (gs.getNavbarLogoSize() == null || !ALLOWED_NAV_LOGO_SIZES.contains(gs.getNavbarLogoSize())) {
+            gs.setNavbarLogoSize("md");
+        }
+        gs.setNavbarLogoUrl(cleanLogoUrl(gs.getNavbarLogoUrl()));
+        gs.setNavbarLogoDarkUrl(cleanLogoUrl(gs.getNavbarLogoDarkUrl()));
+
         if (gs.getSearchEnabled() == null) {
             gs.setSearchEnabled(true);
         }
@@ -1267,6 +1278,15 @@ public class StoreThemeService {
                 .replaceAll("^-+|-+$", "");
         return slug.length() > 50 ? slug.substring(0, 50).replaceAll("-+$", "") : slug;
     }
+    private static String cleanLogoUrl(String raw) {
+        if (raw == null) return "";
+        String url = raw.trim();
+        if (url.isEmpty() || url.length() > 500) return "";
+        String lower = url.toLowerCase();
+        boolean ok = lower.startsWith("https://") || lower.startsWith("http://")
+                || (url.startsWith("/") && !url.startsWith("//"));
+        return ok ? url : "";
+    }
 
     private void sanitizeSingleSection(ThemeSectionDto sec) {
         if (sec == null) return;
@@ -1312,7 +1332,36 @@ public class StoreThemeService {
                 sec.getSettings().remove("layoutTone");
             }
             sanitizeSectionAnchor(sec);
+            sanitizeImageFraming(sec.getSettings());
             sanitizePhase2SectionSettings(sec);
+        }
+    }
+
+    private static final java.util.regex.Pattern IMAGE_FRAME_KEY =
+            java.util.regex.Pattern.compile("^.*[iI]mage(Fit|PosX|PosY|Zoom)$");
+
+    /** Valida el encuadre de las fotos: ajuste (cover/contain), enfoque 0-100 y zoom 100-250. */
+    private void sanitizeImageFraming(Map<String, Object> s) {
+        if (s == null) return;
+        for (String key : new ArrayList<>(s.keySet())) {
+            java.util.regex.Matcher m = IMAGE_FRAME_KEY.matcher(key);
+            if (!m.matches()) continue;
+            Object v = s.get(key);
+            String kind = m.group(1);
+            if ("Fit".equals(kind)) {
+                if (!"cover".equals(v) && !"contain".equals(v)) s.remove(key);
+                continue;
+            }
+            double n;
+            try {
+                n = Double.parseDouble(String.valueOf(v).trim());
+            } catch (Exception e) {
+                s.remove(key);
+                continue;
+            }
+            double min = "Zoom".equals(kind) ? 100 : 0;
+            double max = "Zoom".equals(kind) ? 250 : 100;
+            s.put(key, (int) Math.round(Math.max(min, Math.min(max, n))));
         }
     }
 

@@ -164,7 +164,7 @@
                                     th:attr="data-video-embed=${'https://www.youtube-nocookie.com/embed/' + videoId + '?rel=0&playsinline=1&autoplay=1'},
                                              data-video-title=${!#strings.isEmpty(title) ? title : 'Video de ' + store.name}"
                                     onclick="const f=this.closest('.sv-video-frame');if(f&&this.dataset.videoEmbed){const i=document.createElement('iframe');i.src=this.dataset.videoEmbed;i.title=this.dataset.videoTitle||'Video';i.className='sv-video-iframe';i.setAttribute('allow','accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');i.setAttribute('allowfullscreen','allowfullscreen');f.innerHTML='';f.appendChild(i);}">
-                                <img th:src="${coverUrl}"
+                                <img th:src="${coverUrl}" th:style="${sec.frameStyle('coverImage')}"
                                      th:alt="${!#strings.isEmpty(title) ? title : store.name}"
                                      loading="lazy"
                                      class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
@@ -356,7 +356,7 @@
                 <div th:if="${activeCount > 0}"
                      class="sv-lookbook-grid"
                      th:attr="data-cols=${safeCols}">
-                    <th:block th:each="it : ${lookbookItems}">
+                    <th:block th:each="it, itStat : ${lookbookItems}">
                         <div th:if="${it['active']}"
                              th:with="rawUrl=${it['url']},
                                       resolvedHref=${#strings.isEmpty(rawUrl)
@@ -368,7 +368,7 @@
                                                   : (rawUrl == '/' ? '/s/' + store.slug : '/s/' + store.slug + (#strings.startsWith(rawUrl, '/') ? rawUrl : '/' + rawUrl))))}"
                              class="sv-lookbook-item store-radius group"
                              th:attr="data-aspect=${safeAspect}">
-                            <img th:src="${it['img']}"
+                            <img th:src="${it['img']}" th:style="${sec.frameStyle('item' + (itStat.index + 1) + 'Image')}"
                                  th:alt="${!#strings.isEmpty(it['cap']) ? it['cap'] : (!#strings.isEmpty(title) ? title : store.name)}"
                                  loading="lazy"
                                  class="sv-lookbook-img" />
@@ -636,7 +636,7 @@
                 <div th:if="${postCount > 0}"
                      class="sv-social-feed-grid mt-8"
                      th:attr="data-count=${postCount}">
-                    <th:block th:each="post : ${postItems}">
+                    <th:block th:each="post, postStat : ${postItems}">
                         <div th:if="${post['active']}"
                              th:with="rawUrl=${post['url']},
                                       resolvedHref=${#strings.isEmpty(rawUrl)
@@ -648,7 +648,7 @@
                                                   : (rawUrl == '/' ? '/s/' + store.slug : '/s/' + store.slug + (#strings.startsWith(rawUrl, '/') ? rawUrl : '/' + rawUrl))))}"
                              class="sv-lookbook-item store-radius group"
                              data-aspect="square">
-                            <img th:src="${post['img']}"
+                            <img th:src="${post['img']}" th:style="${sec.frameStyle('post' + (postStat.index + 1) + 'Image')}"
                                  th:alt="${!#strings.isEmpty(post['cap']) ? post['cap'] : store.name}"
                                  loading="lazy"
                                  class="sv-lookbook-img" />
@@ -1052,7 +1052,7 @@
          th:classappend="${isCompact ? 'py-10 sm:py-12' : (!#strings.isEmpty(imageUrl) and !isSplit ? 'min-h-[340px] sm:min-h-[440px] flex items-center py-16 sm:py-20' : 'py-14 sm:py-20')}"
          class="relative overflow-hidden px-4">
     <div th:if="${!#strings.isEmpty(imageUrl) and !isSplit}" class="absolute inset-0 z-0">
-        <img th:src="${imageUrl}" alt="Banner principal" class="w-full h-full object-cover">
+        <img th:src="${imageUrl}" th:style="${sec.frameStyle('image')}" alt="Banner principal" class="w-full h-full object-cover">
         <div class="absolute inset-0 bg-slate-950" th:style="|opacity: ${overlayOpacity / 100.0};|"></div>
     </div>
 
@@ -1115,7 +1115,7 @@
         </div>
         <div class="sv-hero-split__media">
             <div class="aspect-[4/3] store-radius overflow-hidden shadow-2xl border border-white/15 bg-slate-900">
-                <img th:src="${imageUrl}" th:alt="${title}" class="w-full h-full object-cover">
+                <img th:src="${imageUrl}" th:style="${sec.frameStyle('image')}" th:alt="${title}"  class="w-full h-full object-cover">
             </div>
         </div>
     </div>
@@ -1209,6 +1209,7 @@
                   customTitle=${sec.settingStr('customTitle', '')},
                   customSubtitle=${sec.settingStr('customSubtitle', '')},
                   imageSide=${sec.settingStr('imageSide', 'left')},
+                  imageFit=${sec.settingStr('imageFit', 'contain')},
                   matchedList=${sec.resolvedProducts != null and not #lists.isEmpty(sec.resolvedProducts) ? sec.resolvedProducts : new java.util.ArrayList()}"
          class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
     <th:block th:if="${#lists.isEmpty(matchedList) and products != null and not #lists.isEmpty(products)}">
@@ -1227,8 +1228,8 @@
                       hasDiscount=${sp.discountPrice != null and sp.discountPrice > 0 and sp.price != null and sp.price > sp.discountPrice},
                       discountPct=${hasDiscount ? T(java.lang.Math).round(((sp.price - sp.discountPrice) * 100.0) / sp.price) : 0},
                       effectivePrice=${hasDiscount ? sp.discountPrice : sp.price},
-                      spImg=${sp.mainImageUrl != null ? sp.mainImageUrl : '/img/placeholder.jpg'}"
-             th:attr="data-image-side=${imageSide}"
+                      spImg=${sp.mainImageUrl != null ? #strings.replace(sp.mainImageUrl, '/upload/', '/upload/c_limit,w_1100,q_auto,f_auto/') : '/img/placeholder.jpg'}"
+             th:attr="data-image-side=${imageSide}, data-img-fit=${imageFit}"
              class="product-card sv-spotlight-card bg-white text-slate-900 store-radius shadow-xl border border-slate-100">
             <div class="sv-spotlight-media">
                 <a th:href="@{/s/{slug}/p/{id}(slug=${slug}, id=${sp.id})}" class="block w-full h-full">
@@ -1304,17 +1305,6 @@
                    catImgMap=${categoryImageMap != null ? new java.util.HashMap(categoryImageMap) : new java.util.HashMap()}">
     <section th:if="${not #lists.isEmpty(displayCats) or (isDraftPreview == true)}"
              class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <th:block th:if="${products != null}" th:each="prod : ${products}">
-            <th:block th:if="${prod.category != null and (prod.mainImageUrl != null or prod.getMainImageThumbnailUrl() != null)}"
-                      th:with="pImg=${prod.getMainImageThumbnailUrl() != null ? prod.getMainImageThumbnailUrl() : prod.mainImageUrl}">
-                <th:block th:if="${!catImgMap.containsKey(prod.category.id)}"
-                          th:with="ign=${catImgMap.put(prod.category.id, pImg)}"></th:block>
-                <th:block th:if="${prod.category.parentCategory != null and !catImgMap.containsKey(prod.category.parentCategory.id)}"
-                          th:with="ign2=${catImgMap.put(prod.category.parentCategory.id, pImg)}"></th:block>
-                <th:block th:if="${prod.category.parentCategory != null and prod.category.parentCategory.parentCategory != null and !catImgMap.containsKey(prod.category.parentCategory.parentCategory.id)}"
-                          th:with="ign3=${catImgMap.put(prod.category.parentCategory.parentCategory.id, pImg)}"></th:block>
-            </th:block>
-        </th:block>
         <div class="text-center mb-8">
             <h2 class="text-2xl sm:text-3xl font-black store-heading tracking-tight" th:text="${title}">Categorías</h2>
             <p th:if="${!#strings.isEmpty(subtitle)}" class="store-muted mt-1 text-sm sm:text-base" th:text="${subtitle}"></p>
@@ -1323,7 +1313,8 @@
              th:class="'grid gap-4 sm:gap-6 ' + ${gridColsClass}">
             <a th:each="cat : ${displayCats}"
                th:if="${cat.isActive and cat.parentCategory == null}"
-               th:with="catImg=${catImgMap.get(cat.id)}"
+               th:with="catImg0=${catImgMap.get(cat.id)},
+                       catImg=${catImg0 != null ? #strings.replace(catImg0, '/upload/c_fill,h_300,w_300,q_auto,f_auto/', '/upload/c_fill,g_auto,ar_4:3,w_800,q_auto,f_auto/') : null}"
                th:href="@{/s/{slug}/catalog(slug=${slug}, category=${cat.id})}"
                class="group relative aspect-[4/3] bg-slate-900 text-white store-radius overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 flex flex-col justify-end p-5 sm:p-6">
                 <img th:if="${catImg != null}"
@@ -1509,8 +1500,8 @@
                 </a>
             </div>
         </div>
-        <div th:if="${!#strings.isEmpty(imageUrl)}" style="min-height: 280px;" class="w-full h-full bg-slate-800">
-            <img th:src="${imageUrl}" th:alt="${title}" class="w-full h-full object-cover">
+        <div th:if="${!#strings.isEmpty(imageUrl)}" style="min-height: 280px;" class="w-full h-full bg-slate-800 overflow-hidden">
+            <img th:src="${imageUrl}" th:style="${sec.frameStyle('image')}" th:alt="${title}" class="w-full h-full object-cover">
         </div>
     </div>
 </section>
@@ -1545,8 +1536,7 @@
         <div th:style="|background-color: ${b1Bg}; min-height: 280px;|"
              class="relative store-radius overflow-hidden p-8 flex flex-col justify-end text-white shadow-lg group">
             <div th:if="${!#strings.isEmpty(b1Img)}" class="absolute inset-0 z-0">
-                <img th:src="${b1Img}" th:alt="${b1Title}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
-                <div class="absolute inset-0 bg-slate-950/50"></div>
+                <img th:src="${b1Img}" th:style="${sec.frameStyle('card1Image')}" th:alt="${b1Title}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">                <div class="absolute inset-0 bg-slate-950/50"></div>
             </div>
             <div class="relative z-10 space-y-2">
                 <span th:if="${!#strings.isEmpty(b1Badge)}" style="background-color: rgba(255,255,255,0.2);" class="inline-block px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider" th:text="${b1Badge}"></span>
@@ -1563,7 +1553,7 @@
         <div th:style="|background-color: ${b2Bg}; min-height: 280px;|"
              class="relative store-radius overflow-hidden p-8 flex flex-col justify-end text-white shadow-lg group">
             <div th:if="${!#strings.isEmpty(b2Img)}" class="absolute inset-0 z-0">
-                <img th:src="${b2Img}" th:alt="${b2Title}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                	<img th:src="${b2Img}" th:style="${sec.frameStyle('card2Image')}" th:alt="${b2Title}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                 <div class="absolute inset-0 bg-slate-950/50"></div>
             </div>
             <div class="relative z-10 space-y-2">

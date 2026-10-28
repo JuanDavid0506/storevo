@@ -1065,3 +1065,46 @@ body[data-sv-dropdown-style="dual_drawer"] .sv-catalog-chevron {
 .sv-fullcols-special:hover {
     text-decoration: underline;
 }
+
+/* ============================================================
+   LOGO DE LA TIENDA (Navegación y Cabecera)
+   ============================================================ */
+.sv-nav__logo { --sv-logo-h: 52px; --sv-logo-k: 0.8; }
+.sv-nav__logo[data-logo-size="sm"] { --sv-logo-h: 40px; }
+.sv-nav__logo[data-logo-size="lg"] { --sv-logo-h: 64px; }
+.sv-nav__logo[data-logo-size="xl"] { --sv-logo-h: 80px; }
+/* Con logo en imagen: aire arriba/abajo y más ancho disponible que con texto */
+.sv-nav__logo:has(.sv-nav__logo-img) { padding-block: 0.5rem; max-width: 15rem; }
+@media (min-width: 640px) { .sv-nav__logo:has(.sv-nav__logo-img) { max-width: 24rem; } }
+@media (min-width: 768px) {
+    .sv-nav__logo { --sv-logo-k: 1; }
+    .sv-nav[data-nav-layout="centered"] .sv-nav__logo { --sv-logo-k: 1.15; }
+    /* Al compactar el navbar con scroll, el logo también se encoge */
+    body[data-sv-nav-compact="true"].sv-is-scrolled .sv-nav__logo { --sv-logo-k: 0.65; }
+}
+/* Layout compacto: cabecera baja, logo proporcional */
+.sv-nav[data-nav-layout="compact"] .sv-nav__logo { --sv-logo-k: 0.75; }
+.sv-nav__logo-img {
+    display: block;
+    height: calc(var(--sv-logo-h) * var(--sv-logo-k));
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
+    transition: height var(--sv-nav-duration, 250ms) ease;
+}
+.sv-nav__logo-img ~ .sv-nav__logo-name { margin-left: 0.6rem; }
+
+/* Logo alterno para fondos oscuros: oculto por defecto */
+.sv-nav__logo-img--dark { display: none; }
+
+/* Navbar de color primario/secundario (texto blanco) */
+.sv-nav[data-nav-style="primary"]:not([data-nav-tone="light-bg"]) .sv-nav__logo.has-dark-logo .sv-nav__logo-img--light,
+.sv-nav[data-nav-style="secondary"]:not([data-nav-tone="light-bg"]) .sv-nav__logo.has-dark-logo .sv-nav__logo-img--light { display: none; }
+.sv-nav[data-nav-style="primary"]:not([data-nav-tone="light-bg"]) .sv-nav__logo.has-dark-logo .sv-nav__logo-img--dark,
+.sv-nav[data-nav-style="secondary"]:not([data-nav-tone="light-bg"]) .sv-nav__logo.has-dark-logo .sv-nav__logo-img--dark { display: block; }
+
+/* Navbar transparente sobre el banner (Hero Overlay, solo PC) */
+@media (min-width: 768px) {
+    body[data-sv-nav-layout="hero_overlay"].sv-has-hero-first:not(.sv-is-scrolled) .sv-nav .sv-nav__logo.has-dark-logo .sv-nav__logo-img--light { display: none; }
+    body[data-sv-nav-layout="hero_overlay"].sv-has-hero-first:not(.sv-is-scrolled) .sv-nav .sv-nav__logo.has-dark-logo .sv-nav__logo-img--dark { display: block; }
+}

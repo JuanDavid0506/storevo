@@ -103,6 +103,23 @@ public class ThemeSectionDto {
         }
         return Boolean.parseBoolean(String.valueOf(settings.get(key)).trim());
     }
+
+    public String frameStyle(String base) {
+        if (settings == null || base == null || base.isBlank()) return null;
+        String fit = "contain".equals(settingStr(base + "Fit", "cover")) ? "contain" : "cover";
+        int x = Math.max(0, Math.min(100, settingInt(base + "PosX", 50)));
+        int y = Math.max(0, Math.min(100, settingInt(base + "PosY", 50)));
+        int zoom = Math.max(100, Math.min(250, settingInt(base + "Zoom", 100)));
+        if ("cover".equals(fit) && x == 50 && y == 50 && zoom == 100) return null;
+        StringBuilder css = new StringBuilder();
+        css.append("object-fit:").append(fit)
+                .append(";object-position:").append(x).append("% ").append(y).append("%");
+        if (zoom != 100) {
+            css.append(";scale:").append(zoom / 100.0)
+                    .append(";transform-origin:").append(x).append("% ").append(y).append("%");
+        }
+        return css.toString();
+    }
     public List<Long> settingLongList(String key) {
         if (settings == null || !settings.containsKey(key) || settings.get(key) == null) {
             return new ArrayList<>();
