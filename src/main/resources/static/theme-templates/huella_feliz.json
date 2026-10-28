@@ -1,0 +1,49 @@
+{
+  "globalStyles": {
+      "primaryColor": "#f97316",
+      "secondaryColor": "#1e293b",
+      "backgroundColor": "#fffdf7",
+      "textColor": "#1e293b",
+      "headingFont": "Plus Jakarta Sans",
+      "bodyFont": "DM Sans",
+      "borderRadius": "1.5rem",
+      "buttonRadius": "pill",
+      "navbarLinkFormat": "bold",
+      "navbarLinkHover": "pill",
+      "navbarSpeed": "fast",
+      "navbarCompactOnScroll": true,
+      "cardStyle": "soft",
+      "cardRadius": "1.5rem",
+      "cardImagePadding": "inset",
+      "cardMetaMode": "both",
+      "detailInfoStyle": "card",
+      "detailVariantStyle": "pills",
+      "detailSpecsOpen": "expanded",
+      "filterShowSpecs": true,
+      "searchNavbarVariant": "inline_bar",
+      "searchInputStyle": "pill",
+      "searchButtonMode": "icon_text",
+      "searchPlaceholder": "Buscar concentrado, snacks, juguetes, camas, antipulgas...",
+      "searchEmptyMessage": "No encontramos productos para tu mascota con esa búsqueda",
+      "searchDebounceMs": 150,
+      "searchShowProductBrand": true,
+      "searchPopularTerms": "Perros, Gatos, Concentrado, Juguetes, Camas, Snacks",
+      "searchCategoryScope": "pills_top",
+      "searchAdvSpecs": true
+  },
+  "sections": [
+    {"id": "sec_ann_hf", "type": "announcement_bar", "settings": {"text": "🐾 Todo para consentir a tu peludo • Despachos rápidos a domicilio", "text2": "🦴 Concentrados, snacks, camas y accesorios con pago seguro PSE o Nequi", "bgColor": "#f97316"}},
+    {"id": "sec_hero_hf", "type": "hero_banner", "settings": {"heroLayout": "split", "badgeText": "BIENESTAR Y ALEGRÍA PARA TU MASCOTA", "title": "Consiente a tu mejor amigo en {{storeName}}", "subtitle": "Alimentos balanceados, juguetes resistentes, camas acogedoras y accesorios de paseo para perros y gatos.", "buttonText": "Ver Productos para Mascotas", "secondaryButtonText": "Pedir por WhatsApp", "bgColor": "#1e293b"}},
+    {"id": "sec_cats_hf", "type": "featured_categories", "settings": {"title": "¿Para quién buscas hoy?", "subtitle": "Explora nuestras categorías para perros y gatos", "cardLayout": "pills"}},
+    {"id": "sec_grid_hf", "type": "product_grid", "settings": {"title": "Los Favoritos de la Manada", "subtitle": "Busca por marca, etapa (cachorro/adulto) o tamaño de raza", "limit": 12}},
+    {"id": "sec_spot_hf", "type": "spotlight_product", "settings": {"badgeText": "🐾 RECOMENDADO DEL MES"}},
+    {"id": "sec_multi_hf", "type": "multi_banners", "settings": {"card1Badge": "Nutrición", "card1Title": "Alimentos y Snacks", "card1Subtitle": "Energía y pelaje brillante todos los días", "card1ButtonText": "Ver Nutrición", "card1BgColor": "#f97316", "card2Badge": "Diversión y Descanso", "card2Title": "Camas, Juguetes y Paseo", "card2Subtitle": "Collares, pecheras, rascadores y más", "card2ButtonText": "Ver Accesorios", "card2BgColor": "#1e293b"}},
+    {"id": "sec_steps_hf", "type": "how_to_buy", "settings": {"title": "¿Cómo pedir para tu peludo?", "subtitle": "En 3 pasos rápidos y sin filas", "step1Title": "Elige sus favoritos", "step1Text": "Selecciona presentación, talla de pechera o sabor.", "step2Title": "Indica tu dirección", "step2Text": "Llevamos el pedido directo hasta tu casa.", "step3Text": "Usa PSE, Nequi, tarjetas o coordina con nosotros."}},
+    {"id": "sec_test_hf", "type": "testimonials", "settings": {"title": "Peludos Felices y Familias Tranquilas", "subtitle": "Reseñas verificadas de nuestros clientes"}},
+    {"id": "sec_wa_hf", "type": "whatsapp_cta", "settings": {"title": "¿Dudas con la talla del collar, cama o el alimento ideal?", "subtitle": "Cuéntanos qué raza o peso tiene tu mascota y te asesoramos por WhatsApp.", "buttonText": "Consultar por WhatsApp"}}
+  ],
+  "pages": {
+    "catalog": [{"id": "sec_catalog_results", "type": "catalog_results", "settings": {"headerBadge": "TIENDA DE MASCOTAS", "headerTitle": "Catálogo Completo", "headerSubtitle": "Filtra por categoría, marca, tamaño o precio."}}],
+    "product": [{"id": "sec_product_main", "type": "product_main", "settings": {"relatedTitle": "Otros consentidos también llevan", "relatedSubtitle": "Complementa el pedido de tu mascota"}}]
+  }
+}

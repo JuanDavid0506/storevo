@@ -1,0 +1,46 @@
+{
+  "globalStyles": {
+      "primaryColor": "#991b1b",
+      "secondaryColor": "#1c1917",
+      "backgroundColor": "#faf6f0",
+      "textColor": "#1c1917",
+      "headingFont": "Playfair Display",
+      "bodyFont": "DM Sans",
+      "borderRadius": "1rem",
+      "navbarLayout": "compact",
+      "navbarStyle": "secondary",
+      "navbarLinkFormat": "bold",
+      "navbarLinkHover": "pill",
+      "navbarCompactOnScroll": true,
+      "cardRadius": "1rem",
+      "detailInfoStyle": "card",
+      "detailVariantStyle": "pills",
+      "detailShowSku": false,
+      "detailSpecsOpen": "expanded",
+      "filterShowBrand": false,
+      "filterShowSpecs": true,
+      "searchInputStyle": "rounded",
+      "searchPlaceholder": "Buscar café en grano, molido, postres, conservas...",
+      "searchEmptyMessage": "No encontramos productos gourmet para tu búsqueda",
+      "searchDebounceMs": 200,
+      "searchSuggestBrands": false,
+      "searchPopularTerms": "Café, Molido, En grano, Tortas, Galletas, Regalos",
+      "searchCategoryScope": "pills_top",
+      "searchAdvBrand": false,
+      "searchAdvSpecs": true
+  },
+  "sections": [
+    {"id": "sec_ann_ch", "type": "announcement_bar", "settings": {"text": "☕ Frescura y calidad artesanal en cada pedido • Envíos cuidadosos", "text2": "💳 Paga fácil con PSE, Nequi, Tarjetas o pide por WhatsApp", "bgColor": "#991b1b"}},
+    {"id": "sec_hero_ch", "type": "hero_banner", "settings": {"heroLayout": "split", "badgeText": "SABOR DE ORIGEN Y TRADICIÓN", "title": "Aromas y sabores auténticos en {{storeName}}", "subtitle": "Productos seleccionados, lotes frescos y preparaciones artesanales listas para disfrutar en casa o regalar.", "buttonText": "Ver Carta y Productos", "secondaryButtonText": "Hacer Pedido por WhatsApp", "bgColor": "#1c1917"}},
+    {"id": "sec_cats_ch", "type": "featured_categories", "settings": {"title": "Nuestras Especialidades", "subtitle": "Explora por línea de sabor", "cardLayout": "pills"}},
+    {"id": "sec_grid_ch", "type": "product_grid", "settings": {"title": "Recién Salidos y Favoritos", "subtitle": "Elige presentación, gramaje o molienda en cada producto"}},
+    {"id": "sec_spot_ch", "type": "spotlight_product", "settings": {"badgeText": "☕ RECOMENDACIÓN DE LA CASA"}},
+    {"id": "sec_trust_ch", "type": "trust_badges", "settings": {"badgeStyle": "secondary", "item1Icon": "star", "item1Title": "Frescura Garantizada", "item1Text": "Ingredientes seleccionados y lotes siempre frescos.", "item2Icon": "gift", "item2Title": "Empaque Sellado", "item2Text": "Conserva intacto el aroma, textura y sabor.", "item3Icon": "truck", "item3Title": "Entrega Segura", "item3Text": "Coordinamos tu entrega con total puntualidad."}},
+    {"id": "sec_steps_ch", "type": "how_to_buy", "settings": {"title": "¿Cómo hacer tu pedido?", "subtitle": "Del productor u horno directo a tu mesa", "step1Title": "Selecciona tus productos", "step1Text": "Elige tamaño, peso o presentación.", "step2Title": "Indica tu dirección", "step2Text": "Completa tus datos de entrega y notas especiales.", "step3Text": "Realiza tu pago seguro o coordina la entrega con nosotros."}},
+    {"id": "sec_test_ch", "type": "testimonials", "settings": {"title": "Paladares que Recomiendan a {{storeName}}", "subtitle": "Reseñas verificadas de compradores reales"}}
+  ],
+  "pages": {
+    "catalog": [{"id": "sec_catalog_results", "type": "catalog_results", "settings": {"headerBadge": "SABORES DE ORIGEN", "headerTitle": "Nuestro Catálogo Gourmet", "headerSubtitle": "Filtra por categoría, presentación o precio."}}],
+    "product": [{"id": "sec_product_main", "type": "product_main", "settings": {"showSku": false, "relatedTitle": "Acompaña tu pedido con", "relatedSubtitle": "Otras delicias de nuestro catálogo"}}]
+  }
+}

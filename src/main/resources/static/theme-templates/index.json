@@ -1,0 +1,137 @@
+[
+  {
+    "id": "atelier_provenza",
+    "category": "moda_calzado",
+    "name": "Atelier Provenza",
+    "tag": "Ropa, Boutique y Moda de Autor",
+    "layoutSummary": "Navbar Boutique Centrado • Tarjeta Editorial 4:5 • Galería Lookbook",
+    "colors": ["#9a6b56", "#1c1917", "#faf8f5"],
+    "description": "Editorial de alta costura con tipografía Cormorant Garamond y Manrope, tarjetas verticales limpias, catálogo de 3 columnas amplias y ficha en mosaico 60/40."
+  },
+  {
+    "id": "nexo_digital",
+    "category": "tecnologia",
+    "name": "Nexo Digital",
+    "tag": "Tecnología, Audio y Accesorios",
+    "layoutSummary": "Navbar Buscador Comercial • Tarjetas Bento Contain • Ficha Técnica Abierta",
+    "colors": ["#2563eb", "#0f172a", "#f1f5f9"],
+    "description": "Estructura tipo marketplace tecnológico con buscador prominente en cabecera, submenú Maestro-Detalle, tarjetas Bento con imagen completa sin recorte y especificaciones técnicas desplegadas."
+  },
+  {
+    "id": "distrito_urbano",
+    "category": "moda_calzado",
+    "name": "Distrito Urbano",
+    "tag": "Streetwear, Sneakers y Gorras",
+    "layoutSummary": "Navbar Transparente Hero • Tarjetas Póster 3:4 • Cinta Continua",
+    "colors": ["#dc2626", "#09090b", "#f4f4f5"],
+    "description": "Estética urbana de alto impacto con fuentes Space Grotesk, títulos en mayúsculas, bordes rectos, marquesina continua y barra de compra rápida lado a lado."
+  },
+  {
+    "id": "paso_firme",
+    "category": "moda_calzado",
+    "name": "Paso Firme",
+    "tag": "Calzado, Tenis, Botas y Marroquinería",
+    "layoutSummary": "Navbar Departamentos Ancho • Tarjetas Horizontales • Filtro Lateral",
+    "colors": ["#c2410c", "#0f172a", "#fafaf9"],
+    "description": "Diseñada específicamente para tiendas de calzado: vitrina con filtros de talla visibles, carrusel de marcas aliadas y ficha con galería en carrusel."
+  },
+  {
+    "id": "aura_botanica",
+    "category": "belleza_bienestar",
+    "name": "Aura Botánica",
+    "tag": "Skincare, Maquillaje y Cuidado Capilar",
+    "layoutSummary": "Navbar Editorial Cristal • Tarjetas Suaves Redondeadas • Rutina en 3 Pasos",
+    "colors": ["#c06c84", "#2d2327", "#fdf8f9"],
+    "description": "Atmósfera limpia y delicada con tipografía Playfair Display y Plus Jakarta Sans, botones en píldora, contador de resultados y sección de rutina de aplicación."
+  },
+  {
+    "id": "vitalidad_pro",
+    "category": "belleza_bienestar",
+    "name": "Vitalidad Pro",
+    "tag": "Suplementos, Fitness y Salud Natural",
+    "layoutSummary": "Navbar Doble Barra • Tarjetas Comerciales con Barra Dividida • Cifras de Respaldo",
+    "colors": ["#0d9488", "#0f2926", "#f4fbf9"],
+    "description": "Enfocada en confianza y conversión rápida: doble barra informativa, filtro superior horizontal, estadísticas verificables y especificaciones abiertas por defecto."
+  },
+  {
+    "id": "oro_y_bruma",
+    "category": "accesorios_joyas",
+    "name": "Oro & Bruma",
+    "tag": "Joyería, Relojería, Perfumería y Óptica",
+    "layoutSummary": "Navbar Minimalista • Tarjetas Galería 4:5 • Ficha Boutique en Cascada",
+    "colors": ["#a16207", "#141413", "#fcfaf5"],
+    "description": "Lujo silencioso con tipografía Cinzel y Lora, tarjetas con botón revelable al pasar el mouse, catálogo de 3 columnas y galería de producto en cascada editorial."
+  },
+  {
+    "id": "veta_de_cuero",
+    "category": "accesorios_joyas",
+    "name": "Veta de Cuero",
+    "tag": "Bolsos, Morrales, Billeteras y Cinturones",
+    "layoutSummary": "Navbar Boutique Izquierdo • Tarjetas Contorneadas • Panel Lateral Doble",
+    "colors": ["#7c2d12", "#1c1917", "#faf6f0"],
+    "description": "Inspirada en marroquinería colombiana de tradición: menú con panel lateral doble por clic, mosaico de colecciones, video destacado y acabado sobrio."
+  },
+  {
+    "id": "pulso_activo",
+    "category": "deportes",
+    "name": "Pulso Activo",
+    "tag": "Ropa Deportiva, Ciclismo y Gimnasio",
+    "layoutSummary": "Navbar Compacto Color Secundario • Tarjetas Dinámicas • Contador de Ofertas",
+    "colors": ["#ea580c", "#0f172a", "#f8fafc"],
+    "description": "Energía y velocidad con tipografía Oswald y DM Sans, encabezados en mayúsculas, contador regresivo de promociones y buscador instantáneo."
+  },
+  {
+    "id": "casa_serena",
+    "category": "hogar_mascotas",
+    "name": "Casa Serena",
+    "tag": "Hogar, Muebles, Decoración y Lencería",
+    "layoutSummary": "Navbar Editorial • Tarjetas Panorámicas 4:3 • Lookbook de Espacios",
+    "colors": ["#4d6b53", "#1e241e", "#f7f6f2"],
+    "description": "Pensada para mobiliario e interiorismo: proporción de imagen horizontal 4:3 en tarjetas, catálogo de 3 columnas amplias y galería de ambientes inspiradores."
+  },
+  {
+    "id": "huella_feliz",
+    "category": "hogar_mascotas",
+    "name": "Huella Feliz",
+    "tag": "Pet Shop, Alimentos, Juguetes y Accesorios",
+    "layoutSummary": "Navbar Comercial • Categorías en Píldoras • Buscador con Filtro Rápido",
+    "colors": ["#f97316", "#1e1b4b", "#fffbeb"],
+    "description": "Cálida, amigable y muy fácil de navegar para dueños de mascotas: bordes extra redondeados, categorías por especie y recompra ágil."
+  },
+  {
+    "id": "detalle_magico",
+    "category": "regalos_artesanias",
+    "name": "Detalle Mágico",
+    "tag": "Desayunos Sorpresa, Floristería y Regalos",
+    "layoutSummary": "Navbar Boutique • Tarjetas Centradas con Sombra • Guía de Pedido en 3 Pasos",
+    "colors": ["#db2777", "#3b0764", "#fdf2f8"],
+    "description": "Ideal para tiendas de detalles y fechas especiales: explica cómo personalizar la entrega y dedicatoria, destaca arreglos estrella y facilita pedidos por WhatsApp."
+  },
+  {
+    "id": "manos_de_origen",
+    "category": "regalos_artesanias",
+    "name": "Manos de Origen",
+    "tag": "Artesanías, Tejidos, Cerámica y Arte Hecho a Mano",
+    "layoutSummary": "Navbar Clásico Cálido • Tarjetas Boutique 4:5 • Historia de Taller",
+    "colors": ["#b45309", "#292524", "#fbf8f3"],
+    "description": "Resalta el valor cultural y el trabajo hecho a mano en Colombia: tipografía Lora, sección narrativa del taller artesano y galería visual de piezas únicas."
+  },
+  {
+    "id": "cosecha_y_horno",
+    "category": "regalos_artesanias",
+    "name": "Cosecha & Horno",
+    "tag": "Café de Especialidad, Repostería y Mercado Gourmet",
+    "layoutSummary": "Navbar Compacto Oscuro • Tarjetas Cálidas • Respaldo de Frescura",
+    "colors": ["#991b1b", "#1c1917", "#faf6f0"],
+    "description": "Diseñada para alimentos artesanales, café colombiano y repostería: transmite origen, frescura y facilita encargos rápidos por WhatsApp o pago en línea."
+  },
+  {
+    "id": "todomercado",
+    "category": "multitienda",
+    "name": "TodoMercado",
+    "tag": "Multitiendas, Variedades, Misceláneas y Mayoristas",
+    "layoutSummary": "Navbar Departamentos + Buscador • Tarjetas Compactas • Catálogo de Alta Densidad",
+    "colors": ["#4f46e5", "#0f172a", "#f1f5f9"],
+    "description": "Máxima capacidad comercial para tiendas con múltiples categorías: buscador con píldoras de departamentos, contador de ofertas, vitrina de promociones y filtro lateral fijo."
+  }
+]

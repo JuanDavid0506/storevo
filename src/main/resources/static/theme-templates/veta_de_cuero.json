@@ -1,0 +1,46 @@
+{
+  "globalStyles": {
+      "primaryColor": "#7c2d12",
+      "secondaryColor": "#1c1917",
+      "backgroundColor": "#faf7f2",
+      "textColor": "#1c1917",
+      "headingFont": "Playfair Display",
+      "bodyFont": "Manrope",
+      "borderRadius": "0.75rem",
+      "navbarLayout": "editorial",
+      "navbarLinkFormat": "uppercase",
+      "navbarLinkHover": "underline",
+      "navbarCompactOnScroll": true,
+      "cardRadius": "0.5rem",
+      "cardButtonStyle": "dark",
+      "detailGalleryLayout": "left",
+      "detailSpecsOpen": "expanded",
+      "filterShowBrand": false,
+      "filterShowSpecs": true,
+      "searchInputStyle": "rounded",
+      "searchPlaceholder": "Buscar bolsos, morrales, billeteras, correas...",
+      "searchEmptyMessage": "No encontramos artículos de marroquinería para tu búsqueda",
+      "searchDebounceMs": 200,
+      "searchSuggestBrands": false,
+      "searchPopularTerms": "Bolsos, Morrales, Billeteras, Manos libres, Correas",
+      "searchCategoryScope": "pills_top",
+      "searchAdvBrand": false,
+      "searchAdvSpecs": true
+  },
+  "sections": [
+    {"id": "sec_ann_vc", "type": "announcement_bar", "settings": {"text": "👜 Marroquinería con garantía en costuras y herrajes • Envíos a toda Colombia", "text2": "💳 Paga seguro con PSE, Nequi, Tarjetas o pide por WhatsApp", "bgColor": "#1c1917"}},
+    {"id": "sec_hero_vc", "type": "hero_banner", "settings": {"heroLayout": "split", "badgeText": "TRADICIÓN Y DISEÑO EN MARROQUINERÍA", "title": "Piezas hechas para acompañarte por años en {{storeName}}", "subtitle": "Bolsos, morrales, manos libres y billeteras con acabados de primera calidad, compartimentos funcionales y estilo atemporal.", "buttonText": "Ver Colección", "secondaryButtonText": "Hablar por WhatsApp", "bgColor": "#1c1917"}},
+    {"id": "sec_cats_vc", "type": "featured_categories", "settings": {"title": "Nuestras Líneas de Marroquinería", "subtitle": "Funcionalidad y elegancia en cada detalle"}},
+    {"id": "sec_grid_vc", "type": "product_grid", "settings": {"title": "Nuevos Diseños", "subtitle": "Desliza las fotos de cada producto para ver su interior y acabados", "showFilters": false}},
+    {"id": "sec_spot_vc", "type": "spotlight_product", "settings": {"badgeText": "👜 HECHO EN COLOMBIA"}},
+    {"id": "sec_promo_vc", "type": "promo_banner", "settings": {"badgeText": "ARTESANÍA Y DURABILIDAD", "title": "Herrajes resistentes y costuras reforzadas", "subtitle": "Cada pieza pasa por un control riguroso para garantizarte comodidad, capacidad y resistencia diaria.", "buttonText": "Explorar Catálogo", "bgColor": "#7c2d12"}},
+    {"id": "sec_multi_vc", "type": "multi_banners", "settings": {"card1Badge": "Bolsos & Cartera", "card1Title": "Línea Femenina", "card1Subtitle": "Manos libres, shopping bags y clutches", "card1ButtonText": "Ver Bolsos", "card1BgColor": "#7c2d12", "card2Badge": "Viaje & Oficina", "card2Title": "Morrales y Billeteras", "card2Subtitle": "Compartimentos porta-PC y organizadores", "card2ButtonText": "Ver Morrales", "card2BgColor": "#1c1917"}},
+    {"id": "sec_test_vc", "type": "testimonials", "settings": {"title": "Lo que Opinan Nuestros Clientes", "subtitle": "Calificaciones reales de compradores en Colombia"}},
+    {"id": "sec_faq_vc", "type": "faq_accordion", "settings": {"subtitle": "Dimensiones, materiales y garantía", "q1": "¿Dónde puedo ver las medidas exactas del bolso o morral?", "a1": "En cada producto encontrarás la sección de Especificaciones Técnicas desplegada con el alto, ancho, fondo y material.", "q2": "¿Qué cubre la garantía?", "a2": "Todos nuestros productos tienen garantía directa sobre costuras, cierres, cremalleras y herrajes.", "q3": "¿Cómo limpiar y cuidar mi bolso?", "a3": "Límpialo con un paño suave ligeramente húmedo y utiliza cremas humectantes neutras para marroquinería."}},
+    {"id": "sec_trust_vc", "type": "trust_badges", "settings": {"badgeStyle": "secondary", "item1Title": "Garantía de Taller", "item1Text": "Respaldo directo en herrajes, cierres y costuras.", "item2Text": "Empaque protegido para conservar la horma del bolso.", "item3Icon": "card", "item3Title": "Pago 100% Seguro", "item3Text": "PSE, Nequi, tarjetas o coordinación por WhatsApp."}}
+  ],
+  "pages": {
+    "catalog": [{"id": "sec_catalog_results", "type": "catalog_results", "settings": {"headerBadge": "MARROQUINERÍA", "headerTitle": "Catálogo de Bolsos y Accesorios", "headerSubtitle": "Filtra por color, categoría, material o rango de precio."}}],
+    "product": [{"id": "sec_product_main", "type": "product_main", "settings": {"galleryLayout": "left", "relatedTitle": "Combínalo con estas Billeteras y Correas", "relatedSubtitle": "Otras piezas de nuestra colección marroquinera"}}]
+  }
+}

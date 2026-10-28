@@ -1,0 +1,48 @@
+{
+  "globalStyles": {
+      "primaryColor": "#db2777",
+      "secondaryColor": "#3b0764",
+      "backgroundColor": "#fdf4ff",
+      "textColor": "#2e1065",
+      "headingFont": "Playfair Display",
+      "bodyFont": "Plus Jakarta Sans",
+      "borderRadius": "1.5rem",
+      "buttonRadius": "pill",
+      "navbarLayout": "centered",
+      "navbarLinkHover": "pill",
+      "navbarCompactOnScroll": true,
+      "cardStyle": "soft",
+      "cardRadius": "1.5rem",
+      "cardShadow": "lg",
+      "cardContentAlign": "center",
+      "detailInfoStyle": "buybox",
+      "detailVariantStyle": "pills",
+      "detailShowSku": false,
+      "detailShowStock": false,
+      "filterShowBrand": false,
+      "searchInputStyle": "pill",
+      "searchAnim": "scale",
+      "searchPlaceholder": "Buscar desayunos, ramos, cumpleaños, aniversario...",
+      "searchEmptyMessage": "No encontramos detalles para esa ocasión",
+      "searchDebounceMs": 200,
+      "searchSuggestBrands": false,
+      "searchPopularTerms": "Cumpleaños, Aniversario, Desayunos, Rosas, Chocolates",
+      "searchCategoryScope": "pills_top",
+      "searchAdvBrand": false
+  },
+  "sections": [
+    {"id": "sec_ann_dm", "type": "announcement_bar", "settings": {"text": "🎁 Incluye tarjeta personalizada con tu mensaje • Entregas puntuales a domicilio", "text2": "💐 Sorprende hoy en cumpleaños, aniversarios y fechas especiales", "bgColor": "#db2777"}},
+    {"id": "sec_hero_dm", "type": "hero_banner", "settings": {"heroLayout": "split", "badgeText": "SORPRESAS QUE EMOCIONAN", "title": "Haz inolvidable su día especial con {{storeName}}", "subtitle": "Arreglos florales, desayunos sorpresa, anchetas y cajas de regalo preparadas al instante con amor y dedicación.", "buttonText": "Elegir un Detalle", "secondaryButtonText": "Personalizar por WhatsApp", "overlayOpacity": 35, "bgColor": "#3b0764"}},
+    {"id": "sec_cats_dm", "type": "featured_categories", "settings": {"title": "Busca por Ocasión", "subtitle": "Cumpleaños, aniversario, grados, amor y amistad", "cardLayout": "pills"}},
+    {"id": "sec_grid_dm", "type": "product_grid", "settings": {"title": "Detalles Más Solicitados", "subtitle": "Listos para personalizar con el mensaje que desees", "showFilters": false}},
+    {"id": "sec_spot_dm", "type": "spotlight_product", "settings": {"badgeText": "💝 SORPRESA ESTRELLA", "imageSide": "right"}},
+    {"id": "sec_steps_dm", "type": "how_to_buy", "settings": {"title": "¿Cómo enviar tu sorpresa?", "subtitle": "Fácil, rápido y con seguimiento directo", "step1Title": "Elige el arreglo o detalle", "step1Text": "Selecciona tus adiciones o colores favoritos.", "step2Title": "Datos de quien recibe y dedicatoria", "step2Text": "En el campo de notas del checkout escribe el mensaje para la tarjeta y la hora sugerida.", "step3Title": "Paga en línea o coordina por WhatsApp", "step3Text": "Confirmamos tu pedido y te avisamos cuando sea entregado."}},
+    {"id": "sec_test_dm", "type": "testimonials", "settings": {"title": "Sonrisas Entregadas por {{storeName}}", "subtitle": "Reseñas reales verificadas de quienes confiaron en nosotros"}},
+    {"id": "sec_faq_dm", "type": "faq_accordion", "settings": {"subtitle": "Entregas, mensajes y personalización", "q1": "¿Dónde escribo el mensaje para la tarjeta de regalo?", "a1": "Al finalizar tu compra encontrarás el campo «Notas adicionales», donde puedes escribir la dedicatoria exacta y referencias de entrega.", "q2": "¿Puedo pedir desde otra ciudad o desde el exterior?", "a2": "¡Sí! Puedes pagar en línea o coordinar con nosotros por WhatsApp y nosotros nos encargamos de entregar la sorpresa en destino.", "q3": "¿Con cuánta anticipación debo hacer mi pedido?", "a3": "Recomendamos agendar con al menos 24 horas de anticipación, o consultar disponibilidad para entrega el mismo día por WhatsApp."}},
+    {"id": "sec_wa_dm", "type": "whatsapp_cta", "settings": {"title": "¿Quieres armar un detalle personalizado o para entrega hoy mismo?", "subtitle": "Escríbenos ahora por WhatsApp y lo preparamos a tu medida.", "buttonText": "Hablar con nosotros en WhatsApp"}}
+  ],
+  "pages": {
+    "catalog": [{"id": "sec_catalog_results", "type": "catalog_results", "settings": {"headerBadge": "DETALLES & SORPRESAS", "headerTitle": "Todos Nuestros Arreglos", "headerSubtitle": "Explora por ocasión o rango de presupuesto."}}],
+    "product": [{"id": "sec_product_main", "type": "product_main", "settings": {"showSku": false, "showStockCounter": false, "relatedTitle": "Otros detalles que te encantarán", "relatedSubtitle": "Opciones adicionales para sorprender"}}]
+  }
+}

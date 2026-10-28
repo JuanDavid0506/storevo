@@ -1,0 +1,46 @@
+{
+  "globalStyles": {
+      "primaryColor": "#ea580c",
+      "headingFont": "Montserrat",
+      "bodyFont": "DM Sans",
+      "headingTransform": "uppercase",
+      "borderRadius": "0.75rem",
+      "navbarLinkFormat": "bold",
+      "navbarLinkHover": "underline_slide",
+      "navbarDropdownStyle": "split",
+      "navbarCompactOnScroll": true,
+      "cardRadius": "0.5rem",
+      "cardMetaMode": "both",
+      "cardPriceSize": "large",
+      "detailInfoStyle": "buybox",
+      "detailGalleryLayout": "left",
+      "detailSpecsOpen": "expanded",
+      "filterLayout": "sidebar",
+      "filterShowSpecs": true,
+      "searchInputStyle": "rounded",
+      "searchPlaceholder": "Buscar por modelo, talla (ej. 37, 40) o color...",
+      "searchEmptyMessage": "No encontramos calzado con ese criterio",
+      "searchDebounceMs": 200,
+      "searchShowProductBrand": true,
+      "searchPopularTerms": "Tenis, Botas, Cuero, Talla 38, Talla 40, Ofertas",
+      "searchCategoryScope": "pills_top",
+      "searchAdvancedEnabled": true,
+      "searchAdvSpecs": true
+  },
+  "sections": [
+    {"id": "sec_ann_pf", "type": "announcement_bar", "settings": {"text": "👟 Cambios de talla fáciles y garantizados • Envíos a toda Colombia", "text2": "💳 Paga con PSE, Nequi, Tarjetas o coordina tu pedido por WhatsApp"}},
+    {"id": "sec_hero_pf", "type": "hero_banner", "settings": {"heroLayout": "split", "badgeText": "CONFORT Y DISEÑO EN CADA PASO", "title": "Encuentra tu par ideal en {{storeName}}", "subtitle": "Calzado elaborado con materiales resistentes, suelas de alto confort y hormas pensadas para tu día a día.", "buttonText": "Ver Catálogo de Calzado", "secondaryButtonText": "Consultar mi Talla", "bgColor": "#0f172a"}},
+    {"id": "sec_trust_pf", "type": "trust_badges", "settings": {"item1Icon": "refresh", "item1Title": "Cambio de Talla Seguro", "item1Text": "Si no te queda como esperabas, gestionamos el cambio rápido.", "item2Icon": "shield", "item2Title": "Garantía de Calidad", "item2Text": "Costuras, pegues y materiales con respaldo directo.", "item3Icon": "truck", "item3Title": "Despacho Nacional", "item3Text": "Enviamos en caja original hasta la puerta de tu casa."}},
+    {"id": "sec_cats_pf", "type": "featured_categories", "settings": {"title": "Explora por Línea de Calzado", "subtitle": "Para dama, caballero y todos los estilos"}},
+    {"id": "sec_grid_pf", "type": "product_grid", "settings": {"title": "Nuevos Modelos Disponibles", "subtitle": "Filtra tu número de talla para ver los pares con entrega inmediata", "limit": 12}},
+    {"id": "sec_spot_pf", "type": "spotlight_product", "settings": {"badgeText": "👟 EL MÁS VENDIDO"}},
+    {"id": "sec_promo_pf", "type": "promo_banner", "settings": {"badgeText": "CALIDAD COLOMBIANA", "title": "Materiales pensados para durar", "subtitle": "Seleccionamos suelas antideslizantes, plantillas anatómicas y acabados de primera calidad.", "buttonText": "Descubrir Modelos"}},
+    {"id": "sec_steps_pf", "type": "how_to_buy", "settings": {"title": "¿Cómo pedir tus zapatos en {{storeName}}?", "subtitle": "Recibe tu par favorito sin salir de casa", "step1Title": "Elige modelo y talla", "step1Text": "Selecciona tu número habitual y agrégalo a la bolsa.", "step2Title": "Completa tu dirección", "step2Text": "Ingresa tus datos de entrega en cualquier ciudad o municipio.", "step3Title": "Paga o confirma por WhatsApp", "step3Text": "Realiza tu pago seguro en línea o coordina con un asesor."}},
+    {"id": "sec_faq_pf", "type": "faq_accordion", "settings": {"title": "Preguntas Frecuentes sobre Tallas y Envíos", "subtitle": "Compra con total seguridad", "q1": "¿El tallaje es normal o debo pedir una talla más?", "a1": "Nuestras referencias manejan horma nacional estándar. En la ficha técnica de cada zapato indicamos el material y ajuste.", "q2": "¿Qué pasa si necesito cambiar la talla cuando me llegue?", "a2": "Puedes solicitar el cambio de talla escribiéndonos a nuestro WhatsApp dentro de los plazos de nuestra política de cambios.", "q3": "¿Cuánto demora la entrega?", "a3": "Entre 2 y 5 días hábiles según tu ciudad en Colombia."}},
+    {"id": "sec_wa_pf", "type": "whatsapp_cta", "settings": {"title": "¿No estás seguro de tu talla en centímetros?", "subtitle": "Mide tu pie del talón a la punta y escríbenos por WhatsApp para confirmarte tu talla exacta.", "buttonText": "Confirmar mi talla por WhatsApp"}}
+  ],
+  "pages": {
+    "catalog": [{"id": "sec_catalog_results", "type": "catalog_results", "settings": {"headerBadge": "COLECCIÓN DE CALZADO", "headerTitle": "Todos los Modelos", "headerSubtitle": "Selecciona tu talla en los filtros para ver los pares disponibles hoy.", "filterLayout": "sidebar"}}],
+    "product": [{"id": "sec_product_main", "type": "product_main", "settings": {"galleryLayout": "left", "relatedTitle": "Otros modelos que te pueden gustar", "relatedSubtitle": "Disponibles en nuestro catálogo de calzado"}}]
+  }
+}

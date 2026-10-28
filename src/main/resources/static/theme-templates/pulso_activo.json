@@ -1,0 +1,52 @@
+{
+  "globalStyles": {
+      "primaryColor": "#16a34a",
+      "headingFont": "Oswald",
+      "bodyFont": "DM Sans",
+      "headingTransform": "uppercase",
+      "borderRadius": "0.5rem",
+      "navbarLayout": "compact",
+      "navbarStyle": "secondary",
+      "navbarLinkFormat": "uppercase",
+      "navbarLinkHover": "pill",
+      "navbarDropdownStyle": "strip",
+      "navbarDropdownAnim": "slide_down",
+      "navbarSpeed": "fast",
+      "navbarCompactOnScroll": true,
+      "cardPreset": "compact",
+      "cardStyle": "bento",
+      "cardRadius": "0.5rem",
+      "cardMetaMode": "brand",
+      "cardPriceSize": "large",
+      "detailInfoStyle": "card",
+      "detailGalleryLayout": "left",
+      "detailSpecsOpen": "expanded",
+      "filterLayout": "sidebar",
+      "filterShowSpecs": true,
+      "searchNavbarVariant": "inline_bar",
+      "searchInputStyle": "rounded",
+      "searchButtonMode": "icon_text",
+      "searchPlaceholder": "Buscar ropa deportiva, ciclismo, accesorios, talla...",
+      "searchEmptyMessage": "No encontramos implementos deportivos para tu búsqueda",
+      "searchDebounceMs": 150,
+      "searchShowProductBrand": true,
+      "searchPopularTerms": "Conjuntos, Licras, Ciclismo, Guantes, Termos",
+      "searchCategoryScope": "pills_top",
+      "searchAdvancedEnabled": true,
+      "searchAdvSpecs": true
+  },
+  "sections": [
+    {"id": "sec_ann_pa", "type": "announcement_bar", "settings": {"text": "⚡ RENDIMIENTO Y COMODIDAD EN CADA ENTRENAMIENTO • ENVÍOS A TODA COLOMBIA", "text2": "🚴 TELAS DE SECADO RÁPIDO Y ALTA RESISTENCIA • PAGA CON PSE O NEQUI", "bgColor": "#16a34a"}},
+    {"id": "sec_hero_pa", "type": "hero_banner", "settings": {"heroLayout": "split", "badgeText": "EQUIPAMIENTO Y MODA DEPORTIVA", "title": "SUPERA TUS LÍMITES CON {{storeName}}", "subtitle": "Prendas de secado rápido, compresión cómoda e implementos diseñados para gimnasio, running y ciclismo.", "buttonText": "VER EQUIPAMIENTO", "secondaryButtonText": "CONSULTAR TALLAS", "bgColor": "#0f172a"}},
+    {"id": "sec_cats_pa", "type": "featured_categories", "settings": {"title": "Explora por Disciplina", "subtitle": "Equipamiento listo para tu entrenamiento", "cardLayout": "pills"}},
+    {"id": "sec_cd_pa", "type": "countdown_promo", "settings": {"badgeText": "🔥 SEMANA DEL DEPORTE", "title": "DESCUENTOS ESPECIALES EN DOTACIÓN Y ACCESORIOS", "subtitle": "Equípate hoy con precios de temporada antes de agotar tallas.", "bgColor": "#0f172a"}},
+    {"id": "sec_grid_pa", "type": "product_grid", "settings": {"title": "Destacados para Entrenar", "subtitle": "Filtra por talla, disciplina o disponibilidad"}},
+    {"id": "sec_spot_pa", "type": "spotlight_product", "settings": {"badgeText": "⚡ ALTO RENDIMIENTO"}},
+    {"id": "sec_trust_pa", "type": "trust_badges", "settings": {"item1Icon": "star", "item1Title": "Telas Técnicas", "item1Text": "Transpirables, elásticas y de alta durabilidad.", "item2Icon": "refresh", "item2Title": "Cambios de Talla Ágiles", "item2Text": "Entrena cómodo con el ajuste perfecto.", "item3Title": "Envíos Rápidos", "item3Text": "Despachamos a todas las ciudades del país."}},
+    {"id": "sec_faq_pa", "type": "faq_accordion", "settings": {"subtitle": "Tallas, telas y envíos", "q1": "¿Las prendas deportivas transparentan o ceden con el uso?", "a1": "No, trabajamos con textiles deportivos de alto gramaje, elongación en 4 sentidos y cero transparencia.", "q2": "¿Puedo cambiar la talla si no me queda bien?", "a2": "Sí, gestionamos cambios de talla de forma rápida a través de nuestro WhatsApp.", "q3": "¿Cuánto tarda el despacho?", "a3": "Alistamos tu pedido en 24 horas hábiles y llega entre 2 y 4 días hábiles según tu ciudad."}}
+  ],
+  "pages": {
+    "catalog": [{"id": "sec_catalog_results", "type": "catalog_results", "settings": {"headerBadge": "CATÁLOGO DEPORTIVO", "headerTitle": "Todo para tu Entrenamiento", "headerSubtitle": "Filtra por talla, marca, categoría o rango de precio.", "filterLayout": "sidebar"}}],
+    "product": [{"id": "sec_product_main", "type": "product_main", "settings": {"galleryLayout": "left", "relatedTitle": "Completa tu Equipamiento", "relatedSubtitle": "Prendas e implementos compatibles"}}]
+  }
+}

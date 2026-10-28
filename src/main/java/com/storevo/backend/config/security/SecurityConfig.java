@@ -31,8 +31,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Permitimos la ruta /error para que Spring no lance 403 ocultando fallos reales
                         .requestMatchers("/error").permitAll()
-                        // Landing Page, Recursos Estáticos e Imágenes
-                        .requestMatchers("/", "/css/**", "/js/**", "/img/**", "/images/**", "/icons/**", "/uploads/**").permitAll()
+                        // Landing Page, Recursos Estáticos, Imágenes y Plantillas de Tema
+                        .requestMatchers("/", "/css/**", "/js/**", "/img/**", "/images/**", "/icons/**", "/uploads/**", "/theme-templates/**").permitAll()
                         // Rutas públicas de las tiendas de los clientes
                         .requestMatchers("/s/**").permitAll()
                         // Login y Webhooks
