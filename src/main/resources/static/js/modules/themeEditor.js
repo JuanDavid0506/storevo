@@ -4470,9 +4470,14 @@ Storevo.ThemeEditor = {
     },
 
     hydratePresetWithBase: function(diffConfig, baseTheme) {
+        // Soportar tanto JSON directo { globalStyles, sections, pages } como envuelto en { config: { ... } }
+        const rawConfig = (diffConfig && diffConfig.config && typeof diffConfig.config === 'object')
+            ? diffConfig.config
+            : (diffConfig || {});
+
         const baseGs = (baseTheme && baseTheme.globalStyles) || {};
         const secDefaultsMap = (baseTheme && baseTheme.sectionDefaults) || {};
-        const mergedGlobalStyles = Object.assign({}, baseGs, (diffConfig && diffConfig.globalStyles) || {});
+        const mergedGlobalStyles = Object.assign({}, baseGs, rawConfig.globalStyles || {});
 
         const hydrateSection = (sec) => {
             if (!sec || !sec.type) return sec;
@@ -4490,16 +4495,21 @@ Storevo.ThemeEditor = {
             return out;
         };
 
-        const homeSections = Array.isArray(diffConfig && diffConfig.sections)
-            ? diffConfig.sections.map(hydrateSection)
-            : [];
+        const rawHomeList = Array.isArray(rawConfig.sections)
+            ? rawConfig.sections
+            : (rawConfig.pages && Array.isArray(rawConfig.pages.home) ? rawConfig.pages.home : []);
+
+        const homeSections = rawHomeList.map(hydrateSection);
 
         const pages = {};
-        if (diffConfig && diffConfig.pages && typeof diffConfig.pages === 'object') {
-            Object.keys(diffConfig.pages).forEach(pageKey => {
-                const list = diffConfig.pages[pageKey];
+        if (rawConfig.pages && typeof rawConfig.pages === 'object') {
+            Object.keys(rawConfig.pages).forEach(pageKey => {
+                const list = rawConfig.pages[pageKey];
                 pages[pageKey] = Array.isArray(list) ? list.map(hydrateSection) : [];
             });
+        }
+        if (!Array.isArray(pages.home) || pages.home.length === 0) {
+            pages.home = JSON.parse(JSON.stringify(homeSections));
         }
 
         const hydrated = {
@@ -4550,10 +4560,21 @@ Storevo.ThemeEditor = {
 
         this.loadPresetConfigById(presetMeta.id)
             .then(resolvedConfig => {
-                this.applyPreset(Object.assign({}, presetMeta, { config: resolvedConfig }));
+                try {
+                    this.applyPreset(Object.assign({}, presetMeta, { config: resolvedConfig }));
+                } catch (applyErr) {
+                    console.error('[Storevo.ThemeEditor] Error aplicando la plantilla en el editor:', applyErr);
+                    if (triggerBtn) {
+                        triggerBtn.disabled = false;
+                        if (labelEl) labelEl.textContent = originalText;
+                    }
+                    if (window.Storevo && Storevo.UI && Storevo.UI.Toast) {
+                        Storevo.UI.Toast.show('Error al aplicar la plantilla en el editor', 'error');
+                    }
+                }
             })
             .catch(err => {
-                console.error('[Storevo.ThemeEditor] No se pudo cargar la plantilla:', err);
+                console.error('[Storevo.ThemeEditor] No se pudo descargar el JSON de la plantilla:', err);
                 if (triggerBtn) {
                     triggerBtn.disabled = false;
                     if (labelEl) labelEl.textContent = originalText;
@@ -4748,7 +4769,6 @@ Storevo.ThemeEditor = {
             const baseOldSections = Array.isArray(sourceTheme.sections) ? sourceTheme.sections : [];
             this.mergeUserContentIntoPreset(baseOldSections, nextTheme.sections);
 
-            // Conservar también encuadres o vínculos en secciones de páginas internas (ej. catalog, product o páginas personalizadas)
             if (sourceTheme.pages && nextTheme.pages && typeof nextTheme.pages === 'object') {
                 Object.keys(nextTheme.pages).forEach(pageKey => {
                     const oldPageSecs = sourceTheme.pages[pageKey];
@@ -4758,7 +4778,6 @@ Storevo.ThemeEditor = {
                     }
                 });
             }
-            // Preservar las secciones de las páginas personalizadas creadas por el comerciante (page:*)
             if (sourceTheme.pages && typeof sourceTheme.pages === 'object') {
                 nextTheme.pages = nextTheme.pages || {};
                 Object.keys(sourceTheme.pages).forEach(pageKey => {
@@ -4769,10 +4788,6 @@ Storevo.ThemeEditor = {
             }
         }
 
-        // Regla de propiedad en globalStyles:
-        // 1) Siempre conservar logo y modo de marca del comerciante.
-        // 2) Si keepContent está activo, conservar textos/datos del footer y términos de búsqueda del comerciante,
-        //    mientras la plantilla decide la apariencia (colores, fuentes, navbar, tarjetas, footerLayout y footerTone).
         const prevGs = (sourceTheme && sourceTheme.globalStyles) || (this.theme && this.theme.globalStyles) || {};
         const preservedMerchantStyles = {};
         ['navbarBrandMode', 'navbarLogoUrl', 'navbarLogoDarkUrl', 'navbarLogoSize'].forEach(k => {
@@ -4806,13 +4821,24 @@ Storevo.ThemeEditor = {
         this.activePresetId = preset.id;
         this.activeSectionId = null;
 
-        // Sincronizar todos los controles del panel de estilos globales (colores, fuentes, navbar, tarjetas, footer, etc.)
+        // Garantizar que pages.home, pages.catalog y pages.product estén completos y sincronizados con this.theme.sections
+        this.ensurePagesStructure();
+
+        // Sincronizar todos los controles del panel de estilos globales
         this.initGlobalStylesInputs();
 
         const undoBanner = document.getElementById('preset-undo-banner');
         if (undoBanner) undoBanner.classList.remove('hidden');
 
-        this.closeSettingsModal();
+        // Reemplazo seguro de closeSettingsModal() (que no existía)
+        if (typeof this.closeSettingsModal === 'function') {
+            this.closeSettingsModal();
+        } else {
+            const panelInspector = document.getElementById('panel-section-inspector');
+            if (panelInspector) panelInspector.classList.add('hidden');
+            this.highlightSectionInIframe(null);
+        }
+
         this.renderSectionsList();
         this.renderPresetsCatalog();
         this.pushLiveStylesToIframe();
@@ -4835,11 +4861,21 @@ Storevo.ThemeEditor = {
         this.activePresetId = null;
         this.activeSectionId = null;
 
+        this.ensurePagesStructure();
+
         const undoBanner = document.getElementById('preset-undo-banner');
         if (undoBanner) undoBanner.classList.add('hidden');
 
         this.initGlobalStylesInputs();
-        this.closeSettingsModal();
+
+        if (typeof this.closeSettingsModal === 'function') {
+            this.closeSettingsModal();
+        } else {
+            const panelInspector = document.getElementById('panel-section-inspector');
+            if (panelInspector) panelInspector.classList.add('hidden');
+            this.highlightSectionInIframe(null);
+        }
+
         this.renderSectionsList();
         this.renderPresetsCatalog();
         this.pushLiveStylesToIframe();
@@ -5127,7 +5163,17 @@ Storevo.ThemeEditor = {
                         currentFooter.replaceWith(iDoc.importNode(nextFooter, true));
                     }
 
-                    // 2. Reemplazar el contenido principal (<main>) y puente de filtros
+                    // 2. Limpiar intervalos activos de la vista anterior y vaciar el host superior de anuncios antes de inyectar el nuevo <main>
+                    if (Array.isArray(iWin.__storevoPageIntervals)) {
+                        iWin.__storevoPageIntervals.forEach(id => iWin.clearInterval(id));
+                        iWin.__storevoPageIntervals.length = 0;
+                    }
+                    const topAnnHost = iDoc.getElementById('storevoTopAnnouncementHost');
+                    if (topAnnHost) {
+                        topAnnHost.innerHTML = '';
+                    }
+
+                    // 2.b. Reemplazar el contenido principal (<main>) y puente de filtros
                     currentMain.innerHTML = nextMain.innerHTML;
 
                     const currentScriptsBox = iDoc.getElementById('storevo-page-scripts');
@@ -5136,13 +5182,16 @@ Storevo.ThemeEditor = {
                         currentScriptsBox.innerHTML = nextScriptsBox.innerHTML;
                     }
 
-                    // 3. Re-ejecutar scripts inline de secciones (ej. contadores regresivos) y re-hidratar módulos en 0ms
+                    // 3. Re-ejecutar scripts inline de secciones (ej. contadores regresivos y rotador de anuncios)
                     Array.from(currentMain.querySelectorAll('script:not([src])')).forEach(oldScript => {
                         const newScript = iDoc.createElement('script');
                         Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
                         newScript.textContent = oldScript.textContent;
                         oldScript.parentNode.replaceChild(newScript, oldScript);
                     });
+
+                    // 4. Notificar a store-layout.html para que reevalúe announcement_bar (above_menu vs below_menu), Hero Overlay y paginación
+                    iDoc.dispatchEvent(new CustomEvent('storevo:page-load'));
 
                     if (iWin.Storevo) {
                         if (iWin.Storevo.Catalog && typeof iWin.Storevo.Catalog.init === 'function') iWin.Storevo.Catalog.init();
