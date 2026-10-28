@@ -7,7 +7,7 @@
     "headingFont": "Oswald",
     "bodyFont": "DM Sans",
     "headingTransform": "uppercase",
-    "borderRadius": "0.5rem",
+    "borderRadius": "0.75rem",
     "navbarLayout": "compact",
     "navbarStyle": "secondary",
     "navbarLinkFormat": "uppercase",

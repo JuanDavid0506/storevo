@@ -7,7 +7,7 @@
     "headingFont": "Montserrat",
     "bodyFont": "Plus Jakarta Sans",
     "borderRadius": "1rem",
-    "navbarLayout": "double",
+    "navbarLayout": "marketplace",
     "navbarLinkFormat": "bold",
     "navbarLinkHover": "pill",
     "navbarDropdownStyle": "split",

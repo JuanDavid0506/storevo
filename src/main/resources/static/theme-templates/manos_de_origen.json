@@ -15,7 +15,7 @@
     "navbarCompactOnScroll": true,
     "cardPreset": "gallery",
     "cardStyle": "soft",
-    "cardRadius": "0.75rem",
+    "cardRadius": "1rem",
     "cardImageAspect": "portrait",
     "cardButtonStyle": "dark",
     "cardImageHover": "zoom",
