@@ -125,30 +125,32 @@ public class ProductService {
         }
 
         String cleanSort = sortStr != null ? sortStr.trim().toLowerCase(Locale.ROOT) : "default";
-        Sort sort;
+        String sortMode;
         boolean supportsCursor = false;
         switch (cleanSort) {
             case "price_asc":
-                sort = Sort.by("price").ascending().and(Sort.by("id").descending());
+                sortMode = "price_asc";
                 break;
             case "price_desc":
-                sort = Sort.by("price").descending().and(Sort.by("id").descending());
+                sortMode = "price_desc";
+                break;
+            case "discount_desc":
+                sortMode = "discount_desc";
                 break;
             case "name_asc":
-                sort = Sort.by("name").ascending().and(Sort.by("id").descending());
+                sortMode = "name_asc";
                 break;
             case "newest":
             case "default":
             default:
-                sort = Sort.by("id").descending();
+                sortMode = "default";
                 supportsCursor = true;
                 break;
         }
 
         Long effectiveCursor = (supportsCursor && cursorId != null && cursorId > 0) ? cursorId : null;
         int effectivePage = (effectiveCursor != null) ? 0 : safePage;
-        Pageable pageable = PageRequest.of(effectivePage, safeSize, sort);
-
+        Pageable pageable = PageRequest.of(effectivePage, safeSize);
         String cleanQ = (q != null && !q.isBlank()) ? q.trim() : null;
 
         return productRepository.searchPublicCatalogPaginated(
@@ -162,8 +164,86 @@ public class ProductService {
                 minPrice,
                 maxPrice,
                 effectiveCursor,
+                sortMode,
                 pageable
         );
+    }
+
+    private static final List<OrderStatus> VALID_SALES_STATUSES = List.of(
+            OrderStatus.PAID,
+            OrderStatus.CONFIRMED,
+            OrderStatus.PREPARING,
+            OrderStatus.PACKED,
+            OrderStatus.SHIPPED,
+            OrderStatus.DELIVERED
+    );
+
+    private static double resolveEffectivePrice(Product p) {
+        if (p == null) return 0.0;
+        double orig = p.getPrice() != null ? p.getPrice() : 0.0;
+        double disc = p.getDiscountPrice() != null ? p.getDiscountPrice() : 0.0;
+        return (disc > 0 && (orig <= 0 || disc < orig)) ? disc : orig;
+    }
+
+    private static double resolveDiscountPct(Product p) {
+        if (p == null || p.getPrice() == null || p.getPrice() <= 0 || p.getDiscountPrice() == null || p.getDiscountPrice() <= 0) {
+            return 0.0;
+        }
+        if (p.getDiscountPrice() >= p.getPrice()) return 0.0;
+        return ((p.getPrice() - p.getDiscountPrice()) * 100.0) / p.getPrice();
+    }
+
+    public void sortProductsInMemory(List<Product> list, String sortStr) {
+        if (list == null || list.size() <= 1 || sortStr == null) return;
+        String cleanSort = sortStr.trim().toLowerCase(Locale.ROOT);
+        switch (cleanSort) {
+            case "price_asc":
+                list.sort(Comparator.comparingDouble(ProductService::resolveEffectivePrice));
+                break;
+            case "price_desc":
+                list.sort(Comparator.comparingDouble(ProductService::resolveEffectivePrice).reversed());
+                break;
+            case "discount_desc":
+                list.sort(Comparator.comparingDouble(ProductService::resolveDiscountPct).reversed());
+                break;
+            case "name_asc":
+                list.sort(Comparator.comparing(p -> p.getName() != null ? p.getName().toLowerCase(Locale.ROOT) : ""));
+                break;
+            default:
+                break;
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public Page<Product> getBestSellingPublicProductsPage(String q, String sortStr, int pageZeroBased, int size) {
+        int safePage = Math.max(0, pageZeroBased);
+        int safeSize = Math.max(1, Math.min(size, 48));
+        String cleanQ = (q != null && !q.isBlank()) ? q.trim() : null;
+        Page<Product> basePage = productRepository.findBestSellingPublicProducts(
+                cleanQ, VALID_SALES_STATUSES, PageRequest.of(safePage, safeSize));
+        String cleanSort = sortStr != null ? sortStr.trim().toLowerCase(Locale.ROOT) : "default";
+        if (!"default".equals(cleanSort) && !"newest".equals(cleanSort) && !basePage.getContent().isEmpty()) {
+            List<Product> sorted = new ArrayList<>(basePage.getContent());
+            sortProductsInMemory(sorted, cleanSort);
+            return new PageImpl<>(sorted, basePage.getPageable(), basePage.getTotalElements());
+        }
+        return basePage;
+    }
+
+    @Transactional(readOnly = true)
+    public Page<Product> getRecommendedPublicProductsPage(String q, String sortStr, int pageZeroBased, int size) {
+        int safePage = Math.max(0, pageZeroBased);
+        int safeSize = Math.max(1, Math.min(size, 48));
+        String cleanQ = (q != null && !q.isBlank()) ? q.trim() : null;
+        Page<Product> basePage = productRepository.findRecommendedPublicProducts(
+                cleanQ, VALID_SALES_STATUSES, PageRequest.of(safePage, safeSize));
+        String cleanSort = sortStr != null ? sortStr.trim().toLowerCase(Locale.ROOT) : "default";
+        if (!"default".equals(cleanSort) && !"newest".equals(cleanSort) && !basePage.getContent().isEmpty()) {
+            List<Product> sorted = new ArrayList<>(basePage.getContent());
+            sortProductsInMemory(sorted, cleanSort);
+            return new PageImpl<>(sorted, basePage.getPageable(), basePage.getTotalElements());
+        }
+        return basePage;
     }
 
     @Transactional(readOnly = true)
@@ -173,14 +253,11 @@ public class ProductService {
             String sortStr,
             int pageZeroBased,
             int size) {
-
         int safePage = Math.max(0, pageZeroBased);
         int safeSize = Math.max(1, Math.min(size, 48));
-
         if (orderedIds == null || orderedIds.isEmpty()) {
             return new PageImpl<>(Collections.emptyList(), PageRequest.of(safePage, safeSize), 0);
         }
-
         List<Long> uniqueIds = orderedIds.stream()
                 .filter(Objects::nonNull)
                 .distinct()
@@ -213,20 +290,12 @@ public class ProductService {
             ordered.add(p);
         }
 
-        String cleanSort = sortStr != null ? sortStr.trim().toLowerCase(Locale.ROOT) : "default";
-        if ("price_asc".equals(cleanSort)) {
-            ordered.sort(Comparator.comparingDouble(p -> (p.getDiscountPrice() != null && p.getDiscountPrice() > 0 && (p.getPrice() == null || p.getDiscountPrice() < p.getPrice())) ? p.getDiscountPrice() : (p.getPrice() != null ? p.getPrice() : 0.0)));
-        } else if ("price_desc".equals(cleanSort)) {
-            ordered.sort(Comparator.comparingDouble((Product p) -> (p.getDiscountPrice() != null && p.getDiscountPrice() > 0 && (p.getPrice() == null || p.getDiscountPrice() < p.getPrice())) ? p.getDiscountPrice() : (p.getPrice() != null ? p.getPrice() : 0.0)).reversed());
-        } else if ("name_asc".equals(cleanSort)) {
-            ordered.sort(Comparator.comparing(p -> p.getName() != null ? p.getName().toLowerCase(Locale.ROOT) : ""));
-        }
+        sortProductsInMemory(ordered, sortStr);
 
         int total = ordered.size();
         int fromIndex = Math.min(safePage * safeSize, total);
         int toIndex = Math.min(fromIndex + safeSize, total);
         List<Product> slice = ordered.subList(fromIndex, toIndex);
-
         return new PageImpl<>(slice, PageRequest.of(safePage, safeSize), total);
     }
 

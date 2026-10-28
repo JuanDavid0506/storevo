@@ -323,9 +323,13 @@
             cardEl.getAttribute('data-search') || ''
         ].join(' '));
 
+        const tabMatch = (cardEl.className || '').match(/\bsv-tab-card-(tab\d+)\b/);
+        const tabId = cardEl.getAttribute('data-sv-tab-id') || (tabMatch ? tabMatch[1] : '');
+
         return {
             el: cardEl,
             index,
+            tabId,
             id: productId || String(index),
             name,
             nameNorm: normalizeText(name),
@@ -433,9 +437,12 @@
             sortSelect.appendChild(opt);
         }
 
+        const initialDefaultSort = gridEl.getAttribute('data-default-sort') || (sortSelect ? sortSelect.value : 'default') || 'default';
+        const initialActiveTabBtn = sectionRoot.querySelector('.sv-pg-tab-btn.is-active');
         const state = {
+            activeTab: initialActiveTabBtn ? (initialActiveTabBtn.getAttribute('data-pg-tab-btn') || '') : '',
             q: searchInput ? searchInput.value.trim() : '',
-            sort: sortSelect ? sortSelect.value : 'default',
+            sort: sortSelect ? sortSelect.value : initialDefaultSort,
             categories: new Set(),
             brands: new Set(),
             onlyOffers: false,
@@ -523,6 +530,9 @@
         }
 
         function recordMatches(r, cfg) {
+            if (state.activeTab && r.tabId && r.tabId !== state.activeTab) {
+                return false;
+            }
             if (cfg.showSearch && state.q) {
                 const qNorm = normalizeText(state.q);
                 if (!r.searchBlob.includes(qNorm)) return false;
@@ -567,7 +577,10 @@
         function applyFiltersAndSort() {
             const cfg = getGlobalFilterConfig();
             if (!cfg.enabled || !isSectionFilterAllowed()) {
-                records.forEach(r => r.el.classList.remove('hidden'));
+                records.forEach(r => {
+                    const visibleInTab = !state.activeTab || !r.tabId || r.tabId === state.activeTab;
+                    r.el.classList.toggle('hidden', !visibleInTab);
+                });
                 if (noMatchesEl) noMatchesEl.classList.add('hidden');
                 gridEl.classList.remove('hidden');
                 return;
@@ -1246,7 +1259,11 @@
         applyFiltersAndSort();
         sectionRoot.classList.add('sv-filters-ready');
 
-        return {
+        const instanceApi = {
+            setActiveTab: (tabId) => {
+                state.activeTab = tabId || '';
+                applyFiltersAndSort();
+            },
             refreshConfig: (fromLiveEditorUpdate) => {
                 syncToolbarSearchAppearance();
                 renderFilterUI(Boolean(fromLiveEditorUpdate));
@@ -1254,6 +1271,8 @@
                 sectionRoot.classList.add('sv-filters-ready');
             }
         };
+        sectionRoot._svCatalogInstance = instanceApi;
+        return instanceApi;
     }
 
     function createFallbackEmptyState(gridEl) {
@@ -2593,6 +2612,91 @@
         activeInstances.forEach(inst => inst.refreshConfig(true));
         SearchEngine.refresh();
     });
+
+    const ProductGridController = {
+        stepCarousel: function (btn, dir) {
+            const shell = btn ? btn.closest('.sv-pg-carousel-shell') : null;
+            const track = shell ? shell.querySelector('.sv-catalog-grid[data-display-mode="carousel"]') : null;
+            if (!track) return;
+            const stepPx = Math.max(260, Math.round(track.clientWidth * 0.82));
+            track.scrollBy({ left: dir * stepPx, behavior: 'smooth' });
+        },
+        switchTab: function (btn) {
+            if (!btn) return;
+            const tabId = btn.getAttribute('data-pg-tab-btn') || '';
+            const sectionEl = btn.closest('.storevo-theme-section, section') || document;
+            const navEl = btn.closest('.sv-pg-tabs-nav');
+            if (navEl) {
+                navEl.querySelectorAll('.sv-pg-tab-btn').forEach(b => {
+                    const active = b === btn;
+                    b.classList.toggle('is-active', active);
+                    b.setAttribute('aria-selected', active ? 'true' : 'false');
+                });
+            }
+            const viewAllLink = sectionEl.querySelector('.sv-pg-view-all-link');
+            const tabHref = btn.getAttribute('data-view-all-href');
+            if (viewAllLink && tabHref) {
+                viewAllLink.setAttribute('href', tabHref);
+            }
+            const gridEl = sectionEl.querySelector('.sv-catalog-grid');
+            if (gridEl && gridEl.getAttribute('data-display-mode') === 'carousel') {
+                gridEl.scrollTo({ left: 0, behavior: 'smooth' });
+            }
+            if (sectionEl._svCatalogInstance && typeof sectionEl._svCatalogInstance.setActiveTab === 'function') {
+                sectionEl._svCatalogInstance.setActiveTab(tabId);
+                return;
+            }
+            if (!gridEl) return;
+            let visibleCount = 0;
+            const cards = Array.from(gridEl.querySelectorAll('.product-card'));
+            cards.forEach(card => {
+                const match = card.classList.contains('sv-tab-card-' + tabId);
+                card.classList.toggle('hidden', !match);
+                if (match) visibleCount++;
+            });
+            const quickSortSel = sectionEl.querySelector('.sv-pg-quick-sort');
+            if (quickSortSel && quickSortSel.value) {
+                this.quickSort(quickSortSel);
+            }
+            const emptyTabEl = sectionEl.querySelector('.sv-pg-tab-empty');
+            if (emptyTabEl) {
+                emptyTabEl.classList.toggle('hidden', visibleCount > 0);
+            }
+        },
+        quickSort: function (selectEl) {
+            if (!selectEl) return;
+            const gridId = selectEl.getAttribute('data-target-grid');
+            const sectionEl = selectEl.closest('.storevo-theme-section, section') || document;
+            const gridEl = (gridId && document.getElementById(gridId)) || sectionEl.querySelector('.sv-catalog-grid');
+            if (!gridEl) return;
+            const sortVal = selectEl.value || 'default';
+            const cards = Array.from(gridEl.querySelectorAll('.product-card'));
+            cards.sort((a, b) => {
+                const priceA = parseFloat(a.getAttribute('data-price') || '0') || 0;
+                const priceB = parseFloat(b.getAttribute('data-price') || '0') || 0;
+                if (sortVal === 'price_asc') return priceA - priceB;
+                if (sortVal === 'price_desc') return priceB - priceA;
+                if (sortVal === 'discount_desc') {
+                    const origA = parseFloat(a.getAttribute('data-original-price') || '0') || 0;
+                    const origB = parseFloat(b.getAttribute('data-original-price') || '0') || 0;
+                    const pctA = (origA > priceA && origA > 0) ? ((origA - priceA) / origA) : 0;
+                    const pctB = (origB > priceB && origB > 0) ? ((origB - priceB) / origB) : 0;
+                    return pctB - pctA;
+                }
+                if (sortVal === 'name_asc') {
+                    const nameA = (a.getAttribute('data-name') || '').toLowerCase();
+                    const nameB = (b.getAttribute('data-name') || '').toLowerCase();
+                    return nameA.localeCompare(nameB, 'es');
+                }
+                const idxA = parseInt(a.getAttribute('data-index') || '0', 10) || 0;
+                const idxB = parseInt(b.getAttribute('data-index') || '0', 10) || 0;
+                return idxA - idxB;
+            });
+            cards.forEach(c => gridEl.appendChild(c));
+        }
+    };
+
+    window.StorevoProductGrid = ProductGridController;
 
     Storevo.Catalog = {
         init: initAllCatalogs,

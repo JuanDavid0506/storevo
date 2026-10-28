@@ -115,8 +115,9 @@ public class StoreThemeService {
     );
     private static final Set<String> ALLOWED_LAYOUT_SPACING = Set.of("none", "sm", "lg");
     private static final Set<String> ALLOWED_LAYOUT_WIDTH = Set.of("full");
-    private static final Set<String> ALLOWED_LAYOUT_BG_MODES = Set.of("none", "solid");
+    private static final Set<String> ALLOWED_LAYOUT_BG_MODES = Set.of("none", "solid", "image");
     private static final Set<String> ALLOWED_LAYOUT_TONES = Set.of("light", "dark");
+    private static final Set<String> ALLOWED_LAYOUT_VISIBILITY = Set.of("all", "desktop_only", "mobile_only");
     private static final Set<String> ALLOWED_VIDEO_ASPECTS = Set.of("16:9", "9:16");
     private static final Set<String> ALLOWED_STAT_STYLES = Set.of("cards", "minimal", "secondary");
     private static final Set<String> ALLOWED_STAT_ICONS = Set.of(
@@ -127,7 +128,61 @@ public class StoreThemeService {
     private static final Set<String> ALLOWED_BRAND_DISPLAY_MODES = Set.of("grid", "carousel");
     private static final Set<String> ALLOWED_BRAND_LOGO_SIZES = Set.of("sm", "md", "lg");
     private static final Set<String> ALLOWED_PRODUCT_GRID_SOURCES = Set.of(
-            "NEWEST", "OFFERS", "CATEGORY", "BRAND", "MANUAL", "FEATURED"
+            "NEWEST", "OFFERS", "CATEGORY", "BRAND", "MANUAL", "FEATURED", "BEST_SELLERS", "RECOMMENDED"
+    );
+    private static final Set<String> ALLOWED_PRODUCT_GRID_SORTS = Set.of(
+            "default", "price_asc", "price_desc", "discount_desc", "name_asc"
+    );
+    private static final Set<String> ALLOWED_PRODUCT_GRID_DISPLAY_MODES = Set.of(
+            "grid", "carousel"
+    );
+    private static final Set<String> ALLOWED_HERO_LAYOUTS = Set.of(
+            "classic", "split", "compact"
+    );
+    private static final Set<String> ALLOWED_HERO_HEIGHTS = Set.of(
+            "default", "sm", "md", "lg", "xl"
+    );
+    private static final Set<String> ALLOWED_HERO_ALIGNMENTS = Set.of(
+            "center", "left"
+    );
+    private static final Set<String> ALLOWED_HERO_AUTOPLAY_SPEEDS = Set.of(
+            "fast", "normal", "slow"
+    );
+    private static final Set<String> ALLOWED_RICH_TEXT_IMG_POS = Set.of(
+            "right", "left", "top", "bottom"
+    );
+    private static final Set<String> ALLOWED_RICH_TEXT_ALIGNS = Set.of(
+            "center", "left"
+    );
+    private static final Set<String> ALLOWED_FEATURED_CAT_LAYOUTS = Set.of(
+            "visual", "icon", "pills"
+    );
+    private static final Set<String> ALLOWED_MULTI_BANNER_COUNTS = Set.of(
+            "2", "3", "4"
+    );
+    private static final Set<String> ALLOWED_MULTI_BANNER_LAYOUTS = Set.of(
+            "equal", "mosaic_3", "cols_3", "grid_2x2", "cols_4"
+    );
+    private static final Set<String> ALLOWED_TRUST_MOBILE_LAYOUTS = Set.of(
+            "stack", "carousel"
+    );
+    private static final Set<String> ALLOWED_TESTIMONIAL_ORDERS = Set.of(
+            "reviews_first", "manual_first", "only_reviews", "only_manual"
+    );
+    private static final Set<String> ALLOWED_TESTIMONIAL_SOURCES = Set.of(
+            "direct", "whatsapp", "instagram"
+    );
+    private static final Set<String> ALLOWED_COUNTDOWN_EXPIRE_ACTIONS = Set.of(
+            "hide", "message"
+    );
+    private static final Set<String> ALLOWED_WA_SCHEDULE_DAYS = Set.of(
+            "MON_FRI", "MON_SAT", "ALL_DAYS"
+    );
+    private static final Set<String> ALLOWED_PAYMENT_STYLES = Set.of(
+            "cards", "compact", "secondary"
+    );
+    private static final Set<String> ALLOWED_VISIT_IMG_SIDES = Set.of(
+            "right", "left"
     );
     private static final Set<String> ALLOWED_PAGINATION_MODES = Set.of(
             "numbered", "compact", "load_more", "infinite", "arrows", "counter_more"
@@ -358,56 +413,71 @@ public class StoreThemeService {
             String rawSource = section.settingStr("source", "NEWEST").toUpperCase(Locale.ROOT);
             String source = ALLOWED_PRODUCT_GRID_SOURCES.contains(rawSource) ? rawSource : "NEWEST";
             Long categoryId = section.settingLong("categoryId");
-            // Respetar siempre el límite propio configurado en la vitrina (ej. 4, 8, 12 productos)
+            String rawSort = section.settingStr("defaultSort", "default").toLowerCase(Locale.ROOT);
+            String defaultSort = ALLOWED_PRODUCT_GRID_SORTS.contains(rawSort) ? rawSort : "default";
             int pageSize = Math.max(1, Math.min(section.settingInt("limit", 8), 24));
 
             if ("NEWEST".equals(source) && categoryId != null) {
                 source = "CATEGORY";
             }
 
-            org.springframework.data.domain.Page<Product> resolvedPage;
-            switch (source) {
-                case "CATEGORY": {
-                    String cacheKey = "CATEGORY:" + (categoryId != null ? categoryId : "ALL") + ":" + pageSize;
-                    resolvedPage = pageCache.computeIfAbsent(cacheKey,
-                            k -> productService.searchPublicCatalogPage(categoryId, null, null, null, false, false, false, null, null, "default", 0, pageSize, null));
-                    break;
-                }
-                case "OFFERS": {
-                    String cacheKey = "OFFERS:" + pageSize;
-                    resolvedPage = pageCache.computeIfAbsent(cacheKey,
-                            k -> productService.searchPublicCatalogPage(null, null, null, null, true, false, false, null, null, "default", 0, pageSize, null));
-                    break;
-                }
-                case "BRAND": {
-                    Long brandId = section.settingLong("brandId");
-                    String brandName = section.settingStr("brandName", "");
-                    String cacheKey = "BRAND:" + (brandId != null ? brandId : "") + ":" + brandName.toLowerCase(Locale.ROOT) + ":" + pageSize;
-                    resolvedPage = pageCache.computeIfAbsent(cacheKey,
-                            k -> productService.searchPublicCatalogPage(null, brandId, brandName, null, false, false, false, null, null, "default", 0, pageSize, null));
-                    break;
-                }
-                case "FEATURED": {
-                    String cacheKey = "FEATURED:" + pageSize;
-                    resolvedPage = pageCache.computeIfAbsent(cacheKey,
-                            k -> productService.searchPublicCatalogPage(null, null, null, null, false, true, false, null, null, "default", 0, pageSize, null));
-                    break;
-                }
-                case "MANUAL": {
-                    List<Long> manualIds = section.settingLongList("productIds");
-                    String cacheKey = "MANUAL:" + manualIds.toString() + ":" + pageSize;
-                    resolvedPage = pageCache.computeIfAbsent(cacheKey,
-                            k -> productService.getManualPublicProductsPage(manualIds, null, "default", 0, pageSize));
-                    break;
-                }
-                case "NEWEST":
-                default: {
-                    String cacheKey = "NEWEST:" + pageSize;
-                    resolvedPage = pageCache.computeIfAbsent(cacheKey,
-                            k -> productService.searchPublicCatalogPage(null, null, null, null, false, false, false, null, null, "default", 0, pageSize, null));
-                    break;
+            List<Map<String, Object>> hydratedTabs = new ArrayList<>();
+            if (section.settingBool("enableTabs", false)) {
+                for (int i = 1; i <= 4; i++) {
+                    String tabLabel = section.settingStr("tab" + i + "Label", "");
+                    if (tabLabel.isEmpty()) continue;
+                    String rawTabSrc = section.settingStr("tab" + i + "Source", i == 1 ? source : "NEWEST").toUpperCase(Locale.ROOT);
+                    String tabSrc = ALLOWED_PRODUCT_GRID_SOURCES.contains(rawTabSrc) ? rawTabSrc : "NEWEST";
+                    Long tabCatId = section.settingLong("tab" + i + "CategoryId");
+                    if (tabCatId == null && i == 1 && "CATEGORY".equals(tabSrc)) {
+                        tabCatId = categoryId;
+                    }
+                    Long tabBrandId = section.settingLong("tab" + i + "BrandId");
+                    String tabBrandName = section.settingStr("tab" + i + "BrandName", "");
+                    if (tabBrandId == null && tabBrandName.isEmpty() && i == 1 && "BRAND".equals(tabSrc)) {
+                        tabBrandId = section.settingLong("brandId");
+                        tabBrandName = section.settingStr("brandName", "");
+                    }
+                    List<Long> tabManualIds = section.settingLongList("tab" + i + "ProductIds");
+                    if (tabManualIds.isEmpty() && i == 1 && "MANUAL".equals(tabSrc)) {
+                        tabManualIds = section.settingLongList("productIds");
+                    }
+
+                    org.springframework.data.domain.Page<Product> tabPage = resolveProductGridPage(
+                            tabSrc, tabCatId, tabBrandId, tabBrandName, tabManualIds, defaultSort, pageSize, pageCache);
+
+                    Map<String, Object> tabMap = new LinkedHashMap<>();
+                    tabMap.put("id", "tab" + i);
+                    tabMap.put("label", tabLabel);
+                    tabMap.put("source", tabSrc);
+                    tabMap.put("categoryId", tabCatId);
+                    tabMap.put("brandName", tabBrandName);
+                    tabMap.put("products", tabPage.getContent());
+                    hydratedTabs.add(tabMap);
                 }
             }
+
+            if (hydratedTabs.size() >= 2) {
+                section.setResolvedTabs(hydratedTabs);
+                @SuppressWarnings("unchecked")
+                List<Product> firstTabProducts = (List<Product>) hydratedTabs.get(0).get("products");
+                section.setResolvedProducts(firstTabProducts != null ? firstTabProducts : Collections.emptyList());
+                section.setResolvedTotalProducts((long) section.getResolvedProducts().size());
+                section.setResolvedPageSize(pageSize);
+                section.setResolvedCurrentPage(1);
+                section.setResolvedTotalPages(1);
+                section.setResolvedHasNext(false);
+                section.setResolvedNextCursor(null);
+                return;
+            }
+
+            section.setResolvedTabs(Collections.emptyList());
+            Long brandId = section.settingLong("brandId");
+            String brandName = section.settingStr("brandName", "");
+            List<Long> manualIds = section.settingLongList("productIds");
+
+            org.springframework.data.domain.Page<Product> resolvedPage = resolveProductGridPage(
+                    source, categoryId, brandId, brandName, manualIds, defaultSort, pageSize, pageCache);
 
             List<Product> content = resolvedPage.getContent();
             section.setResolvedProducts(content);
@@ -417,6 +487,64 @@ public class StoreThemeService {
             section.setResolvedTotalPages(Math.max(1, resolvedPage.getTotalPages()));
             section.setResolvedHasNext(resolvedPage.hasNext());
             section.setResolvedNextCursor(!content.isEmpty() ? content.get(content.size() - 1).getId() : null);
+        }
+    }
+
+    private org.springframework.data.domain.Page<Product> resolveProductGridPage(
+            String source,
+            Long categoryId,
+            Long brandId,
+            String brandName,
+            List<Long> manualIds,
+            String defaultSort,
+            int pageSize,
+            Map<String, org.springframework.data.domain.Page<Product>> pageCache) {
+
+        String safeSort = (defaultSort != null && ALLOWED_PRODUCT_GRID_SORTS.contains(defaultSort)) ? defaultSort : "default";
+        switch (source) {
+            case "CATEGORY": {
+                String cacheKey = "CATEGORY:" + (categoryId != null ? categoryId : "ALL") + ":" + safeSort + ":" + pageSize;
+                return pageCache.computeIfAbsent(cacheKey,
+                        k -> productService.searchPublicCatalogPage(categoryId, null, null, null, false, false, false, null, null, safeSort, 0, pageSize, null));
+            }
+            case "OFFERS": {
+                String cacheKey = "OFFERS:" + safeSort + ":" + pageSize;
+                return pageCache.computeIfAbsent(cacheKey,
+                        k -> productService.searchPublicCatalogPage(null, null, null, null, true, false, false, null, null, safeSort, 0, pageSize, null));
+            }
+            case "BRAND": {
+                String safeBrandName = brandName != null ? brandName : "";
+                String cacheKey = "BRAND:" + (brandId != null ? brandId : "") + ":" + safeBrandName.toLowerCase(Locale.ROOT) + ":" + safeSort + ":" + pageSize;
+                return pageCache.computeIfAbsent(cacheKey,
+                        k -> productService.searchPublicCatalogPage(null, brandId, safeBrandName, null, false, false, false, null, null, safeSort, 0, pageSize, null));
+            }
+            case "FEATURED": {
+                String cacheKey = "FEATURED:" + safeSort + ":" + pageSize;
+                return pageCache.computeIfAbsent(cacheKey,
+                        k -> productService.searchPublicCatalogPage(null, null, null, null, false, true, false, null, null, safeSort, 0, pageSize, null));
+            }
+            case "BEST_SELLERS": {
+                String cacheKey = "BEST_SELLERS:" + safeSort + ":" + pageSize;
+                return pageCache.computeIfAbsent(cacheKey,
+                        k -> productService.getBestSellingPublicProductsPage(null, safeSort, 0, pageSize));
+            }
+            case "RECOMMENDED": {
+                String cacheKey = "RECOMMENDED:" + safeSort + ":" + pageSize;
+                return pageCache.computeIfAbsent(cacheKey,
+                        k -> productService.getRecommendedPublicProductsPage(null, safeSort, 0, pageSize));
+            }
+            case "MANUAL": {
+                List<Long> safeManual = manualIds != null ? manualIds : Collections.emptyList();
+                String cacheKey = "MANUAL:" + safeManual.toString() + ":" + safeSort + ":" + pageSize;
+                return pageCache.computeIfAbsent(cacheKey,
+                        k -> productService.getManualPublicProductsPage(safeManual, null, safeSort, 0, pageSize));
+            }
+            case "NEWEST":
+            default: {
+                String cacheKey = "NEWEST:" + safeSort + ":" + pageSize;
+                return pageCache.computeIfAbsent(cacheKey,
+                        k -> productService.searchPublicCatalogPage(null, null, null, null, false, false, false, null, null, safeSort, 0, pageSize, null));
+            }
         }
     }
 
@@ -1373,13 +1501,64 @@ public class StoreThemeService {
             sanitizeAllowedSetting(sec.getSettings(), "layoutWidth", ALLOWED_LAYOUT_WIDTH);
             sanitizeAllowedSetting(sec.getSettings(), "layoutBgMode", ALLOWED_LAYOUT_BG_MODES);
             sanitizeAllowedSetting(sec.getSettings(), "layoutTone", ALLOWED_LAYOUT_TONES);
-            if (!"solid".equals(sec.getSettings().get("layoutBgMode"))
-                    || !(sec.getSettings().get("layoutBgColor") instanceof String bgHex)
-                    || !isValidHex(bgHex)) {
+
+            Object bgModeObj = sec.getSettings().get("layoutBgMode");
+            if ("solid".equals(bgModeObj)) {
+                if (!(sec.getSettings().get("layoutBgColor") instanceof String bgHex) || !isValidHex(bgHex)) {
+                    sec.getSettings().remove("layoutBgMode");
+                    sec.getSettings().remove("layoutBgColor");
+                    sec.getSettings().remove("layoutTone");
+                }
+                sec.getSettings().remove("layoutBgImageUrl");
+                sec.getSettings().remove("layoutBgOverlay");
+            } else if ("image".equals(bgModeObj)) {
+                String cleanBgUrl = cleanLogoUrl(sec.settingStr("layoutBgImageUrl", ""));
+                if (cleanBgUrl.isEmpty() || cleanBgUrl.contains("'") || cleanBgUrl.contains("\"") || cleanBgUrl.contains("(") || cleanBgUrl.contains(")")) {
+                    sec.getSettings().remove("layoutBgMode");
+                    sec.getSettings().remove("layoutBgImageUrl");
+                    sec.getSettings().remove("layoutBgOverlay");
+                    sec.getSettings().remove("layoutTone");
+                } else {
+                    sec.getSettings().put("layoutBgImageUrl", cleanBgUrl);
+                    int ov = Math.max(0, Math.min(90, sec.settingInt("layoutBgOverlay", 40)));
+                    sec.getSettings().put("layoutBgOverlay", ov);
+                    if (!sec.getSettings().containsKey("layoutTone")) {
+                        sec.getSettings().put("layoutTone", ov >= 35 ? "dark" : "light");
+                    }
+                    sec.getSettings().remove("layoutBgColor");
+                }
+            } else {
                 sec.getSettings().remove("layoutBgMode");
                 sec.getSettings().remove("layoutBgColor");
+                sec.getSettings().remove("layoutBgImageUrl");
+                sec.getSettings().remove("layoutBgOverlay");
                 sec.getSettings().remove("layoutTone");
             }
+
+            if ("catalog_results".equalsIgnoreCase(sec.getType()) || "product_main".equalsIgnoreCase(sec.getType())) {
+                sec.getSettings().remove("layoutVisibility");
+                sec.getSettings().remove("scheduleStart");
+                sec.getSettings().remove("scheduleEnd");
+            } else {
+                sanitizeAllowedSetting(sec.getSettings(), "layoutVisibility", ALLOWED_LAYOUT_VISIBILITY);
+                if ("all".equals(sec.getSettings().get("layoutVisibility"))) {
+                    sec.getSettings().remove("layoutVisibility");
+                }
+                java.time.LocalDateTime startDt = sec.parseScheduleDateTime("scheduleStart");
+                java.time.LocalDateTime endDt = sec.parseScheduleDateTime("scheduleEnd");
+                java.time.format.DateTimeFormatter isoFmt = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
+                if (startDt == null) {
+                    sec.getSettings().remove("scheduleStart");
+                } else {
+                    sec.getSettings().put("scheduleStart", startDt.format(isoFmt));
+                }
+                if (endDt == null || (startDt != null && !endDt.isAfter(startDt))) {
+                    sec.getSettings().remove("scheduleEnd");
+                } else {
+                    sec.getSettings().put("scheduleEnd", endDt.format(isoFmt));
+                }
+            }
+
             sanitizeSectionAnchor(sec);
             sanitizeImageFraming(sec.getSettings());
             sanitizePhase2SectionSettings(sec);
@@ -1473,16 +1652,246 @@ public class StoreThemeService {
                 rawSource = "NEWEST";
             }
             s.put("source", rawSource);
-
+            String rawSort = sec.settingStr("defaultSort", "default").toLowerCase(Locale.ROOT);
+            if (!ALLOWED_PRODUCT_GRID_SORTS.contains(rawSort)) {
+                rawSort = "default";
+            }
+            s.put("defaultSort", rawSort);
+            String rawDisplayMode = sec.settingStr("displayMode", "grid").toLowerCase(Locale.ROOT);
+            if (!ALLOWED_PRODUCT_GRID_DISPLAY_MODES.contains(rawDisplayMode)) {
+                rawDisplayMode = "grid";
+            }
+            s.put("displayMode", rawDisplayMode);
             String cols = sec.settingStr("columnsDesktop", "4");
             s.put("columnsDesktop", "3".equals(cols) ? "3" : "4");
-
             List<Long> cleanIds = sec.settingLongList("productIds");
             if (cleanIds.size() > 24) {
                 cleanIds = new ArrayList<>(cleanIds.subList(0, 24));
             }
             String csvIds = cleanIds.stream().map(String::valueOf).collect(Collectors.joining(","));
             s.put("productIds", csvIds);
+            s.put("enableTabs", sec.settingBool("enableTabs", false));
+            s.put("showSortDropdown", sec.settingBool("showSortDropdown", false));
+            for (int i = 1; i <= 4; i++) {
+                String lblKey = "tab" + i + "Label";
+                String srcKey = "tab" + i + "Source";
+                String idsKey = "tab" + i + "ProductIds";
+                if (s.containsKey(lblKey)) {
+                    String lbl = sec.settingStr(lblKey, "");
+                    s.put(lblKey, lbl.length() > 40 ? lbl.substring(0, 40) : lbl);
+                }
+                if (s.containsKey(srcKey)) {
+                    String tSrc = sec.settingStr(srcKey, "NEWEST").toUpperCase(Locale.ROOT);
+                    s.put(srcKey, ALLOWED_PRODUCT_GRID_SOURCES.contains(tSrc) ? tSrc : "NEWEST");
+                }
+                if (s.containsKey(idsKey)) {
+                    List<Long> tIds = sec.settingLongList(idsKey);
+                    if (tIds.size() > 24) tIds = new ArrayList<>(tIds.subList(0, 24));
+                    s.put(idsKey, tIds.stream().map(String::valueOf).collect(Collectors.joining(",")));
+                }
+            }
+        } else if ("hero_banner".equalsIgnoreCase(type)) {
+            String heroLayout = sec.settingStr("heroLayout", "classic").toLowerCase(Locale.ROOT);
+            s.put("heroLayout", ALLOWED_HERO_LAYOUTS.contains(heroLayout) ? heroLayout : "classic");
+
+            String heroHeight = sec.settingStr("heroHeight", "default").toLowerCase(Locale.ROOT);
+            s.put("heroHeight", ALLOWED_HERO_HEIGHTS.contains(heroHeight) ? heroHeight : "default");
+
+            String alignment = sec.settingStr("alignment", "center").toLowerCase(Locale.ROOT);
+            s.put("alignment", ALLOWED_HERO_ALIGNMENTS.contains(alignment) ? alignment : "center");
+
+            int overlay = Math.max(0, Math.min(90, sec.settingInt("overlayOpacity", 50)));
+            s.put("overlayOpacity", overlay);
+
+            int slideCount = Math.max(1, Math.min(5, sec.settingInt("slideCount", 1)));
+            s.put("slideCount", String.valueOf(slideCount));
+
+            s.put("autoplay", sec.settingBool("autoplay", true));
+            String autoplaySpeed = sec.settingStr("autoplaySpeed", "normal").toLowerCase(Locale.ROOT);
+            s.put("autoplaySpeed", ALLOWED_HERO_AUTOPLAY_SPEEDS.contains(autoplaySpeed) ? autoplaySpeed : "normal");
+        } else if ("rich_text".equalsIgnoreCase(type)) {
+            String imgPos = sec.settingStr("imagePosition", "right").toLowerCase(Locale.ROOT);
+            s.put("imagePosition", ALLOWED_RICH_TEXT_IMG_POS.contains(imgPos) ? imgPos : "right");
+            String align = sec.settingStr("textAlign", "center").toLowerCase(Locale.ROOT);
+            s.put("textAlign", ALLOWED_RICH_TEXT_ALIGNS.contains(align) ? align : "center");
+            s.put("imageUrl", cleanLogoUrl(sec.settingStr("imageUrl", "")));
+        } else if ("featured_categories".equalsIgnoreCase(type)) {
+            s.put("source", "MANUAL".equalsIgnoreCase(sec.settingStr("source", "AUTO")) ? "MANUAL" : "AUTO");
+            String cardLayout = sec.settingStr("cardLayout", "visual").toLowerCase(Locale.ROOT);
+            s.put("cardLayout", ALLOWED_FEATURED_CAT_LAYOUTS.contains(cardLayout) ? cardLayout : "visual");
+            String cols = sec.settingStr("columns", "4");
+            s.put("columns", "3".equals(cols) ? "3" : "4");
+            s.put("showProductCount", sec.settingBool("showProductCount", true));
+            List<Long> catIds = sec.settingLongList("categoryIds");
+            if (catIds.size() > 24) {
+                catIds = new ArrayList<>(catIds.subList(0, 24));
+            }
+            s.put("categoryIds", catIds.stream().map(String::valueOf).collect(Collectors.joining(",")));
+        } else if ("multi_banners".equalsIgnoreCase(type)) {
+            String count = sec.settingStr("cardCount", "2");
+            s.put("cardCount", ALLOWED_MULTI_BANNER_COUNTS.contains(count) ? count : "2");
+            String layout = sec.settingStr("bannerLayout", "equal").toLowerCase(Locale.ROOT);
+            s.put("bannerLayout", ALLOWED_MULTI_BANNER_LAYOUTS.contains(layout) ? layout : "equal");
+        } else if ("trust_badges".equalsIgnoreCase(type)) {
+            String style = sec.settingStr("badgeStyle", "cards").toLowerCase(Locale.ROOT);
+            s.put("badgeStyle", ALLOWED_STAT_STYLES.contains(style) ? style : "cards");
+            String mobLayout = sec.settingStr("mobileLayout", "stack").toLowerCase(Locale.ROOT);
+            s.put("mobileLayout", ALLOWED_TRUST_MOBILE_LAYOUTS.contains(mobLayout) ? mobLayout : "stack");
+            for (int i = 1; i <= 6; i++) {
+                String iconKey = "item" + i + "Icon";
+                if (s.containsKey(iconKey) && !ALLOWED_STAT_ICONS.contains(sec.settingStr(iconKey, ""))) {
+                    s.put(iconKey, "shield");
+                }
+            }
+        } else if ("testimonials".equalsIgnoreCase(type)) {
+            String orderMode = sec.settingStr("displayOrder", "reviews_first").toLowerCase(Locale.ROOT);
+            s.put("displayOrder", ALLOWED_TESTIMONIAL_ORDERS.contains(orderMode) ? orderMode : "reviews_first");
+            List<Map<String, Object>> cleanManual = new ArrayList<>();
+            Object rawManual = s.get("manualItems");
+            if (rawManual instanceof Collection<?> col) {
+                for (Object itemObj : col) {
+                    if (!(itemObj instanceof Map<?, ?> rawMap)) continue;
+                    String author = rawMap.get("authorName") != null ? String.valueOf(rawMap.get("authorName")).trim() : "";
+                    String text = rawMap.get("text") != null ? String.valueOf(rawMap.get("text")).trim() : "";
+                    String imgUrl = rawMap.get("imageUrl") != null ? cleanLogoUrl(String.valueOf(rawMap.get("imageUrl"))) : "";
+                    boolean authorized = rawMap.get("authorized") != null && Boolean.parseBoolean(String.valueOf(rawMap.get("authorized")).trim());
+                    if (!authorized) {
+                        imgUrl = "";
+                    }
+                    if (author.isEmpty() && text.isEmpty() && imgUrl.isEmpty()) continue;
+                    if (author.length() > 80) author = author.substring(0, 80);
+                    if (text.length() > 600) text = text.substring(0, 600);
+                    String roleOrId = rawMap.get("authorMeta") != null ? String.valueOf(rawMap.get("authorMeta")).trim() : "";
+                    if (roleOrId.length() > 80) roleOrId = roleOrId.substring(0, 80);
+                    String srcType = rawMap.get("sourceType") != null ? String.valueOf(rawMap.get("sourceType")).trim().toLowerCase(Locale.ROOT) : "direct";
+                    if (!ALLOWED_TESTIMONIAL_SOURCES.contains(srcType)) srcType = "direct";
+
+                    Map<String, Object> cleanItem = new LinkedHashMap<>();
+                    cleanItem.put("authorName", author.isEmpty() ? "Cliente de la tienda" : author);
+                    cleanItem.put("authorMeta", roleOrId);
+                    cleanItem.put("text", text);
+                    cleanItem.put("sourceType", srcType);
+                    cleanItem.put("authorized", authorized);
+                    cleanItem.put("imageUrl", imgUrl);
+                    cleanManual.add(cleanItem);
+                    if (cleanManual.size() >= 18) break;
+                }
+            }
+            s.put("manualItems", cleanManual);
+        } else if ("faq_accordion".equalsIgnoreCase(type)) {
+            s.put("enableFaqSchema", sec.settingBool("enableFaqSchema", true));
+            List<Map<String, String>> cleanFaqs = new ArrayList<>();
+            Object rawItems = s.get("items");
+            if (rawItems instanceof Collection<?> col && !col.isEmpty()) {
+                for (Object itemObj : col) {
+                    if (!(itemObj instanceof Map<?, ?> rawMap)) continue;
+                    String q = rawMap.get("q") != null ? String.valueOf(rawMap.get("q")).trim() : "";
+                    String a = rawMap.get("a") != null ? String.valueOf(rawMap.get("a")).trim() : "";
+                    if (q.isEmpty() && a.isEmpty()) continue;
+                    if (q.length() > 240) q = q.substring(0, 240);
+                    if (a.length() > 1500) a = a.substring(0, 1500);
+                    Map<String, String> pair = new LinkedHashMap<>();
+                    pair.put("q", q);
+                    pair.put("a", a);
+                    cleanFaqs.add(pair);
+                    if (cleanFaqs.size() >= 30) break;
+                }
+            } else {
+                for (int i = 1; i <= 5; i++) {
+                    String defQ = i == 1 ? "¿Cuáles son los métodos de pago disponibles?"
+                            : (i == 2 ? "¿Cuánto tarda en llegar mi pedido?"
+                            : (i == 3 ? "¿Tienen cambios o garantías?" : ""));
+                    String defA = i == 1 ? "Puedes realizar tu pedido con pago seguro en línea o coordinar directamente con nosotros por WhatsApp."
+                            : (i == 2 ? "Despachamos a todo el país. El tiempo estimado de entrega es de 2 a 5 días hábiles según tu ciudad."
+                            : (i == 3 ? "Sí, todos nuestros productos cuentan con garantía y soporte directo." : ""));
+                    String q = s.containsKey("q" + i) ? sec.settingStr("q" + i, "") : defQ;
+                    String a = s.containsKey("a" + i) ? sec.settingStr("a" + i, "") : defA;
+                    if (!q.isEmpty() && !a.isEmpty()) {
+                        Map<String, String> pair = new LinkedHashMap<>();
+                        pair.put("q", q);
+                        pair.put("a", a);
+                        cleanFaqs.add(pair);
+                    }
+                }
+            }
+            s.put("items", cleanFaqs);
+            for (int i = 1; i <= 5; i++) {
+                if (i <= cleanFaqs.size()) {
+                    s.put("q" + i, cleanFaqs.get(i - 1).get("q"));
+                    s.put("a" + i, cleanFaqs.get(i - 1).get("a"));
+                } else {
+                    s.put("q" + i, "");
+                    s.put("a" + i, "");
+                }
+            }
+            if (Boolean.TRUE.equals(s.get("enableFaqSchema"))) {
+                List<Map<String, Object>> mainEntities = new ArrayList<>();
+                for (Map<String, String> faq : cleanFaqs) {
+                    String q = faq.get("q");
+                    String a = faq.get("a");
+                    if (q == null || q.isBlank() || a == null || a.isBlank()) continue;
+                    Map<String, Object> qNode = new LinkedHashMap<>();
+                    qNode.put("@type", "Question");
+                    qNode.put("name", q);
+                    Map<String, Object> aNode = new LinkedHashMap<>();
+                    aNode.put("@type", "Answer");
+                    aNode.put("text", a);
+                    qNode.put("acceptedAnswer", aNode);
+                    mainEntities.add(qNode);
+                }
+                if (!mainEntities.isEmpty()) {
+                    try {
+                        Map<String, Object> schemaRoot = new LinkedHashMap<>();
+                        schemaRoot.put("@context", "https://schema.org");
+                        schemaRoot.put("@type", "FAQPage");
+                        schemaRoot.put("mainEntity", mainEntities);
+                        String jsonLd = objectMapper.writeValueAsString(schemaRoot).replace("</", "<\\/");
+                        s.put("faqSchemaJson", jsonLd);
+                    } catch (Exception e) {
+                        s.remove("faqSchemaJson");
+                    }
+                } else {
+                    s.remove("faqSchemaJson");
+                }
+            } else {
+                s.remove("faqSchemaJson");
+            }
+        } else if ("countdown_promo".equalsIgnoreCase(type)) {
+            String onExpire = sec.settingStr("onExpire", "hide").toLowerCase(Locale.ROOT);
+            s.put("onExpire", ALLOWED_COUNTDOWN_EXPIRE_ACTIONS.contains(onExpire) ? onExpire : "hide");
+            String expMsg = sec.settingStr("expiredMessage", "¡Esta promoción ha finalizado! Explora nuestro catálogo para ver las referencias disponibles.");
+            s.put("expiredMessage", expMsg.length() > 240 ? expMsg.substring(0, 240) : expMsg);
+            java.time.LocalDateTime endDt = sec.parseScheduleDateTime("endDate");
+            if (endDt != null) {
+                s.put("endDate", endDt.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm")));
+            } else {
+                s.put("endDate", "");
+            }
+        } else if ("whatsapp_cta".equalsIgnoreCase(type)) {
+            String prefilled = sec.settingStr("prefilledMessage", "");
+            s.put("prefilledMessage", prefilled.length() > 300 ? prefilled.substring(0, 300) : prefilled);
+            s.put("showSchedule", sec.settingBool("showSchedule", false));
+            String days = sec.settingStr("scheduleDays", "MON_SAT").toUpperCase(Locale.ROOT);
+            s.put("scheduleDays", ALLOWED_WA_SCHEDULE_DAYS.contains(days) ? days : "MON_SAT");
+            String openT = sec.settingStr("openTime", "08:00");
+            s.put("openTime", openT.matches("^([01]\\d|2[0-3]):[0-5]\\d$") ? openT : "08:00");
+            String closeT = sec.settingStr("closeTime", "18:00");
+            s.put("closeTime", closeT.matches("^([01]\\d|2[0-3]):[0-5]\\d$") ? closeT : "18:00");
+            String schedTxt = sec.settingStr("scheduleText", "");
+            s.put("scheduleText", schedTxt.length() > 140 ? schedTxt.substring(0, 140) : schedTxt);
+        } else if ("payment_methods".equalsIgnoreCase(type)) {
+            String pStyle = sec.settingStr("paymentStyle", "cards").toLowerCase(Locale.ROOT);
+            s.put("paymentStyle", ALLOWED_PAYMENT_STYLES.contains(pStyle) ? pStyle : "cards");
+            s.put("showSecurityNote", sec.settingBool("showSecurityNote", true));
+        } else if ("visit_us".equalsIgnoreCase(type)) {
+            String imgSide = sec.settingStr("imageSide", "right").toLowerCase(Locale.ROOT);
+            s.put("imageSide", ALLOWED_VISIT_IMG_SIDES.contains(imgSide) ? imgSide : "right");
+            s.put("imageUrl", cleanLogoUrl(sec.settingStr("imageUrl", "")));
+            s.put("showWhatsappBtn", sec.settingBool("showWhatsappBtn", true));
+            String rawMapUrl = sec.settingStr("mapUrl", "");
+            if (!rawMapUrl.isEmpty() && !rawMapUrl.toLowerCase(Locale.ROOT).startsWith("https://") && !rawMapUrl.toLowerCase(Locale.ROOT).startsWith("http://")) {
+                s.put("mapUrl", "");
+            }
         }
     }
 

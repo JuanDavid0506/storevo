@@ -1,6 +1,7 @@
 package com.storevo.backend.tenant.repository;
 
 import com.storevo.backend.tenant.model.Brand;
+import com.storevo.backend.tenant.model.OrderStatus;
 import com.storevo.backend.tenant.model.Product;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -89,7 +90,13 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             "(:onlyInStock IS NULL OR :onlyInStock = false OR p.isMadeToOrder = true OR p.stock > 0) AND " +
             "(:minPrice IS NULL OR (CASE WHEN p.discountPrice IS NOT NULL AND p.discountPrice > 0 AND (p.price IS NULL OR p.discountPrice < p.price) THEN p.discountPrice ELSE p.price END) >= :minPrice) AND " +
             "(:maxPrice IS NULL OR (CASE WHEN p.discountPrice IS NOT NULL AND p.discountPrice > 0 AND (p.price IS NULL OR p.discountPrice < p.price) THEN p.discountPrice ELSE p.price END) <= :maxPrice) AND " +
-            "(:cursorId IS NULL OR p.id < :cursorId)",
+            "(:cursorId IS NULL OR p.id < :cursorId) " +
+            "ORDER BY " +
+            "CASE WHEN :sortMode = 'price_asc' THEN (CASE WHEN p.discountPrice IS NOT NULL AND p.discountPrice > 0 AND (p.price IS NULL OR p.discountPrice < p.price) THEN p.discountPrice ELSE p.price END) END ASC, " +
+            "CASE WHEN :sortMode = 'price_desc' THEN (CASE WHEN p.discountPrice IS NOT NULL AND p.discountPrice > 0 AND (p.price IS NULL OR p.discountPrice < p.price) THEN p.discountPrice ELSE p.price END) END DESC, " +
+            "CASE WHEN :sortMode = 'discount_desc' THEN (CASE WHEN p.discountPrice IS NOT NULL AND p.discountPrice > 0 AND p.price IS NOT NULL AND p.price > p.discountPrice THEN ((p.price - p.discountPrice) * 100.0 / p.price) ELSE 0.0 END) END DESC, " +
+            "CASE WHEN :sortMode = 'name_asc' THEN LOWER(p.name) END ASC, " +
+            "p.id DESC",
             countQuery = "SELECT COUNT(p) FROM Product p LEFT JOIN p.brandRef b WHERE " +
                     "p.isActive = true AND p.isDeleted = false AND p.isDraft = false AND " +
                     "(b IS NULL OR b.isActive = true) AND " +
@@ -116,6 +123,51 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             @Param("minPrice") Double minPrice,
             @Param("maxPrice") Double maxPrice,
             @Param("cursorId") Long cursorId,
+            @Param("sortMode") String sortMode,
+            Pageable pageable);
+
+    @Query(value = "SELECT p FROM Product p LEFT JOIN p.brandRef b WHERE " +
+            "p.isActive = true AND p.isDeleted = false AND p.isDraft = false AND " +
+            "(b IS NULL OR b.isActive = true) AND " +
+            "(:q IS NULL OR :q = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :q, '%')) " +
+            "  OR LOWER(p.sku) LIKE LOWER(CONCAT('%', :q, '%')) " +
+            "  OR LOWER(p.brand) LIKE LOWER(CONCAT('%', :q, '%'))) " +
+            "ORDER BY (SELECT COALESCE(SUM(oi.quantity), 0) FROM OrderItem oi JOIN oi.order o " +
+            "  WHERE oi.productId = p.id AND o.status IN :validStatuses) DESC, " +
+            "p.isFeatured DESC, p.id DESC",
+            countQuery = "SELECT COUNT(p) FROM Product p LEFT JOIN p.brandRef b WHERE " +
+                    "p.isActive = true AND p.isDeleted = false AND p.isDraft = false AND " +
+                    "(b IS NULL OR b.isActive = true) AND " +
+                    "(:q IS NULL OR :q = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :q, '%')) " +
+                    "  OR LOWER(p.sku) LIKE LOWER(CONCAT('%', :q, '%')) " +
+                    "  OR LOWER(p.brand) LIKE LOWER(CONCAT('%', :q, '%')))")
+    Page<Product> findBestSellingPublicProducts(
+            @Param("q") String q,
+            @Param("validStatuses") Collection<OrderStatus> validStatuses,
+            Pageable pageable);
+
+    @Query(value = "SELECT p FROM Product p LEFT JOIN p.brandRef b WHERE " +
+            "p.isActive = true AND p.isDeleted = false AND p.isDraft = false AND " +
+            "(b IS NULL OR b.isActive = true) AND " +
+            "(:q IS NULL OR :q = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :q, '%')) " +
+            "  OR LOWER(p.sku) LIKE LOWER(CONCAT('%', :q, '%')) " +
+            "  OR LOWER(p.brand) LIKE LOWER(CONCAT('%', :q, '%'))) " +
+            "ORDER BY " +
+            "(CASE WHEN p.isMadeToOrder = true OR p.stock > 0 THEN 1 ELSE 0 END) DESC, " +
+            "((CASE WHEN p.isFeatured = true THEN 30 ELSE 0 END) + " +
+            " (CASE WHEN p.discountPrice IS NOT NULL AND p.discountPrice > 0 AND (p.price IS NULL OR p.discountPrice < p.price) THEN 20 ELSE 0 END) + " +
+            " (CASE WHEN (SELECT COALESCE(SUM(oi.quantity), 0) FROM OrderItem oi JOIN oi.order o WHERE oi.productId = p.id AND o.status IN :validStatuses) > 0 THEN 25 ELSE 0 END)) DESC, " +
+            "(SELECT COALESCE(SUM(oi.quantity), 0) FROM OrderItem oi JOIN oi.order o WHERE oi.productId = p.id AND o.status IN :validStatuses) DESC, " +
+            "p.id DESC",
+            countQuery = "SELECT COUNT(p) FROM Product p LEFT JOIN p.brandRef b WHERE " +
+                    "p.isActive = true AND p.isDeleted = false AND p.isDraft = false AND " +
+                    "(b IS NULL OR b.isActive = true) AND " +
+                    "(:q IS NULL OR :q = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :q, '%')) " +
+                    "  OR LOWER(p.sku) LIKE LOWER(CONCAT('%', :q, '%')) " +
+                    "  OR LOWER(p.brand) LIKE LOWER(CONCAT('%', :q, '%')))")
+    Page<Product> findRecommendedPublicProducts(
+            @Param("q") String q,
+            @Param("validStatuses") Collection<OrderStatus> validStatuses,
             Pageable pageable);
 
     Optional<Product> findTopByOrderByIdDesc();

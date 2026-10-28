@@ -1,7 +1,9 @@
 package com.storevo.backend.tenant.controller;
 
+import com.storevo.backend.admin.model.IntegrationType;
 import com.storevo.backend.admin.model.Store;
 import com.storevo.backend.admin.model.StoreSettings;
+import com.storevo.backend.admin.repository.StoreIntegrationRepository;
 import com.storevo.backend.config.tenant.TenantContext;
 import com.storevo.backend.tenant.dto.StoreSettingsDto;
 import com.storevo.backend.tenant.dto.ThemeConfigDto;
@@ -38,6 +40,7 @@ public class StoreFrontController {
     private final CategoryService categoryService;
     private final StoreThemeService storeThemeService;
     private final StoreReviewRepository storeReviewRepository;
+    private final StoreIntegrationRepository integrationRepository;
 
     private int resolveGlobalPageSize(ThemeConfigDto theme, Integer requestedSize) {
         if (requestedSize != null && requestedSize >= 4 && requestedSize <= 48) {
@@ -115,6 +118,17 @@ public class StoreFrontController {
                             if (rp != null && rp.getId() != null) filterProductsMap.putIfAbsent(rp.getId(), rp);
                         }
                     }
+                    if (sec != null && sec.getResolvedTabs() != null) {
+                        for (Map<String, Object> tabMap : sec.getResolvedTabs()) {
+                            if (tabMap != null && tabMap.get("products") instanceof Collection<?> tabProds) {
+                                for (Object itemObj : tabProds) {
+                                    if (itemObj instanceof Product tp && tp.getId() != null) {
+                                        filterProductsMap.putIfAbsent(tp.getId(), tp);
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -129,6 +143,38 @@ public class StoreFrontController {
         } catch (Exception e) {
             model.addAttribute("storeReviews", Collections.emptyList());
         }
+
+        try {
+            model.addAttribute("categoryProductCounts", categoryService.getProductCountsByCategory());
+            model.addAttribute("allActiveCategories", categoryService.getAllCategories());
+        } catch (Exception e) {
+            model.addAttribute("categoryProductCounts", Collections.emptyMap());
+        }
+
+        boolean wompiEnabled = false;
+        if (store != null && store.getId() != null) {
+            String currentSchema = store.getSchemaName();
+            try {
+                TenantContext.clear();
+                wompiEnabled = integrationRepository
+                        .findByStoreAndIntegrationTypeAndIsActiveTrue(store, IntegrationType.WOMPI)
+                        .isPresent();
+            } catch (Exception ignored) {
+            } finally {
+                if (currentSchema != null) {
+                    TenantContext.setCurrentTenant(currentSchema);
+                }
+            }
+        }
+        Object resolvedSettings = model.getAttribute("settings");
+        String waNumber = null;
+        if (resolvedSettings instanceof StoreSettingsDto sDto) {
+            waNumber = sDto.getWhatsapp();
+        } else if (resolvedSettings instanceof StoreSettings sEnt) {
+            waNumber = sEnt.getWhatsapp();
+        }
+        model.addAttribute("storeWompiEnabled", wompiEnabled);
+        model.addAttribute("storeWhatsappEnabled", waNumber != null && !waNumber.isBlank());
     }
 
     @GetMapping
@@ -272,6 +318,9 @@ public class StoreFrontController {
                     resolvedBrandName = foundSec.settingStr("brandName", "");
                 }
                 manualIds = foundSec.settingLongList("productIds");
+                if ("default".equalsIgnoreCase(sort)) {
+                    sort = foundSec.settingStr("defaultSort", "default");
+                }
             }
         } else if (productIds != null && !productIds.isBlank()) {
             for (String part : productIds.split(",")) {
@@ -293,6 +342,10 @@ public class StoreFrontController {
         Page<Product> resultPage;
         if ("MANUAL".equals(resolvedSource)) {
             resultPage = productService.getManualPublicProductsPage(manualIds, q, sort, zeroBasedPage, effectiveSize);
+        } else if ("BEST_SELLERS".equals(resolvedSource)) {
+            resultPage = productService.getBestSellingPublicProductsPage(q, sort, zeroBasedPage, effectiveSize);
+        } else if ("RECOMMENDED".equals(resolvedSource)) {
+            resultPage = productService.getRecommendedPublicProductsPage(q, sort, zeroBasedPage, effectiveSize);
         } else {
             resultPage = productService.searchPublicCatalogPage(
                     resolvedCat, resolvedBrandId, resolvedBrandName, q,

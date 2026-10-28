@@ -37,9 +37,13 @@ Storevo.ThemeEditor = {
         hero_banner: {
             layoutSupport: { bg: false, spacing: false, width: false, anchor: true },
             label: 'Banner Principal (Hero)',
-            description: 'Portada de gran impacto con 3 estilos de diseño, imagen y hasta 2 botones.',
+            description: 'Portada de gran impacto con hasta 5 slides en carrusel, imagen móvil, control de altura y 3 diseños.',
             defaultSettings: {
                 heroLayout: 'classic',
+                heroHeight: 'default',
+                slideCount: '1',
+                autoplay: true,
+                autoplaySpeed: 'normal',
                 badgeText: 'Nueva Colección',
                 title: 'Descubre lo mejor de nuestra tienda',
                 subtitle: 'Calidad garantizada con envíos a toda Colombia.',
@@ -48,6 +52,7 @@ Storevo.ThemeEditor = {
                 secondaryButtonText: '',
                 secondaryButtonUrl: '/catalog',
                 imageUrl: '',
+                mobileImageUrl: '',
                 overlayOpacity: 50,
                 bgColor: '#6366f1',
                 textColor: '#ffffff',
@@ -345,6 +350,37 @@ Storevo.ThemeEditor = {
                 post4LinkUrl: ''
             }
         },
+        visit_us: {
+            layoutSupport: { bg: true, spacing: true, width: true, anchor: true },
+            label: 'Visítanos (Tienda Física)',
+            description: 'Presenta la dirección, ciudad, horarios de atención, foto y cómo llegar a tu punto físico.',
+            defaultSettings: {
+                badgeText: '📍 Punto Físico',
+                title: 'Visítanos en Nuestra Tienda',
+                subtitle: 'Conoce nuestros productos personalmente y recibe asesoría directa.',
+                city: '',
+                address: '',
+                reference: '',
+                hoursText: 'Lunes a Sábado: 9:00 am – 7:00 pm',
+                phone: '',
+                imageUrl: '',
+                imageSide: 'right',
+                mapUrl: '',
+                mapButtonText: 'Cómo llegar en Google Maps',
+                showWhatsappBtn: true
+            }
+        },
+        payment_methods: {
+            layoutSupport: { bg: true, spacing: true, width: true, anchor: true },
+            label: 'Medios de Pago Aceptados',
+            description: 'Muestra automáticamente los medios de pago realmente habilitados en tu tienda (Wompi y/o WhatsApp).',
+            defaultSettings: {
+                title: 'Medios de Pago Aceptados',
+                subtitle: 'Compra con total tranquilidad a través de nuestros canales habilitados',
+                paymentStyle: 'cards',
+                showSecurityNote: true
+            }
+        },
         catalog_results: {
             layoutSupport: { bg: false, spacing: false, width: false, anchor: false },
             label: 'Catálogo de Productos',
@@ -382,11 +418,15 @@ Storevo.ThemeEditor = {
     getLayoutSupport: function(type) {
         const def = this.catalogDefinitions[type];
         const declared = (def && def.layoutSupport) || {};
+        const isLockedAnchor = type === 'catalog_results' || type === 'product_main';
+        const isProductMain = type === 'product_main';
         return {
-            bg: declared.bg === true,
-            spacing: declared.spacing === true,
+            bg: !isProductMain,
+            spacing: !isProductMain,
             width: declared.width === true,
-            anchor: declared.anchor === true
+            anchor: !isLockedAnchor && declared.anchor !== false,
+            visibility: !isLockedAnchor,
+            schedule: !isLockedAnchor
         };
     },
 
@@ -403,7 +443,7 @@ Storevo.ThemeEditor = {
         if (!/^#[0-9a-fA-F]{6}$/.test(clean)) return 'light';
         const r = parseInt(clean.substring(1, 3), 16) / 255;
         const g = parseInt(clean.substring(3, 5), 16) / 255;
-        const b = parseInt(clean.substring(5, 7), 16) / 155;
+        const b = parseInt(clean.substring(5, 7), 16) / 255;
         const toLinear = (c) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
         const luminance = (0.2126 * toLinear(r)) + (0.7152 * toLinear(g)) + (0.0722 * toLinear(b));
         return luminance < 0.179 ? 'dark' : 'light';
@@ -1468,9 +1508,16 @@ Storevo.ThemeEditor = {
         currentList.forEach(sec => {
             const def = this.catalogDefinitions[sec.type] || { label: sec.type };
             const isLocked = this.isSectionLocked(sec);
-            const subtitle = isLocked
+            const baseSubtitle = isLocked
                 ? 'Sección principal de esta página (Clic para personalizar)'
                 : ((sec.settings && (sec.settings.title || sec.settings.customTitle || sec.settings.badgeText || sec.settings.text || sec.settings.card1Title || sec.settings.headerTitle)) || def.label);
+            const metaTags = [];
+            if (!isLocked && sec.settings) {
+                if (sec.settings.layoutVisibility === 'desktop_only') metaTags.push('🖥️ Solo PC');
+                else if (sec.settings.layoutVisibility === 'mobile_only') metaTags.push('📱 Solo móvil');
+                if (sec.settings.scheduleStart || sec.settings.scheduleEnd) metaTags.push('🗓️ Programada');
+            }
+            const subtitle = metaTags.length > 0 ? `${metaTags.join(' · ')} — ${baseSubtitle}` : baseSubtitle;
             const isEnabled = isLocked ? true : (sec.enabled !== false);
 
             const secIdx = currentList.indexOf(sec);
@@ -1769,6 +1816,9 @@ Storevo.ThemeEditor = {
                     const s = sec.settings || {};
                     switch (sec.type) {
                         case 'hero_banner':
+                            if (/mobileimageurl$/i.test(field.key)) {
+                                return { pc: '4 / 5', mobile: '4 / 5', size: '1080×1350 px', minW: 720 };
+                            }
                             return s.heroLayout === 'split'
                                 ? { pc: '4 / 3', mobile: '4 / 3', size: '1200×900 px', minW: 900 }
                                 : { pc: '16 / 6', mobile: '5 / 4', size: '1920×700 px', minW: 1600 };
@@ -1776,6 +1826,9 @@ Storevo.ThemeEditor = {
                             return { pc: '4 / 3', mobile: '16 / 9', size: '1200×900 px', minW: 900 };
                         case 'multi_banners':
                             return { pc: '16 / 9', mobile: '16 / 9', size: '1200×675 px', minW: 900 };
+                        case 'rich_text':
+                        case 'visit_us':
+                            return { pc: '4 / 3', mobile: '4 / 3', size: '1200×900 px', minW: 800 };
                         case 'featured_video':
                             return s.aspectRatio === '9:16'
                                 ? { pc: '9 / 16', mobile: '9 / 16', size: '720×1280 px', minW: 700 }
@@ -2406,7 +2459,8 @@ Storevo.ThemeEditor = {
                     defaultVal: 'none',
                     options: [
                         { value: 'none', label: 'Sin fondo (Predeterminado)' },
-                        { value: 'solid', label: 'Color sólido personalizado' }
+                        { value: 'solid', label: 'Color sólido personalizado' },
+                        { value: 'image', label: 'Imagen de fondo personalizada' }
                     ]
                 },
                 {
@@ -2415,6 +2469,31 @@ Storevo.ThemeEditor = {
                     type: 'color',
                     defaultVal: '#f1f5f9',
                     showIf: (s) => Boolean(s && s.layoutBgMode === 'solid')
+                },
+                {
+                    key: 'layoutBgImageUrl',
+                    label: 'Imagen de fondo de la sección',
+                    type: 'bg_image',
+                    defaultVal: '',
+                    showIf: (s) => Boolean(s && s.layoutBgMode === 'image')
+                },
+                {
+                    key: 'layoutBgOverlay',
+                    label: 'Oscuridad del velo sobre la imagen (0% a 90%)',
+                    type: 'range_overlay',
+                    defaultVal: 40,
+                    showIf: (s) => Boolean(s && s.layoutBgMode === 'image' && String(s.layoutBgImageUrl || '').trim() !== '')
+                },
+                {
+                    key: 'layoutTone',
+                    label: 'Contraste de textos sobre la imagen',
+                    type: 'select',
+                    defaultVal: 'dark',
+                    options: [
+                        { value: 'dark', label: 'Texto claro (Ideal para fondos oscuros)' },
+                        { value: 'light', label: 'Texto oscuro (Ideal para fondos claros)' }
+                    ],
+                    showIf: (s) => Boolean(s && s.layoutBgMode === 'image' && String(s.layoutBgImageUrl || '').trim() !== '')
                 }
             );
         }
@@ -2445,6 +2524,29 @@ Storevo.ThemeEditor = {
             });
         }
 
+        if (layoutSupport.visibility) {
+            layoutFields.push({
+                key: 'layoutVisibility',
+                label: 'Visibilidad por dispositivo',
+                type: 'select',
+                defaultVal: 'all',
+                options: [
+                    { value: 'all', label: 'Mostrar en PC y celular (Predeterminado)' },
+                    { value: 'desktop_only', label: 'Ocultar en celular (Solo visible en PC)' },
+                    { value: 'mobile_only', label: 'Ocultar en PC (Solo visible en celular)' }
+                ]
+            });
+        }
+
+        if (layoutSupport.schedule) {
+            layoutFields.push({
+                key: 'scheduleRange',
+                label: 'Programación de publicación (Inicio y Fin)',
+                type: 'schedule_range',
+                defaultVal: ''
+            });
+        }
+
         if (layoutSupport.anchor) {
             layoutFields.push({
                 key: 'layoutAnchor',
@@ -2460,8 +2562,11 @@ Storevo.ThemeEditor = {
             detailsEl.className = 'style-acc mt-4';
             detailsEl.setAttribute('data-acc', 'section-layout');
 
-            const hasCustomLayout = ['layoutBgMode', 'layoutBgColor', 'layoutSpaceTop', 'layoutSpaceBottom', 'layoutWidth', 'layoutAnchor']
-                .some(k => sec.settings && sec.settings[k] !== undefined && sec.settings[k] !== null && String(sec.settings[k]).trim() !== '' && sec.settings[k] !== 'default' && sec.settings[k] !== 'none');
+            const hasCustomLayout = [
+                'layoutBgMode', 'layoutBgColor', 'layoutBgImageUrl',
+                'layoutSpaceTop', 'layoutSpaceBottom', 'layoutWidth',
+                'layoutVisibility', 'scheduleStart', 'scheduleEnd', 'layoutAnchor'
+            ].some(k => sec.settings && sec.settings[k] !== undefined && sec.settings[k] !== null && String(sec.settings[k]).trim() !== '' && sec.settings[k] !== 'default' && sec.settings[k] !== 'none' && sec.settings[k] !== 'all');
             if (hasCustomLayout) {
                 detailsEl.open = true;
             }
@@ -2469,8 +2574,8 @@ Storevo.ThemeEditor = {
             const summaryEl = document.createElement('summary');
             summaryEl.innerHTML = `
                 <span class="min-w-0">
-                    <span class="style-acc-title">Diseño de la sección</span>
-                    <span class="style-acc-hint">Fondo, espaciado, ancho y ancla</span>
+                    <span class="style-acc-title">Diseño y programación de la sección</span>
+                    <span class="style-acc-hint">Espaciado, fondo, visibilidad PC/móvil, fechas y ancla</span>
                 </span>
                 <svg class="style-acc-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
             `;
@@ -2505,27 +2610,39 @@ Storevo.ThemeEditor = {
                     });
                     select.addEventListener('change', () => {
                         if (field.key === 'layoutBgMode') {
+                            if (!sec.settings) sec.settings = {};
                             if (select.value === 'solid') {
                                 const colorWrap = bodyEl.querySelector('[data-field-key="layoutBgColor"]');
                                 const pickerEl = colorWrap ? colorWrap.querySelector('input[type="color"]') : null;
-                                const chosenColor = (sec.settings && /^#[0-9a-fA-F]{6}$/.test(sec.settings.layoutBgColor || ''))
+                                const chosenColor = /^#[0-9a-fA-F]{6}$/.test(sec.settings.layoutBgColor || '')
                                     ? sec.settings.layoutBgColor
                                     : (pickerEl && /^#[0-9a-fA-F]{6}$/.test(pickerEl.value) ? pickerEl.value : '#f1f5f9');
-                                if (!sec.settings) sec.settings = {};
+                                delete sec.settings.layoutBgImageUrl;
+                                delete sec.settings.layoutBgOverlay;
                                 sec.settings.layoutBgColor = chosenColor;
                                 sec.settings.layoutTone = this.computeLayoutTone(chosenColor);
                                 commitSectionChange('layoutBgMode', 'solid');
+                            } else if (select.value === 'image') {
+                                delete sec.settings.layoutBgColor;
+                                if (sec.settings.layoutBgOverlay === undefined) sec.settings.layoutBgOverlay = 40;
+                                if (!sec.settings.layoutTone) sec.settings.layoutTone = 'dark';
+                                commitSectionChange('layoutBgMode', 'image');
                             } else {
-                                if (sec.settings) {
-                                    delete sec.settings.layoutBgColor;
-                                    delete sec.settings.layoutTone;
-                                }
+                                delete sec.settings.layoutBgColor;
+                                delete sec.settings.layoutBgImageUrl;
+                                delete sec.settings.layoutBgOverlay;
+                                delete sec.settings.layoutTone;
                                 commitSectionChange('layoutBgMode', null);
                             }
                             return;
                         }
+                        if (field.key === 'layoutTone') {
+                            commitSectionChange('layoutTone', select.value);
+                            return;
+                        }
                         const nextVal = select.value === field.defaultVal ? null : select.value;
                         commitSectionChange(field.key, nextVal);
+                        this.renderSectionsList();
                     });
                     wrapper.appendChild(select);
                 } else if (field.type === 'color') {
@@ -2567,6 +2684,187 @@ Storevo.ThemeEditor = {
                     colorRow.appendChild(colorInput);
                     colorRow.appendChild(hexInput);
                     wrapper.appendChild(colorRow);
+                } else if (field.type === 'bg_image') {
+                    const bgBox = document.createElement('div');
+                    bgBox.className = 'bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2.5';
+
+                    const previewWrap = document.createElement('div');
+                    previewWrap.className = (currentVal ? '' : 'hidden ') + 'relative h-28 w-full rounded-lg overflow-hidden border border-slate-800 bg-slate-900';
+                    const previewImg = document.createElement('img');
+                    previewImg.src = currentVal || '';
+                    previewImg.alt = 'Fondo de sección';
+                    previewImg.className = 'w-full h-full object-cover';
+                    const removeImgBtn = document.createElement('button');
+                    removeImgBtn.type = 'button';
+                    removeImgBtn.className = 'absolute top-1.5 right-1.5 bg-red-500 hover:bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded shadow';
+                    removeImgBtn.textContent = 'Quitar imagen';
+                    previewWrap.appendChild(previewImg);
+                    previewWrap.appendChild(removeImgBtn);
+
+                    const fileInput = document.createElement('input');
+                    fileInput.type = 'file';
+                    fileInput.accept = 'image/jpeg,image/png,image/webp';
+                    fileInput.className = 'hidden';
+
+                    const uploadBtn = document.createElement('button');
+                    uploadBtn.type = 'button';
+                    uploadBtn.className = 'w-full py-2 px-3 bg-slate-800 hover:bg-storevo-500 text-slate-200 hover:text-white border border-slate-700 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5';
+                    uploadBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg><span>Subir imagen de fondo</span>';
+
+                    const urlInput = document.createElement('input');
+                    urlInput.type = 'text';
+                    urlInput.value = currentVal || '';
+                    urlInput.placeholder = 'O pega una URL de imagen (https://...)';
+                    urlInput.className = 'w-full px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-300 focus:border-storevo-500 focus:outline-none';
+
+                    uploadBtn.addEventListener('click', () => fileInput.click());
+                    fileInput.addEventListener('change', () => {
+                        if (!fileInput.files || !fileInput.files[0]) return;
+                        const originalHtml = uploadBtn.innerHTML;
+                        uploadBtn.disabled = true;
+                        uploadBtn.innerHTML = '<span class="animate-pulse">Subiendo imagen...</span>';
+                        const formData = new FormData();
+                        formData.append('file', fileInput.files[0]);
+
+                        fetch(`/dashboard/${this.slug}/template/upload-image`, { method: 'POST', body: formData })
+                            .then(r => r.json())
+                            .then(data => {
+                                if (data.success && data.url) {
+                                    urlInput.value = data.url;
+                                    previewImg.src = data.url;
+                                    previewWrap.classList.remove('hidden');
+                                    commitSectionChange('layoutBgImageUrl', data.url);
+                                } else if (Storevo.UI && Storevo.UI.Toast) {
+                                    Storevo.UI.Toast.show(data.message || 'Error al subir imagen', 'error');
+                                }
+                            })
+                            .catch(() => {
+                                if (Storevo.UI && Storevo.UI.Toast) {
+                                    Storevo.UI.Toast.show('Error de conexión al subir la imagen', 'error');
+                                }
+                            })
+                            .finally(() => {
+                                uploadBtn.disabled = false;
+                                uploadBtn.innerHTML = originalHtml;
+                                fileInput.value = '';
+                            });
+                    });
+
+                    removeImgBtn.addEventListener('click', () => {
+                        urlInput.value = '';
+                        previewImg.removeAttribute('src');
+                        previewWrap.classList.add('hidden');
+                        commitSectionChange('layoutBgImageUrl', null);
+                    });
+
+                    urlInput.addEventListener('input', () => {
+                        const val = urlInput.value.trim();
+                        if (val) {
+                            previewImg.src = val;
+                            previewWrap.classList.remove('hidden');
+                            commitSectionChange('layoutBgImageUrl', val);
+                        } else {
+                            previewImg.removeAttribute('src');
+                            previewWrap.classList.add('hidden');
+                            commitSectionChange('layoutBgImageUrl', null);
+                        }
+                    });
+
+                    bgBox.appendChild(previewWrap);
+                    bgBox.appendChild(fileInput);
+                    bgBox.appendChild(uploadBtn);
+                    bgBox.appendChild(urlInput);
+                    wrapper.appendChild(bgBox);
+                } else if (field.type === 'range_overlay') {
+                    const row = document.createElement('div');
+                    row.className = 'flex items-center gap-3 bg-slate-950 p-2.5 rounded-xl border border-slate-800';
+                    const range = document.createElement('input');
+                    range.type = 'range';
+                    range.min = '0';
+                    range.max = '90';
+                    range.step = '5';
+                    range.value = String(currentVal !== undefined && currentVal !== null ? currentVal : 40);
+                    range.className = 'flex-1';
+                    const badge = document.createElement('span');
+                    badge.className = 'text-xs font-mono font-bold text-white w-10 text-right';
+                    badge.textContent = `${range.value}%`;
+
+                    range.addEventListener('input', () => {
+                        badge.textContent = `${range.value}%`;
+                    });
+                    range.addEventListener('change', () => {
+                        commitSectionChange('layoutBgOverlay', parseInt(range.value, 10));
+                    });
+                    row.appendChild(range);
+                    row.appendChild(badge);
+                    wrapper.appendChild(row);
+                } else if (field.type === 'schedule_range') {
+                    const schedBox = document.createElement('div');
+                    schedBox.className = 'bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2.5';
+
+                    const startVal = (sec.settings && sec.settings.scheduleStart) ? String(sec.settings.scheduleStart).substring(0, 16) : '';
+                    const endVal = (sec.settings && sec.settings.scheduleEnd) ? String(sec.settings.scheduleEnd).substring(0, 16) : '';
+
+                    schedBox.innerHTML = `
+                        <div class="space-y-1">
+                            <label class="block text-[11px] font-bold text-slate-400">Mostrar desde (Fecha y hora de inicio)</label>
+                            <input type="datetime-local" data-sched-input="start" value="${this.escapeHtml(startVal)}"
+                                   class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white focus:border-storevo-500 focus:outline-none [color-scheme:dark]">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="block text-[11px] font-bold text-slate-400">Ocultar después de (Fecha y hora de fin)</label>
+                            <input type="datetime-local" data-sched-input="end" value="${this.escapeHtml(endVal)}"
+                                   class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white focus:border-storevo-500 focus:outline-none [color-scheme:dark]">
+                        </div>
+                        <p class="sv-sched-error hidden text-[11px] font-bold text-red-400 leading-snug"></p>
+                        <div class="flex items-center justify-between gap-2 pt-1">
+                            <span class="text-[10px] text-slate-500">Hora oficial de Colombia (America/Bogota)</span>
+                            <button type="button" class="sv-sched-clear text-[10px] font-bold text-slate-400 hover:text-white transition">Limpiar fechas</button>
+                        </div>
+                    `;
+
+                    const startInput = schedBox.querySelector('[data-sched-input="start"]');
+                    const endInput = schedBox.querySelector('[data-sched-input="end"]');
+                    const errorEl = schedBox.querySelector('.sv-sched-error');
+                    const clearBtn = schedBox.querySelector('.sv-sched-clear');
+
+                    const validateAndApplySchedule = () => {
+                        const sVal = startInput.value ? startInput.value.trim() : '';
+                        const eVal = endInput.value ? endInput.value.trim() : '';
+                        if (sVal) endInput.min = sVal;
+                        else endInput.removeAttribute('min');
+                        if (eVal) startInput.max = eVal;
+                        else startInput.removeAttribute('max');
+
+                        if (sVal && eVal && eVal <= sVal) {
+                            errorEl.textContent = 'La fecha de finalización debe ser posterior a la fecha de inicio.';
+                            errorEl.classList.remove('hidden');
+                            endInput.classList.add('border-red-500');
+                            return;
+                        }
+                        errorEl.textContent = '';
+                        errorEl.classList.add('hidden');
+                        endInput.classList.remove('border-red-500');
+
+                        if (!sec.settings) sec.settings = {};
+                        if (sVal) sec.settings.scheduleStart = sVal;
+                        else delete sec.settings.scheduleStart;
+                        if (eVal) sec.settings.scheduleEnd = eVal;
+                        else delete sec.settings.scheduleEnd;
+
+                        this.renderSectionsList();
+                        this.scheduleAutoSave(true);
+                    };
+
+                    startInput.addEventListener('change', validateAndApplySchedule);
+                    endInput.addEventListener('change', validateAndApplySchedule);
+                    clearBtn.addEventListener('click', () => {
+                        startInput.value = '';
+                        endInput.value = '';
+                        validateAndApplySchedule();
+                    });
+
+                    wrapper.appendChild(schedBox);
                 } else if (field.type === 'anchor') {
                     const inputWrap = document.createElement('div');
                     inputWrap.className = 'relative flex items-center';
@@ -2648,38 +2946,14 @@ Storevo.ThemeEditor = {
                     }
                 }
                 if (sec.settings) {
-                    ['layoutBgMode', 'layoutBgColor', 'layoutTone', 'layoutSpaceTop', 'layoutSpaceBottom', 'layoutWidth', 'layoutAnchor']
-                        .forEach(k => delete sec.settings[k]);
+                    [
+                        'layoutBgMode', 'layoutBgColor', 'layoutBgImageUrl', 'layoutBgOverlay', 'layoutTone',
+                        'layoutSpaceTop', 'layoutSpaceBottom', 'layoutWidth',
+                        'layoutVisibility', 'scheduleStart', 'scheduleEnd', 'layoutAnchor'
+                    ].forEach(k => delete sec.settings[k]);
                 }
-                layoutFields.forEach(field => {
-                    const wrap = bodyEl.querySelector(`[data-field-key="${field.key}"]`);
-                    if (!wrap) return;
-                    if (field.type === 'select') {
-                        const sel = wrap.querySelector('select');
-                        if (sel) sel.value = field.defaultVal;
-                    } else if (field.type === 'color') {
-                        const cInput = wrap.querySelector('input[type="color"]');
-                        const hInput = wrap.querySelector('input[type="text"]');
-                        if (cInput) cInput.value = field.defaultVal;
-                        if (hInput) hInput.value = field.defaultVal;
-                    } else if (field.type === 'anchor') {
-                        const aInput = wrap.querySelector('input[type="text"]');
-                        const errP = wrap.querySelector('p.text-red-400');
-                        const hintP = wrap.querySelector('p.text-slate-500');
-                        if (aInput) {
-                            aInput.value = '';
-                            aInput.classList.remove('border-red-500');
-                        }
-                        if (errP) {
-                            errP.textContent = '';
-                            errP.classList.add('hidden');
-                        }
-                        if (hintP) {
-                            hintP.textContent = 'Permite saltar a esta sección con un enlace #ancla.';
-                        }
-                    }
-                });
-                syncConditionalFields();
+                this.openInspector(this.activeSectionId);
+                this.renderSectionsList();
                 this.scheduleAutoSave();
                 if (Storevo.UI && Storevo.UI.Toast) {
                     Storevo.UI.Toast.show('Diseño de la sección restablecido', 'info');
@@ -2780,43 +3054,96 @@ Storevo.ThemeEditor = {
                     { key: 'textColor', label: 'Color del texto', type: 'color', defaultVal: '#ffffff' }
                 ];
             }
-            case 'hero_banner':
-                return [
+            case 'hero_banner': {
+                const isMultiSlide = (s) => parseInt((s && s.slideCount) || '1', 10) >= 2;
+                const heroFields = [
                     { key: 'heroLayout', label: 'Diseño del Banner Principal', type: 'select', defaultVal: 'classic', options: [
                             { value: 'classic', label: 'Portada Clásica (Imagen de fondo completa)' },
                             { value: 'split', label: 'Dividido Editorial (Texto a un lado + Imagen al otro)' },
                             { value: 'compact', label: 'Banner Compacto (Altura reducida)' }
                         ]},
-                    { key: 'imageUrl', label: 'Imagen del Banner', type: 'image' },
-                    { key: 'overlayOpacity', label: 'Oscuridad sobre la imagen (0 a 90)', type: 'number', defaultVal: 50 },
-                    { key: 'badgeText', label: 'Etiqueta superior (Opcional)', type: 'text', placeholder: 'Ej: Nueva Colección' },
-                    { key: 'title', label: 'Título Principal', type: 'text', placeholder: 'Bienvenido a nuestra tienda' },
-                    { key: 'subtitle', label: 'Subtítulo descriptivo', type: 'textarea', placeholder: 'Explora nuestro catálogo...' },
-                    { key: 'alignment', label: 'Alineación del texto', type: 'select', options: [
+                    { key: 'heroHeight', label: 'Altura del Banner', type: 'select', defaultVal: 'default', options: [
+                            { value: 'default', label: 'Automática según el diseño (Predeterminada)' },
+                            { value: 'sm', label: 'Compacta (260px móvil / 320px PC)' },
+                            { value: 'md', label: 'Mediana Estándar (360px móvil / 460px PC)' },
+                            { value: 'lg', label: 'Grande (440px móvil / 560px PC)' },
+                            { value: 'xl', label: 'Impacto Amplio (520px móvil / 680px PC)' }
+                        ]},
+                    { key: 'slideCount', label: 'Modalidad / Cantidad de Slides', type: 'select', defaultVal: '1', options: [
+                            { value: '1', label: '1 solo banner fijo (Estándar)' },
+                            { value: '2', label: 'Carrusel de 2 slides' },
+                            { value: '3', label: 'Carrusel de 3 slides' },
+                            { value: '4', label: 'Carrusel de 4 slides' },
+                            { value: '5', label: 'Carrusel de 5 slides' }
+                        ]},
+                    { key: 'autoplay', label: 'Reproducción automática (Autoplay)', type: 'checkbox', placeholder: 'Cambiar de slide automáticamente', defaultVal: true, showIf: isMultiSlide },
+                    { key: 'autoplaySpeed', label: 'Velocidad del carrusel', type: 'select', defaultVal: 'normal', options: [
+                            { value: 'fast', label: 'Rápida (3.5 segundos)' },
+                            { value: 'normal', label: 'Normal (5 segundos)' },
+                            { value: 'slow', label: 'Pausada (7 segundos)' }
+                        ], showIf: (s) => isMultiSlide(s) && (!s || s.autoplay !== false) },
+                    { key: 'alignment', label: 'Alineación del texto', type: 'select', defaultVal: 'center', options: [
                             { value: 'center', label: 'Centrado' },
                             { value: 'left', label: 'Izquierda' }
                         ]},
-                    { key: 'buttonText', label: 'Texto del botón principal', type: 'text', placeholder: 'Ver Catálogo' },
-                    { key: 'buttonUrl', label: '¿A dónde lleva el botón principal?', type: 'url', defaultVal: '/catalog' },
-                    { key: 'secondaryButtonText', label: 'Texto 2do botón (Dejar vacío para ocultar)', type: 'text', placeholder: 'Ej: Ver Ofertas o Hablar por WhatsApp' },
-                    { key: 'secondaryButtonUrl', label: '¿A dónde lleva el 2do botón?', type: 'url', defaultVal: '/catalog' },
-                    { key: 'bgColor', label: 'Color de fondo', type: 'color', defaultVal: '#6366f1' },
-                    { key: 'textColor', label: 'Color del texto', type: 'color', defaultVal: '#ffffff' }
+                    { key: 'overlayOpacity', label: 'Oscuridad sobre la imagen (0 a 90)', type: 'number', defaultVal: 50 },
+                    { key: 'bgColor', label: 'Color de fondo del Hero', type: 'color', defaultVal: '#6366f1' },
+                    { key: 'textColor', label: 'Color del texto', type: 'color', defaultVal: '#ffffff' },
+                    { key: 'imageUrl', label: 'Slide 1: Imagen para PC (y móvil si no subes otra)', type: 'image' },
+                    { key: 'mobileImageUrl', label: 'Slide 1: Imagen específica para Celular (Opcional)', type: 'image' },
+                    { key: 'badgeText', label: 'Slide 1: Etiqueta superior (Opcional)', type: 'text', placeholder: 'Ej: Nueva Colección' },
+                    { key: 'title', label: 'Slide 1: Título Principal', type: 'text', placeholder: 'Bienvenido a nuestra tienda' },
+                    { key: 'subtitle', label: 'Slide 1: Subtítulo descriptivo', type: 'textarea', placeholder: 'Explora nuestro catálogo...' },
+                    { key: 'buttonText', label: 'Slide 1: Texto del botón principal', type: 'text', placeholder: 'Ver Catálogo' },
+                    { key: 'buttonUrl', label: 'Slide 1: ¿A dónde lleva el botón principal?', type: 'url', defaultVal: '/catalog' },
+                    { key: 'secondaryButtonText', label: 'Slide 1: Texto 2do botón (Dejar vacío para ocultar)', type: 'text', placeholder: 'Ej: Ver Ofertas o Hablar por WhatsApp' },
+                    { key: 'secondaryButtonUrl', label: 'Slide 1: ¿A dónde lleva el 2do botón?', type: 'url', defaultVal: '/catalog', showIf: (s) => Boolean(s && String(s.secondaryButtonText || '').trim()) }
                 ];
+
+                for (let i = 2; i <= 5; i++) {
+                    const showSlide = (s) => parseInt((s && s.slideCount) || '1', 10) >= i;
+                    const secBtnKey = `slide${i}SecondaryButtonText`;
+                    heroFields.push(
+                        { key: `slide${i}ImageUrl`, label: `Slide ${i}: Imagen para PC`, type: 'image', showIf: showSlide },
+                        { key: `slide${i}MobileImageUrl`, label: `Slide ${i}: Imagen específica para Celular (Opcional)`, type: 'image', showIf: showSlide },
+                        { key: `slide${i}BadgeText`, label: `Slide ${i}: Etiqueta superior (Opcional)`, type: 'text', placeholder: 'Ej: Destacado', showIf: showSlide },
+                        { key: `slide${i}Title`, label: `Slide ${i}: Título`, type: 'text', placeholder: `Título del Slide ${i}`, showIf: showSlide },
+                        { key: `slide${i}Subtitle`, label: `Slide ${i}: Subtítulo`, type: 'textarea', placeholder: `Descripción del Slide ${i}...`, showIf: showSlide },
+                        { key: `slide${i}ButtonText`, label: `Slide ${i}: Texto del botón principal`, type: 'text', defaultVal: 'Ver Catálogo', placeholder: 'Ver Catálogo', showIf: showSlide },
+                        { key: `slide${i}ButtonUrl`, label: `Slide ${i}: ¿A dónde lleva el botón principal?`, type: 'url', defaultVal: '/catalog', showIf: showSlide },
+                        { key: secBtnKey, label: `Slide ${i}: Texto 2do botón (Opcional)`, type: 'text', placeholder: 'Dejar vacío para ocultar', showIf: showSlide },
+                        { key: `slide${i}SecondaryButtonUrl`, label: `Slide ${i}: ¿A dónde lleva el 2do botón?`, type: 'url', defaultVal: '/catalog', showIf: (s) => showSlide(s) && Boolean(s && String(s[secBtnKey] || '').trim()) }
+                    );
+                }
+                return heroFields;
+            }
             case 'product_grid':
                 return [
                     { key: 'title', label: 'Título de la vitrina', type: 'text', placeholder: 'Novedades' },
                     { key: 'subtitle', label: 'Subtítulo (Opcional)', type: 'text', placeholder: 'Los favoritos de la temporada' },
                     { key: 'source', label: 'Qué productos mostrar', type: 'select', options: [
                             { value: 'NEWEST', label: 'Últimos productos agregados' },
-                            { value: 'OFFERS', label: 'Solo productos en oferta / descuento' },
-                            { value: 'FEATURED', label: 'Productos destacados (★)' },
-                            { value: 'CATEGORY', label: 'Productos de una categoría específica' },
-                            { value: 'BRAND', label: 'Productos de una marca específica' },
-                            { value: 'MANUAL', label: 'Selección manual de productos' }
+                            { value: 'BEST_SELLERS', label: '🔥 Más vendidos (Ranking de ventas reales)' },
+                            { value: 'RECOMMENDED', label: '✨ Recomendados (En stock + Destacados + Ofertas)' },
+                            { value: 'OFFERS', label: '🏷️ Solo productos en oferta / descuento' },
+                            { value: 'FEATURED', label: '★ Productos destacados' },
+                            { value: 'CATEGORY', label: '📁 Productos de una categoría específica' },
+                            { value: 'BRAND', label: '🏷️ Productos de una marca específica' },
+                            { value: 'MANUAL', label: '✋ Selección manual de productos' }
                         ]},
                     { key: 'categoryId', label: 'Categoría a mostrar', type: 'select', options: catOptions },
-                    { key: 'columnsDesktop', label: 'Columnas de productos en PC', type: 'select', defaultVal: '4', options: [
+                    { key: 'defaultSort', label: 'Ordenamiento de los productos', type: 'select', defaultVal: 'default', options: [
+                            { value: 'default', label: 'Automático según el origen elegido' },
+                            { value: 'price_asc', label: 'Precio: menor a mayor' },
+                            { value: 'price_desc', label: 'Precio: mayor a menor' },
+                            { value: 'discount_desc', label: 'Mayor descuento (%)' },
+                            { value: 'name_asc', label: 'Nombre: A - Z' }
+                        ]},
+                    { key: 'displayMode', label: 'Formato de presentación', type: 'select', defaultVal: 'grid', options: [
+                            { value: 'grid', label: 'Cuadrícula adaptable (Filas y columnas)' },
+                            { value: 'carousel', label: 'Carrusel deslizable horizontal' }
+                        ]},
+                    { key: 'columnsDesktop', label: 'Columnas visibles en PC', type: 'select', defaultVal: '4', options: [
                             { value: '4', label: '4 productos por fila (Estándar)' },
                             { value: '3', label: '3 productos grandes por fila (Editorial)' }
                         ]},
@@ -2827,7 +3154,9 @@ Storevo.ThemeEditor = {
                             { value: '16', label: '16 productos (4 filas)' },
                             { value: '24', label: '24 productos (Catálogo amplio)' }
                         ]},
-                    { key: 'showFilters', label: 'Filtros Dinámicos y Buscador', type: 'checkbox', placeholder: 'Habilitar barra de filtros, tallas, colores y buscador en esta vitrina', defaultVal: false },
+                    { key: 'enableTabs', label: 'Pestañas de colecciones (Tabs)', type: 'checkbox', placeholder: 'Organizar distintas selecciones de productos en pestañas (ej: Nuevos, Más vendidos, Ofertas)', defaultVal: false },
+                    { key: 'showSortDropdown', label: 'Ordenamiento rápido por precio', type: 'checkbox', placeholder: 'Mostrar selector compacto para que el comprador ordene por precio', defaultVal: false },
+                    { key: 'showFilters', label: 'Filtros Dinámicos y Buscador Completo', type: 'checkbox', placeholder: 'Habilitar barra de filtros, tallas, colores y buscador en esta vitrina', defaultVal: false },
                     { key: 'showViewAll', label: 'Enlace al catálogo', type: 'checkbox', placeholder: 'Mostrar botón "Ver todo →"', defaultVal: true }
                 ];
             case 'spotlight_product':
@@ -2849,6 +3178,10 @@ Storevo.ThemeEditor = {
                 return [
                     { key: 'title', label: 'Título de la sección', type: 'text', placeholder: 'Explora por Categoría' },
                     { key: 'subtitle', label: 'Subtítulo', type: 'text', placeholder: 'Encuentra rápidamente lo que buscas' },
+                    { key: 'source', label: 'Qué categorías mostrar', type: 'select', defaultVal: 'AUTO', options: [
+                            { value: 'AUTO', label: 'Automático (Categorías principales activas)' },
+                            { value: 'MANUAL', label: 'Selección manual y orden personalizado' }
+                        ]},
                     { key: 'cardLayout', label: 'Estilo visual de las categorías', type: 'select', defaultVal: 'visual', options: [
                             { value: 'visual', label: 'Tarjetas Visuales con Foto Automática del Producto' },
                             { value: 'icon', label: 'Tarjetas Clásicas Limpias con Ícono' },
@@ -2857,36 +3190,57 @@ Storevo.ThemeEditor = {
                     { key: 'columns', label: 'Columnas en PC', type: 'select', defaultVal: '4', options: [
                             { value: '4', label: '4 categorías por fila' },
                             { value: '3', label: '3 categorías grandes por fila' }
-                        ]}
+                        ]},
+                    { key: 'showProductCount', label: 'Conteo de productos', type: 'checkbox', placeholder: 'Mostrar la cantidad de productos disponibles en cada categoría', defaultVal: true }
                 ];
             case 'countdown_promo':
                 return [
                     { key: 'badgeText', label: 'Etiqueta superior', type: 'text', defaultVal: '⚡ Oferta por Tiempo Limitado' },
                     { key: 'title', label: 'Título de la oferta', type: 'text', defaultVal: '¡Aprovecha nuestros descuentos especiales!' },
                     { key: 'subtitle', label: 'Descripción de la promoción', type: 'textarea' },
-                    { key: 'endDate', label: 'Fecha y hora límite (Opcional: si se deja vacío dura 24h)', type: 'datetime-local' },
+                    { key: 'endDate', label: 'Fecha y hora límite de la oferta', type: 'datetime-local' },
+                    { key: 'onExpire', label: '¿Qué hacer cuando finalice la cuenta regresiva?', type: 'select', defaultVal: 'hide', options: [
+                            { value: 'hide', label: 'Ocultar automáticamente la sección en la tienda' },
+                            { value: 'message', label: 'Mantener la sección y mostrar un mensaje de finalización' }
+                        ]},
+                    { key: 'expiredMessage', label: 'Mensaje al finalizar la oferta', type: 'textarea', defaultVal: '¡Esta promoción ha finalizado! Explora nuestro catálogo para ver las referencias disponibles.', showIf: (s) => Boolean(s && s.onExpire === 'message') },
                     { key: 'buttonText', label: 'Texto del botón', type: 'text', defaultVal: 'Ver Ofertas Ahora' },
                     { key: 'buttonUrl', label: '¿A dónde lleva el botón?', type: 'url', defaultVal: '/catalog' },
                     { key: 'bgColor', label: 'Color de fondo', type: 'color', defaultVal: '#0f172a' },
                     { key: 'textColor', label: 'Color del texto', type: 'color', defaultVal: '#ffffff' }
                 ];
-            case 'multi_banners':
-                return [
-                    { key: 'card1ImageUrl', label: 'Tarjeta 1: Imagen de Fondo', type: 'image' },
-                    { key: 'card1Badge', label: 'Tarjeta 1: Etiqueta', type: 'text' },
-                    { key: 'card1Title', label: 'Tarjeta 1: Título', type: 'text' },
-                    { key: 'card1Subtitle', label: 'Tarjeta 1: Subtítulo', type: 'text' },
-                    { key: 'card1ButtonText', label: 'Tarjeta 1: Texto del botón', type: 'text' },
-                    { key: 'card1ButtonUrl', label: 'Tarjeta 1: ¿A dónde lleva el botón?', type: 'url', defaultVal: '/catalog' },
-                    { key: 'card1BgColor', label: 'Tarjeta 1: Color de fondo', type: 'color', defaultVal: '#1e293b' },
-                    { key: 'card2ImageUrl', label: 'Tarjeta 2: Imagen de Fondo', type: 'image' },
-                    { key: 'card2Badge', label: 'Tarjeta 2: Etiqueta', type: 'text' },
-                    { key: 'card2Title', label: 'Tarjeta 2: Título', type: 'text' },
-                    { key: 'card2Subtitle', label: 'Tarjeta 2: Subtítulo', type: 'text' },
-                    { key: 'card2ButtonText', label: 'Tarjeta 2: Texto del botón', type: 'text' },
-                    { key: 'card2ButtonUrl', label: 'Tarjeta 2: ¿A dónde lleva el botón?', type: 'url', defaultVal: '/catalog' },
-                    { key: 'card2BgColor', label: 'Tarjeta 2: Color de fondo', type: 'color', defaultVal: '#4f46e5' }
+            case 'multi_banners': {
+                const has3Cards = (s) => parseInt((s && s.cardCount) || '2', 10) >= 3;
+                const has4Cards = (s) => parseInt((s && s.cardCount) || '2', 10) >= 4;
+                const mbFields = [
+                    { key: 'cardCount', label: 'Cantidad de tarjetas / banners', type: 'select', defaultVal: '2', options: [
+                            { value: '2', label: '2 tarjetas (Doble clásico)' },
+                            { value: '3', label: '3 tarjetas (Triple o Mosaico)' },
+                            { value: '4', label: '4 tarjetas (Cuádruple)' }
+                        ]},
+                    { key: 'bannerLayout', label: 'Distribución en PC', type: 'select', defaultVal: 'equal', options: [
+                            { value: 'equal', label: 'Columnas simétricas iguales' },
+                            { value: 'mosaic_3', label: 'Mosaico 3 tarjetas (1 grande + 2 apiladas)' },
+                            { value: 'cols_3', label: '3 columnas en línea (para 3 tarjetas)' },
+                            { value: 'grid_2x2', label: 'Cuadrícula 2x2 (para 4 tarjetas)' },
+                            { value: 'cols_4', label: '4 columnas en fila (para 4 tarjetas)' }
+                        ]}
                 ];
+                const defaultBgs = ['#1e293b', '#4f46e5', '#0f766e', '#be123c'];
+                for (let i = 1; i <= 4; i++) {
+                    const showFn = i === 3 ? has3Cards : (i === 4 ? has4Cards : undefined);
+                    mbFields.push(
+                        { key: `card${i}ImageUrl`, label: `Tarjeta ${i}: Imagen de Fondo`, type: 'image', showIf: showFn },
+                        { key: `card${i}Badge`, label: `Tarjeta ${i}: Etiqueta superior`, type: 'text', showIf: showFn },
+                        { key: `card${i}Title`, label: `Tarjeta ${i}: Título`, type: 'text', showIf: showFn },
+                        { key: `card${i}Subtitle`, label: `Tarjeta ${i}: Subtítulo`, type: 'text', showIf: showFn },
+                        { key: `card${i}ButtonText`, label: `Tarjeta ${i}: Texto del botón`, type: 'text', showIf: showFn },
+                        { key: `card${i}ButtonUrl`, label: `Tarjeta ${i}: ¿A dónde lleva el botón?`, type: 'url', defaultVal: '/catalog', showIf: showFn },
+                        { key: `card${i}BgColor`, label: `Tarjeta ${i}: Color de fondo`, type: 'color', defaultVal: defaultBgs[i - 1], showIf: showFn }
+                    );
+                }
+                return mbFields;
+            }
             case 'promo_banner':
                 return [
                     { key: 'imageUrl', label: 'Imagen Lateral de la Promoción', type: 'image' },
@@ -2901,7 +3255,13 @@ Storevo.ThemeEditor = {
             case 'testimonials':
                 return [
                     { key: 'title', label: 'Título de la sección', type: 'text', placeholder: 'Opiniones de Compradores Reales' },
-                    { key: 'subtitle', label: 'Subtítulo descriptivo', type: 'text', placeholder: 'Calificaciones verificadas de clientes...' }
+                    { key: 'subtitle', label: 'Subtítulo descriptivo', type: 'text', placeholder: 'Calificaciones verificadas de clientes...' },
+                    { key: 'displayOrder', label: 'Fuentes y orden de presentación', type: 'select', defaultVal: 'reviews_first', options: [
+                            { value: 'reviews_first', label: 'Reseñas verificadas primero + Testimonios manuales' },
+                            { value: 'manual_first', label: 'Testimonios manuales primero + Reseñas verificadas' },
+                            { value: 'only_reviews', label: 'Mostrar únicamente reseñas de pedidos verificados' },
+                            { value: 'only_manual', label: 'Mostrar únicamente testimonios manuales' }
+                        ]}
                 ];
             case 'how_to_buy':
                 return [
@@ -2915,49 +3275,105 @@ Storevo.ThemeEditor = {
                     { key: 'step3Text', label: 'Paso 3: Descripción', type: 'textarea' },
                     { key: 'showPaymentBadges', label: 'Sello de Pagos y Envíos', type: 'checkbox', placeholder: 'Mostrar íconos de pago seguro (PSE, Nequi, Tarjetas, WhatsApp)', defaultVal: true }
                 ];
-            case 'trust_badges':
-                return [
+            case 'trust_badges': {
+                const tbFields = [
                     { key: 'badgeStyle', label: 'Diseño de la Franja', type: 'select', defaultVal: 'cards', options: [
                             { value: 'cards', label: 'Tarjetas Blancas con Sombra' },
                             { value: 'minimal', label: 'Minimalista Integrado al Fondo' },
                             { value: 'secondary', label: 'Franja Destacada en Color Secundario' }
                         ]},
-                    { key: 'item1Icon', label: 'Beneficio 1: Ícono', type: 'select', defaultVal: 'shield', options: trustIconOptions },
-                    { key: 'item1Title', label: 'Beneficio 1: Título', type: 'text' },
-                    { key: 'item1Text', label: 'Beneficio 1: Descripción', type: 'text' },
-                    { key: 'item2Icon', label: 'Beneficio 2: Ícono', type: 'select', defaultVal: 'truck', options: trustIconOptions },
-                    { key: 'item2Title', label: 'Beneficio 2: Título', type: 'text' },
-                    { key: 'item2Text', label: 'Beneficio 2: Descripción', type: 'text' },
-                    { key: 'item3Icon', label: 'Beneficio 3: Ícono', type: 'select', defaultVal: 'chat', options: trustIconOptions },
-                    { key: 'item3Title', label: 'Beneficio 3: Título', type: 'text' },
-                    { key: 'item3Text', label: 'Beneficio 3: Descripción', type: 'text' }
+                    { key: 'mobileLayout', label: 'Presentación en Celular', type: 'select', defaultVal: 'stack', options: [
+                            { value: 'stack', label: 'Apilados verticalmente (Estándar)' },
+                            { value: 'carousel', label: 'Carrusel deslizable horizontal' }
+                        ]}
                 ];
+                const defaultIcons = ['shield', 'truck', 'chat', 'star', 'refresh', 'card'];
+                for (let i = 1; i <= 6; i++) {
+                    const optLabel = i > 3 ? ' (Opcional — dejar título vacío para ocultar)' : '';
+                    tbFields.push(
+                        { key: `item${i}Icon`, label: `Beneficio ${i}: Ícono`, type: 'select', defaultVal: defaultIcons[i - 1], options: trustIconOptions },
+                        { key: `item${i}Title`, label: `Beneficio ${i}: Título${optLabel}`, type: 'text', placeholder: i > 3 ? 'Ej: Garantía Directa' : '' },
+                        { key: `item${i}Text`, label: `Beneficio ${i}: Descripción`, type: 'text', showIf: i > 3 ? (s) => Boolean(s && String(s[`item${i}Title`] || '').trim()) : undefined }
+                    );
+                }
+                return tbFields;
+            }
             case 'faq_accordion':
                 return [
-                    { key: 'title', label: 'Título de la sección', type: 'text' },
-                    { key: 'subtitle', label: 'Subtítulo', type: 'text' },
-                    { key: 'q1', label: 'Pregunta 1', type: 'text' },
-                    { key: 'a1', label: 'Respuesta 1', type: 'textarea' },
-                    { key: 'q2', label: 'Pregunta 2', type: 'text' },
-                    { key: 'a2', label: 'Respuesta 2', type: 'textarea' },
-                    { key: 'q3', label: 'Pregunta 3', type: 'text' },
-                    { key: 'a3', label: 'Respuesta 3', type: 'textarea' },
-                    { key: 'q4', label: 'Pregunta 4 (Opcional)', type: 'text', placeholder: 'Dejar vacío si no se usa' },
-                    { key: 'a4', label: 'Respuesta 4 (Opcional)', type: 'textarea' },
-                    { key: 'q5', label: 'Pregunta 5 (Opcional)', type: 'text', placeholder: 'Dejar vacío si no se usa' },
-                    { key: 'a5', label: 'Respuesta 5 (Opcional)', type: 'textarea' }
+                    { key: 'title', label: 'Título de la sección', type: 'text', defaultVal: 'Preguntas Frecuentes' },
+                    { key: 'subtitle', label: 'Subtítulo', type: 'text', defaultVal: 'Resolvemos tus dudas antes de comprar' },
+                    { key: 'enableFaqSchema', label: 'SEO y Datos Estructurados (Schema.org)', type: 'checkbox', placeholder: 'Incluir marcado estructurado FAQPage sincronizado con las preguntas visibles', defaultVal: true }
                 ];
-            case 'whatsapp_cta':
+            case 'whatsapp_cta': {
+                const isSchedOn = (s) => Boolean(s && s.showSchedule === true);
                 return [
                     { key: 'title', label: 'Título del bloque', type: 'text' },
                     { key: 'subtitle', label: 'Subtítulo persuasivo', type: 'textarea' },
-                    { key: 'buttonText', label: 'Texto del botón de WhatsApp', type: 'text' }
+                    { key: 'buttonText', label: 'Texto del botón de WhatsApp', type: 'text' },
+                    { key: 'prefilledMessage', label: 'Mensaje prellenado de WhatsApp (Opcional)', type: 'textarea', placeholder: 'Ej: Hola, estoy visitando su tienda online y me gustaría recibir asesoría.' },
+                    { key: 'showSchedule', label: 'Horario de atención en vivo', type: 'checkbox', placeholder: 'Mostrar indicador de estado (En línea / Fuera de horario) según el horario comercial', defaultVal: false },
+                    { key: 'scheduleDays', label: 'Días de atención', type: 'select', defaultVal: 'MON_SAT', options: [
+                            { value: 'MON_SAT', label: 'Lunes a Sábado' },
+                            { value: 'MON_FRI', label: 'Lunes a Viernes' },
+                            { value: 'ALL_DAYS', label: 'Todos los días (Lunes a Domingo)' }
+                        ], showIf: isSchedOn },
+                    { key: 'openTime', label: 'Hora de apertura (24h)', type: 'time', defaultVal: '08:00', showIf: isSchedOn },
+                    { key: 'closeTime', label: 'Hora de cierre (24h)', type: 'time', defaultVal: '18:00', showIf: isSchedOn },
+                    { key: 'scheduleText', label: 'Texto visible del horario (Opcional)', type: 'text', placeholder: 'Ej: Lun a Sáb de 8:00 am a 6:00 pm', showIf: isSchedOn }
                 ];
-            case 'rich_text':
+            }
+            case 'visit_us':
                 return [
-                    { key: 'title', label: 'Título', type: 'text', placeholder: 'Sobre Nosotros' },
-                    { key: 'content', label: 'Contenido', type: 'textarea', placeholder: 'Escribe aquí la historia o mensaje de tu tienda...' }
+                    { key: 'badgeText', label: 'Etiqueta superior (Opcional)', type: 'text', defaultVal: '📍 Punto Físico' },
+                    { key: 'title', label: 'Título de la sección', type: 'text', defaultVal: 'Visítanos en Nuestra Tienda' },
+                    { key: 'subtitle', label: 'Subtítulo descriptivo', type: 'textarea', defaultVal: 'Conoce nuestros productos personalmente y recibe asesoría directa.' },
+                    { key: 'address', label: 'Dirección física del local', type: 'text', placeholder: 'Ej: Calle 85 # 12-34, Local 102' },
+                    { key: 'city', label: 'Ciudad / Municipio', type: 'text', placeholder: 'Ej: Bogotá, Medellín, Cartagena...' },
+                    { key: 'reference', label: 'Punto de referencia o centro comercial (Opcional)', type: 'text', placeholder: 'Ej: Frente al Parque Principal / Piso 2' },
+                    { key: 'hoursText', label: 'Horario de atención al público', type: 'textarea', placeholder: 'Ej: Lunes a Sábado: 9:00 am a 7:00 pm\nDomingos y festivos: 10:00 am a 4:00 pm' },
+                    { key: 'phone', label: 'Teléfono de contacto (Dejar vacío para usar el WhatsApp de la tienda)', type: 'text', placeholder: 'Ej: 300 123 4567' },
+                    { key: 'imageUrl', label: 'Foto del punto físico / fachada (Opcional)', type: 'image' },
+                    { key: 'imageSide', label: 'Posición de la foto en PC', type: 'select', defaultVal: 'right', options: [
+                            { value: 'right', label: 'Foto a la derecha / Información a la izquierda' },
+                            { value: 'left', label: 'Foto a la izquierda / Información a la derecha' }
+                        ], showIf: (s) => Boolean(s && String(s.imageUrl || '').trim()) },
+                    { key: 'mapUrl', label: 'Enlace a Google Maps / Waze (Opcional)', type: 'text', placeholder: 'https://maps.google.com/...' },
+                    { key: 'mapButtonText', label: 'Texto del botón de mapa', type: 'text', defaultVal: 'Cómo llegar en Google Maps', showIf: (s) => Boolean(s && String(s.mapUrl || '').trim()) },
+                    { key: 'showWhatsappBtn', label: 'Botón de consulta por WhatsApp', type: 'checkbox', placeholder: 'Mostrar botón para consultar ubicación por WhatsApp', defaultVal: true }
                 ];
+            case 'payment_methods':
+                return [
+                    { key: 'title', label: 'Título de la sección', type: 'text', defaultVal: 'Medios de Pago Aceptados' },
+                    { key: 'subtitle', label: 'Subtítulo descriptivo', type: 'text', defaultVal: 'Compra con total tranquilidad a través de nuestros canales habilitados' },
+                    { key: 'paymentStyle', label: 'Estilo visual del bloque', type: 'select', defaultVal: 'cards', options: [
+                            { value: 'cards', label: 'Tarjetas claras sobre contenedor blanco' },
+                            { value: 'secondary', label: 'Franja destacada en Color Secundario' }
+                        ]},
+                    { key: 'showSecurityNote', label: 'Sello de seguridad inferior', type: 'checkbox', placeholder: 'Mostrar nota de protección de pagos bajo las tarjetas', defaultVal: true }
+                ];
+            case 'rich_text': {
+                const hasRichImg = (s) => Boolean(s && String(s.imageUrl || '').trim());
+                const hasRichBtn = (s) => Boolean(s && String(s.buttonText || '').trim());
+                return [
+                    { key: 'badgeText', label: 'Etiqueta superior (Opcional)', type: 'text', placeholder: 'Ej: Nuestra Historia o Servicios' },
+                    { key: 'title', label: 'Título', type: 'text', placeholder: 'Sobre Nosotros' },
+                    { key: 'content', label: 'Contenido principal', type: 'textarea', placeholder: 'Escribe aquí la historia, presentación de marca o servicios de tu tienda...' },
+                    { key: 'bulletItems', label: 'Lista con viñetas (Opcional — escribe 1 punto por línea)', type: 'textarea', placeholder: 'Atención personalizada\nEnvíos seguros a todo el país\nGarantía directa' },
+                    { key: 'imageUrl', label: 'Imagen opcional de la sección', type: 'image' },
+                    { key: 'imagePosition', label: 'Posición de la imagen', type: 'select', defaultVal: 'right', options: [
+                            { value: 'right', label: 'Imagen a la derecha / Texto a la izquierda' },
+                            { value: 'left', label: 'Imagen a la izquierda / Texto a la derecha' },
+                            { value: 'top', label: 'Imagen arriba del texto' },
+                            { value: 'bottom', label: 'Imagen debajo del texto' }
+                        ], showIf: hasRichImg },
+                    { key: 'textAlign', label: 'Alineación del texto', type: 'select', defaultVal: 'center', options: [
+                            { value: 'center', label: 'Centrado' },
+                            { value: 'left', label: 'Izquierda (Editorial)' }
+                        ]},
+                    { key: 'buttonText', label: 'Texto del botón (Dejar vacío para ocultar)', type: 'text', placeholder: 'Ej: Ver Catálogo o Hablar por WhatsApp' },
+                    { key: 'buttonUrl', label: '¿A dónde lleva el botón?', type: 'url', defaultVal: '/catalog', showIf: hasRichBtn }
+                ];
+            }
             case 'featured_video':
                 return [
                     { key: 'badgeText', label: 'Etiqueta superior (Opcional)', type: 'text', placeholder: 'Ej: 🎥 Conoce Más' },
@@ -4687,14 +5103,19 @@ Storevo.ThemeEditor = {
         // fechas de ofertas, anclas, redes y vínculos a productos/categorías/marcas.
         const PRESERVED_MEDIA_AND_DATA_KEYS = [
             // Fotos y medios subidos
-            'imageUrl',
-            'card1ImageUrl', 'card2ImageUrl',
+            'imageUrl', 'mobileImageUrl',
+            'slide2ImageUrl', 'slide2MobileImageUrl',
+            'slide3ImageUrl', 'slide3MobileImageUrl',
+            'slide4ImageUrl', 'slide4MobileImageUrl',
+            'slide5ImageUrl', 'slide5MobileImageUrl',
+            'card1ImageUrl', 'card2ImageUrl', 'card3ImageUrl', 'card4ImageUrl',
             'videoUrl', 'videoId', 'coverImageUrl',
             'item1ImageUrl', 'item2ImageUrl', 'item3ImageUrl', 'item4ImageUrl', 'item5ImageUrl', 'item6ImageUrl',
             'post1ImageUrl', 'post2ImageUrl', 'post3ImageUrl', 'post4ImageUrl',
             // Vínculos a productos, categorías, marcas, fechas y anclas
-            'productId', 'productIds', 'categoryId', 'brandId', 'brandName', 'endDate',
-            'layoutAnchor',
+            'productId', 'productIds', 'categoryId', 'categoryIds', 'brandId', 'brandName', 'endDate',
+            'manualItems', 'items', 'bulletItems',
+            'layoutAnchor', 'layoutBgImageUrl', 'layoutVisibility', 'scheduleStart', 'scheduleEnd',
             // Datos propios de vitrina de marcas y redes sociales
             'handleText', 'instagramUrl', 'tiktokUrl', 'facebookUrl', 'showWhatsapp',
             'item1Name', 'item2Name', 'item3Name', 'item4Name', 'item5Name', 'item6Name',
@@ -5449,6 +5870,26 @@ if (document.readyState === 'loading') {
                     return;
                 }
 
+                if (src === 'BEST_SELLERS') {
+                    extraHost.innerHTML = `
+                        <div class="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-xs text-emerald-200 leading-relaxed">
+                            <p class="font-bold text-emerald-300 mb-0.5">🔥 Ranking de Más Vendidos</p>
+                            <p class="text-[11px] text-slate-300">Ordena tus productos automáticamente según las unidades vendidas en pedidos confirmados y pagados.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                if (src === 'RECOMMENDED') {
+                    extraHost.innerHTML = `
+                        <div class="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/25 text-xs text-indigo-200 leading-relaxed">
+                            <p class="font-bold text-indigo-300 mb-0.5">✨ Selección Recomendada</p>
+                            <p class="text-[11px] text-slate-300">Prioriza productos con disponibilidad inmediata combinando destacados, ofertas activas e historial de ventas.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
                 if (src === 'BRAND') {
                     const renderBrandSelect = () => {
                         const selectedBrandId = String(sec.settings.brandId || '');
@@ -5660,13 +6101,570 @@ if (document.readyState === 'loading') {
             });
 
             renderSourceSpecificControls();
+
+            // Constructor de Pestañas (Tabs) cuando enableTabs está activo
+            const enableTabsWrap = container.querySelector('[data-field-key="enableTabs"]');
+            const enableTabsChk = enableTabsWrap ? enableTabsWrap.querySelector('input[type="checkbox"]') : null;
+            if (enableTabsWrap && enableTabsChk) {
+                const tabsHost = document.createElement('div');
+                tabsHost.className = 'space-y-3 mt-2 pt-2 border-t border-slate-800/80';
+                enableTabsWrap.insertAdjacentElement('afterend', tabsHost);
+
+                const renderTabsEditor = () => {
+                    if (!enableTabsChk.checked) {
+                        tabsHost.innerHTML = '';
+                        tabsHost.classList.add('hidden');
+                        return;
+                    }
+                    tabsHost.classList.remove('hidden');
+                    if (!sec.settings.tab1Label && !sec.settings.tab2Label) {
+                        sec.settings.tab1Label = 'Novedades';
+                        sec.settings.tab1Source = sec.settings.source || 'NEWEST';
+                        sec.settings.tab2Label = 'Más Vendidos';
+                        sec.settings.tab2Source = 'BEST_SELLERS';
+                        sec.settings.tab3Label = 'En Oferta';
+                        sec.settings.tab3Source = 'OFFERS';
+                    }
+
+                    const catOptsHtml = [`<option value="">— Selecciona categoría —</option>`]
+                        .concat((TE.categories || []).map(c => `<option value="${c.id}">${TE.escapeHtml(c.name)}</option>`)).join('');
+                    const brandOptsHtml = [`<option value="">— Selecciona marca —</option>`]
+                        .concat((TE.brands || []).map(b => `<option value="${b.id}" data-name="${TE.escapeHtml(b.name)}">${TE.escapeHtml(b.name)}</option>`)).join('');
+
+                    tabsHost.innerHTML = [1, 2, 3, 4].map(i => {
+                        const lbl = sec.settings[`tab${i}Label`] || '';
+                        const tSrc = sec.settings[`tab${i}Source`] || (i === 1 ? 'NEWEST' : (i === 2 ? 'BEST_SELLERS' : 'OFFERS'));
+                        const tCat = String(sec.settings[`tab${i}CategoryId`] || '');
+                        const tBrandId = String(sec.settings[`tab${i}BrandId`] || '');
+                        return `
+                            <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-2" data-tab-cfg="${i}">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-[11px] font-black uppercase tracking-wider text-indigo-400">Pestaña ${i}${i > 2 ? ' (Opcional)' : ''}</span>
+                                </div>
+                                <input type="text" data-tab-lbl="${i}" value="${TE.escapeHtml(lbl)}"
+                                       placeholder="${i <= 2 ? 'Ej: Novedades o Más vendidos' : 'Dejar vacío para ocultar pestaña'}"
+                                       class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white focus:border-indigo-500 focus:outline-none">
+                                <select data-tab-src="${i}" class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white focus:border-indigo-500 focus:outline-none">
+                                    <option value="NEWEST" ${tSrc === 'NEWEST' ? 'selected' : ''}>Últimos productos agregados</option>
+                                    <option value="BEST_SELLERS" ${tSrc === 'BEST_SELLERS' ? 'selected' : ''}>🔥 Más vendidos</option>
+                                    <option value="RECOMMENDED" ${tSrc === 'RECOMMENDED' ? 'selected' : ''}>✨ Recomendados</option>
+                                    <option value="OFFERS" ${tSrc === 'OFFERS' ? 'selected' : ''}>🏷️ En oferta / descuento</option>
+                                    <option value="FEATURED" ${tSrc === 'FEATURED' ? 'selected' : ''}>★ Destacados</option>
+                                    <option value="CATEGORY" ${tSrc === 'CATEGORY' ? 'selected' : ''}>📁 Categoría específica</option>
+                                    <option value="BRAND" ${tSrc === 'BRAND' ? 'selected' : ''}>🏷️ Marca específica</option>
+                                </select>
+                                <div data-tab-cat-wrap="${i}" class="${tSrc === 'CATEGORY' ? '' : 'hidden'}">
+                                    <select data-tab-cat="${i}" class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white">
+                                        ${catOptsHtml}
+                                    </select>
+                                </div>
+                                <div data-tab-brand-wrap="${i}" class="${tSrc === 'BRAND' ? '' : 'hidden'}">
+                                    <select data-tab-brand="${i}" class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white">
+                                        ${brandOptsHtml}
+                                    </select>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+
+                    [1, 2, 3, 4].forEach(i => {
+                        const box = tabsHost.querySelector(`[data-tab-cfg="${i}"]`);
+                        if (!box) return;
+                        const lblInput = box.querySelector(`[data-tab-lbl="${i}"]`);
+                        const srcSel = box.querySelector(`[data-tab-src="${i}"]`);
+                        const catWrap = box.querySelector(`[data-tab-cat-wrap="${i}"]`);
+                        const catSel = box.querySelector(`[data-tab-cat="${i}"]`);
+                        const brandWrap = box.querySelector(`[data-tab-brand-wrap="${i}"]`);
+                        const brandSel = box.querySelector(`[data-tab-brand="${i}"]`);
+
+                        if (catSel && sec.settings[`tab${i}CategoryId`]) {
+                            catSel.value = String(sec.settings[`tab${i}CategoryId`]);
+                        }
+                        if (brandSel && sec.settings[`tab${i}BrandId`]) {
+                            brandSel.value = String(sec.settings[`tab${i}BrandId`]);
+                        }
+
+                        lblInput.addEventListener('input', () => {
+                            sec.settings[`tab${i}Label`] = lblInput.value.trim();
+                            materializeAndSave();
+                        });
+                        srcSel.addEventListener('change', () => {
+                            sec.settings[`tab${i}Source`] = srcSel.value;
+                            catWrap.classList.toggle('hidden', srcSel.value !== 'CATEGORY');
+                            brandWrap.classList.toggle('hidden', srcSel.value !== 'BRAND');
+                            materializeAndSave();
+                        });
+                        if (catSel) {
+                            catSel.addEventListener('change', () => {
+                                sec.settings[`tab${i}CategoryId`] = catSel.value || '';
+                                materializeAndSave();
+                            });
+                        }
+                        if (brandSel) {
+                            brandSel.addEventListener('change', () => {
+                                const opt = brandSel.options[brandSel.selectedIndex];
+                                sec.settings[`tab${i}BrandId`] = brandSel.value || '';
+                                sec.settings[`tab${i}BrandName`] = opt ? (opt.getAttribute('data-name') || '') : '';
+                                materializeAndSave();
+                            });
+                        }
+                    });
+                };
+
+                enableTabsChk.addEventListener('change', () => {
+                    renderTabsEditor();
+                    materializeAndSave();
+                });
+
+                TE.refreshBrands(() => renderTabsEditor());
+            }
         }
+
+        function enhanceFeaturedCategoriesForm() {
+            const container = document.getElementById('inspector-fields-container');
+            if (!container) return;
+            const sec = getActiveInspectedSection();
+            if (!sec || sec.type !== 'featured_categories') return;
+
+            const sourceWrap = container.querySelector('[data-field-key="source"]');
+            const sourceSelect = sourceWrap ? sourceWrap.querySelector('select') : null;
+            if (!sourceSelect || sourceSelect.dataset.svCatEnhanced === 'true') return;
+            sourceSelect.dataset.svCatEnhanced = 'true';
+            sec.settings = sec.settings || {};
+
+            const manualHost = document.createElement('div');
+            manualHost.className = 'space-y-2.5 mt-2 pt-2 border-t border-slate-800/80';
+            sourceWrap.insertAdjacentElement('afterend', manualHost);
+
+            let selectedCatIds = parseManualIds(sec.settings.categoryIds);
+
+            const renderManualCategoriesUI = () => {
+                const mode = String(sourceSelect.value || 'AUTO').toUpperCase();
+                if (mode !== 'MANUAL') {
+                    manualHost.innerHTML = '';
+                    manualHost.classList.add('hidden');
+                    return;
+                }
+                manualHost.classList.remove('hidden');
+
+                const allCats = Array.isArray(TE.categories) ? TE.categories : [];
+                const byId = new Map(allCats.map(c => [Number(c.id), c]));
+                selectedCatIds = selectedCatIds.filter(id => byId.has(id));
+                const availableCats = allCats.filter(c => !selectedCatIds.includes(Number(c.id)));
+                const lastIdx = selectedCatIds.length - 1;
+
+                const selectedHtml = selectedCatIds.length === 0
+                    ? `<p class="text-[11px] text-slate-500 italic py-2 text-center bg-slate-950/60 rounded-lg border border-dashed border-slate-800">Selecciona las categorías que deseas destacar.</p>`
+                    : selectedCatIds.map((id, idx) => {
+                        const cat = byId.get(id);
+                        return `
+                            <div class="flex items-center justify-between gap-2 p-2 rounded-lg bg-slate-950 border border-slate-800 text-xs">
+                                <span class="font-bold text-white truncate">${TE.escapeHtml(cat.name)}</span>
+                                <div class="flex items-center gap-1 flex-shrink-0">
+                                    <button type="button" data-cat-up="${idx}" ${idx === 0 ? 'disabled' : ''} class="px-1.5 py-1 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 disabled:opacity-30">↑</button>
+                                    <button type="button" data-cat-down="${idx}" ${idx === lastIdx ? 'disabled' : ''} class="px-1.5 py-1 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 disabled:opacity-30">↓</button>
+                                    <button type="button" data-cat-rm="${id}" class="px-1.5 py-1 rounded bg-red-500/10 hover:bg-red-500/20 text-red-400">✕</button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+
+                const addOptionsHtml = [`<option value="">+ Añadir categoría a la sección...</option>`]
+                    .concat(availableCats.map(c => `<option value="${c.id}">${TE.escapeHtml(c.name)}</option>`)).join('');
+
+                manualHost.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <label class="block text-xs font-bold text-slate-300">Categorías seleccionadas (${selectedCatIds.length})</label>
+                        <span class="text-[10px] text-slate-500">Usa ↑/↓ para ordenar</span>
+                    </div>
+                    <div class="space-y-1.5 max-h-52 overflow-y-auto pr-1">${selectedHtml}</div>
+                    <select class="sv-add-cat-select w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-indigo-500 focus:outline-none">
+                        ${addOptionsHtml}
+                    </select>
+                `;
+
+                const syncCatIds = () => {
+                    sec.settings.categoryIds = selectedCatIds.join(',');
+                    renderManualCategoriesUI();
+                    materializeAndSave();
+                };
+
+                manualHost.querySelectorAll('[data-cat-up]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const i = parseInt(btn.getAttribute('data-cat-up'), 10);
+                        if (i > 0) {
+                            const tmp = selectedCatIds[i - 1];
+                            selectedCatIds[i - 1] = selectedCatIds[i];
+                            selectedCatIds[i] = tmp;
+                            syncCatIds();
+                        }
+                    });
+                });
+                manualHost.querySelectorAll('[data-cat-down]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const i = parseInt(btn.getAttribute('data-cat-down'), 10);
+                        if (i < selectedCatIds.length - 1) {
+                            const tmp = selectedCatIds[i + 1];
+                            selectedCatIds[i + 1] = selectedCatIds[i];
+                            selectedCatIds[i] = tmp;
+                            syncCatIds();
+                        }
+                    });
+                });
+                manualHost.querySelectorAll('[data-cat-rm]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const rmId = parseInt(btn.getAttribute('data-cat-rm'), 10);
+                        selectedCatIds = selectedCatIds.filter(x => x !== rmId);
+                        syncCatIds();
+                    });
+                });
+                const addSel = manualHost.querySelector('.sv-add-cat-select');
+                if (addSel) {
+                    addSel.addEventListener('change', () => {
+                        const addId = parseInt(addSel.value, 10);
+                        if (!isNaN(addId) && !selectedCatIds.includes(addId)) {
+                            selectedCatIds.push(addId);
+                            syncCatIds();
+                        }
+                    });
+                }
+            };
+
+            sourceSelect.addEventListener('change', renderManualCategoriesUI);
+            renderManualCategoriesUI();
+        }
+
+        function enhanceTestimonialsForm() {
+            const container = document.getElementById('inspector-fields-container');
+            if (!container) return;
+            const sec = getActiveInspectedSection();
+            if (!sec || sec.type !== 'testimonials') return;
+
+            const orderWrap = container.querySelector('[data-field-key="displayOrder"]');
+            if (!orderWrap || orderWrap.dataset.svTestimEnhanced === 'true') return;
+            orderWrap.dataset.svTestimEnhanced = 'true';
+            sec.settings = sec.settings || {};
+            if (!Array.isArray(sec.settings.manualItems)) {
+                sec.settings.manualItems = [];
+            }
+
+            const host = document.createElement('div');
+            host.className = 'space-y-3 mt-3 pt-3 border-t border-slate-800';
+            orderWrap.insertAdjacentElement('afterend', host);
+
+            const renderManualTestimonials = () => {
+                const items = sec.settings.manualItems;
+                const lastIdx = items.length - 1;
+
+                const listHtml = items.length === 0
+                    ? `<p class="text-[11px] text-slate-500 italic py-3 px-2 text-center bg-slate-950/60 rounded-xl border border-dashed border-slate-800">No has agregado testimonios manuales todavía. Las reseñas de pedidos verificados se muestran automáticamente.</p>`
+                    : items.map((it, idx) => {
+                        const hasImg = Boolean(it.imageUrl && String(it.imageUrl).trim());
+                        return `
+                            <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5" data-testim-idx="${idx}">
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="text-[11px] font-black uppercase tracking-wider text-storevo-400">Testimonio #${idx + 1}</span>
+                                    <div class="flex items-center gap-1">
+                                        <button type="button" data-t-up="${idx}" ${idx === 0 ? 'disabled' : ''} class="px-1.5 py-0.5 rounded bg-slate-900 hover:bg-slate-800 text-xs text-slate-300 disabled:opacity-30">↑</button>
+                                        <button type="button" data-t-down="${idx}" ${idx === lastIdx ? 'disabled' : ''} class="px-1.5 py-0.5 rounded bg-slate-900 hover:bg-slate-800 text-xs text-slate-300 disabled:opacity-30">↓</button>
+                                        <button type="button" data-t-del="${idx}" class="px-1.5 py-0.5 rounded bg-red-500/10 hover:bg-red-500/20 text-xs text-red-400">✕</button>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <input type="text" data-t-field="authorName" value="${TE.escapeHtml(it.authorName || '')}" placeholder="Nombre del cliente"
+                                           class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white focus:border-storevo-500 focus:outline-none">
+                                    <input type="text" data-t-field="authorMeta" value="${TE.escapeHtml(it.authorMeta || '')}" placeholder="Ciudad o @usuario (Opcional)"
+                                           class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white focus:border-storevo-500 focus:outline-none">
+                                </div>
+                                <select data-t-field="sourceType" class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white">
+                                    <option value="whatsapp" ${it.sourceType === 'whatsapp' ? 'selected' : ''}>💬 Recibido por WhatsApp</option>
+                                    <option value="instagram" ${it.sourceType === 'instagram' ? 'selected' : ''}>📸 Recibido por Instagram</option>
+                                    <option value="direct" ${(!it.sourceType || it.sourceType === 'direct') ? 'selected' : ''}>💬 Cliente directo</option>
+                                </select>
+                                <textarea data-t-field="text" rows="2" placeholder="Escribe el mensaje del testimonio..."
+                                          class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white focus:border-storevo-500 focus:outline-none">${TE.escapeHtml(it.text || '')}</textarea>
+                                <label class="flex items-start gap-2 p-2 rounded-lg bg-slate-900/90 border border-slate-800 cursor-pointer">
+                                    <input type="checkbox" data-t-field="authorized" ${it.authorized ? 'checked' : ''} class="mt-0.5 w-3.5 h-3.5 rounded border-slate-700 text-storevo-500">
+                                    <span class="text-[11px] text-slate-300 leading-snug">Cuento con autorización del cliente para publicar una imagen o captura de su testimonio</span>
+                                </label>
+                                <div class="space-y-1.5 ${it.authorized ? '' : 'hidden'}" data-t-img-zone="${idx}">
+                                    ${hasImg ? `<div class="relative h-24 rounded-lg overflow-hidden border border-slate-800 bg-slate-900">
+                                        <img src="${TE.escapeHtml(it.imageUrl)}" class="w-full h-full object-contain" alt="">
+                                        <button type="button" data-t-rm-img="${idx}" class="absolute top-1 right-1 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded">Quitar</button>
+                                    </div>` : ''}
+                                    <input type="file" data-t-file="${idx}" accept="image/jpeg,image/png,image/webp" class="hidden">
+                                    <button type="button" data-t-upload="${idx}" class="w-full py-1.5 px-2.5 bg-slate-800 hover:bg-storevo-500 text-slate-200 hover:text-white rounded-lg text-[11px] font-bold transition">
+                                        Subir captura de WhatsApp / Instagram
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+
+                host.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-slate-200">Testimonios manuales (${items.length})</span>
+                        <button type="button" class="sv-add-testim-btn px-2.5 py-1 rounded-lg bg-storevo-500 hover:bg-storevo-600 text-white text-[11px] font-bold transition">+ Añadir testimonio</button>
+                    </div>
+                    <div class="space-y-2.5">${listHtml}</div>
+                `;
+
+                host.querySelector('.sv-add-testim-btn')?.addEventListener('click', () => {
+                    items.push({
+                        authorName: 'Cliente satisfecho',
+                        authorMeta: '',
+                        sourceType: 'whatsapp',
+                        text: 'Excelente atención y entrega rápida. ¡Muy recomendados!',
+                        authorized: false,
+                        imageUrl: ''
+                    });
+                    renderManualTestimonials();
+                    materializeAndSave();
+                });
+
+                host.querySelectorAll('[data-testim-idx]').forEach(cardEl => {
+                    const idx = parseInt(cardEl.getAttribute('data-testim-idx'), 10);
+                    const item = items[idx];
+                    if (!item) return;
+
+                    cardEl.querySelectorAll('[data-t-field]').forEach(inputEl => {
+                        const fKey = inputEl.getAttribute('data-t-field');
+                        if (inputEl.type === 'checkbox') {
+                            inputEl.addEventListener('change', () => {
+                                item[fKey] = inputEl.checked;
+                                if (!inputEl.checked) item.imageUrl = '';
+                                renderManualTestimonials();
+                                materializeAndSave();
+                            });
+                        } else {
+                            inputEl.addEventListener('input', () => {
+                                item[fKey] = inputEl.value;
+                                materializeAndSave();
+                            });
+                        }
+                    });
+
+                    const fileInput = cardEl.querySelector(`[data-t-file="${idx}"]`);
+                    const uploadBtn = cardEl.querySelector(`[data-t-upload="${idx}"]`);
+                    const rmImgBtn = cardEl.querySelector(`[data-t-rm-img="${idx}"]`);
+
+                    if (uploadBtn && fileInput) {
+                        uploadBtn.addEventListener('click', () => fileInput.click());
+                        fileInput.addEventListener('change', () => {
+                            if (!fileInput.files || !fileInput.files[0]) return;
+                            uploadBtn.disabled = true;
+                            uploadBtn.textContent = 'Subiendo captura...';
+                            const fd = new FormData();
+                            fd.append('file', fileInput.files[0]);
+                            fetch(`/dashboard/${TE.slug}/template/upload-image`, { method: 'POST', body: fd })
+                                .then(r => r.json())
+                                .then(data => {
+                                    if (data.success && data.url) {
+                                        item.imageUrl = data.url;
+                                        renderManualTestimonials();
+                                        materializeAndSave();
+                                    }
+                                })
+                                .finally(() => {
+                                    uploadBtn.disabled = false;
+                                    fileInput.value = '';
+                                });
+                        });
+                    }
+                    if (rmImgBtn) {
+                        rmImgBtn.addEventListener('click', () => {
+                            item.imageUrl = '';
+                            renderManualTestimonials();
+                            materializeAndSave();
+                        });
+                    }
+                });
+
+                host.querySelectorAll('[data-t-up]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const i = parseInt(btn.getAttribute('data-t-up'), 10);
+                        if (i > 0) {
+                            const tmp = items[i - 1];
+                            items[i - 1] = items[i];
+                            items[i] = tmp;
+                            renderManualTestimonials();
+                            materializeAndSave();
+                        }
+                    });
+                });
+                host.querySelectorAll('[data-t-down]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const i = parseInt(btn.getAttribute('data-t-down'), 10);
+                        if (i < items.length - 1) {
+                            const tmp = items[i + 1];
+                            items[i + 1] = items[i];
+                            items[i] = tmp;
+                            renderManualTestimonials();
+                            materializeAndSave();
+                        }
+                    });
+                });
+                host.querySelectorAll('[data-t-del]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const i = parseInt(btn.getAttribute('data-t-del'), 10);
+                        items.splice(i, 1);
+                        renderManualTestimonials();
+                        materializeAndSave();
+                    });
+                });
+            };
+
+            renderManualTestimonials();
+        }
+
+        function enhanceFaqAccordionForm() {
+            const container = document.getElementById('inspector-fields-container');
+            if (!container) return;
+            const sec = getActiveInspectedSection();
+            if (!sec || sec.type !== 'faq_accordion') return;
+
+            const schemaWrap = container.querySelector('[data-field-key="enableFaqSchema"]');
+            if (!schemaWrap || schemaWrap.dataset.svFaqEnhanced === 'true') return;
+            schemaWrap.dataset.svFaqEnhanced = 'true';
+            sec.settings = sec.settings || {};
+
+            if (!Array.isArray(sec.settings.items) || sec.settings.items.length === 0) {
+                const migrated = [];
+                for (let i = 1; i <= 5; i++) {
+                    const q = String(sec.settings[`q${i}`] || '').trim();
+                    const a = String(sec.settings[`a${i}`] || '').trim();
+                    if (q || a) migrated.push({ q, a });
+                }
+                if (migrated.length === 0) {
+                    migrated.push(
+                        { q: '¿Cuáles son los métodos de pago disponibles?', a: 'Puedes realizar tu pedido con pago seguro en línea o coordinar directamente con nosotros por WhatsApp.' },
+                        { q: '¿Cuánto tarda en llegar mi pedido?', a: 'Despachamos a todo el país. El tiempo estimado de entrega es de 2 a 5 días hábiles según tu ciudad.' },
+                        { q: '¿Tienen cambios o garantías?', a: 'Sí, todos nuestros productos cuentan con garantía y soporte directo.' }
+                    );
+                }
+                sec.settings.items = migrated;
+            }
+
+            const host = document.createElement('div');
+            host.className = 'space-y-3 mt-3 pt-3 border-t border-slate-800';
+            schemaWrap.insertAdjacentElement('afterend', host);
+
+            const syncLegacyFaqFields = () => {
+                const items = sec.settings.items || [];
+                for (let i = 1; i <= 5; i++) {
+                    sec.settings[`q${i}`] = items[i - 1] ? items[i - 1].q : '';
+                    sec.settings[`a${i}`] = items[i - 1] ? items[i - 1].a : '';
+                }
+            };
+
+            const renderFaqItemsEditor = () => {
+                const items = sec.settings.items;
+                const lastIdx = items.length - 1;
+
+                const listHtml = items.map((faq, idx) => `
+                    <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-2" data-faq-idx="${idx}">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-[11px] font-black uppercase tracking-wider text-storevo-400">Pregunta #${idx + 1}</span>
+                            <div class="flex items-center gap-1">
+                                <button type="button" data-faq-up="${idx}" ${idx === 0 ? 'disabled' : ''} class="px-1.5 py-0.5 rounded bg-slate-900 hover:bg-slate-800 text-xs text-slate-300 disabled:opacity-30">↑</button>
+                                <button type="button" data-faq-down="${idx}" ${idx === lastIdx ? 'disabled' : ''} class="px-1.5 py-0.5 rounded bg-slate-900 hover:bg-slate-800 text-xs text-slate-300 disabled:opacity-30">↓</button>
+                                <button type="button" data-faq-del="${idx}" class="px-1.5 py-0.5 rounded bg-red-500/10 hover:bg-red-500/20 text-xs text-red-400">✕</button>
+                            </div>
+                        </div>
+                        <input type="text" data-faq-q="${idx}" value="${TE.escapeHtml(faq.q || '')}" placeholder="Escribe la pregunta..."
+                               class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs font-bold text-white focus:border-storevo-500 focus:outline-none">
+                        <textarea data-faq-a="${idx}" rows="2" placeholder="Escribe la respuesta..."
+                                  class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white focus:border-storevo-500 focus:outline-none">${TE.escapeHtml(faq.a || '')}</textarea>
+                    </div>
+                `).join('');
+
+                host.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-slate-200">Preguntas (${items.length})</span>
+                        <button type="button" class="sv-add-faq-btn px-2.5 py-1 rounded-lg bg-storevo-500 hover:bg-storevo-600 text-white text-[11px] font-bold transition">+ Añadir pregunta</button>
+                    </div>
+                    <div class="space-y-2.5">${listHtml}</div>
+                `;
+
+                host.querySelector('.sv-add-faq-btn')?.addEventListener('click', () => {
+                    items.push({ q: '¿Nueva pregunta frecuente?', a: 'Escribe aquí la respuesta para tus compradores.' });
+                    syncLegacyFaqFields();
+                    renderFaqItemsEditor();
+                    materializeAndSave();
+                });
+
+                host.querySelectorAll('[data-faq-q]').forEach(inp => {
+                    inp.addEventListener('input', () => {
+                        const i = parseInt(inp.getAttribute('data-faq-q'), 10);
+                        if (items[i]) {
+                            items[i].q = inp.value;
+                            syncLegacyFaqFields();
+                            materializeAndSave();
+                        }
+                    });
+                });
+                host.querySelectorAll('[data-faq-a]').forEach(inp => {
+                    inp.addEventListener('input', () => {
+                        const i = parseInt(inp.getAttribute('data-faq-a'), 10);
+                        if (items[i]) {
+                            items[i].a = inp.value;
+                            syncLegacyFaqFields();
+                            materializeAndSave();
+                        }
+                    });
+                });
+                host.querySelectorAll('[data-faq-up]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const i = parseInt(btn.getAttribute('data-faq-up'), 10);
+                        if (i > 0) {
+                            const tmp = items[i - 1];
+                            items[i - 1] = items[i];
+                            items[i] = tmp;
+                            syncLegacyFaqFields();
+                            renderFaqItemsEditor();
+                            materializeAndSave();
+                        }
+                    });
+                });
+                host.querySelectorAll('[data-faq-down]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const i = parseInt(btn.getAttribute('data-faq-down'), 10);
+                        if (i < items.length - 1) {
+                            const tmp = items[i + 1];
+                            items[i + 1] = items[i];
+                            items[i] = tmp;
+                            syncLegacyFaqFields();
+                            renderFaqItemsEditor();
+                            materializeAndSave();
+                        }
+                    });
+                });
+                host.querySelectorAll('[data-faq-del]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const i = parseInt(btn.getAttribute('data-faq-del'), 10);
+                        items.splice(i, 1);
+                        syncLegacyFaqFields();
+                        renderFaqItemsEditor();
+                        materializeAndSave();
+                    });
+                });
+            };
+
+            renderFaqItemsEditor();
+        }
+
+        const runAllInspectorEnhancers = () => {
+            enhanceProductGridForm();
+            enhanceFeaturedCategoriesForm();
+            enhanceTestimonialsForm();
+            enhanceFaqAccordionForm();
+        };
 
         const sidebar = document.getElementById('theme-editor-sidebar');
         if (sidebar) {
-            const obs = new MutationObserver(() => enhanceProductGridForm());
+            const obs = new MutationObserver(() => runAllInspectorEnhancers());
             obs.observe(sidebar, { childList: true, subtree: true });
-            enhanceProductGridForm();
+            runAllInspectorEnhancers();
         }
 
         const urlPage = new URLSearchParams(window.location.search).get('page');

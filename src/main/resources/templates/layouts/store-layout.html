@@ -207,6 +207,24 @@
                     grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
                 }
             }
+            @media (max-width: 767px) {
+                .storevo-theme-section.sv-hide-mobile {
+                    display: none !important;
+                }
+            }
+            @media (min-width: 768px) {
+                .storevo-theme-section.sv-hide-desktop {
+                    display: none !important;
+                }
+            }
+            .storevo-theme-section.sv-space-top-none > section,
+            .storevo-theme-section.sv-space-top-none > div.sv-ann-bar { padding-top: 0 !important; }
+            .storevo-theme-section.sv-space-top-sm > section { padding-top: 1.5rem !important; }
+            .storevo-theme-section.sv-space-top-lg > section { padding-top: 4.5rem !important; }
+            .storevo-theme-section.sv-space-bottom-none > section,
+            .storevo-theme-section.sv-space-bottom-none > div.sv-ann-bar { padding-bottom: 0 !important; }
+            .storevo-theme-section.sv-space-bottom-sm > section { padding-bottom: 1.5rem !important; }
+            .storevo-theme-section.sv-space-bottom-lg > section { padding-bottom: 4.5rem !important; }
         </style>
         </style>
         <!-- Estilos exclusivos cuando la tienda se visualiza dentro del Editor Visual (preview=draft) -->
@@ -222,6 +240,27 @@
             .storevo-theme-section.editor-selected-section {
                 outline: 2px solid #6366f1;
                 outline-offset: -2px;
+            }
+            .storevo-theme-section[data-schedule-state="UPCOMING"],
+            .storevo-theme-section[data-schedule-state="EXPIRED"] {
+                outline: 1px dashed rgba(245, 158, 11, 0.65);
+                outline-offset: -2px;
+            }
+            .storevo-theme-section[data-editor-meta-badge]::before {
+                content: attr(data-editor-meta-badge);
+                position: absolute;
+                top: 10px;
+                left: 12px;
+                z-index: 45;
+                background: rgba(15, 23, 42, 0.92);
+                color: #fbbf24;
+                font-size: 11px;
+                font-weight: 700;
+                padding: 4px 10px;
+                border-radius: 9999px;
+                border: 1px solid rgba(245, 158, 11, 0.55);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+                pointer-events: none;
             }
             .storevo-theme-section::after {
                 content: attr(data-section-label) " · Doble clic para editar";
@@ -2786,7 +2825,7 @@
             function isPureFormOrFilterControl(target) {
                 if (!target || !target.closest) return false;
                 return Boolean(
-                    target.closest('input, select, textarea, [data-qty-step], .sv-pagination-host, .sv-pag-btn, .sv-card__arrow, .sv-card__dot, .sv-card__dots, .sv-detail-gallery-arrow, .sv-detail-share-btn, .product-thumbnail, .opt-btn, .sv-filter-open-btn, .sv-filter-drawer-backdrop, .sv-global-filters-host, .sv-catalog-sidebar, .sv-active-filters-bar, .sv-nav__search, .sv-nav__search-expand, .sv-nav__search-trigger, .sv-search-panel, .sv-search-modal-backdrop, .sv-toolbar-search-box, .sv-search-cat-pills')
+                    target.closest('input, select, textarea, [data-qty-step], .sv-hero-nav-btn, .sv-hero-dot, .sv-hero-dots, .sv-pg-nav-btn, .sv-pg-tab-btn, .sv-pg-quick-sort, .sv-pagination-host, .sv-pag-btn, .sv-card__arrow, .sv-card__dot, .sv-card__dots, .sv-detail-gallery-arrow, .sv-detail-share-btn, .product-thumbnail, .opt-btn, .sv-filter-open-btn, .sv-filter-drawer-backdrop, .sv-global-filters-host, .sv-catalog-sidebar, .sv-active-filters-bar, .sv-nav__search, .sv-nav__search-expand, .sv-nav__search-trigger, .sv-search-panel, .sv-search-modal-backdrop, .sv-toolbar-search-box, .sv-search-cat-pills')
                 );
             }
 
