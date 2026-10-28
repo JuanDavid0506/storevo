@@ -744,6 +744,199 @@
                     </div>
                 </details>
 
+                <!-- ============ 2.B PIE DE PÁGINA (FOOTER) ============ -->
+                <details class="style-acc" data-acc="footer">
+                    <summary>
+                        <span class="min-w-0">
+                            <span class="style-acc-title">Pie de Página (Footer)</span>
+                            <span class="style-acc-hint">Diseño, tono de color, descripción, enlaces y redes</span>
+                        </span>
+                        <svg class="style-acc-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </summary>
+                    <div class="style-acc-body" id="style-footer-section">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-storevo-400 bg-storevo-500/10 border border-storevo-500/20 px-2 py-0.5 rounded-full">
+                                Global en toda la tienda
+                            </span>
+                            <button type="button" id="style-footer-reset"
+                                    class="text-[11px] font-bold text-slate-400 hover:text-white transition">
+                                Restablecer sección
+                            </button>
+                        </div>
+
+                        <!-- Selector visual de los 6 tipos de footer -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 mb-1.5">Diseño del pie de página</label>
+                            <div id="style-footer-layout" class="grid grid-cols-2 gap-2">
+                                <button type="button" data-value="classic"
+                                        class="nav-layout-opt flex flex-col items-center gap-1.5 p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
+                                    <svg viewBox="0 0 64 36" class="w-full h-8" fill="currentColor">
+                                        <rect x="4" y="8" width="16" height="4" rx="1"/>
+                                        <rect x="4" y="15" width="18" height="2.5" rx="1" opacity=".45"/>
+                                        <rect x="4" y="20" width="14" height="2.5" rx="1" opacity=".45"/>
+                                        <circle cx="6" cy="27" r="2" opacity=".65"/>
+                                        <circle cx="12" cy="27" r="2" opacity=".65"/>
+                                        <rect x="27" y="8" width="12" height="3.5" rx="1"/>
+                                        <rect x="27" y="15" width="14" height="2.5" rx="1" opacity=".45"/>
+                                        <rect x="27" y="20" width="14" height="2.5" rx="1" opacity=".45"/>
+                                        <rect x="46" y="8" width="14" height="3.5" rx="1"/>
+                                        <rect x="46" y="15" width="12" height="2.5" rx="1" opacity=".45"/>
+                                    </svg>
+                                    <span class="text-[11px] font-bold">Clásico (3 col.)</span>
+                                </button>
+
+                                <button type="button" data-value="minimal"
+                                        class="nav-layout-opt flex flex-col items-center gap-1.5 p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
+                                    <svg viewBox="0 0 64 36" class="w-full h-8" fill="currentColor">
+                                        <rect x="2" y="11" width="60" height="14" rx="2" opacity=".2"/>
+                                        <rect x="6" y="16" width="14" height="4" rx="1"/>
+                                        <rect x="24" y="17" width="7" height="2.5" rx="1" opacity=".5"/>
+                                        <rect x="33" y="17" width="7" height="2.5" rx="1" opacity=".5"/>
+                                        <circle cx="51" cy="18" r="2" opacity=".7"/>
+                                        <circle cx="56" cy="18" r="2" opacity=".7"/>
+                                    </svg>
+                                    <span class="text-[11px] font-bold">Mínimo (1 línea)</span>
+                                </button>
+
+                                <button type="button" data-value="centered"
+                                        class="nav-layout-opt flex flex-col items-center gap-1.5 p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
+                                    <svg viewBox="0 0 64 36" class="w-full h-8" fill="currentColor">
+                                        <rect x="22" y="5" width="20" height="4.5" rx="1"/>
+                                        <rect x="16" y="12" width="32" height="2.5" rx="1" opacity=".45"/>
+                                        <rect x="14" y="18" width="9" height="2.5" rx="1" opacity=".65"/>
+                                        <rect x="27" y="18" width="9" height="2.5" rx="1" opacity=".65"/>
+                                        <rect x="40" y="18" width="9" height="2.5" rx="1" opacity=".65"/>
+                                        <circle cx="27" cy="25" r="2" opacity=".6"/>
+                                        <circle cx="32" cy="25" r="2" opacity=".6"/>
+                                        <circle cx="37" cy="25" r="2" opacity=".6"/>
+                                        <rect x="8" y="30" width="48" height="1" opacity=".25"/>
+                                    </svg>
+                                    <span class="text-[11px] font-bold">Boutique Centrado</span>
+                                </button>
+
+                                <button type="button" data-value="columns_4"
+                                        class="nav-layout-opt flex flex-col items-center gap-1.5 p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
+                                    <svg viewBox="0 0 64 36" class="w-full h-8" fill="currentColor">
+                                        <rect x="4" y="6" width="11" height="3.5" rx="1"/>
+                                        <rect x="4" y="12" width="12" height="2" rx="1" opacity=".45"/>
+                                        <rect x="4" y="16" width="10" height="2" rx="1" opacity=".45"/>
+                                        <rect x="19" y="6" width="10" height="3" rx="1"/>
+                                        <rect x="19" y="12" width="10" height="2" rx="1" opacity=".45"/>
+                                        <rect x="19" y="16" width="9" height="2" rx="1" opacity=".45"/>
+                                        <rect x="33" y="6" width="10" height="3" rx="1"/>
+                                        <rect x="33" y="12" width="10" height="2" rx="1" opacity=".45"/>
+                                        <rect x="33" y="16" width="9" height="2" rx="1" opacity=".45"/>
+                                        <rect x="47" y="6" width="12" height="3" rx="1"/>
+                                        <rect x="47" y="12" width="12" height="2" rx="1" opacity=".45"/>
+                                        <rect x="4" y="25" width="56" height="1" opacity=".25"/>
+                                        <rect x="4" y="29" width="20" height="2" rx="1" opacity=".4"/>
+                                    </svg>
+                                    <span class="text-[11px] font-bold">Completo (4 col.)</span>
+                                </button>
+
+                                <button type="button" data-value="trust_strip"
+                                        class="nav-layout-opt flex flex-col items-center gap-1.5 p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
+                                    <svg viewBox="0 0 64 36" class="w-full h-8" fill="currentColor">
+                                        <rect x="4" y="4" width="17" height="6" rx="1.5" opacity=".35"/>
+                                        <rect x="23.5" y="4" width="17" height="6" rx="1.5" opacity=".35"/>
+                                        <rect x="43" y="4" width="17" height="6" rx="1.5" opacity=".35"/>
+                                        <rect x="4" y="13" width="56" height="1" opacity=".25"/>
+                                        <rect x="4" y="17" width="12" height="3" rx="1"/>
+                                        <rect x="20" y="17" width="10" height="3" rx="1" opacity=".6"/>
+                                        <rect x="34" y="17" width="10" height="3" rx="1" opacity=".6"/>
+                                        <rect x="48" y="17" width="12" height="3" rx="1" opacity=".6"/>
+                                        <rect x="4" y="23" width="12" height="2" rx="1" opacity=".4"/>
+                                        <rect x="20" y="23" width="10" height="2" rx="1" opacity=".4"/>
+                                        <rect x="34" y="23" width="10" height="2" rx="1" opacity=".4"/>
+                                    </svg>
+                                    <span class="text-[11px] font-bold">Franja Confianza</span>
+                                </button>
+
+                                <button type="button" data-value="marketplace"
+                                        class="nav-layout-opt flex flex-col items-center gap-1.5 p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition">
+                                    <svg viewBox="0 0 64 36" class="w-full h-8" fill="currentColor">
+                                        <rect x="3" y="4" width="58" height="28" rx="4" opacity=".2"/>
+                                        <rect x="8" y="8" width="16" height="4" rx="1"/>
+                                        <rect x="42" y="8" width="14" height="5" rx="2"/>
+                                        <rect x="8" y="15" width="48" height="1" opacity=".25"/>
+                                        <rect x="8" y="19" width="12" height="2.5" rx="1" opacity=".65"/>
+                                        <rect x="26" y="19" width="12" height="2.5" rx="1" opacity=".65"/>
+                                        <rect x="44" y="19" width="12" height="2.5" rx="1" opacity=".65"/>
+                                        <rect x="8" y="24" width="10" height="2" rx="1" opacity=".4"/>
+                                        <rect x="26" y="24" width="10" height="2" rx="1" opacity=".4"/>
+                                    </svg>
+                                    <span class="text-[11px] font-bold">Marketplace / App</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Tono de color e identidad de marca -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-300 mb-1.5">Tono de color</label>
+                                <select id="style-footer-tone" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:border-storevo-500">
+                                    <option value="secondary">Color secundario (por defecto)</option>
+                                    <option value="primary">Color primario de marca</option>
+                                    <option value="dark">Oscuro elegante (#0f172a)</option>
+                                    <option value="light">Claro limpio (Blanco)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-300 mb-1.5">Marca en el footer</label>
+                                <select id="style-footer-brand-mode" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:border-storevo-500">
+                                    <option value="text">Solo el nombre de la tienda</option>
+                                    <option value="logo">Solo mi logo</option>
+                                    <option value="logo_text">Logo + nombre de la tienda</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Descripción de la tienda en el footer -->
+                        <div>
+                            <label for="style-footer-description" class="block text-xs font-bold text-slate-300 mb-1.5">Descripción de la tienda</label>
+                            <textarea id="style-footer-description" rows="2" maxlength="320"
+                                      placeholder="Escribe una breve descripción de tu tienda..."
+                                      class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-storevo-500 focus:outline-none leading-relaxed"></textarea>
+                            <p class="text-[11px] text-slate-500 mt-1">Se muestra debajo del nombre o logo de tu tienda (deja vacío si prefieres ocultarla).</p>
+                        </div>
+
+                        <!-- Texto opcional de derechos reservados -->
+                        <div>
+                            <label for="style-footer-copyright" class="block text-xs font-bold text-slate-300 mb-1.5">Texto de derechos reservados (opcional)</label>
+                            <input type="text" id="style-footer-copyright" maxlength="140"
+                                   placeholder="Ej: © 2026 Mi Tienda. Todos los derechos reservados."
+                                   class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-storevo-500 focus:outline-none">
+                        </div>
+
+                        <!-- Interruptores de bloques visibles -->
+                        <div class="pt-2 border-t border-slate-800/80 space-y-2">
+                            <p class="text-[11px] font-black uppercase tracking-wider text-storevo-400">Bloques Visibles en el Footer</p>
+                            <div class="space-y-1.5">
+                                <label class="flex items-center justify-between p-2.5 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
+                                    <span class="text-xs font-medium text-slate-200">Mostrar íconos de redes sociales</span>
+                                    <input type="checkbox" id="style-footer-show-social" checked class="w-4 h-4 rounded border-slate-700 text-storevo-500">
+                                </label>
+                                <label class="flex items-center justify-between p-2.5 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
+                                    <span class="text-xs font-medium text-slate-200">Mostrar datos de contacto (WhatsApp / Email)</span>
+                                    <input type="checkbox" id="style-footer-show-contact" checked class="w-4 h-4 rounded border-slate-700 text-storevo-500">
+                                </label>
+                                <label class="flex items-center justify-between p-2.5 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
+                                    <span class="text-xs font-medium text-slate-200">Mostrar enlaces a categorías</span>
+                                    <input type="checkbox" id="style-footer-show-categories" checked class="w-4 h-4 rounded border-slate-700 text-storevo-500">
+                                </label>
+                                <label class="flex items-center justify-between p-2.5 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
+                                    <span class="text-xs font-medium text-slate-200">Mostrar páginas y enlaces rápidos</span>
+                                    <input type="checkbox" id="style-footer-show-pages" checked class="w-4 h-4 rounded border-slate-700 text-storevo-500">
+                                </label>
+                                <label class="flex items-center justify-between p-2.5 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
+                                    <span class="text-xs font-medium text-slate-200">Mostrar sello «Desarrollado por Storevo SaaS»</span>
+                                    <input type="checkbox" id="style-footer-show-credit" checked class="w-4 h-4 rounded border-slate-700 text-storevo-500">
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </details>
+
                 <!-- ============ 3. TIPOGRAFÍAS Y JERARQUÍA ============ -->
                 <details class="style-acc" data-acc="typography">
                     <summary>

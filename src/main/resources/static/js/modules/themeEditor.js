@@ -4239,6 +4239,132 @@ Storevo.ThemeEditor = {
         }
 
         syncGlobalSearchUI();
+
+        // =====================================================================
+        // PIE DE PÁGINA GLOBAL (FOOTER)
+        // =====================================================================
+        const DEFAULT_FOOTER_DESCRIPTION = 'Bienvenido a nuestra tienda online. Descubre nuestro catálogo con los mejores productos.';
+        const DEFAULT_GLOBAL_FOOTER_STYLES = {
+            footerLayout: 'classic',
+            footerTone: 'secondary',
+            footerBrandMode: 'text',
+            footerDescription: DEFAULT_FOOTER_DESCRIPTION,
+            footerCopyrightText: '',
+            footerShowSocial: true,
+            footerShowContact: true,
+            footerShowCategories: true,
+            footerShowPages: true,
+            footerShowCredit: true
+        };
+
+        const footerLayoutWrap = document.getElementById('style-footer-layout');
+        const footerToneSel = document.getElementById('style-footer-tone');
+        const footerBrandModeSel = document.getElementById('style-footer-brand-mode');
+        const footerDescInput = document.getElementById('style-footer-description');
+        const footerCopyInput = document.getElementById('style-footer-copyright');
+        const footerCheckboxMap = {
+            'style-footer-show-social': 'footerShowSocial',
+            'style-footer-show-contact': 'footerShowContact',
+            'style-footer-show-categories': 'footerShowCategories',
+            'style-footer-show-pages': 'footerShowPages',
+            'style-footer-show-credit': 'footerShowCredit'
+        };
+
+        const syncFooterUI = () => {
+            const s = liveStyles();
+            const activeFooterLayout = s.footerLayout || 'classic';
+            if (footerLayoutWrap) {
+                footerLayoutWrap.querySelectorAll('button[data-value]').forEach(btn => {
+                    btn.classList.toggle('is-selected', btn.getAttribute('data-value') === activeFooterLayout);
+                });
+            }
+            if (footerToneSel) footerToneSel.value = s.footerTone || 'secondary';
+            if (footerBrandModeSel) footerBrandModeSel.value = s.footerBrandMode || 'text';
+            if (footerDescInput) {
+                footerDescInput.value = s.footerDescription !== undefined && s.footerDescription !== null
+                    ? String(s.footerDescription)
+                    : DEFAULT_FOOTER_DESCRIPTION;
+            }
+            if (footerCopyInput) {
+                footerCopyInput.value = s.footerCopyrightText !== undefined && s.footerCopyrightText !== null
+                    ? String(s.footerCopyrightText)
+                    : '';
+            }
+            Object.entries(footerCheckboxMap).forEach(([elId, propKey]) => {
+                const chk = document.getElementById(elId);
+                if (chk) {
+                    chk.checked = s[propKey] !== undefined && s[propKey] !== null ? Boolean(s[propKey]) : true;
+                }
+            });
+        };
+
+        if (footerLayoutWrap) {
+            footerLayoutWrap.querySelectorAll('button[data-value]').forEach(btn => {
+                btn.onclick = () => {
+                    liveStyles().footerLayout = btn.getAttribute('data-value') || 'classic';
+                    syncFooterUI();
+                    this.pushLiveStylesToIframe();
+                    this.scheduleAutoSave(false);
+                };
+            });
+        }
+
+        if (footerToneSel) {
+            footerToneSel.onchange = () => {
+                liveStyles().footerTone = footerToneSel.value || 'secondary';
+                this.pushLiveStylesToIframe();
+                this.scheduleAutoSave(false);
+            };
+        }
+
+        if (footerBrandModeSel) {
+            footerBrandModeSel.onchange = () => {
+                liveStyles().footerBrandMode = footerBrandModeSel.value || 'text';
+                this.pushLiveStylesToIframe();
+                this.scheduleAutoSave(false);
+            };
+        }
+
+        if (footerDescInput) {
+            footerDescInput.oninput = () => {
+                liveStyles().footerDescription = footerDescInput.value;
+                this.pushLiveStylesToIframe();
+                this.scheduleAutoSave(false);
+            };
+        }
+
+        if (footerCopyInput) {
+            footerCopyInput.oninput = () => {
+                liveStyles().footerCopyrightText = footerCopyInput.value;
+                this.pushLiveStylesToIframe();
+                this.scheduleAutoSave(false);
+            };
+        }
+
+        Object.entries(footerCheckboxMap).forEach(([elId, propKey]) => {
+            const chk = document.getElementById(elId);
+            if (!chk) return;
+            chk.onchange = () => {
+                liveStyles()[propKey] = chk.checked;
+                this.pushLiveStylesToIframe();
+                this.scheduleAutoSave(false);
+            };
+        });
+
+        const footerResetBtn = document.getElementById('style-footer-reset');
+        if (footerResetBtn) {
+            footerResetBtn.onclick = () => {
+                Object.assign(liveStyles(), DEFAULT_GLOBAL_FOOTER_STYLES);
+                syncFooterUI();
+                this.pushLiveStylesToIframe();
+                this.scheduleAutoSave(false);
+                if (window.Storevo && Storevo.UI && Storevo.UI.Toast) {
+                    Storevo.UI.Toast.show('Configuración del pie de página restablecida', 'info');
+                }
+            };
+        }
+
+        syncFooterUI();
     },
 
     syncFontPairHighlight: function() {
@@ -7004,12 +7130,24 @@ Storevo.ThemeEditor = {
             });
         }
 
-        // El logo y la identidad de la tienda no forman parte de una plantilla: se conservan
+        // El logo, la identidad de la tienda y los textos/preferencias del footer del comerciante se conservan
         const prevGs = (this.theme && this.theme.globalStyles) || {};
         const preservedBrand = {};
         ['navbarBrandMode', 'navbarLogoUrl', 'navbarLogoDarkUrl', 'navbarLogoSize'].forEach(k => {
             if (prevGs[k] !== undefined && prevGs[k] !== null && prevGs[k] !== '') preservedBrand[k] = prevGs[k];
         });
+        if (keepContent) {
+            [
+                'footerLayout', 'footerTone', 'footerBrandMode',
+                'footerDescription', 'footerCopyrightText',
+                'footerShowSocial', 'footerShowContact',
+                'footerShowCategories', 'footerShowPages', 'footerShowCredit'
+            ].forEach(k => {
+                if (prevGs[k] !== undefined && prevGs[k] !== null) {
+                    preservedBrand[k] = prevGs[k];
+                }
+            });
+        }
 
         this.theme = nextTheme;
         this.theme.customPages = currentCustomPages;
@@ -7332,6 +7470,13 @@ Storevo.ThemeEditor = {
                     const nextDrawerBrand = nextDoc.querySelector('#storeNavbar .sv-drawer__header > div:first-child');
                     if (currentDrawerBrand && nextDrawerBrand) {
                         currentDrawerBrand.innerHTML = nextDrawerBrand.innerHTML;
+                    }
+
+                    // 1.c. Sincronizar el pie de página (#storeFooter) fuera de <main>
+                    const currentFooter = iDoc.getElementById('storeFooter');
+                    const nextFooter = nextDoc.getElementById('storeFooter');
+                    if (currentFooter && nextFooter) {
+                        currentFooter.replaceWith(iDoc.importNode(nextFooter, true));
                     }
 
                     // 2. Reemplazar el contenido principal (<main>) y puente de filtros

@@ -138,6 +138,17 @@ public class StoreThemeService {
     private static final Set<String> ALLOWED_PAGINATION_SIZES = Set.of("sm", "md", "lg");
     private static final Set<String> ALLOWED_PAGINATION_ALIGNS = Set.of("left", "center", "right", "between");
     private static final Set<String> ALLOWED_PAGINATION_BORDERS = Set.of("0px", "1px", "2px");
+    private static final Set<String> ALLOWED_FOOTER_LAYOUTS = Set.of(
+            "classic", "minimal", "centered", "columns_4", "trust_strip", "marketplace"
+    );
+    private static final Set<String> ALLOWED_FOOTER_TONES = Set.of(
+            "secondary", "primary", "dark", "light"
+    );
+    private static final Set<String> ALLOWED_FOOTER_BRAND_MODES = Set.of(
+            "text", "logo", "logo_text"
+    );
+    private static final String DEFAULT_FOOTER_DESCRIPTION =
+            "Bienvenido a nuestra tienda online. Descubre nuestro catálogo con los mejores productos.";
     private static final java.util.regex.Pattern YOUTUBE_ID_PATTERN = java.util.regex.Pattern.compile(
             "(?:youtube(?:-nocookie)?\\.com/(?:watch\\?(?:.*&)?v=|embed/|shorts/|live/)|youtu\\.be/)([a-zA-Z0-9_-]{11})"
     );
@@ -1165,6 +1176,44 @@ public class StoreThemeService {
         }
         if (gs.getPaginationShowPrevNext() == null) {
             gs.setPaginationShowPrevNext(true);
+        }
+
+        // Sanitización de estilos globales del Pie de Página (Footer)
+        if (gs.getFooterLayout() == null || !ALLOWED_FOOTER_LAYOUTS.contains(gs.getFooterLayout())) {
+            gs.setFooterLayout("classic");
+        }
+        if (gs.getFooterTone() == null || !ALLOWED_FOOTER_TONES.contains(gs.getFooterTone())) {
+            gs.setFooterTone("secondary");
+        }
+        if (gs.getFooterBrandMode() == null || !ALLOWED_FOOTER_BRAND_MODES.contains(gs.getFooterBrandMode())) {
+            gs.setFooterBrandMode("text");
+        }
+        if (gs.getFooterDescription() == null) {
+            gs.setFooterDescription(DEFAULT_FOOTER_DESCRIPTION);
+        } else {
+            String desc = gs.getFooterDescription().trim();
+            gs.setFooterDescription(desc.length() > 320 ? desc.substring(0, 320) : desc);
+        }
+        if (gs.getFooterShowSocial() == null) {
+            gs.setFooterShowSocial(true);
+        }
+        if (gs.getFooterShowContact() == null) {
+            gs.setFooterShowContact(true);
+        }
+        if (gs.getFooterShowCategories() == null) {
+            gs.setFooterShowCategories(true);
+        }
+        if (gs.getFooterShowPages() == null) {
+            gs.setFooterShowPages(true);
+        }
+        if (gs.getFooterCopyrightText() == null) {
+            gs.setFooterCopyrightText("");
+        } else {
+            String copy = gs.getFooterCopyrightText().trim();
+            gs.setFooterCopyrightText(copy.length() > 140 ? copy.substring(0, 140) : copy);
+        }
+        if (gs.getFooterShowCredit() == null) {
+            gs.setFooterShowCredit(true);
         }
 
         if (config.getPages() == null) {

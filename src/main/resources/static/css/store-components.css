@@ -1773,7 +1773,6 @@ body[data-card-style="boutique"] .storevo-theme-section.sv-tone-dark .product-ca
         gap: 1.25rem;
     }
 }
-
 /* ---------- Producto Estrella: ajuste de la foto por sección (data-img-fit) ---------- */
 body .sv-spotlight-card[data-img-fit="contain"] .sv-spotlight-img {
     object-fit: contain !important;
@@ -1784,4 +1783,391 @@ body .sv-spotlight-card[data-img-fit="cover"] .sv-spotlight-img {
     object-fit: cover !important;
     background-color: transparent;
     padding: 0;
+}
+
+/* ==========================================================================
+   PIE DE PÁGINA GLOBAL MULTI-DISEÑO (.sv-footer)
+   ========================================================================== */
+#storeFooter.sv-footer {
+    position: relative;
+    width: 100%;
+    margin-top: auto;
+    transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease, padding 0.25s ease;
+}
+
+/* --- 1. Tonos de color y contraste legible --- */
+#storeFooter[data-footer-tone="secondary"],
+#storeFooter:not([data-footer-tone]) {
+    background-color: var(--brand-secondary, #0f172a) !important;
+}
+
+#storeFooter[data-footer-tone="primary"] {
+    background-color: var(--brand-color, #6366f1) !important;
+}
+
+#storeFooter[data-footer-tone="dark"] {
+    background-color: #0f172a !important;
+    color: #ffffff !important;
+    border-top-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+#storeFooter[data-footer-tone="light"] {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    border-top-color: rgba(15, 23, 42, 0.1) !important;
+}
+
+/* Ajuste automático cuando primary/secondary tiene luminancia alta (color claro) */
+#storeFooter[data-footer-luminance="light"] {
+    color: #0f172a !important;
+    border-top-color: rgba(15, 23, 42, 0.12) !important;
+}
+
+#storeFooter[data-footer-luminance="dark"] {
+    color: #ffffff !important;
+    border-top-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Botones sociales, píldoras y divisores adaptados al tono */
+#storeFooter[data-footer-luminance="light"] .sv-footer__social-btn {
+    background-color: rgba(15, 23, 42, 0.08);
+    color: #0f172a;
+}
+
+#storeFooter[data-footer-luminance="light"] .sv-footer__social-btn:hover {
+    background-color: var(--brand-color, #6366f1);
+    color: #ffffff;
+}
+
+#storeFooter .sv-footer__divider {
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+#storeFooter[data-footer-luminance="light"] .sv-footer__divider {
+    border-top-color: rgba(15, 23, 42, 0.1);
+}
+
+#storeFooter .sv-footer__pill {
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+#storeFooter .sv-footer__pill:hover {
+    background-color: rgba(255, 255, 255, 0.18);
+}
+
+#storeFooter[data-footer-luminance="light"] .sv-footer__pill {
+    background-color: rgba(15, 23, 42, 0.05);
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    color: #0f172a;
+}
+
+#storeFooter[data-footer-luminance="light"] .sv-footer__pill:hover {
+    background-color: rgba(15, 23, 42, 0.1);
+}
+
+#storeFooter .sv-footer__link:hover {
+    color: var(--brand-color, #6366f1);
+}
+
+#storeFooter[data-footer-tone="primary"] .sv-footer__link:hover {
+    text-decoration: underline;
+    color: inherit;
+}
+
+/* --- 2. Identidad de marca en el footer (Nombre vs Logo reutilizado del Navbar) --- */
+#storeFooter .sv-footer__brand {
+    max-width: 100%;
+}
+
+#storeFooter .sv-footer__logo-img {
+    width: auto;
+    max-width: 220px;
+    object-fit: contain;
+    display: none;
+    transition: height 0.2s ease, filter 0.2s ease;
+}
+
+#storeFooter[data-footer-logo-size="sm"] .sv-footer__logo-img { height: 40px; }
+#storeFooter[data-footer-logo-size="md"] .sv-footer__logo-img,
+#storeFooter:not([data-footer-logo-size]) .sv-footer__logo-img { height: 48px; }
+#storeFooter[data-footer-logo-size="lg"] .sv-footer__logo-img { height: 60px; }
+#storeFooter[data-footer-logo-size="xl"] .sv-footer__logo-img { height: 72px; }
+
+#storeFooter[data-footer-layout="minimal"] .sv-footer__logo-img {
+    height: 36px;
+}
+
+/* Si el modo es 'logo' o 'logo_text' y existe logo cargado, mostrar el logo adecuado según luminancia */
+#storeFooter[data-footer-has-logo="true"][data-footer-brand-mode="logo"] .sv-footer__logo-img--light,
+#storeFooter[data-footer-has-logo="true"][data-footer-brand-mode="logo_text"] .sv-footer__logo-img--light {
+    display: block;
+}
+
+#storeFooter[data-footer-has-logo="true"][data-footer-has-dark-logo="true"][data-footer-luminance="dark"][data-footer-brand-mode="logo"] .sv-footer__logo-img--light,
+#storeFooter[data-footer-has-logo="true"][data-footer-has-dark-logo="true"][data-footer-luminance="dark"][data-footer-brand-mode="logo_text"] .sv-footer__logo-img--light {
+    display: none;
+}
+
+#storeFooter[data-footer-has-logo="true"][data-footer-has-dark-logo="true"][data-footer-luminance="dark"][data-footer-brand-mode="logo"] .sv-footer__logo-img--dark,
+#storeFooter[data-footer-has-logo="true"][data-footer-has-dark-logo="true"][data-footer-luminance="dark"][data-footer-brand-mode="logo_text"] .sv-footer__logo-img--dark {
+    display: block;
+}
+
+/* Fusión inteligente para fondos oscuros cuando el comerciante subió un logo con fondo blanco/texto oscuro y no tiene navbarLogoDarkUrl */
+#storeFooter[data-footer-luminance="dark"][data-footer-has-dark-logo="false"]:not([data-logo-already-light="true"]) .sv-footer__logo-img--light {
+    filter: invert(1) hue-rotate(180deg) brightness(1.06) contrast(1.05);
+    mix-blend-mode: screen;
+}
+
+/* Si el modo es solo 'logo' y sí hay imagen de logo, ocultar el texto del nombre */
+#storeFooter[data-footer-has-logo="true"][data-footer-brand-mode="logo"] .sv-footer__brand-name {
+    display: none;
+}
+
+/* --- 3. Espaciado vertical según tipo de footer --- */
+#storeFooter[data-footer-layout="minimal"] {
+    padding-top: 1.5rem !important;
+    padding-bottom: 1.5rem !important;
+}
+
+#storeFooter[data-footer-layout="centered"] {
+    padding-top: 3rem !important;
+    padding-bottom: 2.25rem !important;
+}
+
+#storeFooter[data-footer-layout="trust_strip"] {
+    padding-top: 2.25rem !important;
+    padding-bottom: 2.5rem !important;
+}
+
+#storeFooter[data-footer-layout="marketplace"] {
+    padding-top: 2rem !important;
+    padding-bottom: 2rem !important;
+}
+
+/* --- 4. Grilla de 4 columnas y listas de enlaces (columns_4 y trust_strip) --- */
+#storeFooter .sv-footer__grid-4 {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 2rem;
+}
+
+@media (min-width: 640px) {
+    #storeFooter .sv-footer__grid-4 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 1024px) {
+    #storeFooter .sv-footer__grid-4 {
+        grid-template-columns: 1.4fr 1fr 1fr 1.1fr;
+        gap: 2.5rem;
+    }
+}
+
+#storeFooter .sv-footer__col-title {
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.9rem;
+    opacity: 0.95;
+}
+
+#storeFooter .sv-footer__list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    font-size: 0.875rem;
+    opacity: 0.88;
+}
+
+/* --- 5. Franja superior de confianza (trust_strip) --- */
+#storeFooter .sv-footer__trust-grid {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 1rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+#storeFooter[data-footer-luminance="light"] .sv-footer__trust-grid {
+    border-bottom-color: rgba(15, 23, 42, 0.1);
+}
+
+@media (min-width: 768px) {
+    #storeFooter .sv-footer__trust-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1.5rem;
+    }
+}
+
+#storeFooter .sv-footer__trust-item {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    padding: 0.9rem 1.1rem;
+    border-radius: var(--store-radius, 0.875rem);
+    background-color: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#storeFooter[data-footer-luminance="light"] .sv-footer__trust-item {
+    background-color: rgba(15, 23, 42, 0.035);
+    border-color: rgba(15, 23, 42, 0.08);
+}
+
+#storeFooter .sv-footer__trust-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 0.75rem;
+    background-color: var(--brand-color, #6366f1);
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+#storeFooter[data-footer-tone="primary"] .sv-footer__trust-icon {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: inherit;
+}
+
+/* --- 6. Diseño Moderno / Marketplace (Tarjeta redondeada + Acordeón en móvil) --- */
+#storeFooter .sv-footer__marketplace-card {
+    border-radius: var(--store-radius, 1rem);
+    padding: 1.5rem;
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 12px 32px -12px rgba(0, 0, 0, 0.22);
+}
+
+@media (min-width: 640px) {
+    #storeFooter .sv-footer__marketplace-card {
+        padding: 2.25rem;
+    }
+}
+
+#storeFooter[data-footer-luminance="light"] .sv-footer__marketplace-card {
+    background-color: #f8fafc;
+    border-color: rgba(15, 23, 42, 0.1);
+    box-shadow: 0 10px 25px -10px rgba(15, 23, 42, 0.08);
+}
+
+#storeFooter .sv-footer__marketplace-top {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    padding-bottom: 1.5rem;
+    margin-bottom: 1.25rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+#storeFooter[data-footer-luminance="light"] .sv-footer__marketplace-top {
+    border-bottom-color: rgba(15, 23, 42, 0.1);
+}
+
+@media (min-width: 768px) {
+    #storeFooter .sv-footer__marketplace-top {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        padding-bottom: 1.75rem;
+        margin-bottom: 1.75rem;
+    }
+}
+
+#storeFooter .sv-footer__cta-btn {
+    background-color: var(--brand-color, #6366f1);
+    color: #ffffff;
+    box-shadow: 0 4px 14px -3px color-mix(in srgb, var(--brand-color, #6366f1) 50%, transparent);
+}
+
+#storeFooter .sv-footer__cta-btn:hover {
+    filter: brightness(0.94);
+}
+
+#storeFooter[data-footer-tone="primary"] .sv-footer__cta-btn {
+    background-color: #ffffff;
+    color: #0f172a;
+}
+
+#storeFooter .sv-footer__marketplace-cols {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 0.25rem;
+}
+
+@media (min-width: 768px) {
+    #storeFooter .sv-footer__marketplace-cols {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 2rem;
+    }
+}
+
+/* Comportamiento de Acordeón en Móvil (< 768px) y Columnas Abiertas en PC (>= 768px) */
+#storeFooter .sv-footer__acc-trigger {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.85rem 0;
+    font-size: 0.8rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    background: transparent;
+    border: 0;
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
+}
+
+#storeFooter .sv-footer__acc-group {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#storeFooter[data-footer-luminance="light"] .sv-footer__acc-group {
+    border-bottom-color: rgba(15, 23, 42, 0.08);
+}
+
+#storeFooter .sv-footer__acc-icon {
+    transition: transform 0.22s ease;
+    opacity: 0.75;
+}
+
+#storeFooter .sv-footer__acc-group.is-open .sv-footer__acc-icon {
+    transform: rotate(180deg);
+}
+
+#storeFooter .sv-footer__acc-panel {
+    display: none;
+    padding-bottom: 0.9rem;
+}
+
+#storeFooter .sv-footer__acc-group.is-open .sv-footer__acc-panel {
+    display: block;
+}
+
+@media (min-width: 768px) {
+    #storeFooter .sv-footer__acc-group {
+        border-bottom: 0 !important;
+    }
+    #storeFooter .sv-footer__acc-trigger {
+        padding: 0 0 0.85rem 0;
+        cursor: default;
+        pointer-events: none;
+    }
+    #storeFooter .sv-footer__acc-icon {
+        display: none;
+    }
+    #storeFooter .sv-footer__acc-panel {
+        display: block !important;
+        padding-bottom: 0;
+    }
 }

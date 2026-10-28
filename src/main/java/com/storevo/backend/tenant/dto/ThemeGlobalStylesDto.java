@@ -573,4 +573,57 @@ public class ThemeGlobalStylesDto {
 
     @Builder.Default
     private Boolean paginationShowPrevNext = true;
+
+    // =========================================================================
+    // PIE DE PÁGINA GLOBAL (FOOTER)
+    // =========================================================================
+
+    /**
+     * Diseño estructural del footer:
+     * classic | minimal | centered | columns_4 | trust_strip | marketplace
+     */
+    @Builder.Default
+    private String footerLayout = "classic";
+
+    /**
+     * Tono de color del footer:
+     * secondary | primary | dark | light
+     */
+    @Builder.Default
+    private String footerTone = "secondary";
+
+    /**
+     * Identidad de marca en el footer (reutiliza el logo del navbar):
+     * text | logo | logo_text
+     */
+    @Builder.Default
+    private String footerBrandMode = "text";
+
+    /**
+     * Descripción breve de la tienda mostrada bajo el nombre o logo.
+     */
+    @Builder.Default
+    private String footerDescription = "Bienvenido a nuestra tienda online. Descubre nuestro catálogo con los mejores productos.";
+
+    @Builder.Default
+    private Boolean footerShowSocial = true;
+
+    @Builder.Default
+    private Boolean footerShowContact = true;
+
+    @Builder.Default
+    private Boolean footerShowCategories = true;
+
+    @Builder.Default
+    private Boolean footerShowPages = true;
+
+    /**
+     * Texto personalizado de derechos reservados (opcional).
+     * Si está vacío, se genera automáticamente con el año y el nombre de la tienda.
+     */
+    @Builder.Default
+    private String footerCopyrightText = "";
+
+    @Builder.Default
+    private Boolean footerShowCredit = true;
 }

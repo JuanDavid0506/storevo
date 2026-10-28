@@ -361,7 +361,17 @@
                  data-sv-pag-active-bg=${gs != null and gs.paginationActiveBgColor != null ? gs.paginationActiveBgColor : '#6366f1'},
                  data-sv-pag-active-text=${gs != null and gs.paginationActiveTextColor != null ? gs.paginationActiveTextColor : '#ffffff'},
                  data-sv-pag-counter=${gs == null or gs.paginationShowCounter == null or gs.paginationShowCounter},
-                 data-sv-pag-prev-next=${gs == null or gs.paginationShowPrevNext == null or gs.paginationShowPrevNext}">
+                 data-sv-pag-prev-next=${gs == null or gs.paginationShowPrevNext == null or gs.paginationShowPrevNext},
+                 data-sv-footer-layout=${gs != null and gs.footerLayout != null ? gs.footerLayout : 'classic'},
+                 data-sv-footer-tone=${gs != null and gs.footerTone != null ? gs.footerTone : 'secondary'},
+                 data-sv-footer-brand-mode=${gs != null and gs.footerBrandMode != null ? gs.footerBrandMode : 'text'},
+                 data-sv-footer-description=${gs != null and gs.footerDescription != null ? gs.footerDescription : 'Bienvenido a nuestra tienda online. Descubre nuestro catálogo con los mejores productos.'},
+                 data-sv-footer-show-social=${gs == null or gs.footerShowSocial == null or gs.footerShowSocial},
+                 data-sv-footer-show-contact=${gs == null or gs.footerShowContact == null or gs.footerShowContact},
+                 data-sv-footer-show-categories=${gs == null or gs.footerShowCategories == null or gs.footerShowCategories},
+                 data-sv-footer-show-pages=${gs == null or gs.footerShowPages == null or gs.footerShowPages},
+                 data-sv-footer-copyright=${gs != null and gs.footerCopyrightText != null ? gs.footerCopyrightText : ''},
+                 data-sv-footer-show-credit=${gs == null or gs.footerShowCredit == null or gs.footerShowCredit}">
 
 <nav th:replace="~{components/store-navbar :: storeNavbar}"></nav>
 <script th:src="@{/js/ui/navbarStyle.js}"></script>
@@ -427,71 +437,872 @@
         <div layout:fragment="content"></div>
     </div>
 </main>
-<!-- Footer conectado a --brand-secondary para reflejar el Color Secundario en toda la tienda -->
-<footer class="bg-secondary text-white py-12 mt-auto border-t border-white/10">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-8">
-        <div>
-            <h3 class="text-xl font-bold mb-3" th:text="${settings != null and settings.storeName != null ? settings.storeName : 'Tienda'}">Tienda</h3>
-            <p class="text-sm opacity-90 leading-relaxed">Bienvenido a nuestra tienda online. Descubre nuestro catálogo con los mejores productos.</p>
+<!-- Footer multi-diseño conectado a globalStyles (retrocompatible al 100% con el diseño clásico por defecto) -->
+<footer id="storeFooter"
+        class="sv-footer bg-secondary text-white py-12 mt-auto border-t border-white/10"
+        th:with="fLayout=${gs != null and gs.footerLayout != null ? gs.footerLayout : 'classic'},
+                 fTone=${gs != null and gs.footerTone != null ? gs.footerTone : 'secondary'},
+                 fBrandMode=${gs != null and gs.footerBrandMode != null ? gs.footerBrandMode : 'text'},
+                 fDesc=${gs != null and gs.footerDescription != null ? gs.footerDescription : 'Bienvenido a nuestra tienda online. Descubre nuestro catálogo con los mejores productos.'},
+                 fShowSocial=${gs == null or gs.footerShowSocial == null or gs.footerShowSocial},
+                 fShowContact=${gs == null or gs.footerShowContact == null or gs.footerShowContact},
+                 fShowCategories=${gs == null or gs.footerShowCategories == null or gs.footerShowCategories},
+                 fShowPages=${gs == null or gs.footerShowPages == null or gs.footerShowPages},
+                 fCopyrightRaw=${gs != null and gs.footerCopyrightText != null ? #strings.trim(gs.footerCopyrightText) : ''},
+                 fShowCredit=${gs == null or gs.footerShowCredit == null or gs.footerShowCredit},
+                 fStoreName=${settings != null and settings.storeName != null and !settings.storeName.isBlank() ? settings.storeName : 'Tienda'},
+                 fLogoLight=${gs != null and not #strings.isEmpty(gs.navbarLogoUrl) ? gs.navbarLogoUrl : (settings != null and not #strings.isEmpty(settings.logoUrl) ? settings.logoUrl : '')},
+                 fLogoDark=${gs != null and not #strings.isEmpty(gs.navbarLogoDarkUrl) ? gs.navbarLogoDarkUrl : ''},
+                 fLogoSize=${gs != null and gs.navbarLogoSize != null ? gs.navbarLogoSize : 'md'},
+                 fHasLogo=${not #strings.isEmpty(fLogoLight)},
+                 fPreviewParam=${isDraftPreview == true ? 'draft' : null},
+                 fDefaultCopyright=${'© 2026 ' + fStoreName + '. Todos los derechos reservados.'},
+                 fCopyright=${not #strings.isEmpty(fCopyrightRaw) ? fCopyrightRaw : fDefaultCopyright},
+                 fIgRaw=${settings != null and settings.instagram != null ? #strings.trim(settings.instagram) : ''},
+                 fIgClean=${#strings.replace(fIgRaw, '@', '')},
+                 fIgUrl=${not #strings.isEmpty(fIgClean) ? (fIgClean.startsWith('http') ? fIgClean : 'https://instagram.com/' + fIgClean) : ''},
+                 fFbRaw=${settings != null and settings.facebook != null ? #strings.trim(settings.facebook) : ''},
+                 fFbUrl=${not #strings.isEmpty(fFbRaw) ? (fFbRaw.startsWith('http') ? fFbRaw : 'https://facebook.com/' + fFbRaw) : ''},
+                 fTtRaw=${settings != null and settings.tiktok != null ? #strings.trim(settings.tiktok) : ''},
+                 fTtClean=${#strings.replace(fTtRaw, '@', '')},
+                 fTtUrl=${not #strings.isEmpty(fTtClean) ? (fTtClean.startsWith('http') ? fTtClean : 'https://www.tiktok.com/@' + fTtClean) : ''},
+                 fHasAnySocial=${not #strings.isEmpty(fIgUrl) or not #strings.isEmpty(fFbUrl) or not #strings.isEmpty(fTtUrl)},
+                 fWaRaw=${settings != null and settings.whatsapp != null ? #strings.trim(settings.whatsapp) : ''},
+                 fWaDigits=${#strings.replace(#strings.replace(#strings.replace(fWaRaw, ' ', ''), '+', ''), '-', '')},
+                 fWaNormalized=${#strings.length(fWaDigits) == 10 ? '57' + fWaDigits : fWaDigits},
+                 fEmailRaw=${settings != null and settings.emailContact != null ? #strings.trim(settings.emailContact) : ''},
+                 fHasAnyContact=${not #strings.isEmpty(fWaRaw) or not #strings.isEmpty(fEmailRaw)},
+                 fCats=${navCategories != null and not #lists.isEmpty(navCategories) ? navCategories : categories},
+                 fHasCats=${fCats != null and not #lists.isEmpty(fCats)},
+                 fCustomPages=${theme != null and theme.customPages != null ? theme.customPages : null},
+                 fHasCustomPages=${fCustomPages != null and not #lists.isEmpty(fCustomPages)}"
+        th:attr="data-footer-layout=${fLayout},
+                 data-footer-tone=${fTone},
+                 data-footer-brand-mode=${fBrandMode},
+                 data-footer-has-logo=${fHasLogo},
+                 data-footer-has-dark-logo=${not #strings.isEmpty(fLogoDark)},
+                 data-footer-logo-size=${fLogoSize},
+                 data-footer-show-social=${fShowSocial},
+                 data-footer-show-contact=${fShowContact},
+                 data-footer-show-categories=${fShowCategories},
+                 data-footer-show-pages=${fShowPages},
+                 data-footer-show-credit=${fShowCredit},
+                 data-footer-store-name=${fStoreName},
+                 data-footer-default-copyright=${fDefaultCopyright}">
 
-            <div class="flex items-center gap-3 mt-5"
-                 th:if="${settings != null and ((settings.instagram != null and !settings.instagram.isBlank())
-                       or (settings.facebook != null and !settings.facebook.isBlank())
-                       or (settings.tiktok != null and !settings.tiktok.isBlank()))}">
-                <!-- Instagram -->
-                <a th:if="${settings.instagram != null and !settings.instagram.isBlank()}"
-                   th:with="igClean=${#strings.replace(#strings.trim(settings.instagram), '@', '')},
-                            igUrl=${igClean.startsWith('http') ? igClean : 'https://instagram.com/' + igClean}"
-                   th:href="${igUrl}" target="_blank" rel="noopener"
-                   title="Instagram"
-                   class="w-9 h-9 rounded-full bg-white/15 hover:bg-brand flex items-center justify-center transition">
+    <!-- =================================================================== -->
+    <!-- 1. DISEÑO CLÁSICO (classic) - Idéntico al original por defecto      -->
+    <!-- =================================================================== -->
+    <div class="sv-footer__view" data-layout="classic"
+         th:classappend="${fLayout != 'classic' ? 'hidden' : ''}"
+         th:attr="aria-hidden=${fLayout != 'classic' ? 'true' : null}">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div>
+                <a th:href="@{/s/{slug}(slug=${slug}, preview=${fPreviewParam})}"
+                   class="sv-footer__brand inline-flex items-center gap-2.5 mb-3 no-underline">
+                    <img th:if="${fHasLogo}" th:src="${fLogoLight}" th:alt="${fStoreName}"
+                         class="sv-footer__logo-img sv-footer__logo-img--light">
+                    <img th:if="${fHasLogo and not #strings.isEmpty(fLogoDark)}" th:src="${fLogoDark}" alt=""
+                         class="sv-footer__logo-img sv-footer__logo-img--dark" aria-hidden="true">
+                    <h3 class="sv-footer__brand-name text-xl font-bold m-0" th:text="${fStoreName}">Tienda</h3>
+                </a>
+                <p class="sv-footer-desc text-sm opacity-90 leading-relaxed"
+                   th:classappend="${#strings.isEmpty(fDesc) ? 'hidden' : ''}"
+                   th:text="${fDesc}">Bienvenido a nuestra tienda online. Descubre nuestro catálogo con los mejores productos.</p>
+
+                <div class="sv-footer-social-wrap flex items-center gap-3 mt-5"
+                     th:if="${fHasAnySocial}"
+                     th:classappend="${!fShowSocial ? 'hidden' : ''}">
+                    <!-- Instagram -->
+                    <a th:if="${not #strings.isEmpty(fIgUrl)}"
+                       th:href="${fIgUrl}" target="_blank" rel="noopener"
+                       title="Instagram" aria-label="Instagram"
+                       class="sv-footer__social-btn w-9 h-9 rounded-full bg-white/15 hover:bg-brand flex items-center justify-center transition">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                    </a>
+                    <!-- Facebook -->
+                    <a th:if="${not #strings.isEmpty(fFbUrl)}"
+                       th:href="${fFbUrl}" target="_blank" rel="noopener"
+                       title="Facebook" aria-label="Facebook"
+                       class="sv-footer__social-btn w-9 h-9 rounded-full bg-white/15 hover:bg-brand flex items-center justify-center transition">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M22.675 0h-21.35c-.732 0-1.325.593-1.325 1.325v21.351c0 .731.593 1.324 1.325 1.324h11.495v-9.294h-3.128v-3.622h3.128v-2.671c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.795.143v3.24l-1.918.001c-1.504 0-1.795.715-1.795 1.763v2.313h3.587l-.467 3.622h-3.12v9.293h6.116c.73 0 1.323-.593 1.323-1.325v-21.35c0-.732-.593-1.325-1.325-1.325z"/></svg>
+                    </a>
+                    <!-- TikTok -->
+                    <a th:if="${not #strings.isEmpty(fTtUrl)}"
+                       th:href="${fTtUrl}" target="_blank" rel="noopener"
+                       title="TikTok" aria-label="TikTok"
+                       class="sv-footer__social-btn w-9 h-9 rounded-full bg-white/15 hover:bg-brand flex items-center justify-center transition">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/></svg>
+                    </a>
+                </div>
+            </div>
+            <div class="sv-footer-contact-wrap" th:classappend="${!fShowContact ? 'hidden' : ''}">
+                <h4 class="font-bold mb-4 uppercase text-sm tracking-wider">Contacto</h4>
+                <ul class="space-y-2.5 text-sm opacity-90" th:if="${settings != null}">
+                    <li th:if="${not #strings.isEmpty(fWaRaw)}">
+                        <a th:href="'https://wa.me/' + ${fWaNormalized}" target="_blank" rel="noopener" class="inline-flex items-center gap-2 hover:underline">
+                            <span>WhatsApp:</span>
+                            <span class="font-semibold" th:text="${fWaRaw}"></span>
+                        </a>
+                    </li>
+                    <li th:if="${not #strings.isEmpty(fEmailRaw)}">
+                        <a th:href="'mailto:' + ${fEmailRaw}" class="inline-flex items-center gap-2 hover:underline">
+                            <span>Email:</span>
+                            <span class="font-semibold" th:text="${fEmailRaw}"></span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            <div class="sv-footer-credit-wrap" th:classappend="${!fShowCredit ? 'hidden' : ''}">
+                <h4 class="font-bold mb-4 uppercase text-sm tracking-wider">Desarrollado por</h4>
+                <p class="text-sm opacity-90 font-medium tracking-tight">Storevo SaaS</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- =================================================================== -->
+    <!-- 2. DISEÑO MÍNIMO (minimal) - Una sola línea horizontal compacta     -->
+    <!-- =================================================================== -->
+    <div class="sv-footer__view" data-layout="minimal"
+         th:classappend="${fLayout != 'minimal' ? 'hidden' : ''}"
+         th:attr="aria-hidden=${fLayout != 'minimal' ? 'true' : null}">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="sv-footer-minimal-row flex flex-col md:flex-row items-center justify-between gap-4">
+                <!-- Izquierda: Marca + Derechos -->
+                <div class="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 text-center sm:text-left">
+                    <a th:href="@{/s/{slug}(slug=${slug}, preview=${fPreviewParam})}"
+                       class="sv-footer__brand inline-flex items-center gap-2 no-underline">
+                        <img th:if="${fHasLogo}" th:src="${fLogoLight}" th:alt="${fStoreName}"
+                             class="sv-footer__logo-img sv-footer__logo-img--light">
+                        <img th:if="${fHasLogo and not #strings.isEmpty(fLogoDark)}" th:src="${fLogoDark}" alt=""
+                             class="sv-footer__logo-img sv-footer__logo-img--dark" aria-hidden="true">
+                        <span class="sv-footer__brand-name font-bold text-base tracking-tight" th:text="${fStoreName}">Tienda</span>
+                    </a>
+                    <span class="hidden sm:inline opacity-35">·</span>
+                    <span class="sv-footer-copyright text-xs opacity-80" th:text="${fCopyright}">© 2026 Tienda. Todos los derechos reservados.</span>
+                </div>
+
+                <!-- Centro: Enlaces rápidos en línea (Páginas y Catálogo) -->
+                <nav aria-label="Enlaces rápidos del pie de página"
+                     class="sv-footer-pages-wrap flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 text-xs font-semibold"
+                     th:classappend="${!fShowPages ? 'hidden' : ''}">
+                    <a th:href="@{/s/{slug}(slug=${slug}, preview=${fPreviewParam})}" class="sv-footer__link opacity-85 hover:opacity-100 transition">Inicio</a>
+                    <a th:href="@{/s/{slug}/catalog(slug=${slug}, preview=${fPreviewParam})}" class="sv-footer__link opacity-85 hover:opacity-100 transition">Catálogo</a>
+                    <th:block th:if="${fHasCustomPages}">
+                        <a th:each="cp : ${fCustomPages}"
+                           th:href="@{/s/{slug}/page/{pageSlug}(slug=${slug}, pageSlug=${cp.slug}, preview=${fPreviewParam})}"
+                           class="sv-footer__link opacity-85 hover:opacity-100 transition"
+                           th:text="${cp.title}">Página</a>
+                    </th:block>
+                </nav>
+
+                <!-- Derecha: Redes + Crédito compacto -->
+                <div class="flex flex-wrap items-center justify-center gap-3">
+                    <div class="sv-footer-social-wrap flex items-center gap-2"
+                         th:if="${fHasAnySocial}"
+                         th:classappend="${!fShowSocial ? 'hidden' : ''}">
+                        <a th:if="${not #strings.isEmpty(fIgUrl)}" th:href="${fIgUrl}" target="_blank" rel="noopener" title="Instagram" aria-label="Instagram"
+                           class="sv-footer__social-btn w-8 h-8 rounded-full bg-white/15 hover:bg-brand flex items-center justify-center transition">
+                            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                        </a>
+                        <a th:if="${not #strings.isEmpty(fFbUrl)}" th:href="${fFbUrl}" target="_blank" rel="noopener" title="Facebook" aria-label="Facebook"
+                           class="sv-footer__social-btn w-8 h-8 rounded-full bg-white/15 hover:bg-brand flex items-center justify-center transition">
+                            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M22.675 0h-21.35c-.732 0-1.325.593-1.325 1.325v21.351c0 .731.593 1.324 1.325 1.324h11.495v-9.294h-3.128v-3.622h3.128v-2.671c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.795.143v3.24l-1.918.001c-1.504 0-1.795.715-1.795 1.763v2.313h3.587l-.467 3.622h-3.12v9.293h6.116c.73 0 1.323-.593 1.323-1.325v-21.35c0-.732-.593-1.325-1.325-1.325z"/></svg>
+                        </a>
+                        <a th:if="${not #strings.isEmpty(fTtUrl)}" th:href="${fTtUrl}" target="_blank" rel="noopener" title="TikTok" aria-label="TikTok"
+                           class="sv-footer__social-btn w-8 h-8 rounded-full bg-white/15 hover:bg-brand flex items-center justify-center transition">
+                            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/></svg>
+                        </a>
+                    </div>
+                    <span class="sv-footer-credit-wrap text-xs opacity-75 font-medium"
+                          th:classappend="${!fShowCredit ? 'hidden' : ''}">
+                        Desarrollado por <strong class="font-bold">Storevo SaaS</strong>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =================================================================== -->
+    <!-- 3. DISEÑO BOUTIQUE CENTRADO (centered)                              -->
+    <!-- =================================================================== -->
+    <div class="sv-footer__view" data-layout="centered"
+         th:classappend="${fLayout != 'centered' ? 'hidden' : ''}"
+         th:attr="aria-hidden=${fLayout != 'centered' ? 'true' : null}">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center flex flex-col items-center">
+            <!-- Marca / Logo centrado -->
+            <a th:href="@{/s/{slug}(slug=${slug}, preview=${fPreviewParam})}"
+               class="sv-footer__brand inline-flex flex-col items-center gap-2.5 no-underline mb-3">
+                <img th:if="${fHasLogo}" th:src="${fLogoLight}" th:alt="${fStoreName}"
+                     class="sv-footer__logo-img sv-footer__logo-img--light">
+                <img th:if="${fHasLogo and not #strings.isEmpty(fLogoDark)}" th:src="${fLogoDark}" alt=""
+                     class="sv-footer__logo-img sv-footer__logo-img--dark" aria-hidden="true">
+                <h3 class="sv-footer__brand-name text-2xl font-black tracking-tight m-0" th:text="${fStoreName}">Tienda</h3>
+            </a>
+
+            <!-- Descripción centrada -->
+            <p class="sv-footer-desc text-sm opacity-85 leading-relaxed max-w-xl mx-auto"
+               th:classappend="${#strings.isEmpty(fDesc) ? 'hidden' : ''}"
+               th:text="${fDesc}">Bienvenido a nuestra tienda online. Descubre nuestro catálogo con los mejores productos.</p>
+
+            <!-- Fila horizontal de Categorías y Enlaces -->
+            <nav aria-label="Navegación del pie de página"
+                 class="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mt-6 text-sm font-semibold">
+                <span class="sv-footer-pages-wrap contents" th:classappend="${!fShowPages ? 'hidden' : ''}">
+                    <a th:href="@{/s/{slug}(slug=${slug}, preview=${fPreviewParam})}" class="sv-footer__link opacity-85 hover:opacity-100 transition">Inicio</a>
+                    <a th:href="@{/s/{slug}/catalog(slug=${slug}, preview=${fPreviewParam})}" class="sv-footer__link opacity-85 hover:opacity-100 transition">Catálogo</a>
+                </span>
+                <span class="sv-footer-categories-wrap contents" th:if="${fHasCats}" th:classappend="${!fShowCategories ? 'hidden' : ''}">
+                    <a th:each="cat, iterStat : ${fCats}"
+                       th:if="${iterStat.index < 6 and (cat.isActive == null or cat.isActive) and cat.parentCategory == null}"
+                       th:href="@{/s/{slug}/catalog(slug=${slug}, category=${cat.id}, preview=${fPreviewParam})}"
+                       class="sv-footer__link opacity-85 hover:opacity-100 transition"
+                       th:text="${cat.name}">Categoría</a>
+                </span>
+                <span class="sv-footer-pages-wrap contents" th:if="${fHasCustomPages}" th:classappend="${!fShowPages ? 'hidden' : ''}">
+                    <a th:each="cp : ${fCustomPages}"
+                       th:href="@{/s/{slug}/page/{pageSlug}(slug=${slug}, pageSlug=${cp.slug}, preview=${fPreviewParam})}"
+                       class="sv-footer__link opacity-85 hover:opacity-100 transition"
+                       th:text="${cp.title}">Página</a>
+                </span>
+            </nav>
+
+            <!-- Contacto rápido en píldoras centradas -->
+            <div class="sv-footer-contact-wrap flex flex-wrap items-center justify-center gap-4 mt-5 text-xs opacity-90"
+                 th:if="${fHasAnyContact}"
+                 th:classappend="${!fShowContact ? 'hidden' : ''}">
+                <a th:if="${not #strings.isEmpty(fWaRaw)}"
+                   th:href="'https://wa.me/' + ${fWaNormalized}" target="_blank" rel="noopener"
+                   class="sv-footer__pill inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full transition">
+                    <span>WhatsApp:</span>
+                    <strong class="font-bold" th:text="${fWaRaw}"></strong>
+                </a>
+                <a th:if="${not #strings.isEmpty(fEmailRaw)}"
+                   th:href="'mailto:' + ${fEmailRaw}"
+                   class="sv-footer__pill inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full transition">
+                    <span>Email:</span>
+                    <strong class="font-bold" th:text="${fEmailRaw}"></strong>
+                </a>
+            </div>
+
+            <!-- Redes sociales centradas -->
+            <div class="sv-footer-social-wrap flex items-center justify-center gap-3 mt-6"
+                 th:if="${fHasAnySocial}"
+                 th:classappend="${!fShowSocial ? 'hidden' : ''}">
+                <a th:if="${not #strings.isEmpty(fIgUrl)}" th:href="${fIgUrl}" target="_blank" rel="noopener" title="Instagram" aria-label="Instagram"
+                   class="sv-footer__social-btn w-9 h-9 rounded-full bg-white/15 hover:bg-brand flex items-center justify-center transition">
                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
                 </a>
-                <!-- Facebook -->
-                <a th:if="${settings.facebook != null and !settings.facebook.isBlank()}"
-                   th:with="fbClean=${#strings.trim(settings.facebook)},
-                            fbUrl=${fbClean.startsWith('http') ? fbClean : 'https://facebook.com/' + fbClean}"
-                   th:href="${fbUrl}" target="_blank" rel="noopener"
-                   title="Facebook"
-                   class="w-9 h-9 rounded-full bg-white/15 hover:bg-brand flex items-center justify-center transition">
+                <a th:if="${not #strings.isEmpty(fFbUrl)}" th:href="${fFbUrl}" target="_blank" rel="noopener" title="Facebook" aria-label="Facebook"
+                   class="sv-footer__social-btn w-9 h-9 rounded-full bg-white/15 hover:bg-brand flex items-center justify-center transition">
                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M22.675 0h-21.35c-.732 0-1.325.593-1.325 1.325v21.351c0 .731.593 1.324 1.325 1.324h11.495v-9.294h-3.128v-3.622h3.128v-2.671c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.795.143v3.24l-1.918.001c-1.504 0-1.795.715-1.795 1.763v2.313h3.587l-.467 3.622h-3.12v9.293h6.116c.73 0 1.323-.593 1.323-1.325v-21.35c0-.732-.593-1.325-1.325-1.325z"/></svg>
                 </a>
-                <!-- TikTok -->
-                <a th:if="${settings.tiktok != null and !settings.tiktok.isBlank()}"
-                   th:with="ttClean=${#strings.replace(#strings.trim(settings.tiktok), '@', '')},
-                            ttUrl=${ttClean.startsWith('http') ? ttClean : 'https://www.tiktok.com/@' + ttClean}"
-                   th:href="${ttUrl}" target="_blank" rel="noopener"
-                   title="TikTok"
-                   class="w-9 h-9 rounded-full bg-white/15 hover:bg-brand flex items-center justify-center transition">
+                <a th:if="${not #strings.isEmpty(fTtUrl)}" th:href="${fTtUrl}" target="_blank" rel="noopener" title="TikTok" aria-label="TikTok"
+                   class="sv-footer__social-btn w-9 h-9 rounded-full bg-white/15 hover:bg-brand flex items-center justify-center transition">
                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/></svg>
                 </a>
             </div>
+
+            <!-- Barra inferior centrada -->
+            <div class="sv-footer__divider w-full mt-8 pt-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs opacity-75">
+                <p class="sv-footer-copyright" th:text="${fCopyright}">© 2026 Tienda. Todos los derechos reservados.</p>
+                <p class="sv-footer-credit-wrap" th:classappend="${!fShowCredit ? 'hidden' : ''}">
+                    Desarrollado por <strong class="font-bold">Storevo SaaS</strong>
+                </p>
+            </div>
         </div>
-        <div>
-            <h4 class="font-bold mb-4 uppercase text-sm tracking-wider">Contacto</h4>
-            <ul class="space-y-2.5 text-sm opacity-90" th:if="${settings != null}">
-                <li th:if="${settings.whatsapp != null && !settings.whatsapp.isBlank()}"
-                    th:with="waDigits=${#strings.replace(#strings.replace(#strings.replace(settings.whatsapp, ' ', ''), '+', ''), '-', '')},
-                             waNormalized=${#strings.length(waDigits) == 10 ? '57' + waDigits : waDigits}">
-                    <a th:href="'https://wa.me/' + ${waNormalized}" target="_blank" rel="noopener" class="inline-flex items-center gap-2 hover:underline">
-                        <span>WhatsApp:</span>
-                        <span class="font-semibold" th:text="${settings.whatsapp}"></span>
+    </div>
+
+    <!-- =================================================================== -->
+    <!-- 4. DISEÑO COMPLETO DE 4 COLUMNAS (columns_4)                        -->
+    <!-- =================================================================== -->
+    <div class="sv-footer__view" data-layout="columns_4"
+         th:classappend="${fLayout != 'columns_4' ? 'hidden' : ''}"
+         th:attr="aria-hidden=${fLayout != 'columns_4' ? 'true' : null}">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="sv-footer__grid-4">
+                <!-- Columna 1: Marca + Descripción + Redes -->
+                <div class="space-y-3">
+                    <a th:href="@{/s/{slug}(slug=${slug}, preview=${fPreviewParam})}"
+                       class="sv-footer__brand inline-flex items-center gap-2.5 no-underline">
+                        <img th:if="${fHasLogo}" th:src="${fLogoLight}" th:alt="${fStoreName}"
+                             class="sv-footer__logo-img sv-footer__logo-img--light">
+                        <img th:if="${fHasLogo and not #strings.isEmpty(fLogoDark)}" th:src="${fLogoDark}" alt=""
+                             class="sv-footer__logo-img sv-footer__logo-img--dark" aria-hidden="true">
+                        <h3 class="sv-footer__brand-name text-xl font-bold m-0" th:text="${fStoreName}">Tienda</h3>
                     </a>
-                </li>
-                <li th:if="${settings.emailContact != null && !settings.emailContact.isBlank()}">
-                    <a th:href="'mailto:' + ${settings.emailContact}" class="inline-flex items-center gap-2 hover:underline">
-                        <span>Email:</span>
-                        <span class="font-semibold" th:text="${settings.emailContact}"></span>
-                    </a>
-                </li>
-            </ul>
+                    <p class="sv-footer-desc text-sm opacity-85 leading-relaxed"
+                       th:classappend="${#strings.isEmpty(fDesc) ? 'hidden' : ''}"
+                       th:text="${fDesc}">Bienvenido a nuestra tienda online. Descubre nuestro catálogo con los mejores productos.</p>
+                    <div class="sv-footer-social-wrap flex items-center gap-2.5 pt-2"
+                         th:if="${fHasAnySocial}"
+                         th:classappend="${!fShowSocial ? 'hidden' : ''}">
+                        <a th:if="${not #strings.isEmpty(fIgUrl)}" th:href="${fIgUrl}" target="_blank" rel="noopener" title="Instagram" aria-label="Instagram"
+                           class="sv-footer__social-btn w-9 h-9 rounded-full bg-white/15 hover:bg-brand flex items-center justify-center transition">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                        </a>
+                        <a th:if="${not #strings.isEmpty(fFbUrl)}" th:href="${fFbUrl}" target="_blank" rel="noopener" title="Facebook" aria-label="Facebook"
+                           class="sv-footer__social-btn w-9 h-9 rounded-full bg-white/15 hover:bg-brand flex items-center justify-center transition">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M22.675 0h-21.35c-.732 0-1.325.593-1.325 1.325v21.351c0 .731.593 1.324 1.325 1.324h11.495v-9.294h-3.128v-3.622h3.128v-2.671c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.795.143v3.24l-1.918.001c-1.504 0-1.795.715-1.795 1.763v2.313h3.587l-.467 3.622h-3.12v9.293h6.116c.73 0 1.323-.593 1.323-1.325v-21.35c0-.732-.593-1.325-1.325-1.325z"/></svg>
+                        </a>
+                        <a th:if="${not #strings.isEmpty(fTtUrl)}" th:href="${fTtUrl}" target="_blank" rel="noopener" title="TikTok" aria-label="TikTok"
+                           class="sv-footer__social-btn w-9 h-9 rounded-full bg-white/15 hover:bg-brand flex items-center justify-center transition">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/></svg>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Columna 2: Categorías -->
+                <nav aria-label="Categorías de la tienda"
+                     class="sv-footer-categories-wrap"
+                     th:classappend="${!fShowCategories ? 'hidden' : ''}">
+                    <h4 class="sv-footer__col-title">Categorías</h4>
+                    <ul class="sv-footer__list">
+                        <li>
+                            <a th:href="@{/s/{slug}/catalog(slug=${slug}, preview=${fPreviewParam})}" class="sv-footer__link">Todo el catálogo</a>
+                        </li>
+                        <th:block th:if="${fHasCats}">
+                            <li th:each="cat, iterStat : ${fCats}"
+                                th:if="${iterStat.index < 6 and (cat.isActive == null or cat.isActive) and cat.parentCategory == null}">
+                                <a th:href="@{/s/{slug}/catalog(slug=${slug}, category=${cat.id}, preview=${fPreviewParam})}"
+                                   class="sv-footer__link"
+                                   th:text="${cat.name}">Categoría</a>
+                            </li>
+                        </th:block>
+                    </ul>
+                </nav>
+
+                <!-- Columna 3: Enlaces y Páginas -->
+                <nav aria-label="Enlaces de la tienda"
+                     class="sv-footer-pages-wrap"
+                     th:classappend="${!fShowPages ? 'hidden' : ''}">
+                    <h4 class="sv-footer__col-title">Navegación</h4>
+                    <ul class="sv-footer__list">
+                        <li><a th:href="@{/s/{slug}(slug=${slug}, preview=${fPreviewParam})}" class="sv-footer__link">Inicio</a></li>
+                        <li><a th:href="@{/s/{slug}/wishlist(slug=${slug}, preview=${fPreviewParam})}" class="sv-footer__link">Mis Favoritos</a></li>
+                        <li><a th:href="@{/s/{slug}/cart(slug=${slug}, preview=${fPreviewParam})}" class="sv-footer__link">Mi Bolsa</a></li>
+                        <th:block th:if="${fHasCustomPages}">
+                            <li th:each="cp : ${fCustomPages}">
+                                <a th:href="@{/s/{slug}/page/{pageSlug}(slug=${slug}, pageSlug=${cp.slug}, preview=${fPreviewParam})}"
+                                   class="sv-footer__link"
+                                   th:text="${cp.title}">Página</a>
+                            </li>
+                        </th:block>
+                    </ul>
+                </nav>
+
+                <!-- Columna 4: Contacto -->
+                <div class="sv-footer-contact-wrap" th:classappend="${!fShowContact ? 'hidden' : ''}">
+                    <h4 class="sv-footer__col-title">Contacto</h4>
+                    <ul class="sv-footer__list">
+                        <li th:if="${not #strings.isEmpty(fWaRaw)}">
+                            <a th:href="'https://wa.me/' + ${fWaNormalized}" target="_blank" rel="noopener" class="sv-footer__link inline-flex items-center gap-2">
+                                <span>WhatsApp:</span>
+                                <strong class="font-bold" th:text="${fWaRaw}"></strong>
+                            </a>
+                        </li>
+                        <li th:if="${not #strings.isEmpty(fEmailRaw)}">
+                            <a th:href="'mailto:' + ${fEmailRaw}" class="sv-footer__link inline-flex items-center gap-2">
+                                <span>Email:</span>
+                                <strong class="font-bold" th:text="${fEmailRaw}"></strong>
+                            </a>
+                        </li>
+                        <li th:if="${!fHasAnyContact}">
+                            <a th:href="@{/s/{slug}/catalog(slug=${slug}, preview=${fPreviewParam})}" class="sv-footer__link">Explorar productos</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Barra inferior con derechos y crédito -->
+            <div class="sv-footer__divider mt-10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs opacity-75">
+                <p class="sv-footer-copyright" th:text="${fCopyright}">© 2026 Tienda. Todos los derechos reservados.</p>
+                <p class="sv-footer-credit-wrap" th:classappend="${!fShowCredit ? 'hidden' : ''}">
+                    Desarrollado por <strong class="font-bold">Storevo SaaS</strong>
+                </p>
+            </div>
         </div>
-        <div>
-            <h4 class="font-bold mb-4 uppercase text-sm tracking-wider">Desarrollado por</h4>
-            <p class="text-sm opacity-90 font-medium tracking-tight">Storevo SaaS</p>
+    </div>
+
+    <!-- =================================================================== -->
+    <!-- 5. DISEÑO CON FRANJA DE CONFIANZA + COLUMNAS (trust_strip)          -->
+    <!-- =================================================================== -->
+    <div class="sv-footer__view" data-layout="trust_strip"
+         th:classappend="${fLayout != 'trust_strip' ? 'hidden' : ''}"
+         th:attr="aria-hidden=${fLayout != 'trust_strip' ? 'true' : null}">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <!-- Franja superior de confianza -->
+            <div class="sv-footer__trust-grid">
+                <div class="sv-footer__trust-item">
+                    <span class="sv-footer__trust-icon">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                    </span>
+                    <div>
+                        <p class="font-bold text-sm leading-tight">Compra 100% Protegida</p>
+                        <p class="text-xs opacity-75 mt-0.5">Pedidos seguros en línea o por WhatsApp</p>
+                    </div>
+                </div>
+                <div class="sv-footer__trust-item">
+                    <span class="sv-footer__trust-icon">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
+                    </span>
+                    <div>
+                        <p class="font-bold text-sm leading-tight">Envíos a toda Colombia</p>
+                        <p class="text-xs opacity-75 mt-0.5">Despachos confiables hasta tu puerta</p>
+                    </div>
+                </div>
+                <div class="sv-footer__trust-item">
+                    <span class="sv-footer__trust-icon">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+                    </span>
+                    <div>
+                        <p class="font-bold text-sm leading-tight">Atención Personalizada</p>
+                        <p class="text-xs opacity-75 mt-0.5">Soporte y asesoría directa en tu compra</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cuerpo de columnas debajo de la franja -->
+            <div class="sv-footer__grid-4 pt-8">
+                <div class="space-y-3">
+                    <a th:href="@{/s/{slug}(slug=${slug}, preview=${fPreviewParam})}"
+                       class="sv-footer__brand inline-flex items-center gap-2.5 no-underline">
+                        <img th:if="${fHasLogo}" th:src="${fLogoLight}" th:alt="${fStoreName}"
+                             class="sv-footer__logo-img sv-footer__logo-img--light">
+                        <img th:if="${fHasLogo and not #strings.isEmpty(fLogoDark)}" th:src="${fLogoDark}" alt=""
+                             class="sv-footer__logo-img sv-footer__logo-img--dark" aria-hidden="true">
+                        <h3 class="sv-footer__brand-name text-xl font-bold m-0" th:text="${fStoreName}">Tienda</h3>
+                    </a>
+                    <p class="sv-footer-desc text-sm opacity-85 leading-relaxed"
+                       th:classappend="${#strings.isEmpty(fDesc) ? 'hidden' : ''}"
+                       th:text="${fDesc}">Bienvenido a nuestra tienda online. Descubre nuestro catálogo con los mejores productos.</p>
+                    <div class="sv-footer-social-wrap flex items-center gap-2.5 pt-2"
+                         th:if="${fHasAnySocial}"
+                         th:classappend="${!fShowSocial ? 'hidden' : ''}">
+                        <a th:if="${not #strings.isEmpty(fIgUrl)}" th:href="${fIgUrl}" target="_blank" rel="noopener" title="Instagram" aria-label="Instagram"
+                           class="sv-footer__social-btn w-9 h-9 rounded-full bg-white/15 hover:bg-brand flex items-center justify-center transition">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                        </a>
+                        <a th:if="${not #strings.isEmpty(fFbUrl)}" th:href="${fFbUrl}" target="_blank" rel="noopener" title="Facebook" aria-label="Facebook"
+                           class="sv-footer__social-btn w-9 h-9 rounded-full bg-white/15 hover:bg-brand flex items-center justify-center transition">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M22.675 0h-21.35c-.732 0-1.325.593-1.325 1.325v21.351c0 .731.593 1.324 1.325 1.324h11.495v-9.294h-3.128v-3.622h3.128v-2.671c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.795.143v3.24l-1.918.001c-1.504 0-1.795.715-1.795 1.763v2.313h3.587l-.467 3.622h-3.12v9.293h6.116c.73 0 1.323-.593 1.323-1.325v-21.35c0-.732-.593-1.325-1.325-1.325z"/></svg>
+                        </a>
+                        <a th:if="${not #strings.isEmpty(fTtUrl)}" th:href="${fTtUrl}" target="_blank" rel="noopener" title="TikTok" aria-label="TikTok"
+                           class="sv-footer__social-btn w-9 h-9 rounded-full bg-white/15 hover:bg-brand flex items-center justify-center transition">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/></svg>
+                        </a>
+                    </div>
+                </div>
+
+                <nav aria-label="Categorías de la tienda"
+                     class="sv-footer-categories-wrap"
+                     th:classappend="${!fShowCategories ? 'hidden' : ''}">
+                    <h4 class="sv-footer__col-title">Categorías</h4>
+                    <ul class="sv-footer__list">
+                        <li><a th:href="@{/s/{slug}/catalog(slug=${slug}, preview=${fPreviewParam})}" class="sv-footer__link">Todo el catálogo</a></li>
+                        <th:block th:if="${fHasCats}">
+                            <li th:each="cat, iterStat : ${fCats}"
+                                th:if="${iterStat.index < 6 and (cat.isActive == null or cat.isActive) and cat.parentCategory == null}">
+                                <a th:href="@{/s/{slug}/catalog(slug=${slug}, category=${cat.id}, preview=${fPreviewParam})}"
+                                   class="sv-footer__link"
+                                   th:text="${cat.name}">Categoría</a>
+                            </li>
+                        </th:block>
+                    </ul>
+                </nav>
+
+                <nav aria-label="Enlaces de la tienda"
+                     class="sv-footer-pages-wrap"
+                     th:classappend="${!fShowPages ? 'hidden' : ''}">
+                    <h4 class="sv-footer__col-title">Enlaces Rápidos</h4>
+                    <ul class="sv-footer__list">
+                        <li><a th:href="@{/s/{slug}(slug=${slug}, preview=${fPreviewParam})}" class="sv-footer__link">Inicio</a></li>
+                        <li><a th:href="@{/s/{slug}/wishlist(slug=${slug}, preview=${fPreviewParam})}" class="sv-footer__link">Mis Favoritos</a></li>
+                        <li><a th:href="@{/s/{slug}/cart(slug=${slug}, preview=${fPreviewParam})}" class="sv-footer__link">Mi Bolsa</a></li>
+                        <th:block th:if="${fHasCustomPages}">
+                            <li th:each="cp : ${fCustomPages}">
+                                <a th:href="@{/s/{slug}/page/{pageSlug}(slug=${slug}, pageSlug=${cp.slug}, preview=${fPreviewParam})}"
+                                   class="sv-footer__link"
+                                   th:text="${cp.title}">Página</a>
+                            </li>
+                        </th:block>
+                    </ul>
+                </nav>
+
+                <div class="sv-footer-contact-wrap" th:classappend="${!fShowContact ? 'hidden' : ''}">
+                    <h4 class="sv-footer__col-title">Atención al Cliente</h4>
+                    <ul class="sv-footer__list">
+                        <li th:if="${not #strings.isEmpty(fWaRaw)}">
+                            <a th:href="'https://wa.me/' + ${fWaNormalized}" target="_blank" rel="noopener" class="sv-footer__link inline-flex items-center gap-2">
+                                <span>WhatsApp:</span>
+                                <strong class="font-bold" th:text="${fWaRaw}"></strong>
+                            </a>
+                        </li>
+                        <li th:if="${not #strings.isEmpty(fEmailRaw)}">
+                            <a th:href="'mailto:' + ${fEmailRaw}" class="sv-footer__link inline-flex items-center gap-2">
+                                <span>Email:</span>
+                                <strong class="font-bold" th:text="${fEmailRaw}"></strong>
+                            </a>
+                        </li>
+                        <li th:if="${!fHasAnyContact}">
+                            <a th:href="@{/s/{slug}/catalog(slug=${slug}, preview=${fPreviewParam})}" class="sv-footer__link">Ver catálogo disponible</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="sv-footer__divider mt-10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs opacity-75">
+                <p class="sv-footer-copyright" th:text="${fCopyright}">© 2026 Tienda. Todos los derechos reservados.</p>
+                <p class="sv-footer-credit-wrap" th:classappend="${!fShowCredit ? 'hidden' : ''}">
+                    Desarrollado por <strong class="font-bold">Storevo SaaS</strong>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- =================================================================== -->
+    <!-- 6. DISEÑO MODERNO / MARKETPLACE (marketplace - Acordeón en móvil)   -->
+    <!-- =================================================================== -->
+    <div class="sv-footer__view" data-layout="marketplace"
+         th:classappend="${fLayout != 'marketplace' ? 'hidden' : ''}"
+         th:attr="aria-hidden=${fLayout != 'marketplace' ? 'true' : null}">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="sv-footer__marketplace-card">
+                <!-- Cabecera de tarjeta: Identidad + CTA directo -->
+                <div class="sv-footer__marketplace-top">
+                    <div class="space-y-2 max-w-xl">
+                        <a th:href="@{/s/{slug}(slug=${slug}, preview=${fPreviewParam})}"
+                           class="sv-footer__brand inline-flex items-center gap-2.5 no-underline">
+                            <img th:if="${fHasLogo}" th:src="${fLogoLight}" th:alt="${fStoreName}"
+                                 class="sv-footer__logo-img sv-footer__logo-img--light">
+                            <img th:if="${fHasLogo and not #strings.isEmpty(fLogoDark)}" th:src="${fLogoDark}" alt=""
+                                 class="sv-footer__logo-img sv-footer__logo-img--dark" aria-hidden="true">
+                            <h3 class="sv-footer__brand-name text-xl sm:text-2xl font-black tracking-tight m-0" th:text="${fStoreName}">Tienda</h3>
+                        </a>
+                        <p class="sv-footer-desc text-sm opacity-85 leading-relaxed"
+                           th:classappend="${#strings.isEmpty(fDesc) ? 'hidden' : ''}"
+                           th:text="${fDesc}">Bienvenido a nuestra tienda online. Descubre nuestro catálogo con los mejores productos.</p>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-3">
+                        <a th:if="${not #strings.isEmpty(fWaRaw)}"
+                           th:href="'https://wa.me/' + ${fWaNormalized}" target="_blank" rel="noopener"
+                           class="sv-footer__cta-btn inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition">
+                            <span>Hablar por WhatsApp</span>
+                            <span>→</span>
+                        </a>
+                        <a th:href="@{/s/{slug}/catalog(slug=${slug}, preview=${fPreviewParam})}"
+                           class="sv-footer__pill inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition">
+                            <span>Explorar Catálogo</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Grilla de columnas en PC / Acordeón interactivo en móvil (< 768px) -->
+                <div class="sv-footer__marketplace-cols">
+                    <!-- Acordeón 1: Categorías -->
+                    <nav aria-label="Categorías de la tienda"
+                         class="sv-footer__acc-group sv-footer-categories-wrap is-open"
+                         th:classappend="${!fShowCategories ? 'hidden' : ''}">
+                        <button type="button" class="sv-footer__acc-trigger" aria-expanded="true">
+                            <span>Categorías</span>
+                            <svg class="sv-footer__acc-icon w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                        <div class="sv-footer__acc-panel">
+                            <ul class="sv-footer__list">
+                                <li><a th:href="@{/s/{slug}/catalog(slug=${slug}, preview=${fPreviewParam})}" class="sv-footer__link">Todo el catálogo</a></li>
+                                <th:block th:if="${fHasCats}">
+                                    <li th:each="cat, iterStat : ${fCats}"
+                                        th:if="${iterStat.index < 6 and (cat.isActive == null or cat.isActive) and cat.parentCategory == null}">
+                                        <a th:href="@{/s/{slug}/catalog(slug=${slug}, category=${cat.id}, preview=${fPreviewParam})}"
+                                           class="sv-footer__link"
+                                           th:text="${cat.name}">Categoría</a>
+                                    </li>
+                                </th:block>
+                            </ul>
+                        </div>
+                    </nav>
+
+                    <!-- Acordeón 2: Tienda y Páginas -->
+                    <nav aria-label="Enlaces de la tienda"
+                         class="sv-footer__acc-group sv-footer-pages-wrap"
+                         th:classappend="${!fShowPages ? 'hidden' : ''}">
+                        <button type="button" class="sv-footer__acc-trigger" aria-expanded="false">
+                            <span>Tienda y Páginas</span>
+                            <svg class="sv-footer__acc-icon w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                        <div class="sv-footer__acc-panel">
+                            <ul class="sv-footer__list">
+                                <li><a th:href="@{/s/{slug}(slug=${slug}, preview=${fPreviewParam})}" class="sv-footer__link">Inicio</a></li>
+                                <li><a th:href="@{/s/{slug}/wishlist(slug=${slug}, preview=${fPreviewParam})}" class="sv-footer__link">Lista de Favoritos</a></li>
+                                <li><a th:href="@{/s/{slug}/cart(slug=${slug}, preview=${fPreviewParam})}" class="sv-footer__link">Bolsa de Compras</a></li>
+                                <th:block th:if="${fHasCustomPages}">
+                                    <li th:each="cp : ${fCustomPages}">
+                                        <a th:href="@{/s/{slug}/page/{pageSlug}(slug=${slug}, pageSlug=${cp.slug}, preview=${fPreviewParam})}"
+                                           class="sv-footer__link"
+                                           th:text="${cp.title}">Página</a>
+                                    </li>
+                                </th:block>
+                            </ul>
+                        </div>
+                    </nav>
+
+                    <!-- Acordeón 3: Contacto y Redes -->
+                    <div class="sv-footer__acc-group sv-footer-contact-wrap"
+                         th:classappend="${!fShowContact ? 'hidden' : ''}">
+                        <button type="button" class="sv-footer__acc-trigger" aria-expanded="false">
+                            <span>Contacto Directo</span>
+                            <svg class="sv-footer__acc-icon w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                        <div class="sv-footer__acc-panel">
+                            <ul class="sv-footer__list">
+                                <li th:if="${not #strings.isEmpty(fWaRaw)}">
+                                    <a th:href="'https://wa.me/' + ${fWaNormalized}" target="_blank" rel="noopener" class="sv-footer__link inline-flex items-center gap-2">
+                                        <span>WhatsApp:</span>
+                                        <strong class="font-bold" th:text="${fWaRaw}"></strong>
+                                    </a>
+                                </li>
+                                <li th:if="${not #strings.isEmpty(fEmailRaw)}">
+                                    <a th:href="'mailto:' + ${fEmailRaw}" class="sv-footer__link inline-flex items-center gap-2">
+                                        <span>Email:</span>
+                                        <strong class="font-bold" th:text="${fEmailRaw}"></strong>
+                                    </a>
+                                </li>
+                                <li th:if="${!fHasAnyContact}">
+                                    <a th:href="@{/s/{slug}/catalog(slug=${slug}, preview=${fPreviewParam})}" class="sv-footer__link">Atención online en catálogo</a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Barra inferior dentro de la tarjeta Marketplace -->
+                <div class="sv-footer__divider mt-6 pt-5 flex flex-col md:flex-row items-center justify-between gap-4 text-xs">
+                    <p class="sv-footer-copyright opacity-75" th:text="${fCopyright}">© 2026 Tienda. Todos los derechos reservados.</p>
+
+                    <div class="sv-footer-social-wrap flex items-center gap-2.5"
+                         th:if="${fHasAnySocial}"
+                         th:classappend="${!fShowSocial ? 'hidden' : ''}">
+                        <a th:if="${not #strings.isEmpty(fIgUrl)}" th:href="${fIgUrl}" target="_blank" rel="noopener" title="Instagram" aria-label="Instagram"
+                           class="sv-footer__social-btn w-8 h-8 rounded-full bg-white/15 hover:bg-brand flex items-center justify-center transition">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                        </a>
+                        <a th:if="${not #strings.isEmpty(fFbUrl)}" th:href="${fFbUrl}" target="_blank" rel="noopener" title="Facebook" aria-label="Facebook"
+                           class="sv-footer__social-btn w-8 h-8 rounded-full bg-white/15 hover:bg-brand flex items-center justify-center transition">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M22.675 0h-21.35c-.732 0-1.325.593-1.325 1.325v21.351c0 .731.593 1.324 1.325 1.324h11.495v-9.294h-3.128v-3.622h3.128v-2.671c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.795.143v3.24l-1.918.001c-1.504 0-1.795.715-1.795 1.763v2.313h3.587l-.467 3.622h-3.12v9.293h6.116c.73 0 1.323-.593 1.323-1.325v-21.35c0-.732-.593-1.325-1.325-1.325z"/></svg>
+                        </a>
+                        <a th:if="${not #strings.isEmpty(fTtUrl)}" th:href="${fTtUrl}" target="_blank" rel="noopener" title="TikTok" aria-label="TikTok"
+                           class="sv-footer__social-btn w-8 h-8 rounded-full bg-white/15 hover:bg-brand flex items-center justify-center transition">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/></svg>
+                        </a>
+                    </div>
+
+                    <p class="sv-footer-credit-wrap opacity-75" th:classappend="${!fShowCredit ? 'hidden' : ''}">
+                        Desarrollado por <strong class="font-bold">Storevo SaaS</strong>
+                    </p>
+                </div>
+            </div>
         </div>
     </div>
 </footer>
+<script data-sv-persistent="true">
+    (function() {
+        window.Storevo = window.Storevo || {};
+        Storevo.UI = Storevo.UI || {};
+
+        function checkIsLightHex(hex) {
+            if (Storevo.UI.NavbarStyle && typeof Storevo.UI.NavbarStyle.isLightColor === 'function') {
+                return Storevo.UI.NavbarStyle.isLightColor(hex);
+            }
+            let h = String(hex || '').trim().replace('#', '');
+            if (h.length === 3) h = h.split('').map(c => c + c).join('');
+            if (!/^[0-9a-fA-F]{6}$/.test(h)) return false;
+            const toLin = (v) => {
+                const c = v / 255;
+                return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+            };
+            const r = toLin(parseInt(h.substr(0, 2), 16));
+            const g = toLin(parseInt(h.substr(2, 2), 16));
+            const b = toLin(parseInt(h.substr(4, 2), 16));
+            return (0.2126 * r + 0.7152 * g + 0.0722 * b) > 0.42;
+        }
+
+        Storevo.UI.FooterStyle = {
+            apply: function(styles) {
+                const footer = document.getElementById('storeFooter');
+                if (!footer) return;
+
+                if (styles) {
+                    if (styles.footerLayout) {
+                        footer.setAttribute('data-footer-layout', styles.footerLayout);
+                        document.body.dataset.svFooterLayout = styles.footerLayout;
+                    }
+                    if (styles.footerTone) {
+                        footer.setAttribute('data-footer-tone', styles.footerTone);
+                        document.body.dataset.svFooterTone = styles.footerTone;
+                    }
+                    if (styles.footerBrandMode) {
+                        footer.setAttribute('data-footer-brand-mode', styles.footerBrandMode);
+                        document.body.dataset.svFooterBrandMode = styles.footerBrandMode;
+                    }
+                    if (styles.navbarLogoSize) {
+                        footer.setAttribute('data-footer-logo-size', styles.navbarLogoSize);
+                    }
+                    if (styles.navbarLogoUrl !== undefined) {
+                        const lightUrl = String(styles.navbarLogoUrl || '').trim();
+                        footer.setAttribute('data-footer-has-logo', lightUrl.length > 0 ? 'true' : 'false');
+                        footer.querySelectorAll('.sv-footer__logo-img--light').forEach(img => {
+                            if (lightUrl) img.setAttribute('src', lightUrl);
+                        });
+                    }
+                    if (styles.navbarLogoDarkUrl !== undefined) {
+                        const darkUrl = String(styles.navbarLogoDarkUrl || '').trim();
+                        footer.setAttribute('data-footer-has-dark-logo', darkUrl.length > 0 ? 'true' : 'false');
+                        footer.querySelectorAll('.sv-footer__logo-img--dark').forEach(img => {
+                            if (darkUrl) img.setAttribute('src', darkUrl);
+                        });
+                    }
+                    if (styles.footerDescription !== undefined && styles.footerDescription !== null) {
+                        const descText = String(styles.footerDescription).trim();
+                        document.body.dataset.svFooterDescription = descText;
+                        footer.querySelectorAll('.sv-footer-desc').forEach(el => {
+                            el.textContent = descText;
+                            el.classList.toggle('hidden', descText.length === 0);
+                        });
+                    }
+                    if (styles.footerCopyrightText !== undefined && styles.footerCopyrightText !== null) {
+                        const rawCopy = String(styles.footerCopyrightText).trim();
+                        document.body.dataset.svFooterCopyright = rawCopy;
+                        const fallbackCopy = footer.getAttribute('data-footer-default-copyright')
+                            || ('© ' + new Date().getFullYear() + ' ' + (footer.getAttribute('data-footer-store-name') || 'Tienda') + '. Todos los derechos reservados.');
+                        const finalCopy = rawCopy.length > 0 ? rawCopy : fallbackCopy;
+                        footer.querySelectorAll('.sv-footer-copyright').forEach(el => {
+                            el.textContent = finalCopy;
+                        });
+                    }
+                    const toggleMap = [
+                        { key: 'footerShowSocial', attr: 'data-footer-show-social', ds: 'svFooterShowSocial', sel: '.sv-footer-social-wrap' },
+                        { key: 'footerShowContact', attr: 'data-footer-show-contact', ds: 'svFooterShowContact', sel: '.sv-footer-contact-wrap' },
+                        { key: 'footerShowCategories', attr: 'data-footer-show-categories', ds: 'svFooterShowCategories', sel: '.sv-footer-categories-wrap' },
+                        { key: 'footerShowPages', attr: 'data-footer-show-pages', ds: 'svFooterShowPages', sel: '.sv-footer-pages-wrap' },
+                        { key: 'footerShowCredit', attr: 'data-footer-show-credit', ds: 'svFooterShowCredit', sel: '.sv-footer-credit-wrap' }
+                    ];
+                    toggleMap.forEach(item => {
+                        if (styles[item.key] !== undefined && styles[item.key] !== null) {
+                            const show = String(styles[item.key]) !== 'false';
+                            footer.setAttribute(item.attr, show ? 'true' : 'false');
+                            document.body.dataset[item.ds] = show ? 'true' : 'false';
+                            footer.querySelectorAll(item.sel).forEach(el => {
+                                el.classList.toggle('hidden', !show);
+                            });
+                        }
+                    });
+                }
+
+                // Sincronizar vista activa según data-footer-layout
+                const activeLayout = footer.getAttribute('data-footer-layout') || 'classic';
+                footer.querySelectorAll('.sv-footer__view').forEach(view => {
+                    const isMatch = view.getAttribute('data-layout') === activeLayout;
+                    view.classList.toggle('hidden', !isMatch);
+                    if (isMatch) {
+                        view.removeAttribute('aria-hidden');
+                    } else {
+                        view.setAttribute('aria-hidden', 'true');
+                    }
+                });
+
+                // Calcular luminancia real cuando el tono es secondary o primary para garantizar contraste legible
+                const tone = footer.getAttribute('data-footer-tone') || 'secondary';
+                if (tone === 'light') {
+                    footer.setAttribute('data-footer-luminance', 'light');
+                } else if (tone === 'dark') {
+                    footer.setAttribute('data-footer-luminance', 'dark');
+                } else {
+                    const cssVar = tone === 'primary' ? '--brand-color' : '--brand-secondary';
+                    const rawColor = getComputedStyle(document.documentElement).getPropertyValue(cssVar);
+                    footer.setAttribute('data-footer-luminance', checkIsLightHex(rawColor) ? 'light' : 'dark');
+                }
+
+                this.inspectLogoContrast(footer);
+            },
+
+            inspectLogoContrast: function(footer) {
+                if (!footer) return;
+                const firstLightLogo = footer.querySelector('.sv-footer__logo-img--light');
+                const src = firstLightLogo ? firstLightLogo.getAttribute('src') : '';
+                if (!src) {
+                    footer.removeAttribute('data-logo-already-light');
+                    return;
+                }
+                if (footer._lastInspectedLogoSrc === src) return;
+                footer._lastInspectedLogoSrc = src;
+
+                const probe = new Image();
+                probe.crossOrigin = 'anonymous';
+                probe.onload = function() {
+                    try {
+                        const w = Math.min(64, probe.naturalWidth || 64);
+                        const h = Math.min(64, probe.naturalHeight || 64);
+                        const c = document.createElement('canvas');
+                        c.width = w;
+                        c.height = h;
+                        const ctx = c.getContext('2d');
+                        ctx.drawImage(probe, 0, 0, w, h);
+                        const data = ctx.getImageData(0, 0, w, h).data;
+
+                        // Si las esquinas son opacas y claras, tiene fondo blanco sólido -> requiere fusión (no es already-light)
+                        const corners = [0, (w - 1) * 4, (h - 1) * w * 4, ((h - 1) * w + (w - 1)) * 4];
+                        let opaqueWhiteCorners = 0;
+                        corners.forEach(idx => {
+                            if (data[idx + 3] > 200 && data[idx] > 215 && data[idx + 1] > 215 && data[idx + 2] > 215) {
+                                opaqueWhiteCorners++;
+                            }
+                        });
+                        if (opaqueWhiteCorners >= 2) {
+                            footer.setAttribute('data-logo-already-light', 'false');
+                            return;
+                        }
+
+                        // Si el fondo es transparente, medir brillo promedio de los píxeles visibles
+                        let brightSum = 0;
+                        let visibleCount = 0;
+                        for (let i = 0; i < data.length; i += 4) {
+                            if (data[i + 3] > 60) {
+                                brightSum += (0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
+                                visibleCount++;
+                            }
+                        }
+                        const avgBright = visibleCount > 0 ? (brightSum / visibleCount) : 0;
+                        footer.setAttribute('data-logo-already-light', avgBright > 170 ? 'true' : 'false');
+                    } catch (err) {
+                        footer.setAttribute('data-logo-already-light', 'false');
+                    }
+                };
+                probe.onerror = function() {
+                    footer.setAttribute('data-logo-already-light', 'false');
+                };
+                probe.src = src;
+            }
+        };
+
+        // Delegación global de eventos para acordeones móviles del footer (sin listeners duplicados al recargar)
+        if (!window.__storevoFooterAccordionBound) {
+            window.__storevoFooterAccordionBound = true;
+            document.addEventListener('click', function(e) {
+                const trigger = e.target && e.target.closest ? e.target.closest('.sv-footer__acc-trigger') : null;
+                if (!trigger) return;
+                if (window.innerWidth >= 768) return;
+                e.preventDefault();
+                const group = trigger.closest('.sv-footer__acc-group');
+                if (!group) return;
+                const isOpen = group.classList.toggle('is-open');
+                trigger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            });
+        }
+
+        Storevo.UI.FooterStyle.apply();
+    })();
+</script>
 
 <!-- Puente de datos del Navbar Avanzado (Categorías de hasta 3 niveles con Foto Automática + Páginas Personalizadas) -->
 <div id="storevo-navbar-advanced-bridge" class="hidden"
@@ -2176,6 +2987,9 @@
             }
             if (window.Storevo && Storevo.UI && Storevo.UI.NavbarStyle) {
                 Storevo.UI.NavbarStyle.apply(s);
+            }
+            if (window.Storevo && Storevo.UI && Storevo.UI.FooterStyle) {
+                Storevo.UI.FooterStyle.apply(s);
             }
 
             const filterKeysMap = {
