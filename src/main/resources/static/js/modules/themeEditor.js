@@ -1381,10 +1381,45 @@ Storevo.ThemeEditor = {
         }
     },
 
+    _isDeviceTransitioning: false,
+    _deviceTransitionTimer: null,
+
+    waitForPreviewTransition: function(callback) {
+        const frameContainer = document.getElementById('preview-frame-container');
+        if (!frameContainer || !this._isDeviceTransitioning) {
+            requestAnimationFrame(() => {
+                if (typeof callback === 'function') callback();
+            });
+            return;
+        }
+        let settled = false;
+        const done = () => {
+            if (settled) return;
+            settled = true;
+            frameContainer.removeEventListener('transitionend', onEnd);
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    if (typeof callback === 'function') callback();
+                });
+            });
+        };
+        const onEnd = (e) => {
+            if (e && e.target === frameContainer && (e.propertyName === 'width' || e.propertyName === 'height')) {
+                done();
+            }
+        };
+        frameContainer.addEventListener('transitionend', onEnd);
+        setTimeout(done, 360);
+    },
+
     setDevice: function(device) {
         const wrapper = document.getElementById('preview-viewport-wrapper');
+        const frameContainer = document.getElementById('preview-frame-container');
         const btnDesktop = document.getElementById('btn-device-desktop');
         const btnMobile = document.getElementById('btn-device-mobile');
+
+        const prevDevice = wrapper ? (wrapper.getAttribute('data-device') || 'desktop') : 'desktop';
+        const deviceChanged = prevDevice !== device;
 
         if (wrapper) wrapper.setAttribute('data-device', device);
 
@@ -1394,6 +1429,42 @@ Storevo.ThemeEditor = {
             btnDesktop.className = device === 'desktop' ? activeClass : inactiveClass;
             btnMobile.className = device === 'mobile' ? activeClass : inactiveClass;
         }
+
+        if (!deviceChanged) {
+            requestAnimationFrame(() => {
+                document.dispatchEvent(new CustomEvent('storevo:device-transition-ended', { detail: { device } }));
+            });
+            return;
+        }
+
+        this._isDeviceTransitioning = true;
+        clearTimeout(this._deviceTransitionTimer);
+
+        let finished = false;
+        const finishTransition = () => {
+            if (finished) return;
+            finished = true;
+            this._isDeviceTransitioning = false;
+            if (frameContainer) {
+                frameContainer.removeEventListener('transitionend', onTransEnd);
+            }
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    document.dispatchEvent(new CustomEvent('storevo:device-transition-ended', { detail: { device } }));
+                });
+            });
+        };
+
+        const onTransEnd = (e) => {
+            if (e && e.target === frameContainer && (e.propertyName === 'width' || e.propertyName === 'height')) {
+                finishTransition();
+            }
+        };
+
+        if (frameContainer) {
+            frameContainer.addEventListener('transitionend', onTransEnd);
+        }
+        this._deviceTransitionTimer = setTimeout(finishTransition, 360);
     },
 
     moveSectionByStep: function(sectionId, delta) {
@@ -1795,6 +1866,698 @@ Storevo.ThemeEditor = {
 
         if (!sec.settings) sec.settings = {};
 
+        const buildInteractiveImageWidget = (field, currentVal) => {
+            sec._measuredContainers = sec._measuredContainers || {};
+            if (!sec._measuredContainers[field.key]) {
+                sec._measuredContainers[field.key] = { pc: null, mobile: null };
+            }
+            const measuredCache = sec._measuredContainers[field.key];
+
+            const getFallbackSpec = () => {
+                const s = sec.settings || {};
+                if (field.key === 'layoutBgImageUrl') {
+                    if (['announcement_bar', 'trust_badges', 'stats_counter', 'brand_carousel', 'payment_methods'].includes(sec.type)) {
+                        return { pc: '16 / 4', mobile: '4 / 3', size: '1920×480 px', minW: 1200, mobileSize: '1080×810 px', mobileMinW: 720, defaultFit: 'cover', isVariableRatio: true, basePcW: 1920 };
+                    }
+                    if (['countdown_promo', 'whatsapp_cta', 'promo_banner', 'multi_banners', 'hero_banner'].includes(sec.type)) {
+                        return { pc: '16 / 6', mobile: '4 / 5', size: '1920×720 px', minW: 1280, mobileSize: '1080×1350 px', mobileMinW: 720, defaultFit: 'cover', isVariableRatio: true, basePcW: 1920 };
+                    }
+                    return { pc: '16 / 7', mobile: '4 / 5', size: '1920×840 px', minW: 1280, mobileSize: '1080×1350 px', mobileMinW: 720, defaultFit: 'cover', isVariableRatio: true, basePcW: 1920 };
+                }
+                switch (sec.type) {
+                    case 'hero_banner': {
+                        if (s.heroLayout === 'split') {
+                            return { pc: '4 / 3', mobile: '4 / 3', size: '1200×900 px', minW: 900, mobileSize: '1080×810 px', mobileMinW: 720, defaultFit: 'cover', isVariableRatio: false, basePcW: 1200 };
+                        }
+                        const hMode = s.heroHeight || 'default';
+                        const pcHMap = { sm: 320, md: 460, lg: 560, xl: 680, default: (s.heroLayout === 'compact' ? 300 : 440) };
+                        const mobHMap = { sm: 260, md: 360, lg: 440, xl: 520, default: (s.heroLayout === 'compact' ? 240 : 340) };
+                        const pcH = pcHMap[hMode] || 440;
+                        const mobH = mobHMap[hMode] || 340;
+                        const recPcH = Math.round((1920 * pcH) / 1280);
+                        const recMobH = Math.round((1080 * mobH) / 365);
+                        return {
+                            pc: `1280 / ${pcH}`,
+                            mobile: `365 / ${mobH}`,
+                            size: `1920×${recPcH} px`,
+                            minW: 1280,
+                            mobileSize: `1080×${recMobH} px`,
+                            mobileMinW: 720,
+                            defaultFit: 'cover',
+                            isVariableRatio: true,
+                            basePcW: 1920
+                        };
+                    }
+                    case 'promo_banner':
+                        return { pc: '8 / 5', mobile: '4 / 3', size: '1200×750 px', minW: 850, mobileSize: '1080×810 px', mobileMinW: 720, defaultFit: 'cover', isVariableRatio: true, basePcW: 1200 };
+                    case 'multi_banners': {
+                        const count = String(s.cardCount || '2');
+                        const layout = String(s.bannerLayout || 'equal');
+                        const idxMatch = field.key.match(/^card(\d+)ImageUrl$/);
+                        const cardIdx = idxMatch ? parseInt(idxMatch[1], 10) : 1;
+                        let pcRatio = '16 / 8';
+                        let pcSize = '1200×600 px';
+                        if (count === '2') {
+                            if (layout === 'split_left') {
+                                pcRatio = cardIdx === 1 ? '16 / 7' : '16 / 10';
+                                pcSize = cardIdx === 1 ? '1200×525 px' : '1200×750 px';
+                            } else if (layout === 'split_right') {
+                                pcRatio = cardIdx === 1 ? '16 / 10' : '16 / 7';
+                                pcSize = cardIdx === 1 ? '1200×750 px' : '1200×525 px';
+                            }
+                        } else if (count === '3') {
+                            if (layout === 'mosaic_3' && cardIdx === 1) {
+                                pcRatio = '4 / 3';
+                                pcSize = '1200×900 px';
+                            } else if (layout === 'cols_3') {
+                                pcRatio = '3 / 2';
+                                pcSize = '1200×800 px';
+                            }
+                        } else if (count === '4') {
+                            if (layout === 'cols_4') {
+                                pcRatio = '11 / 10';
+                                pcSize = '1100×1000 px';
+                            } else {
+                                pcRatio = '16 / 7';
+                                pcSize = '1200×525 px';
+                            }
+                        }
+                        return { pc: pcRatio, mobile: '4 / 3', size: pcSize, minW: 800, mobileSize: '1080×810 px', mobileMinW: 700, defaultFit: 'cover', isVariableRatio: true, basePcW: 1200 };
+                    }
+                    case 'rich_text':
+                    case 'visit_us':
+                        return { pc: '4 / 3', mobile: '4 / 3', size: '1200×900 px', minW: 800, mobileSize: '1080×810 px', mobileMinW: 700, defaultFit: 'cover', isVariableRatio: false, basePcW: 1200 };
+                    case 'featured_video':
+                        return s.aspectRatio === '9:16'
+                            ? { pc: '9 / 16', mobile: '9 / 16', size: '720×1280 px', minW: 700, mobileSize: '720×1280 px', mobileMinW: 600, defaultFit: 'cover', isVariableRatio: false, basePcW: 720 }
+                            : { pc: '16 / 9', mobile: '16 / 9', size: '1280×720 px', minW: 1000, mobileSize: '1080×608 px', mobileMinW: 720, defaultFit: 'cover', isVariableRatio: false, basePcW: 1280 };
+                    case 'gallery_lookbook': {
+                        const a = s.imageAspect;
+                        if (a === 'square') return { pc: '1 / 1', mobile: '1 / 1', size: '1080×1080 px', minW: 800, mobileSize: '1080×1080 px', mobileMinW: 700, defaultFit: 'cover', isVariableRatio: false, basePcW: 1080 };
+                        if (a === 'landscape') return { pc: '4 / 3', mobile: '4 / 3', size: '1200×900 px', minW: 900, mobileSize: '1080×810 px', mobileMinW: 700, defaultFit: 'cover', isVariableRatio: false, basePcW: 1200 };
+                        return { pc: '4 / 5', mobile: '4 / 5', size: '1080×1350 px', minW: 800, mobileSize: '1080×1350 px', mobileMinW: 700, defaultFit: 'cover', isVariableRatio: false, basePcW: 1080 };
+                    }
+                    case 'social_showcase':
+                        return { pc: '1 / 1', mobile: '1 / 1', size: '1080×1080 px', minW: 800, mobileSize: '1080×1080 px', mobileMinW: 700, defaultFit: 'cover', isVariableRatio: false, basePcW: 1080 };
+                    case 'brand_carousel':
+                        return { pc: '5 / 2', mobile: '5 / 2', size: '400×160 px (PNG o WEBP transparente)', minW: 200, mobileSize: '400×160 px', mobileMinW: 200, defaultFit: 'contain', disableMobileSplit: true, isVariableRatio: false, basePcW: 400 };
+                    default:
+                        return { pc: '16 / 9', mobile: '4 / 3', size: '1200×675 px', minW: 800, mobileSize: '1080×810 px', mobileMinW: 700, defaultFit: 'cover', isVariableRatio: false, basePcW: 1200 };
+                }
+            };
+
+            const measureLiveContainerInIframe = () => {
+                if (this._isDeviceTransitioning) return;
+                const iframe = document.getElementById('storefront-preview-iframe');
+                const wrapper = document.getElementById('preview-viewport-wrapper');
+                if (!iframe || !iframe.contentDocument || !wrapper) return;
+
+                const currentPreviewDevice = wrapper.getAttribute('data-device') === 'mobile' ? 'mobile' : 'pc';
+                const iDoc = iframe.contentDocument;
+                const secEl = iDoc.querySelector(`.storevo-theme-section[data-section-id="${sec.id}"]`);
+                if (!secEl) return;
+
+                const s = sec.settings || {};
+                let targetEl = null;
+                let widthAdjust = 1;
+                let minExpectedH = 0;
+
+                if (field.key === 'layoutBgImageUrl') {
+                    targetEl = secEl;
+                } else if (sec.type === 'hero_banner') {
+                    if (s.heroLayout === 'split') {
+                        targetEl = secEl.querySelector('.sv-hero-split__media > div');
+                    } else {
+                        targetEl = secEl.querySelector('section.sv-hero-section') || secEl.querySelector('section') || secEl;
+                        const hMode = s.heroHeight || 'default';
+                        if (hMode === 'default' && s.heroLayout !== 'compact') {
+                            minExpectedH = currentPreviewDevice === 'mobile' ? 340 : 440;
+                        }
+                    }
+                } else if (sec.type === 'multi_banners') {
+                    const m = field.key.match(/^card(\d+)ImageUrl$/);
+                    const idx = m ? m[1] : '1';
+                    targetEl = secEl.querySelector(`.sv-multi-banner-card[data-card-idx="${idx}"]`) || secEl.querySelector('.sv-multi-banner-card');
+                } else if (sec.type === 'promo_banner') {
+                    targetEl = secEl.querySelector('section > div > div.relative.bg-slate-800');
+                    if (!targetEl) {
+                        targetEl = secEl.querySelector('section > div');
+                        if (targetEl && currentPreviewDevice === 'pc') {
+                            widthAdjust = 0.5;
+                            minExpectedH = 380;
+                        } else if (targetEl && currentPreviewDevice === 'mobile') {
+                            minExpectedH = 260;
+                        }
+                    }
+                } else if (sec.type === 'rich_text' || sec.type === 'visit_us') {
+                    targetEl = secEl.querySelector('.sv-rich-text-media > div');
+                } else if (sec.type === 'featured_video') {
+                    targetEl = secEl.querySelector('.sv-video-frame');
+                } else if (sec.type === 'gallery_lookbook' || sec.type === 'social_showcase') {
+                    targetEl = secEl.querySelector('.sv-lookbook-item');
+                }
+
+                if (!targetEl) return;
+                const rect = targetEl.getBoundingClientRect();
+                const effW = Math.round(rect.width * widthAdjust);
+                const effH = Math.round(Math.max(rect.height, minExpectedH));
+                if (effW < 40 || effH < 30) return;
+
+                const fb = getFallbackSpec();
+                const baseW = currentPreviewDevice === 'mobile' ? 1080 : (fb.basePcW || 1200);
+                const recH = Math.max(140, Math.min(2400, Math.round((baseW * effH) / effW)));
+
+                measuredCache[currentPreviewDevice] = {
+                    ratio: `${effW} / ${effH}`,
+                    size: `${baseW}×${recH} px`,
+                    rawW: effW,
+                    rawH: effH,
+                    minW: currentPreviewDevice === 'mobile' ? (fb.mobileMinW || 700) : (fb.minW || 800)
+                };
+            };
+
+            const getFrameSpec = () => {
+                const fb = getFallbackSpec();
+                if (!fb) return null;
+                if (!fb.isVariableRatio) {
+                    return fb;
+                }
+                const mPc = measuredCache.pc;
+                const mMob = measuredCache.mobile;
+                return {
+                    pc: mPc ? mPc.ratio : fb.pc,
+                    mobile: mMob ? mMob.ratio : fb.mobile,
+                    size: mPc ? mPc.size : fb.size,
+                    minW: mPc ? mPc.minW : fb.minW,
+                    mobileSize: mMob ? mMob.size : fb.mobileSize,
+                    mobileMinW: mMob ? mMob.minW : fb.mobileMinW,
+                    defaultFit: fb.defaultFit,
+                    disableMobileSplit: fb.disableMobileSplit,
+                    isVariableRatio: fb.isVariableRatio,
+                    measuredPc: Boolean(mPc),
+                    measuredMobile: Boolean(mMob)
+                };
+            };
+
+            const base = field.key.replace(/Url$/, '');
+            const pcUrlKey = field.key;
+            const mobBase = base + 'Mobile';
+            const mobUrlKey = mobBase + 'Url';
+            const legacyMobUrlKey = base === 'image'
+                ? 'mobileImageUrl'
+                : (base.endsWith('Image') ? base.replace(/Image$/, 'MobileImageUrl') : null);
+
+            const clampNum = (v, d, lo, hi) => {
+                const n = parseFloat(v);
+                return isNaN(n) ? d : Math.min(hi, Math.max(lo, n));
+            };
+
+            const initialSpec = getFallbackSpec();
+            const defFit = (initialSpec && initialSpec.defaultFit) ? initialSpec.defaultFit : 'cover';
+            const st0 = sec.settings || {};
+
+            let pcUrlVal = String(currentVal || '').trim();
+            let mobUrlVal = String(st0[mobUrlKey] || (legacyMobUrlKey && st0[legacyMobUrlKey]) || '').trim();
+
+            const pcFrame = {
+                fit: st0[base + 'Fit'] === 'contain' ? 'contain' : (st0[base + 'Fit'] === 'cover' ? 'cover' : defFit),
+                x: clampNum(st0[base + 'PosX'], 50, 0, 100),
+                y: clampNum(st0[base + 'PosY'], 50, 0, 100),
+                zoom: clampNum(st0[base + 'Zoom'], 100, 100, 250)
+            };
+
+            const hasSavedMobFrame = st0[mobBase + 'Fit'] !== undefined || st0[mobBase + 'PosX'] !== undefined
+                || st0[mobBase + 'PosY'] !== undefined || st0[mobBase + 'Zoom'] !== undefined;
+
+            const mobFrame = {
+                fit: st0[mobBase + 'Fit'] === 'contain' ? 'contain' : (st0[mobBase + 'Fit'] === 'cover' ? 'cover' : pcFrame.fit),
+                x: clampNum(st0[mobBase + 'PosX'], hasSavedMobFrame ? 50 : pcFrame.x, 0, 100),
+                y: clampNum(st0[mobBase + 'PosY'], hasSavedMobFrame ? 50 : pcFrame.y, 0, 100),
+                zoom: clampNum(st0[mobBase + 'Zoom'], hasSavedMobFrame ? 100 : pcFrame.zoom, 100, 250)
+            };
+
+            const previewWrap = document.getElementById('preview-viewport-wrapper');
+            let viewMode = (previewWrap && previewWrap.getAttribute('data-device') === 'mobile') ? 'mobile' : 'pc';
+            const getActiveFrame = () => viewMode === 'mobile' ? mobFrame : pcFrame;
+            const getEffectiveUrl = () => {
+                if (viewMode === 'mobile') {
+                    return mobUrlVal || pcUrlVal;
+                }
+                return pcUrlVal || mobUrlVal;
+            };
+
+            const imgBox = document.createElement('div');
+            imgBox.className = 'bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2.5';
+
+            const smallBtnClass = (active) => 'px-2.5 py-1 rounded-lg text-[11px] font-bold border transition ' +
+                (active ? 'bg-storevo-500 text-white border-storevo-500' : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white');
+
+            const viewRow = document.createElement('div');
+            viewRow.className = 'flex items-center gap-1.5';
+            const viewPcBtn = document.createElement('button');
+            viewPcBtn.type = 'button';
+            viewPcBtn.textContent = '🖥️ Vista computador';
+            const viewMobBtn = document.createElement('button');
+            viewMobBtn.type = 'button';
+            viewMobBtn.textContent = '📱 Vista celular';
+            viewRow.appendChild(viewPcBtn);
+            viewRow.appendChild(viewMobBtn);
+
+            const modeStatusNote = document.createElement('p');
+            modeStatusNote.className = 'hidden text-[10px] font-semibold text-storevo-300 bg-storevo-500/10 border border-storevo-500/20 rounded-lg px-2.5 py-1.5 leading-snug';
+
+            const frame = document.createElement('div');
+            frame.style.cssText = 'position:relative;overflow:hidden;width:100%;border-radius:10px;border:1px solid #1e293b;background:#0f172a;touch-action:none;';
+            const imgEl = document.createElement('img');
+            imgEl.draggable = false;
+            imgEl.alt = 'Vista previa';
+            imgEl.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;user-select:none;pointer-events:none;';
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'absolute top-1.5 right-1.5 bg-red-500 hover:bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded shadow';
+            removeBtn.style.zIndex = '2';
+            removeBtn.textContent = 'Quitar imagen';
+            frame.appendChild(imgEl);
+            frame.appendChild(removeBtn);
+
+            const controls = document.createElement('div');
+            controls.className = 'hidden space-y-2';
+            const dragHint = document.createElement('p');
+            dragHint.className = 'text-[11px] text-slate-400';
+            dragHint.textContent = 'Arrastra la foto con el mouse para elegir qué parte se ve.';
+            const fitRow = document.createElement('div');
+            fitRow.className = 'flex items-center gap-1.5 flex-wrap';
+            const fitCoverBtn = document.createElement('button');
+            fitCoverBtn.type = 'button';
+            fitCoverBtn.textContent = 'Rellenar';
+            const fitContainBtn = document.createElement('button');
+            fitContainBtn.type = 'button';
+            fitContainBtn.textContent = 'Ver completa';
+            const resetBtn = document.createElement('button');
+            resetBtn.type = 'button';
+            resetBtn.className = 'px-2.5 py-1 rounded-lg text-[11px] font-bold text-slate-400 hover:text-white transition ml-auto';
+            resetBtn.textContent = 'Restablecer';
+            fitRow.appendChild(fitCoverBtn);
+            fitRow.appendChild(fitContainBtn);
+            fitRow.appendChild(resetBtn);
+
+            const containVariableNote = document.createElement('p');
+            containVariableNote.className = 'hidden text-[10px] text-amber-300/95 bg-amber-500/10 border border-amber-500/25 rounded-lg px-2.5 py-1.5 leading-snug';
+
+            const zoomRow = document.createElement('div');
+            zoomRow.className = 'flex items-center gap-2';
+            const zoomLabel = document.createElement('span');
+            zoomLabel.className = 'text-[11px] font-bold text-slate-400 whitespace-nowrap';
+            const zoomRange = document.createElement('input');
+            zoomRange.type = 'range';
+            zoomRange.min = '100';
+            zoomRange.max = '250';
+            zoomRange.step = '5';
+            zoomRange.style.cssText = 'flex:1;min-width:0;';
+            zoomRow.appendChild(zoomLabel);
+            zoomRow.appendChild(zoomRange);
+            controls.appendChild(dragHint);
+            controls.appendChild(fitRow);
+            controls.appendChild(containVariableNote);
+            controls.appendChild(zoomRow);
+
+            const infoLine = document.createElement('p');
+            infoLine.className = 'text-[11px] text-slate-500 leading-relaxed';
+
+            const actionsRow = document.createElement('div');
+            actionsRow.className = 'flex items-center gap-2';
+
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = 'image/jpeg,image/png,image/webp';
+            fileInput.className = 'hidden';
+
+            const uploadBtn = document.createElement('button');
+            uploadBtn.type = 'button';
+            uploadBtn.className = 'w-full py-2 px-3 bg-slate-800 hover:bg-storevo-500 text-slate-200 hover:text-white border border-slate-700 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5';
+            const uploadBtnLabel = document.createElement('span');
+            uploadBtnLabel.textContent = 'Subir imagen desde mi equipo';
+            uploadBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>';
+            uploadBtn.appendChild(uploadBtnLabel);
+
+            const urlInput = document.createElement('input');
+            urlInput.type = 'text';
+            urlInput.value = pcUrlVal;
+            urlInput.placeholder = 'O pega una URL de imagen (https://...)';
+            urlInput.className = 'w-full px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-300 focus:border-storevo-500 focus:outline-none';
+
+            const applyFrame = () => {
+                const st = getActiveFrame();
+                const spec = getFrameSpec();
+                imgEl.style.objectFit = spec ? st.fit : 'contain';
+                imgEl.style.objectPosition = `${st.x}% ${st.y}%`;
+                imgEl.style.transformOrigin = `${st.x}% ${st.y}%`;
+                imgEl.style.scale = st.zoom === 100 ? '' : String(st.zoom / 100);
+                fitCoverBtn.className = smallBtnClass(st.fit === 'cover');
+                fitContainBtn.className = smallBtnClass(st.fit === 'contain');
+                zoomLabel.textContent = `Zoom ${Math.round(st.zoom)}%`;
+                zoomRange.value = String(Math.round(st.zoom));
+
+                if (spec && spec.isVariableRatio && st.fit === 'contain') {
+                    const targetSize = viewMode === 'mobile' ? (spec.mobileSize || spec.size) : spec.size;
+                    containVariableNote.textContent = `Nota: Este bloque cambia de proporción según el ancho de pantalla y el contenido. «Ver completa» evita franjas en la proporción actual (${targetSize}), pero no siempre es posible evitar franjas en otros tamaños de pantalla sin recortar la imagen (modo «Rellenar»).`;
+                    containVariableNote.classList.remove('hidden');
+                } else {
+                    containVariableNote.classList.add('hidden');
+                }
+            };
+
+            const applyRatio = () => {
+                const spec = getFrameSpec();
+                if (!spec) {
+                    frame.style.aspectRatio = '';
+                    frame.style.height = '96px';
+                    frame.style.width = '100%';
+                    frame.style.margin = '0';
+                    return;
+                }
+                const ratio = viewMode === 'mobile' ? spec.mobile : spec.pc;
+                const parts = ratio.split('/').map(p => parseFloat(p));
+                const r = (parts[0] && parts[1]) ? (parts[0] / parts[1]) : 1.5;
+                frame.style.height = '';
+                frame.style.aspectRatio = ratio;
+                frame.style.width = r < 0.9 ? '58%' : '100%';
+                frame.style.margin = r < 0.9 ? '0 auto' : '0';
+                const allowMobTab = !spec.disableMobileSplit;
+                viewRow.classList.toggle('hidden', !allowMobTab);
+                viewRow.classList.toggle('flex', allowMobTab);
+                viewPcBtn.className = smallBtnClass(viewMode === 'pc');
+                viewMobBtn.className = smallBtnClass(viewMode === 'mobile');
+            };
+
+            const paintInfo = () => {
+                const spec = getFrameSpec();
+                if (!spec) {
+                    infoLine.textContent = 'Recomendado: 400×160 px · JPG, PNG o WEBP · máx. 10 MB.';
+                    infoLine.style.color = '';
+                    return;
+                }
+                const isMob = viewMode === 'mobile';
+                const targetSize = isMob ? (spec.mobileSize || spec.size) : spec.size;
+                const targetMinW = isMob ? (spec.mobileMinW || 700) : spec.minW;
+                const deviceLabel = isMob ? 'Recomendado en celular' : 'Recomendado en PC';
+                let text = `${deviceLabel}: ${targetSize} · JPG, PNG o WEBP · máx. 10 MB.`;
+                infoLine.style.color = '';
+                const effUrl = getEffectiveUrl();
+                if (effUrl && imgEl.naturalWidth) {
+                    text += ` Tu foto: ${imgEl.naturalWidth}×${imgEl.naturalHeight} px.`;
+                    if (imgEl.naturalWidth < targetMinW) {
+                        text += ' Es pequeña y puede verse borrosa.';
+                        infoLine.style.color = '#fbbf24';
+                    }
+                }
+                infoLine.textContent = text;
+            };
+
+            const refreshAll = () => {
+                measureLiveContainerInIframe();
+                const spec = getFrameSpec();
+                const effUrl = getEffectiveUrl();
+                const hasImgNow = Boolean(effUrl);
+                if (effUrl) {
+                    if (imgEl.getAttribute('src') !== effUrl) {
+                        imgEl.src = effUrl;
+                    }
+                } else {
+                    imgEl.removeAttribute('src');
+                }
+
+                frame.classList.toggle('hidden', !hasImgNow);
+                controls.classList.toggle('hidden', !(hasImgNow && spec));
+
+                if (viewMode === 'mobile') {
+                    urlInput.value = mobUrlVal;
+                    urlInput.placeholder = pcUrlVal
+                        ? 'Opcional: pega otra URL exclusiva para celular...'
+                        : 'Pega una URL de imagen para celular (https://...)';
+                    uploadBtnLabel.textContent = mobUrlVal
+                        ? 'Cambiar imagen exclusiva de celular'
+                        : 'Subir otra imagen exclusiva para celular';
+                    removeBtn.textContent = mobUrlVal ? 'Usar la de PC' : 'Quitar imagen';
+                    if (pcUrlVal && !mobUrlVal) {
+                        modeStatusNote.textContent = '📱 Usando la misma imagen de PC. Puedes mover su encuadre aquí para celular o subir otra imagen distinta solo para celular.';
+                        modeStatusNote.classList.remove('hidden');
+                    } else if (mobUrlVal) {
+                        modeStatusNote.textContent = '📱 Mostrando imagen exclusiva para celular (la de PC se conserva intacta).';
+                        modeStatusNote.classList.remove('hidden');
+                    } else {
+                        modeStatusNote.classList.add('hidden');
+                    }
+                } else {
+                    urlInput.value = pcUrlVal;
+                    urlInput.placeholder = 'O pega una URL de imagen (https://...)';
+                    uploadBtnLabel.textContent = pcUrlVal
+                        ? 'Cambiar imagen de PC'
+                        : 'Subir imagen desde mi equipo';
+                    removeBtn.textContent = 'Quitar imagen';
+                    modeStatusNote.classList.add('hidden');
+                }
+
+                applyRatio();
+                applyFrame();
+                paintInfo();
+            };
+
+            const commitFrame = () => {
+                const specNow = getFrameSpec();
+                const dFit = (specNow && specNow.defaultFit) ? specNow.defaultFit : 'cover';
+                if (viewMode === 'mobile') {
+                    commitSectionChange(mobBase + 'Fit', mobFrame.fit);
+                    commitSectionChange(mobBase + 'PosX', Math.round(mobFrame.x));
+                    commitSectionChange(mobBase + 'PosY', Math.round(mobFrame.y));
+                    commitSectionChange(mobBase + 'Zoom', Math.round(mobFrame.zoom));
+                    return;
+                }
+                const isDefault = pcFrame.fit === dFit && Math.round(pcFrame.x) === 50
+                    && Math.round(pcFrame.y) === 50 && Math.round(pcFrame.zoom) === 100;
+                commitSectionChange(base + 'Fit', pcFrame.fit === 'contain' ? 'contain' : (dFit === 'contain' && pcFrame.fit === 'cover' ? 'cover' : null));
+                commitSectionChange(base + 'PosX', isDefault ? null : Math.round(pcFrame.x));
+                commitSectionChange(base + 'PosY', isDefault ? null : Math.round(pcFrame.y));
+                commitSectionChange(base + 'Zoom', (isDefault || Math.round(pcFrame.zoom) === 100) ? null : Math.round(pcFrame.zoom));
+            };
+
+            const resetFrame = (commit) => {
+                const specNow = getFrameSpec();
+                const dFit = (specNow && specNow.defaultFit) ? specNow.defaultFit : 'cover';
+                const target = getActiveFrame();
+                target.fit = dFit;
+                target.x = 50;
+                target.y = 50;
+                target.zoom = 100;
+                applyFrame();
+                if (commit) commitFrame();
+            };
+
+            imgEl.addEventListener('load', paintInfo);
+            this.waitForPreviewTransition(() => refreshAll());
+
+            const onDeviceTransitionEnded = (e) => {
+                if (!document.body.contains(imgBox)) {
+                    document.removeEventListener('storevo:device-transition-ended', onDeviceTransitionEnded);
+                    return;
+                }
+                if (e && e.detail && e.detail.device) {
+                    viewMode = e.detail.device === 'mobile' ? 'mobile' : 'pc';
+                }
+                refreshAll();
+            };
+
+            const onPreviewDomUpdated = () => {
+                if (!document.body.contains(imgBox)) {
+                    document.removeEventListener('storevo:preview-dom-updated', onPreviewDomUpdated);
+                    return;
+                }
+                measuredCache.pc = null;
+                measuredCache.mobile = null;
+                this.waitForPreviewTransition(() => refreshAll());
+            };
+
+            document.addEventListener('storevo:device-transition-ended', onDeviceTransitionEnded);
+            document.addEventListener('storevo:preview-dom-updated', onPreviewDomUpdated);
+
+            let drag = null;
+            frame.style.cursor = 'grab';
+            frame.addEventListener('pointerenter', () => {
+                if (!this._isDeviceTransitioning) refreshAll();
+            });
+            frame.addEventListener('pointerdown', (e) => {
+                if (!getEffectiveUrl() || !getFrameSpec() || e.target === removeBtn) return;
+                const st = getActiveFrame();
+                drag = { sx: e.clientX, sy: e.clientY, x: st.x, y: st.y };
+                try { frame.setPointerCapture(e.pointerId); } catch (err) {}
+                frame.style.cursor = 'grabbing';
+                e.preventDefault();
+            });
+            frame.addEventListener('pointermove', (e) => {
+                if (!drag) return;
+                const st = getActiveFrame();
+                const rect = frame.getBoundingClientRect();
+                const nw = imgEl.naturalWidth || rect.width;
+                const nh = imgEl.naturalHeight || rect.height;
+                const k = st.fit === 'contain'
+                    ? Math.min(rect.width / nw, rect.height / nh)
+                    : Math.max(rect.width / nw, rect.height / nh);
+                const z = st.zoom / 100;
+                const rawOvX = nw * k * z - rect.width;
+                const rawOvY = nh * k * z - rect.height;
+                const effOvX = Math.abs(rawOvX) > 12 ? rawOvX : Math.max(80, rect.width * 0.65);
+                const effOvY = Math.abs(rawOvY) > 12 ? rawOvY : Math.max(80, rect.height * 0.65);
+                st.x = Math.min(100, Math.max(0, drag.x - ((e.clientX - drag.sx) / effOvX) * 100));
+                st.y = Math.min(100, Math.max(0, drag.y - ((e.clientY - drag.sy) / effOvY) * 100));
+                applyFrame();
+            });
+            const endDrag = () => {
+                if (!drag) return;
+                const st = getActiveFrame();
+                const moved = Math.round(drag.x) !== Math.round(st.x) || Math.round(drag.y) !== Math.round(st.y);
+                drag = null;
+                frame.style.cursor = 'grab';
+                if (moved) commitFrame();
+            };
+            frame.addEventListener('pointerup', endDrag);
+            frame.addEventListener('pointercancel', endDrag);
+
+            viewPcBtn.addEventListener('click', () => {
+                viewMode = 'pc';
+                if (window.innerWidth >= 1024 && previewWrap && previewWrap.getAttribute('data-device') !== 'desktop') {
+                    this.setDevice('desktop');
+                    this.waitForPreviewTransition(() => refreshAll());
+                } else {
+                    refreshAll();
+                }
+            });
+            viewMobBtn.addEventListener('click', () => {
+                viewMode = 'mobile';
+                if (window.innerWidth >= 1024 && previewWrap && previewWrap.getAttribute('data-device') !== 'mobile') {
+                    this.setDevice('mobile');
+                    this.waitForPreviewTransition(() => refreshAll());
+                } else {
+                    refreshAll();
+                }
+            });
+
+            fitCoverBtn.addEventListener('click', () => {
+                getActiveFrame().fit = 'cover';
+                applyFrame();
+                commitFrame();
+            });
+            fitContainBtn.addEventListener('click', () => {
+                getActiveFrame().fit = 'contain';
+                applyFrame();
+                commitFrame();
+            });
+            resetBtn.addEventListener('click', () => resetFrame(true));
+            zoomRange.addEventListener('input', () => {
+                getActiveFrame().zoom = clampNum(zoomRange.value, 100, 100, 250);
+                applyFrame();
+            });
+            zoomRange.addEventListener('change', commitFrame);
+
+            uploadBtn.addEventListener('click', () => fileInput.click());
+
+            fileInput.addEventListener('change', () => {
+                if (!fileInput.files || !fileInput.files[0]) return;
+                const file = fileInput.files[0];
+                const prevText = uploadBtnLabel.textContent;
+                uploadBtn.disabled = true;
+                uploadBtnLabel.textContent = 'Subiendo imagen...';
+
+                const formData = new FormData();
+                formData.append('file', file);
+
+                fetch(`/dashboard/${this.slug}/template/upload-image`, {
+                    method: 'POST',
+                    body: formData
+                })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success && data.url) {
+                            if (viewMode === 'mobile') {
+                                mobUrlVal = data.url;
+                                resetFrame(false);
+                                if (legacyMobUrlKey && sec.settings) delete sec.settings[legacyMobUrlKey];
+                                commitSectionChange(mobUrlKey, data.url);
+                                commitFrame();
+                            } else {
+                                pcUrlVal = data.url;
+                                resetFrame(false);
+                                commitSectionChange(pcUrlKey, data.url);
+                                commitFrame();
+                            }
+                            refreshAll();
+                            if (Storevo.UI && Storevo.UI.Toast) {
+                                Storevo.UI.Toast.show(
+                                    viewMode === 'mobile' ? 'Imagen para celular subida y aplicada' : 'Imagen subida y aplicada',
+                                    'success'
+                                );
+                            }
+                        } else if (Storevo.UI && Storevo.UI.Toast) {
+                            Storevo.UI.Toast.show(data.message || 'Error al subir imagen', 'error');
+                        }
+                    })
+                    .catch(() => {
+                        if (Storevo.UI && Storevo.UI.Toast) {
+                            Storevo.UI.Toast.show('Error de conexión al subir la imagen', 'error');
+                        }
+                    })
+                    .finally(() => {
+                        uploadBtn.disabled = false;
+                        uploadBtnLabel.textContent = prevText;
+                        fileInput.value = '';
+                        refreshAll();
+                    });
+            });
+
+            removeBtn.addEventListener('click', () => {
+                if (viewMode === 'mobile') {
+                    if (mobUrlVal) {
+                        mobUrlVal = '';
+                        if (legacyMobUrlKey && sec.settings) delete sec.settings[legacyMobUrlKey];
+                        commitSectionChange(mobUrlKey, null);
+                        refreshAll();
+                        return;
+                    }
+                }
+                pcUrlVal = '';
+                mobUrlVal = '';
+                if (legacyMobUrlKey && sec.settings) delete sec.settings[legacyMobUrlKey];
+                commitSectionChange(mobUrlKey, null);
+                resetFrame(false);
+                commitSectionChange(pcUrlKey, '');
+                commitFrame();
+                refreshAll();
+            });
+
+            urlInput.addEventListener('input', () => {
+                const val = urlInput.value.trim();
+                if (viewMode === 'mobile') {
+                    mobUrlVal = val;
+                    if (legacyMobUrlKey && sec.settings) delete sec.settings[legacyMobUrlKey];
+                    commitSectionChange(mobUrlKey, val || null);
+                } else {
+                    pcUrlVal = val;
+                    commitSectionChange(pcUrlKey, val);
+                }
+                refreshAll();
+            });
+
+            actionsRow.appendChild(fileInput);
+            actionsRow.appendChild(uploadBtn);
+            imgBox.appendChild(viewRow);
+            imgBox.appendChild(modeStatusNote);
+            imgBox.appendChild(frame);
+            imgBox.appendChild(controls);
+            imgBox.appendChild(infoLine);
+            imgBox.appendChild(actionsRow);
+            imgBox.appendChild(urlInput);
+            return imgBox;
+        };
+
         const fieldsSchema = this.getFieldsForType(sec.type);
         fieldsSchema.forEach(field => {
             const wrapper = document.createElement('div');
@@ -1811,370 +2574,7 @@ Storevo.ThemeEditor = {
                 : (field.defaultVal !== undefined ? field.defaultVal : '');
 
             if (field.type === 'image') {
-                // ---- Encuadre de la foto: marco con la proporción real de la sección donde se muestra ----
-                const getFrameSpec = () => {
-                    const s = sec.settings || {};
-                    switch (sec.type) {
-                        case 'hero_banner':
-                            if (/mobileimageurl$/i.test(field.key)) {
-                                return { pc: '4 / 5', mobile: '4 / 5', size: '1080×1350 px', minW: 720 };
-                            }
-                            return s.heroLayout === 'split'
-                                ? { pc: '4 / 3', mobile: '4 / 3', size: '1200×900 px', minW: 900 }
-                                : { pc: '16 / 6', mobile: '5 / 4', size: '1920×700 px', minW: 1600 };
-                        case 'promo_banner':
-                            return { pc: '4 / 3', mobile: '16 / 9', size: '1200×900 px', minW: 900 };
-                        case 'multi_banners':
-                            return { pc: '16 / 9', mobile: '16 / 9', size: '1200×675 px', minW: 900 };
-                        case 'rich_text':
-                        case 'visit_us':
-                            return { pc: '4 / 3', mobile: '4 / 3', size: '1200×900 px', minW: 800 };
-                        case 'featured_video':
-                            return s.aspectRatio === '9:16'
-                                ? { pc: '9 / 16', mobile: '9 / 16', size: '720×1280 px', minW: 700 }
-                                : { pc: '16 / 9', mobile: '16 / 9', size: '1280×720 px', minW: 1000 };
-                        case 'gallery_lookbook': {
-                            const a = s.imageAspect;
-                            if (a === 'square') return { pc: '1 / 1', mobile: '1 / 1', size: '1080×1080 px', minW: 800 };
-                            if (a === 'landscape') return { pc: '4 / 3', mobile: '4 / 3', size: '1200×900 px', minW: 900 };
-                            return { pc: '4 / 5', mobile: '4 / 5', size: '1080×1350 px', minW: 800 };
-                        }
-                        case 'social_showcase':
-                            return { pc: '1 / 1', mobile: '1 / 1', size: '1080×1080 px', minW: 800 };
-                        default:
-                            return null; // p. ej. logos de marcas: sin encuadre, se muestran completos
-                    }
-                };
-
-                const base = field.key.replace(/Url$/, '');
-                const kFit = base + 'Fit';
-                const kX = base + 'PosX';
-                const kY = base + 'PosY';
-                const kZoom = base + 'Zoom';
-                const clampNum = (v, d, lo, hi) => {
-                    const n = parseFloat(v);
-                    return isNaN(n) ? d : Math.min(hi, Math.max(lo, n));
-                };
-                const st0 = sec.settings || {};
-                const frameState = {
-                    fit: st0[kFit] === 'contain' ? 'contain' : 'cover',
-                    x: clampNum(st0[kX], 50, 0, 100),
-                    y: clampNum(st0[kY], 50, 0, 100),
-                    zoom: clampNum(st0[kZoom], 100, 100, 250)
-                };
-                let hasImage = Boolean(currentVal);
-                let viewMode = 'pc';
-
-                const imgBox = document.createElement('div');
-                imgBox.className = 'bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2.5';
-
-                const smallBtnClass = (active) => 'px-2.5 py-1 rounded-lg text-[11px] font-bold border transition ' +
-                    (active ? 'bg-storevo-500 text-white border-storevo-500' : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white');
-
-                // Selector Vista PC / Móvil (solo si el recorte cambia entre pantallas)
-                const viewRow = document.createElement('div');
-                viewRow.className = 'hidden items-center gap-1.5';
-                const viewPcBtn = document.createElement('button');
-                viewPcBtn.type = 'button';
-                viewPcBtn.textContent = 'Vista computador';
-                const viewMobBtn = document.createElement('button');
-                viewMobBtn.type = 'button';
-                viewMobBtn.textContent = 'Vista celular';
-                viewRow.appendChild(viewPcBtn);
-                viewRow.appendChild(viewMobBtn);
-
-                // Marco de vista previa (usa el mismo CSS que la tienda: lo que ves es lo que se publica)
-                const frame = document.createElement('div');
-                frame.style.cssText = 'position:relative;overflow:hidden;width:100%;border-radius:10px;border:1px solid #1e293b;background:#0f172a;touch-action:none;';
-                const imgEl = document.createElement('img');
-                imgEl.draggable = false;
-                imgEl.alt = 'Vista previa';
-                imgEl.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;user-select:none;pointer-events:none;';
-                const removeBtn = document.createElement('button');
-                removeBtn.type = 'button';
-                removeBtn.className = 'absolute top-1.5 right-1.5 bg-red-500 hover:bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded shadow';
-                removeBtn.style.zIndex = '2';
-                removeBtn.textContent = 'Quitar imagen';
-                frame.appendChild(imgEl);
-                frame.appendChild(removeBtn);
-
-                // Controles de encuadre
-                const controls = document.createElement('div');
-                controls.className = 'hidden space-y-2';
-                const dragHint = document.createElement('p');
-                dragHint.className = 'text-[11px] text-slate-400';
-                dragHint.textContent = 'Arrastra la foto para elegir qué parte se ve.';
-                const fitRow = document.createElement('div');
-                fitRow.className = 'flex items-center gap-1.5 flex-wrap';
-                const fitCoverBtn = document.createElement('button');
-                fitCoverBtn.type = 'button';
-                fitCoverBtn.textContent = 'Rellenar';
-                const fitContainBtn = document.createElement('button');
-                fitContainBtn.type = 'button';
-                fitContainBtn.textContent = 'Ver completa';
-                const resetBtn = document.createElement('button');
-                resetBtn.type = 'button';
-                resetBtn.className = 'px-2.5 py-1 rounded-lg text-[11px] font-bold text-slate-400 hover:text-white transition ml-auto';
-                resetBtn.textContent = 'Restablecer';
-                fitRow.appendChild(fitCoverBtn);
-                fitRow.appendChild(fitContainBtn);
-                fitRow.appendChild(resetBtn);
-
-                const zoomRow = document.createElement('div');
-                zoomRow.className = 'flex items-center gap-2';
-                const zoomLabel = document.createElement('span');
-                zoomLabel.className = 'text-[11px] font-bold text-slate-400 whitespace-nowrap';
-                const zoomRange = document.createElement('input');
-                zoomRange.type = 'range';
-                zoomRange.min = '100';
-                zoomRange.max = '250';
-                zoomRange.step = '5';
-                zoomRange.style.cssText = 'flex:1;min-width:0;';
-                zoomRow.appendChild(zoomLabel);
-                zoomRow.appendChild(zoomRange);
-                controls.appendChild(dragHint);
-                controls.appendChild(fitRow);
-                controls.appendChild(zoomRow);
-
-                const infoLine = document.createElement('p');
-                infoLine.className = 'text-[11px] text-slate-500';
-
-                const actionsRow = document.createElement('div');
-                actionsRow.className = 'flex items-center gap-2';
-
-                const fileInput = document.createElement('input');
-                fileInput.type = 'file';
-                fileInput.accept = 'image/jpeg,image/png,image/webp';
-                fileInput.className = 'hidden';
-
-                const uploadBtn = document.createElement('button');
-                uploadBtn.type = 'button';
-                uploadBtn.className = 'w-full py-2 px-3 bg-slate-800 hover:bg-storevo-500 text-slate-200 hover:text-white border border-slate-700 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5';
-                uploadBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg><span>Subir imagen desde mi equipo</span>';
-
-                const urlInput = document.createElement('input');
-                urlInput.type = 'text';
-                urlInput.value = currentVal;
-                urlInput.placeholder = 'O pega una URL de imagen (https://...)';
-                urlInput.className = 'w-full px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-300 focus:border-storevo-500 focus:outline-none';
-
-                // ---- Pintado ----
-                const applyFrame = () => {
-                    imgEl.style.objectFit = getFrameSpec() ? frameState.fit : 'contain';
-                    imgEl.style.objectPosition = `${frameState.x}% ${frameState.y}%`;
-                    imgEl.style.transformOrigin = `${frameState.x}% ${frameState.y}%`;
-                    imgEl.style.scale = frameState.zoom === 100 ? '' : String(frameState.zoom / 100);
-                    fitCoverBtn.className = smallBtnClass(frameState.fit === 'cover');
-                    fitContainBtn.className = smallBtnClass(frameState.fit === 'contain');
-                    zoomLabel.textContent = `Zoom ${Math.round(frameState.zoom)}%`;
-                    zoomRange.value = String(Math.round(frameState.zoom));
-                };
-
-                const applyRatio = () => {
-                    const spec = getFrameSpec();
-                    if (!spec) {
-                        frame.style.aspectRatio = '';
-                        frame.style.height = '96px';
-                        frame.style.width = '100%';
-                        frame.style.margin = '0';
-                        return;
-                    }
-                    const ratio = viewMode === 'mobile' ? spec.mobile : spec.pc;
-                    const parts = ratio.split('/').map(p => parseFloat(p));
-                    const r = parts[0] / parts[1];
-                    frame.style.height = '';
-                    frame.style.aspectRatio = ratio;
-                    frame.style.width = r < 0.9 ? '56%' : '100%';
-                    frame.style.margin = r < 0.9 ? '0 auto' : '0';
-                    const differs = spec.pc !== spec.mobile;
-                    viewRow.classList.toggle('hidden', !(differs && hasImage));
-                    viewRow.classList.toggle('flex', differs && hasImage);
-                    viewPcBtn.className = smallBtnClass(viewMode === 'pc');
-                    viewMobBtn.className = smallBtnClass(viewMode === 'mobile');
-                    infoLine.dataset.size = spec.size;
-                    infoLine.dataset.minW = String(spec.minW);
-                };
-
-                const paintInfo = () => {
-                    const spec = getFrameSpec();
-                    if (!spec) {
-                        infoLine.textContent = 'JPG, PNG o WEBP (máx. 10 MB). Se muestra completa, sin recortar.';
-                        infoLine.style.color = '';
-                        return;
-                    }
-                    let text = `Recomendado: ${spec.size} · JPG o WEBP · máx. 10 MB.`;
-                    infoLine.style.color = '';
-                    if (hasImage && imgEl.naturalWidth) {
-                        text += ` Tu foto: ${imgEl.naturalWidth}×${imgEl.naturalHeight} px.`;
-                        if (imgEl.naturalWidth < spec.minW) {
-                            text += ' Es pequeña y puede verse borrosa.';
-                            infoLine.style.color = '#fbbf24';
-                        }
-                    }
-                    infoLine.textContent = text;
-                };
-
-                const refreshAll = () => {
-                    const spec = getFrameSpec();
-                    frame.classList.toggle('hidden', !hasImage);
-                    controls.classList.toggle('hidden', !(hasImage && spec));
-                    applyRatio();
-                    applyFrame();
-                    paintInfo();
-                };
-
-                const commitFrame = () => {
-                    const isDefault = frameState.fit === 'cover' && Math.round(frameState.x) === 50
-                        && Math.round(frameState.y) === 50 && Math.round(frameState.zoom) === 100;
-                    commitSectionChange(kFit, frameState.fit === 'contain' ? 'contain' : null);
-                    commitSectionChange(kX, isDefault ? null : Math.round(frameState.x));
-                    commitSectionChange(kY, isDefault ? null : Math.round(frameState.y));
-                    commitSectionChange(kZoom, (isDefault || Math.round(frameState.zoom) === 100) ? null : Math.round(frameState.zoom));
-                };
-
-                const resetFrame = (commit) => {
-                    frameState.fit = 'cover';
-                    frameState.x = 50;
-                    frameState.y = 50;
-                    frameState.zoom = 100;
-                    applyFrame();
-                    if (commit) commitFrame();
-                };
-
-                imgEl.addEventListener('load', paintInfo);
-                if (currentVal) imgEl.src = currentVal;
-                refreshAll();
-
-                // ---- Interacción: arrastrar para mover el enfoque ----
-                let drag = null;
-                frame.style.cursor = 'grab';
-                frame.addEventListener('pointerenter', refreshAll);
-                frame.addEventListener('pointerdown', (e) => {
-                    if (!hasImage || !getFrameSpec() || e.target === removeBtn) return;
-                    drag = { sx: e.clientX, sy: e.clientY, x: frameState.x, y: frameState.y };
-                    try { frame.setPointerCapture(e.pointerId); } catch (err) {}
-                    frame.style.cursor = 'grabbing';
-                    e.preventDefault();
-                });
-                frame.addEventListener('pointermove', (e) => {
-                    if (!drag) return;
-                    const rect = frame.getBoundingClientRect();
-                    const nw = imgEl.naturalWidth || rect.width;
-                    const nh = imgEl.naturalHeight || rect.height;
-                    const k = frameState.fit === 'contain'
-                        ? Math.min(rect.width / nw, rect.height / nh)
-                        : Math.max(rect.width / nw, rect.height / nh);
-                    const z = frameState.zoom / 100;
-                    const ovX = nw * k * z - rect.width;
-                    const ovY = nh * k * z - rect.height;
-                    if (Math.abs(ovX) > 1) {
-                        frameState.x = Math.min(100, Math.max(0, drag.x - ((e.clientX - drag.sx) / ovX) * 100));
-                    }
-                    if (Math.abs(ovY) > 1) {
-                        frameState.y = Math.min(100, Math.max(0, drag.y - ((e.clientY - drag.sy) / ovY) * 100));
-                    }
-                    applyFrame();
-                });
-                const endDrag = () => {
-                    if (!drag) return;
-                    const moved = Math.round(drag.x) !== Math.round(frameState.x) || Math.round(drag.y) !== Math.round(frameState.y);
-                    drag = null;
-                    frame.style.cursor = 'grab';
-                    if (moved) commitFrame();
-                };
-                frame.addEventListener('pointerup', endDrag);
-                frame.addEventListener('pointercancel', endDrag);
-
-                viewPcBtn.addEventListener('click', () => { viewMode = 'pc'; applyRatio(); });
-                viewMobBtn.addEventListener('click', () => { viewMode = 'mobile'; applyRatio(); });
-
-                fitCoverBtn.addEventListener('click', () => { frameState.fit = 'cover'; applyFrame(); commitFrame(); });
-                fitContainBtn.addEventListener('click', () => { frameState.fit = 'contain'; applyFrame(); commitFrame(); });
-                resetBtn.addEventListener('click', () => resetFrame(true));
-                zoomRange.addEventListener('input', () => {
-                    frameState.zoom = clampNum(zoomRange.value, 100, 100, 250);
-                    applyFrame();
-                });
-                zoomRange.addEventListener('change', commitFrame);
-
-                // ---- Subir / quitar / URL ----
-                uploadBtn.addEventListener('click', () => fileInput.click());
-
-                fileInput.addEventListener('change', () => {
-                    if (!fileInput.files || !fileInput.files[0]) return;
-                    const file = fileInput.files[0];
-                    const originalBtnHtml = uploadBtn.innerHTML;
-                    uploadBtn.disabled = true;
-                    uploadBtn.innerHTML = '<span class="animate-pulse">Subiendo imagen...</span>';
-
-                    const formData = new FormData();
-                    formData.append('file', file);
-
-                    fetch(`/dashboard/${this.slug}/template/upload-image`, {
-                        method: 'POST',
-                        body: formData
-                    })
-                        .then(r => r.json())
-                        .then(data => {
-                            if (data.success && data.url) {
-                                urlInput.value = data.url;
-                                hasImage = true;
-                                imgEl.src = data.url;
-                                resetFrame(false); // foto nueva = encuadre nuevo
-                                commitSectionChange(field.key, data.url);
-                                commitFrame();
-                                refreshAll();
-                                if (Storevo.UI && Storevo.UI.Toast) {
-                                    Storevo.UI.Toast.show('Imagen subida y aplicada', 'success');
-                                }
-                            } else if (Storevo.UI && Storevo.UI.Toast) {
-                                Storevo.UI.Toast.show(data.message || 'Error al subir imagen', 'error');
-                            }
-                        })
-                        .catch(() => {
-                            if (Storevo.UI && Storevo.UI.Toast) {
-                                Storevo.UI.Toast.show('Error de conexión al subir la imagen', 'error');
-                            }
-                        })
-                        .finally(() => {
-                            uploadBtn.disabled = false;
-                            uploadBtn.innerHTML = originalBtnHtml;
-                            fileInput.value = '';
-                        });
-                });
-
-                removeBtn.addEventListener('click', () => {
-                    urlInput.value = '';
-                    hasImage = false;
-                    imgEl.removeAttribute('src');
-                    resetFrame(false);
-                    commitSectionChange(field.key, '');
-                    commitFrame();
-                    refreshAll();
-                });
-
-                urlInput.addEventListener('input', () => {
-                    const val = urlInput.value.trim();
-                    hasImage = Boolean(val);
-                    if (val) {
-                        imgEl.src = val;
-                    } else {
-                        imgEl.removeAttribute('src');
-                    }
-                    refreshAll();
-                    commitSectionChange(field.key, val);
-                });
-
-                actionsRow.appendChild(fileInput);
-                actionsRow.appendChild(uploadBtn);
-                imgBox.appendChild(viewRow);
-                imgBox.appendChild(frame);
-                imgBox.appendChild(controls);
-                imgBox.appendChild(infoLine);
-                imgBox.appendChild(actionsRow);
-                imgBox.appendChild(urlInput);
-                wrapper.appendChild(imgBox);
-
+                wrapper.appendChild(buildInteractiveImageWidget(field, currentVal));
             } else if (field.type === 'url') {
                 const urlBox = document.createElement('div');
                 urlBox.className = 'space-y-2';
@@ -2473,7 +2873,7 @@ Storevo.ThemeEditor = {
                 {
                     key: 'layoutBgImageUrl',
                     label: 'Imagen de fondo de la sección',
-                    type: 'bg_image',
+                    type: 'image',
                     defaultVal: '',
                     showIf: (s) => Boolean(s && s.layoutBgMode === 'image')
                 },
@@ -2619,6 +3019,10 @@ Storevo.ThemeEditor = {
                                     : (pickerEl && /^#[0-9a-fA-F]{6}$/.test(pickerEl.value) ? pickerEl.value : '#f1f5f9');
                                 delete sec.settings.layoutBgImageUrl;
                                 delete sec.settings.layoutBgOverlay;
+                                delete sec.settings.layoutBgImageFit;
+                                delete sec.settings.layoutBgImagePosX;
+                                delete sec.settings.layoutBgImagePosY;
+                                delete sec.settings.layoutBgImageZoom;
                                 sec.settings.layoutBgColor = chosenColor;
                                 sec.settings.layoutTone = this.computeLayoutTone(chosenColor);
                                 commitSectionChange('layoutBgMode', 'solid');
@@ -2632,6 +3036,10 @@ Storevo.ThemeEditor = {
                                 delete sec.settings.layoutBgImageUrl;
                                 delete sec.settings.layoutBgOverlay;
                                 delete sec.settings.layoutTone;
+                                delete sec.settings.layoutBgImageFit;
+                                delete sec.settings.layoutBgImagePosX;
+                                delete sec.settings.layoutBgImagePosY;
+                                delete sec.settings.layoutBgImageZoom;
                                 commitSectionChange('layoutBgMode', null);
                             }
                             return;
@@ -2684,97 +3092,8 @@ Storevo.ThemeEditor = {
                     colorRow.appendChild(colorInput);
                     colorRow.appendChild(hexInput);
                     wrapper.appendChild(colorRow);
-                } else if (field.type === 'bg_image') {
-                    const bgBox = document.createElement('div');
-                    bgBox.className = 'bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2.5';
-
-                    const previewWrap = document.createElement('div');
-                    previewWrap.className = (currentVal ? '' : 'hidden ') + 'relative h-28 w-full rounded-lg overflow-hidden border border-slate-800 bg-slate-900';
-                    const previewImg = document.createElement('img');
-                    previewImg.src = currentVal || '';
-                    previewImg.alt = 'Fondo de sección';
-                    previewImg.className = 'w-full h-full object-cover';
-                    const removeImgBtn = document.createElement('button');
-                    removeImgBtn.type = 'button';
-                    removeImgBtn.className = 'absolute top-1.5 right-1.5 bg-red-500 hover:bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded shadow';
-                    removeImgBtn.textContent = 'Quitar imagen';
-                    previewWrap.appendChild(previewImg);
-                    previewWrap.appendChild(removeImgBtn);
-
-                    const fileInput = document.createElement('input');
-                    fileInput.type = 'file';
-                    fileInput.accept = 'image/jpeg,image/png,image/webp';
-                    fileInput.className = 'hidden';
-
-                    const uploadBtn = document.createElement('button');
-                    uploadBtn.type = 'button';
-                    uploadBtn.className = 'w-full py-2 px-3 bg-slate-800 hover:bg-storevo-500 text-slate-200 hover:text-white border border-slate-700 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5';
-                    uploadBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg><span>Subir imagen de fondo</span>';
-
-                    const urlInput = document.createElement('input');
-                    urlInput.type = 'text';
-                    urlInput.value = currentVal || '';
-                    urlInput.placeholder = 'O pega una URL de imagen (https://...)';
-                    urlInput.className = 'w-full px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-300 focus:border-storevo-500 focus:outline-none';
-
-                    uploadBtn.addEventListener('click', () => fileInput.click());
-                    fileInput.addEventListener('change', () => {
-                        if (!fileInput.files || !fileInput.files[0]) return;
-                        const originalHtml = uploadBtn.innerHTML;
-                        uploadBtn.disabled = true;
-                        uploadBtn.innerHTML = '<span class="animate-pulse">Subiendo imagen...</span>';
-                        const formData = new FormData();
-                        formData.append('file', fileInput.files[0]);
-
-                        fetch(`/dashboard/${this.slug}/template/upload-image`, { method: 'POST', body: formData })
-                            .then(r => r.json())
-                            .then(data => {
-                                if (data.success && data.url) {
-                                    urlInput.value = data.url;
-                                    previewImg.src = data.url;
-                                    previewWrap.classList.remove('hidden');
-                                    commitSectionChange('layoutBgImageUrl', data.url);
-                                } else if (Storevo.UI && Storevo.UI.Toast) {
-                                    Storevo.UI.Toast.show(data.message || 'Error al subir imagen', 'error');
-                                }
-                            })
-                            .catch(() => {
-                                if (Storevo.UI && Storevo.UI.Toast) {
-                                    Storevo.UI.Toast.show('Error de conexión al subir la imagen', 'error');
-                                }
-                            })
-                            .finally(() => {
-                                uploadBtn.disabled = false;
-                                uploadBtn.innerHTML = originalHtml;
-                                fileInput.value = '';
-                            });
-                    });
-
-                    removeImgBtn.addEventListener('click', () => {
-                        urlInput.value = '';
-                        previewImg.removeAttribute('src');
-                        previewWrap.classList.add('hidden');
-                        commitSectionChange('layoutBgImageUrl', null);
-                    });
-
-                    urlInput.addEventListener('input', () => {
-                        const val = urlInput.value.trim();
-                        if (val) {
-                            previewImg.src = val;
-                            previewWrap.classList.remove('hidden');
-                            commitSectionChange('layoutBgImageUrl', val);
-                        } else {
-                            previewImg.removeAttribute('src');
-                            previewWrap.classList.add('hidden');
-                            commitSectionChange('layoutBgImageUrl', null);
-                        }
-                    });
-
-                    bgBox.appendChild(previewWrap);
-                    bgBox.appendChild(fileInput);
-                    bgBox.appendChild(uploadBtn);
-                    bgBox.appendChild(urlInput);
-                    wrapper.appendChild(bgBox);
+                } else if (field.type === 'image') {
+                    wrapper.appendChild(buildInteractiveImageWidget(field, currentVal));
                 } else if (field.type === 'range_overlay') {
                     const row = document.createElement('div');
                     row.className = 'flex items-center gap-3 bg-slate-950 p-2.5 rounded-xl border border-slate-800';
@@ -2948,6 +3267,7 @@ Storevo.ThemeEditor = {
                 if (sec.settings) {
                     [
                         'layoutBgMode', 'layoutBgColor', 'layoutBgImageUrl', 'layoutBgOverlay', 'layoutTone',
+                        'layoutBgImageFit', 'layoutBgImagePosX', 'layoutBgImagePosY', 'layoutBgImageZoom',
                         'layoutSpaceTop', 'layoutSpaceBottom', 'layoutWidth',
                         'layoutVisibility', 'scheduleStart', 'scheduleEnd', 'layoutAnchor'
                     ].forEach(k => delete sec.settings[k]);
@@ -3089,8 +3409,7 @@ Storevo.ThemeEditor = {
                     { key: 'overlayOpacity', label: 'Oscuridad sobre la imagen (0 a 90)', type: 'number', defaultVal: 50 },
                     { key: 'bgColor', label: 'Color de fondo del Hero', type: 'color', defaultVal: '#6366f1' },
                     { key: 'textColor', label: 'Color del texto', type: 'color', defaultVal: '#ffffff' },
-                    { key: 'imageUrl', label: 'Slide 1: Imagen para PC (y móvil si no subes otra)', type: 'image' },
-                    { key: 'mobileImageUrl', label: 'Slide 1: Imagen específica para Celular (Opcional)', type: 'image' },
+                    { key: 'imageUrl', label: 'Slide 1: Imagen del Banner (PC y Celular)', type: 'image' },
                     { key: 'badgeText', label: 'Slide 1: Etiqueta superior (Opcional)', type: 'text', placeholder: 'Ej: Nueva Colección' },
                     { key: 'title', label: 'Slide 1: Título Principal', type: 'text', placeholder: 'Bienvenido a nuestra tienda' },
                     { key: 'subtitle', label: 'Slide 1: Subtítulo descriptivo', type: 'textarea', placeholder: 'Explora nuestro catálogo...' },
@@ -3104,8 +3423,7 @@ Storevo.ThemeEditor = {
                     const showSlide = (s) => parseInt((s && s.slideCount) || '1', 10) >= i;
                     const secBtnKey = `slide${i}SecondaryButtonText`;
                     heroFields.push(
-                        { key: `slide${i}ImageUrl`, label: `Slide ${i}: Imagen para PC`, type: 'image', showIf: showSlide },
-                        { key: `slide${i}MobileImageUrl`, label: `Slide ${i}: Imagen específica para Celular (Opcional)`, type: 'image', showIf: showSlide },
+                        { key: `slide${i}ImageUrl`, label: `Slide ${i}: Imagen del Banner (PC y Celular)`, type: 'image', showIf: showSlide },
                         { key: `slide${i}BadgeText`, label: `Slide ${i}: Etiqueta superior (Opcional)`, type: 'text', placeholder: 'Ej: Destacado', showIf: showSlide },
                         { key: `slide${i}Title`, label: `Slide ${i}: Título`, type: 'text', placeholder: `Título del Slide ${i}`, showIf: showSlide },
                         { key: `slide${i}Subtitle`, label: `Slide ${i}: Subtítulo`, type: 'textarea', placeholder: `Descripción del Slide ${i}...`, showIf: showSlide },
@@ -5123,7 +5441,7 @@ Storevo.ThemeEditor = {
             'post1Caption', 'post2Caption', 'post3Caption', 'post4Caption',
             'post1LinkUrl', 'post2LinkUrl', 'post3LinkUrl', 'post4LinkUrl'
         ];
-        const isPreservedKey = (k) => PRESERVED_MEDIA_AND_DATA_KEYS.includes(k) || /[iI]mage(Fit|PosX|PosY|Zoom)$/.test(k);
+        const isPreservedKey = (k) => PRESERVED_MEDIA_AND_DATA_KEYS.includes(k) || /[iI]mage(Mobile)?(Url|Fit|PosX|PosY|Zoom)$/.test(k);
 
         const usedOldIds = new Set();
 
@@ -5632,6 +5950,7 @@ Storevo.ThemeEditor = {
                     } else if (previousScrollY > 0) {
                         iWin.scrollTo(0, previousScrollY);
                     }
+                    document.dispatchEvent(new CustomEvent('storevo:preview-dom-updated'));
                 })
                 .catch(() => {
                     // Fallback seguro a recarga estándar del iframe si algo falla
@@ -5653,6 +5972,7 @@ Storevo.ThemeEditor = {
                     iframe.contentWindow.scrollTo(0, previousScrollY);
                 }
             } catch (e) {}
+            document.dispatchEvent(new CustomEvent('storevo:preview-dom-updated'));
             iframe.removeEventListener('load', onLoadHandler);
         };
 
@@ -6396,6 +6716,7 @@ if (document.readyState === 'loading') {
                                     <button type="button" data-t-upload="${idx}" class="w-full py-1.5 px-2.5 bg-slate-800 hover:bg-storevo-500 text-slate-200 hover:text-white rounded-lg text-[11px] font-bold transition">
                                         Subir captura de WhatsApp / Instagram
                                     </button>
+                                    <p class="text-[10px] text-slate-500">Recomendado: 1080×1350 px (vertical) o 1080×1080 px · JPG, PNG o WEBP · máx. 10 MB.</p>
                                 </div>
                             </div>
                         `;
@@ -6653,11 +6974,63 @@ if (document.readyState === 'loading') {
             renderFaqItemsEditor();
         }
 
+        function enhanceMultiBannersForm() {
+            const container = document.getElementById('inspector-fields-container');
+            if (!container) return;
+            const sec = getActiveInspectedSection();
+            if (!sec || sec.type !== 'multi_banners') return;
+
+            const countWrap = container.querySelector('[data-field-key="cardCount"]');
+            const layoutWrap = container.querySelector('[data-field-key="bannerLayout"]');
+            const countSel = countWrap ? countWrap.querySelector('select') : null;
+            const layoutSel = layoutWrap ? layoutWrap.querySelector('select') : null;
+            if (!countSel || !layoutSel || countSel.dataset.svMbEnhanced === 'true') return;
+            countSel.dataset.svMbEnhanced = 'true';
+            sec.settings = sec.settings || {};
+
+            const layoutOptionsByCount = {
+                '2': [
+                    { value: 'equal', label: '2 columnas simétricas (50% / 50%)' },
+                    { value: 'split_left', label: 'Tarjeta 1 destacada ancha (60% / 40%)' },
+                    { value: 'split_right', label: 'Tarjeta 2 destacada ancha (40% / 60%)' }
+                ],
+                '3': [
+                    { value: 'cols_3', label: '3 columnas iguales en fila' },
+                    { value: 'mosaic_3', label: 'Mosaico destacado (1 grande + 2 apiladas)' }
+                ],
+                '4': [
+                    { value: 'grid_2x2', label: 'Cuadrícula 2×2 (2 arriba y 2 abajo)' },
+                    { value: 'cols_4', label: '4 columnas en una sola fila' }
+                ]
+            };
+
+            const syncLayoutOptions = (userChangedCount) => {
+                const countVal = String(countSel.value || sec.settings.cardCount || '2');
+                const validList = layoutOptionsByCount[countVal] || layoutOptionsByCount['2'];
+                let currentLayout = String(sec.settings.bannerLayout || layoutSel.value || '');
+                if (!validList.some(o => o.value === currentLayout)) {
+                    currentLayout = validList[0].value;
+                    sec.settings.bannerLayout = currentLayout;
+                }
+                layoutSel.innerHTML = validList.map(o =>
+                    `<option value="${o.value}" ${o.value === currentLayout ? 'selected' : ''}>${o.label}</option>`
+                ).join('');
+                layoutSel.value = currentLayout;
+                if (userChangedCount) {
+                    materializeAndSave();
+                }
+            };
+
+            countSel.addEventListener('change', () => syncLayoutOptions(true));
+            syncLayoutOptions(false);
+        }
+
         const runAllInspectorEnhancers = () => {
             enhanceProductGridForm();
             enhanceFeaturedCategoriesForm();
             enhanceTestimonialsForm();
             enhanceFaqAccordionForm();
+            enhanceMultiBannersForm();
         };
 
         const sidebar = document.getElementById('theme-editor-sidebar');

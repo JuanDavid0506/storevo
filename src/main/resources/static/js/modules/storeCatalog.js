@@ -756,7 +756,11 @@
                     }
                 }
                 if (itemsHtml.length > 0) {
-                    blocks.push({ title: 'Destacados y Disponibilidad', html: itemsHtml.join('') });
+                    blocks.push({
+                        key: 'avail',
+                        title: 'Destacados y Disponibilidad',
+                        html: `<div class="sv-facet-scroll-box" data-facet-scroll-key="avail">${itemsHtml.join('')}</div>`
+                    });
                 }
             }
 
@@ -768,7 +772,11 @@
                         ${countBadge(cnt)}
                     </label>
                 `).join('');
-                blocks.push({ title: 'Categorías', html: `<div class="max-h-48 overflow-y-auto pr-1 space-y-0.5">${catHtml}</div>` });
+                blocks.push({
+                    key: 'cat',
+                    title: 'Categorías',
+                    html: `<div class="sv-facet-scroll-box space-y-0.5" data-facet-scroll-key="cat">${catHtml}</div>`
+                });
             }
 
             if (cfg.showPrice && facets.maxPrice > facets.minPrice) {
@@ -794,12 +802,12 @@
                         ${mid1 > facets.minPrice ? `
                         <div class="flex flex-wrap gap-1.5">
                             <button type="button" data-price-range="0:${mid1}" class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 hover:bg-brand hover:text-white text-slate-700 transition">Hasta ${formatCOP(mid1)}</button>
-                            <button type="button" data-price-range="${mid1}:${mid2}" class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 hover:bg-brand hover:text-white text-slate-700 transition">${formatCOP(mid1)} -${formatCOP(mid2)}</button>
+                            <button type="button" data-price-range="${mid1}:${mid2}" class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 hover:bg-brand hover:text-white text-slate-700 transition">${formatCOP(mid1)} - ${formatCOP(mid2)}</button>
                             <button type="button" data-price-range="${mid2}:" class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 hover:bg-brand hover:text-white text-slate-700 transition">Más de ${formatCOP(mid2)}</button>
                         </div>` : ''}
                     </div>
                 `;
-                blocks.push({ title: 'Precio', html: priceHtml });
+                blocks.push({ key: 'price', title: 'Precio', html: priceHtml });
             }
 
             if (cfg.showBrand && facets.brands.size > 0) {
@@ -810,7 +818,11 @@
                         ${countBadge(cnt)}
                     </label>
                 `).join('');
-                blocks.push({ title: 'Marca', html: `<div class="max-h-44 overflow-y-auto pr-1 space-y-0.5">${brandHtml}</div>` });
+                blocks.push({
+                    key: 'brand',
+                    title: 'Marca',
+                    html: `<div class="sv-facet-scroll-box space-y-0.5" data-facet-scroll-key="brand">${brandHtml}</div>`
+                });
             }
 
             if (cfg.showVariants && facets.variantGroups.size > 0) {
@@ -827,7 +839,12 @@
                             </button>
                         `;
                     }).join('');
-                    blocks.push({ title: groupName, html: `<div class="flex flex-wrap gap-1.5">${pillsHtml}</div>` });
+                    const scrollKey = 'var_' + normalizeText(groupName);
+                    blocks.push({
+                        key: scrollKey,
+                        title: groupName,
+                        html: `<div class="sv-facet-scroll-box flex flex-wrap gap-1.5" data-facet-scroll-key="${escapeHtml(scrollKey)}">${pillsHtml}</div>`
+                    });
                 });
             }
 
@@ -843,7 +860,12 @@
                             ${countBadge(cnt)}
                         </label>
                     `).join('');
-                    blocks.push({ title: specKey, html: `<div class="max-h-40 overflow-y-auto pr-1 space-y-0.5">${specHtml}</div>` });
+                    const scrollKey = 'spec_' + normalizeText(specKey);
+                    blocks.push({
+                        key: scrollKey,
+                        title: specKey,
+                        html: `<div class="sv-facet-scroll-box space-y-0.5" data-facet-scroll-key="${escapeHtml(scrollKey)}">${specHtml}</div>`
+                    });
                 });
             }
 
@@ -855,12 +877,12 @@
                 return `
                     <div class="flex items-center gap-2.5 flex-wrap">
                         ${blocks.map(b => `
-                            <details class="sv-topbar-popover relative group">
+                            <details class="sv-topbar-popover relative group" data-popover-key="${escapeHtml(b.key || b.title)}">
                                 <summary class="list-none [&::-webkit-details-marker]:hidden inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-slate-200 hover:border-brand text-xs font-bold text-slate-700 cursor-pointer shadow-2xs transition">
                                     <span>${escapeHtml(b.title)}</span>
                                     <svg class="w-3.5 h-3.5 text-slate-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                                 </summary>
-                                <div class="sv-topbar-popover__panel absolute left-0 mt-2 w-72 bg-white text-slate-900 p-4 rounded-2xl shadow-xl border border-slate-200 z-30">
+                                <div class="sv-topbar-popover__panel absolute left-0 mt-2 w-72 max-h-80 overflow-y-auto bg-white text-slate-900 p-4 rounded-2xl shadow-xl border border-slate-200 z-30">
                                     <p class="text-xs font-black uppercase tracking-wider text-slate-400 mb-2.5">${escapeHtml(b.title)}</p>${b.html}
                                 </div>
                             </details>
@@ -870,11 +892,94 @@
             }
 
             return blocks.map(b => `
-                <div class="py-4 border-b border-slate-100 last:border-b-0">
-                    <h4 class="text-xs font-black uppercase tracking-wider text-slate-800 mb-3">${escapeHtml(b.title)}</h4>
+                <div class="py-3.5 border-b border-slate-100 last:border-b-0">
+                    <h4 class="text-xs font-black uppercase tracking-wider text-slate-800 mb-2.5">${escapeHtml(b.title)}</h4>
                     ${b.html}
                 </div>
             `).join('');
+        }
+
+        function syncFacetControlsInContainer(rootEl) {
+            if (!rootEl) return;
+
+            rootEl.querySelectorAll('input[data-filter-type="offers"]').forEach(chk => {
+                chk.checked = Boolean(state.onlyOffers);
+            });
+            rootEl.querySelectorAll('input[data-filter-type="hide-oos"]').forEach(chk => {
+                chk.checked = Boolean(state.hideOutOfStock);
+            });
+            rootEl.querySelectorAll('button[data-avail-val]').forEach(btn => {
+                const val = btn.getAttribute('data-avail-val') || 'all';
+                const active = state.availability === val;
+                btn.className = `px-2.5 py-1 rounded-lg text-xs font-bold border transition ${active ? 'bg-brand text-white border-brand' : 'bg-slate-50 text-slate-700 border-slate-200'}`;
+            });
+            rootEl.querySelectorAll('input[data-filter-type="category"]').forEach(chk => {
+                chk.checked = state.categories.has(chk.value);
+            });
+            rootEl.querySelectorAll('input[data-filter-type="brand"]').forEach(chk => {
+                chk.checked = state.brands.has(chk.value);
+            });
+            rootEl.querySelectorAll('button[data-filter-type="variant"]').forEach(btn => {
+                const grp = btn.getAttribute('data-group');
+                const val = btn.getAttribute('data-val');
+                const active = Boolean(state.variants[grp] && state.variants[grp].has(val));
+                btn.className = `px-3 py-1.5 rounded-xl text-xs font-bold border transition ${active ? 'bg-brand text-white border-brand shadow-xs' : 'bg-white text-slate-700 border-slate-200 hover:border-brand'}`;
+            });
+            rootEl.querySelectorAll('input[data-filter-type="spec"]').forEach(chk => {
+                const grp = chk.getAttribute('data-group');
+                const val = chk.value;
+                chk.checked = Boolean(state.specs[grp] && state.specs[grp].has(val));
+            });
+
+            const minInput = rootEl.querySelector('input[data-filter-type="price-min"]');
+            if (minInput && document.activeElement !== minInput) {
+                minInput.value = state.minPrice != null ? String(state.minPrice) : '';
+            }
+            const maxInput = rootEl.querySelector('input[data-filter-type="price-max"]');
+            if (maxInput && document.activeElement !== maxInput) {
+                maxInput.value = state.maxPrice != null ? String(state.maxPrice) : '';
+            }
+        }
+
+        function syncAllFacetContainersState() {
+            const drawerBodyEl = drawerBackdrop.querySelector('.sv-filter-drawer-body');
+            if (drawerBodyEl) syncFacetControlsInContainer(drawerBodyEl);
+            if (dynamicHost) syncFacetControlsInContainer(dynamicHost);
+            const sidebarEl = sectionRoot.querySelector('.sv-catalog-sidebar');
+            if (sidebarEl) syncFacetControlsInContainer(sidebarEl);
+        }
+
+        function onUserFacetChange(mutateFn) {
+            const prevWinY = window.scrollY;
+            const sidebarBody = sectionRoot.querySelector('.sv-catalog-sidebar-body');
+            const prevSidebarScroll = sidebarBody ? sidebarBody.scrollTop : null;
+
+            mutateFn();
+            syncAllFacetContainersState();
+            applyFiltersAndSort();
+
+            if (sidebarBody && prevSidebarScroll !== null) {
+                sidebarBody.scrollTop = prevSidebarScroll;
+            }
+
+            const navEl = document.getElementById('storeNavbar') || document.querySelector('nav.sv-nav') || document.querySelector('header');
+            const navBottom = (navEl && navEl.getBoundingClientRect().bottom > 0)
+                ? Math.round(navEl.getBoundingClientRect().bottom)
+                : 88;
+
+            const activeResultsEl = !gridEl.classList.contains('hidden') ? gridEl : noMatchesEl;
+            const topAnchorEl = (!activeChipsBar.classList.contains('hidden') ? activeChipsBar : activeResultsEl) || gridEl;
+            const topAnchorRect = topAnchorEl ? topAnchorEl.getBoundingClientRect() : null;
+
+            // Si al reducirse las filas el inicio de los productos quedó tapado arriba por el navbar,
+            // alineamos de inmediato el borde superior de los resultados justo debajo del menú
+            if (topAnchorRect && topAnchorRect.top < navBottom + 12) {
+                const alignedTop = Math.max(0, Math.round(window.scrollY + topAnchorRect.top - navBottom - 16));
+                window.scrollTo(0, alignedTop);
+            } else if (Math.abs(window.scrollY - prevWinY) > 1) {
+                const maxAllowedScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+                window.scrollTo(0, Math.min(prevWinY, maxAllowedScroll));
+            }
         }
 
         function bindFacetEvents(containerEl) {
@@ -882,92 +987,91 @@
 
             containerEl.querySelectorAll('input[data-filter-type="offers"]').forEach(chk => {
                 chk.addEventListener('change', () => {
-                    state.onlyOffers = chk.checked;
-                    renderFilterUI();
-                    applyFiltersAndSort();
+                    onUserFacetChange(() => { state.onlyOffers = chk.checked; });
                 });
             });
 
             containerEl.querySelectorAll('input[data-filter-type="hide-oos"]').forEach(chk => {
                 chk.addEventListener('change', () => {
-                    state.hideOutOfStock = chk.checked;
-                    renderFilterUI();
-                    applyFiltersAndSort();
+                    onUserFacetChange(() => { state.hideOutOfStock = chk.checked; });
                 });
             });
 
             containerEl.querySelectorAll('button[data-avail-val]').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    state.availability = btn.getAttribute('data-avail-val') || 'all';
-                    renderFilterUI();
-                    applyFiltersAndSort();
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    onUserFacetChange(() => { state.availability = btn.getAttribute('data-avail-val') || 'all'; });
                 });
             });
 
             containerEl.querySelectorAll('input[data-filter-type="category"]').forEach(chk => {
                 chk.addEventListener('change', () => {
-                    if (chk.checked) state.categories.add(chk.value);
-                    else state.categories.delete(chk.value);
-                    renderFilterUI();
-                    applyFiltersAndSort();
+                    onUserFacetChange(() => {
+                        if (chk.checked) state.categories.add(chk.value);
+                        else state.categories.delete(chk.value);
+                    });
                 });
             });
 
             containerEl.querySelectorAll('input[data-filter-type="brand"]').forEach(chk => {
                 chk.addEventListener('change', () => {
-                    if (chk.checked) state.brands.add(chk.value);
-                    else state.brands.delete(chk.value);
-                    renderFilterUI();
-                    applyFiltersAndSort();
+                    onUserFacetChange(() => {
+                        if (chk.checked) state.brands.add(chk.value);
+                        else state.brands.delete(chk.value);
+                    });
                 });
             });
 
             containerEl.querySelectorAll('button[data-filter-type="variant"]').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const grp = btn.getAttribute('data-group');
-                    const val = btn.getAttribute('data-val');
-                    if (!state.variants[grp]) state.variants[grp] = new Set();
-                    if (state.variants[grp].has(val)) state.variants[grp].delete(val);
-                    else state.variants[grp].add(val);
-                    renderFilterUI();
-                    applyFiltersAndSort();
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    onUserFacetChange(() => {
+                        const grp = btn.getAttribute('data-group');
+                        const val = btn.getAttribute('data-val');
+                        if (!state.variants[grp]) state.variants[grp] = new Set();
+                        if (state.variants[grp].has(val)) state.variants[grp].delete(val);
+                        else state.variants[grp].add(val);
+                    });
                 });
             });
 
             containerEl.querySelectorAll('input[data-filter-type="spec"]').forEach(chk => {
                 chk.addEventListener('change', () => {
-                    const grp = chk.getAttribute('data-group');
-                    const val = chk.value;
-                    if (!state.specs[grp]) state.specs[grp] = new Set();
-                    if (chk.checked) state.specs[grp].add(val);
-                    else state.specs[grp].delete(val);
-                    renderFilterUI();
-                    applyFiltersAndSort();
+                    onUserFacetChange(() => {
+                        const grp = chk.getAttribute('data-group');
+                        const val = chk.value;
+                        if (!state.specs[grp]) state.specs[grp] = new Set();
+                        if (chk.checked) state.specs[grp].add(val);
+                        else state.specs[grp].delete(val);
+                    });
                 });
             });
 
             const minInput = containerEl.querySelector('input[data-filter-type="price-min"]');
             const maxInput = containerEl.querySelector('input[data-filter-type="price-max"]');
             const handlePriceInput = () => {
-                state.minPrice = (minInput && minInput.value !== '') ? Number(minInput.value) : null;
-                state.maxPrice = (maxInput && maxInput.value !== '') ? Number(maxInput.value) : null;
-                applyFiltersAndSort();
+                onUserFacetChange(() => {
+                    state.minPrice = (minInput && minInput.value !== '') ? Number(minInput.value) : null;
+                    state.maxPrice = (maxInput && maxInput.value !== '') ? Number(maxInput.value) : null;
+                });
             };
             if (minInput) minInput.addEventListener('change', handlePriceInput);
             if (maxInput) maxInput.addEventListener('change', handlePriceInput);
 
             containerEl.querySelectorAll('button[data-price-range]').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const [minStr, maxStr] = (btn.getAttribute('data-price-range') || '').split(':');
-                    state.minPrice = minStr ? Number(minStr) : null;
-                    state.maxPrice = maxStr ? Number(maxStr) : null;
-                    renderFilterUI();
-                    applyFiltersAndSort();
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    onUserFacetChange(() => {
+                        const [minStr, maxStr] = (btn.getAttribute('data-price-range') || '').split(':');
+                        state.minPrice = minStr ? Number(minStr) : null;
+                        state.maxPrice = maxStr ? Number(maxStr) : null;
+                    });
                 });
             });
         }
 
         let lastRenderedLayout = null;
+        let lastFacetConfigSignature = null;
 
         function openDrawer() {
             drawerBackdrop.classList.remove('hidden');
@@ -989,7 +1093,22 @@
             const layoutChangedInLiveEditor = Boolean(
                 fromLiveEditorUpdate && lastRenderedLayout !== null && lastRenderedLayout !== cfg.layout
             );
+            const currentSignature = [
+                cfg.enabled, cfg.layout, cfg.showSearch, cfg.showSort, cfg.showCount,
+                cfg.showCategory, cfg.showPrice, cfg.showOffers, cfg.showAvailability,
+                cfg.showBrand, cfg.showVariants, cfg.showSpecs, dynamicHost.dataset.inlineOpen || 'false'
+            ].join('|');
+
+            // Si la estructura de filtros ya está montada y no cambió la configuración del editor,
+            // sincronizamos los controles en sitio sin destruir ni recrear el DOM
+            if (!fromLiveEditorUpdate && lastFacetConfigSignature === currentSignature && effectiveEnabled) {
+                syncAllFacetContainersState();
+                updateTriggerBadge(cfg);
+                return;
+            }
+
             lastRenderedLayout = cfg.layout;
+            lastFacetConfigSignature = currentSignature;
 
             toolbarEl.classList.toggle('hidden', !effectiveEnabled);
             if (!effectiveEnabled) {
@@ -1044,7 +1163,10 @@
                 `;
                 drawerBackdrop.querySelector('.sv-drawer-close')?.addEventListener('click', closeDrawer);
                 drawerBackdrop.querySelector('.sv-drawer-apply')?.addEventListener('click', closeDrawer);
-                drawerBackdrop.querySelector('.sv-drawer-reset')?.addEventListener('click', resetAllFilters);
+                drawerBackdrop.querySelector('.sv-drawer-reset')?.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    onUserFacetChange(resetAllFilters);
+                });
                 drawerBackdrop.addEventListener('click', (e) => {
                     if (e.target === drawerBackdrop) closeDrawer();
                 });
@@ -1052,10 +1174,8 @@
 
             const drawerBodyEl = drawerBackdrop.querySelector('.sv-filter-drawer-body');
             if (drawerBodyEl) {
-                const prevScrollTop = drawerBodyEl.scrollTop;
                 drawerBodyEl.innerHTML = buildFacetsSectionsHtml(cfg, false);
                 bindFacetEvents(drawerBodyEl);
-                drawerBodyEl.scrollTop = prevScrollTop;
             }
 
             if (!hasAnyFacetEnabled) {
@@ -1072,8 +1192,9 @@
                 openDrawer();
             }
 
-            resetSidebarWrapper();
-            dynamicHost.innerHTML = '';
+            if (cfg.layout !== 'sidebar') {
+                resetSidebarWrapper();
+            }
 
             if (cfg.layout === 'topbar') {
                 dynamicHost.classList.remove('hidden');
@@ -1083,6 +1204,11 @@
                 dynamicHost.classList.remove('hidden');
                 if (layoutChangedInLiveEditor || (fromLiveEditorUpdate && dynamicHost.dataset.inlineOpen === undefined)) {
                     dynamicHost.dataset.inlineOpen = 'true';
+                    lastFacetConfigSignature = [
+                        cfg.enabled, cfg.layout, cfg.showSearch, cfg.showSort, cfg.showCount,
+                        cfg.showCategory, cfg.showPrice, cfg.showOffers, cfg.showAvailability,
+                        cfg.showBrand, cfg.showVariants, cfg.showSpecs, 'true'
+                    ].join('|');
                 }
                 const isOpen = dynamicHost.dataset.inlineOpen === 'true';
                 dynamicHost.innerHTML = isOpen ? `
@@ -1093,9 +1219,11 @@
                 if (!isOpen) dynamicHost.classList.add('hidden');
                 bindFacetEvents(dynamicHost);
             } else if (cfg.layout === 'sidebar') {
+                dynamicHost.innerHTML = '';
                 dynamicHost.classList.add('hidden');
                 mountDesktopSidebar(cfg);
             } else {
+                dynamicHost.innerHTML = '';
                 dynamicHost.classList.add('hidden');
             }
 
@@ -1109,7 +1237,7 @@
                 layoutWrap.className = 'sv-sidebar-layout-wrapper flex flex-col lg:flex-row gap-8 items-start';
                 gridEl.parentNode.insertBefore(layoutWrap, gridEl);
                 const sidebarAside = document.createElement('aside');
-                sidebarAside.className = 'sv-catalog-sidebar hidden lg:block w-64 flex-shrink-0 bg-white text-slate-900 p-5 store-radius border border-slate-200/80 shadow-xs sticky top-24';
+                sidebarAside.className = 'sv-catalog-sidebar hidden lg:flex lg:flex-col w-64 flex-shrink-0 bg-white text-slate-900 p-5 store-radius border border-slate-200/80 shadow-xs sticky top-24';
                 const gridContainer = document.createElement('div');
                 gridContainer.className = 'flex-1 w-full min-w-0';
                 layoutWrap.appendChild(sidebarAside);
@@ -1120,14 +1248,19 @@
             const sidebarEl = layoutWrap.querySelector('.sv-catalog-sidebar');
             if (sidebarEl) {
                 sidebarEl.innerHTML = `
-                    <div class="flex items-center justify-between pb-3 mb-2 border-b border-slate-100">
+                    <div class="flex items-center justify-between pb-3 mb-2 border-b border-slate-100 flex-shrink-0">
                         <h3 class="text-sm font-black uppercase tracking-wider text-slate-900">Filtros</h3>
                         <button type="button" class="sv-sidebar-reset text-xs font-bold text-brand hover:underline">Limpiar</button>
                     </div>
-                    ${buildFacetsSectionsHtml(cfg, false)}
+                    <div class="sv-catalog-sidebar-body overflow-y-auto pr-1 flex-1">
+                        ${buildFacetsSectionsHtml(cfg, false)}
+                    </div>
                 `;
                 bindFacetEvents(sidebarEl);
-                sidebarEl.querySelector('.sv-sidebar-reset')?.addEventListener('click', resetAllFilters);
+                sidebarEl.querySelector('.sv-sidebar-reset')?.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    onUserFacetChange(resetAllFilters);
+                });
             }
         }
 

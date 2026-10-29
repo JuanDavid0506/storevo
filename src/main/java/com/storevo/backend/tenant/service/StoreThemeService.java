@@ -161,7 +161,7 @@ public class StoreThemeService {
             "2", "3", "4"
     );
     private static final Set<String> ALLOWED_MULTI_BANNER_LAYOUTS = Set.of(
-            "equal", "mosaic_3", "cols_3", "grid_2x2", "cols_4"
+            "equal", "split_left", "split_right", "mosaic_3", "cols_3", "grid_2x2", "cols_4"
     );
     private static final Set<String> ALLOWED_TRUST_MOBILE_LAYOUTS = Set.of(
             "stack", "carousel"
@@ -1510,16 +1510,43 @@ public class StoreThemeService {
                     sec.getSettings().remove("layoutTone");
                 }
                 sec.getSettings().remove("layoutBgImageUrl");
+                sec.getSettings().remove("layoutBgImageMobileUrl");
                 sec.getSettings().remove("layoutBgOverlay");
+                sec.getSettings().remove("layoutBgImageFit");
+                sec.getSettings().remove("layoutBgImagePosX");
+                sec.getSettings().remove("layoutBgImagePosY");
+                sec.getSettings().remove("layoutBgImageZoom");
+                sec.getSettings().remove("layoutBgImageMobileFit");
+                sec.getSettings().remove("layoutBgImageMobilePosX");
+                sec.getSettings().remove("layoutBgImageMobilePosY");
+                sec.getSettings().remove("layoutBgImageMobileZoom");
             } else if ("image".equals(bgModeObj)) {
                 String cleanBgUrl = cleanLogoUrl(sec.settingStr("layoutBgImageUrl", ""));
+                String cleanMobBgUrl = cleanLogoUrl(sec.settingStr("layoutBgImageMobileUrl", ""));
+                if (cleanBgUrl.isEmpty() && !cleanMobBgUrl.isEmpty()) {
+                    cleanBgUrl = cleanMobBgUrl;
+                }
                 if (cleanBgUrl.isEmpty() || cleanBgUrl.contains("'") || cleanBgUrl.contains("\"") || cleanBgUrl.contains("(") || cleanBgUrl.contains(")")) {
                     sec.getSettings().remove("layoutBgMode");
                     sec.getSettings().remove("layoutBgImageUrl");
+                    sec.getSettings().remove("layoutBgImageMobileUrl");
                     sec.getSettings().remove("layoutBgOverlay");
                     sec.getSettings().remove("layoutTone");
+                    sec.getSettings().remove("layoutBgImageFit");
+                    sec.getSettings().remove("layoutBgImagePosX");
+                    sec.getSettings().remove("layoutBgImagePosY");
+                    sec.getSettings().remove("layoutBgImageZoom");
+                    sec.getSettings().remove("layoutBgImageMobileFit");
+                    sec.getSettings().remove("layoutBgImageMobilePosX");
+                    sec.getSettings().remove("layoutBgImageMobilePosY");
+                    sec.getSettings().remove("layoutBgImageMobileZoom");
                 } else {
                     sec.getSettings().put("layoutBgImageUrl", cleanBgUrl);
+                    if (!cleanMobBgUrl.isEmpty()) {
+                        sec.getSettings().put("layoutBgImageMobileUrl", cleanMobBgUrl);
+                    } else {
+                        sec.getSettings().remove("layoutBgImageMobileUrl");
+                    }
                     int ov = Math.max(0, Math.min(90, sec.settingInt("layoutBgOverlay", 40)));
                     sec.getSettings().put("layoutBgOverlay", ov);
                     if (!sec.getSettings().containsKey("layoutTone")) {
@@ -1531,8 +1558,17 @@ public class StoreThemeService {
                 sec.getSettings().remove("layoutBgMode");
                 sec.getSettings().remove("layoutBgColor");
                 sec.getSettings().remove("layoutBgImageUrl");
+                sec.getSettings().remove("layoutBgImageMobileUrl");
                 sec.getSettings().remove("layoutBgOverlay");
                 sec.getSettings().remove("layoutTone");
+                sec.getSettings().remove("layoutBgImageFit");
+                sec.getSettings().remove("layoutBgImagePosX");
+                sec.getSettings().remove("layoutBgImagePosY");
+                sec.getSettings().remove("layoutBgImageZoom");
+                sec.getSettings().remove("layoutBgImageMobileFit");
+                sec.getSettings().remove("layoutBgImageMobilePosX");
+                sec.getSettings().remove("layoutBgImageMobilePosY");
+                sec.getSettings().remove("layoutBgImageMobileZoom");
             }
 
             if ("catalog_results".equalsIgnoreCase(sec.getType()) || "product_main".equalsIgnoreCase(sec.getType())) {
@@ -1729,9 +1765,17 @@ public class StoreThemeService {
             s.put("categoryIds", catIds.stream().map(String::valueOf).collect(Collectors.joining(",")));
         } else if ("multi_banners".equalsIgnoreCase(type)) {
             String count = sec.settingStr("cardCount", "2");
-            s.put("cardCount", ALLOWED_MULTI_BANNER_COUNTS.contains(count) ? count : "2");
+            String safeCount = ALLOWED_MULTI_BANNER_COUNTS.contains(count) ? count : "2";
+            s.put("cardCount", safeCount);
             String layout = sec.settingStr("bannerLayout", "equal").toLowerCase(Locale.ROOT);
-            s.put("bannerLayout", ALLOWED_MULTI_BANNER_LAYOUTS.contains(layout) ? layout : "equal");
+            if ("2".equals(safeCount)) {
+                if (!Set.of("equal", "split_left", "split_right").contains(layout)) layout = "equal";
+            } else if ("3".equals(safeCount)) {
+                if (!Set.of("cols_3", "mosaic_3").contains(layout)) layout = "cols_3";
+            } else if ("4".equals(safeCount)) {
+                if (!Set.of("grid_2x2", "cols_4").contains(layout)) layout = "grid_2x2";
+            }
+            s.put("bannerLayout", layout);
         } else if ("trust_badges".equalsIgnoreCase(type)) {
             String style = sec.settingStr("badgeStyle", "cards").toLowerCase(Locale.ROOT);
             s.put("badgeStyle", ALLOWED_STAT_STYLES.contains(style) ? style : "cards");

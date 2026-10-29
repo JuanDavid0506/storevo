@@ -264,6 +264,10 @@ body[data-card-style="outlined"] .product-card:hover {
 }
 
 /* Escenario y transiciones del carrusel de Hero (2 a 5 slides) */
+.sv-hero-section {
+    display: flex;
+    align-items: center;
+}
 .sv-hero-slides-stage {
     display: grid;
     grid-template-areas: "hero-slide";
@@ -272,21 +276,20 @@ body[data-card-style="outlined"] .product-card:hover {
 }
 .sv-hero-slide {
     grid-area: hero-slide;
+    position: static;
     width: 100%;
     display: flex;
     align-items: center;
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
-    transform: translateY(6px);
-    transition: opacity 0.45s ease, transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), visibility 0.45s ease;
+    transition: opacity 0.45s ease, visibility 0.45s ease;
     z-index: 1;
 }
 .sv-hero-slide.is-active {
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
-    transform: translateY(0);
     z-index: 10;
 }
 
@@ -491,6 +494,46 @@ body[data-card-style="outlined"] .product-card:hover {
     flex: 1 1 0%;
     min-width: 0;
     width: 100%;
+}
+
+/* Desactivar Scroll Anchoring nativo en secciones con filtros para evitar saltos al pie de página */
+.storevo-theme-section,
+.sv-sidebar-layout-wrapper,
+.sv-catalog-grid,
+.sv-catalog-sidebar,
+.sv-global-filters-host {
+    overflow-anchor: none;
+}
+
+/* Scroll acotado para la columna lateral de filtros y para cada grupo individual */
+@media (min-width: 1024px) {
+    .sv-sidebar-layout-wrapper > .sv-catalog-sidebar {
+        display: flex !important;
+        flex-direction: column;
+        top: calc(var(--sv-nav-h, 5.5rem) + 1rem) !important;
+        max-height: calc(100vh - var(--sv-nav-h, 5.5rem) - 2rem) !important;
+        overflow: hidden;
+    }
+    .sv-sidebar-layout-wrapper > .sv-catalog-sidebar > .sv-catalog-sidebar-body {
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        max-height: calc(100vh - var(--sv-nav-h, 5.5rem) - 6.25rem) !important;
+        padding-right: 0.25rem;
+    }
+}
+
+.sv-inline-filter-panel {
+    max-height: 62vh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.sv-facet-scroll-box {
+    max-height: 9.5rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 0.25rem;
+    scrollbar-width: thin;
 }
 
 /* Grupos de filtros, píldoras y swatches de color */
@@ -1499,6 +1542,34 @@ body[data-card-style="boutique"] .storevo-theme-section.sv-tone-dark .product-ca
     scroll-margin-top: calc(var(--sv-nav-h, 4.5rem) + 1rem);
 }
 
+/* Capa de imagen de fondo personalizada con soporte de encuadre (PosX, PosY, Fit y Zoom) */
+.storevo-theme-section.sv-has-bg-image {
+    position: relative;
+    overflow: hidden;
+}
+.sv-section-bg-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+.sv-section-bg-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.sv-section-bg-scrim {
+    position: absolute;
+    inset: 0;
+    background-color: #0f172a;
+}
+.storevo-theme-section.sv-has-bg-image > :not(.sv-section-bg-layer) {
+    position: relative;
+    z-index: 1;
+}
+
 /* ==========================================================================
    FASE 2 - SECCIONES COMERCIALES NUEVAS
    ========================================================================== */
@@ -2437,6 +2508,12 @@ body .sv-spotlight-card[data-img-fit="cover"] .sv-spotlight-img {
     .sv-multi-banners-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 1.5rem;
+    }
+    .sv-multi-banners-grid[data-card-count="2"][data-banner-layout="split_left"] {
+        grid-template-columns: 1.45fr 1fr;
+    }
+    .sv-multi-banners-grid[data-card-count="2"][data-banner-layout="split_right"] {
+        grid-template-columns: 1fr 1.45fr;
     }
     .sv-multi-banners-grid[data-card-count="3"][data-banner-layout="cols_3"],
     .sv-multi-banners-grid[data-card-count="3"][data-banner-layout="equal"] {

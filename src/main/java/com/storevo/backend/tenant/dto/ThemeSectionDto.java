@@ -294,4 +294,308 @@ public class ThemeSectionDto {
             return true;
         }
     }
+
+    @JsonIgnore
+    public int getLayoutBgOverlayClamped() {
+        return Math.max(0, Math.min(90, settingInt("layoutBgOverlay", 40)));
+    }
+
+    public String resolveViewAllHref(String slug) {
+        String safeSlug = slug != null ? slug : "";
+        String src = settingStr("source", "NEWEST").toUpperCase(Locale.ROOT);
+        Long catId = settingLong("categoryId");
+        String brandName = settingStr("brandName", "");
+        return buildCatalogHrefForSource(safeSlug, src, catId, brandName);
+    }
+
+    public String resolveTabHref(String slug, Map<String, Object> tab) {
+        String safeSlug = slug != null ? slug : "";
+        if (tab == null) return "/s/" + safeSlug + "/catalog";
+        String src = tab.get("source") != null ? String.valueOf(tab.get("source")).toUpperCase(Locale.ROOT) : "NEWEST";
+        Long catId = null;
+        if (tab.get("categoryId") instanceof Number num) {
+            catId = num.longValue();
+        } else if (tab.get("categoryId") != null) {
+            try {
+                catId = Long.parseLong(String.valueOf(tab.get("categoryId")).trim());
+            } catch (NumberFormatException ignored) {}
+        }
+        String brandName = tab.get("brandName") != null ? String.valueOf(tab.get("brandName")).trim() : "";
+        return buildCatalogHrefForSource(safeSlug, src, catId, brandName);
+    }
+
+    private String buildCatalogHrefForSource(String slug, String src, Long catId, String brandName) {
+        String base = "/s/" + slug + "/catalog";
+        if ("CATEGORY".equals(src) && catId != null) {
+            return base + "?category=" + catId;
+        }
+        if ("BRAND".equals(src) && brandName != null && !brandName.isEmpty()) {
+            return base + "?q=" + java.net.URLEncoder.encode(brandName, java.nio.charset.StandardCharsets.UTF_8);
+        }
+        if ("OFFERS".equals(src)) {
+            return base + "?offers=true";
+        }
+        if ("FEATURED".equals(src)) {
+            return base + "?featured=true";
+        }
+        return base;
+    }
+
+    public String effectiveMobileImageUrl(String baseKey) {
+        if (baseKey == null || baseKey.isBlank()) return "";
+        String directMob = settingStr(baseKey + "MobileUrl", "");
+        if (!directMob.isEmpty()) return directMob;
+        if ("image".equals(baseKey)) {
+            String legacy = settingStr("mobileImageUrl", "");
+            if (!legacy.isEmpty()) return legacy;
+        } else if (baseKey.endsWith("Image")) {
+            String prefix = baseKey.substring(0, baseKey.length() - 5);
+            String legacy = settingStr(prefix + "MobileImageUrl", "");
+            if (!legacy.isEmpty()) return legacy;
+        }
+        return settingStr(baseKey + "Url", "");
+    }
+
+    public String mobileFrameStyle(String baseKey) {
+        if (baseKey == null || baseKey.isBlank()) return "";
+        String mobPrefix = baseKey + "Mobile";
+        boolean hasDirectMobFrame = settings != null && (
+                settings.containsKey(mobPrefix + "Fit") ||
+                        settings.containsKey(mobPrefix + "PosX") ||
+                        settings.containsKey(mobPrefix + "PosY") ||
+                        settings.containsKey(mobPrefix + "Zoom")
+        );
+        if (hasDirectMobFrame) {
+            return frameStyle(mobPrefix);
+        }
+        if ("image".equals(baseKey)) {
+            boolean hasLegacyHeroMob = settings != null && (
+                    settings.containsKey("mobileImageFit") ||
+                            settings.containsKey("mobileImagePosX") ||
+                            settings.containsKey("mobileImagePosY") ||
+                            settings.containsKey("mobileImageZoom")
+            );
+            if (hasLegacyHeroMob) return frameStyle("mobileImage");
+        } else if (baseKey.endsWith("Image")) {
+            String prefix = baseKey.substring(0, baseKey.length() - 5) + "MobileImage";
+            boolean hasLegacySlideMob = settings != null && (
+                    settings.containsKey(prefix + "Fit") ||
+                            settings.containsKey(prefix + "PosX") ||
+                            settings.containsKey(prefix + "PosY") ||
+                            settings.containsKey(prefix + "Zoom")
+            );
+            if (hasLegacySlideMob) return frameStyle(prefix);
+        }
+        String pcUrl = settingStr(baseKey + "Url", "");
+        String mobUrl = effectiveMobileImageUrl(baseKey);
+        if (!mobUrl.isEmpty() && !mobUrl.equals(pcUrl)) {
+            return "object-fit:cover;object-position:50% 50%;";
+        }
+        return frameStyle(baseKey);
+    }
+
+    public List<Map<String, Object>> getHeroSlides(String storeName, boolean isDraftPreview) {
+        String safeStore = (storeName != null && !storeName.isBlank()) ? storeName : "Tienda";
+        int count = Math.max(1, Math.min(5, settingInt("slideCount", 1)));
+        List<Map<String, Object>> list = new ArrayList<>();
+
+        String s1PcImg = settingStr("imageUrl", "");
+        String s1MobImg = effectiveMobileImageUrl("image");
+        Map<String, Object> s1 = new LinkedHashMap<>();
+        s1.put("idx", 1);
+        s1.put("img", !s1PcImg.isEmpty() ? s1PcImg : s1MobImg);
+        s1.put("mobImg", !s1MobImg.isEmpty() ? s1MobImg : s1PcImg);
+        s1.put("imgFrame", frameStyle("image"));
+        s1.put("mobFrame", mobileFrameStyle("image"));
+        s1.put("badge", settingStr("badgeText", ""));
+        s1.put("title", settingStr("title", "Bienvenido a " + safeStore));
+        s1.put("subtitle", settingStr("subtitle", "Explora nuestro catálogo y descubre los mejores productos diseñados para ti."));
+        s1.put("btnText", settingStr("buttonText", "Ver Catálogo"));
+        s1.put("btnUrl", settingStr("buttonUrl", "/catalog").trim());
+        s1.put("secText", settingStr("secondaryButtonText", ""));
+        s1.put("secUrl", settingStr("secondaryButtonUrl", "/catalog").trim());
+        list.add(s1);
+
+        String[] fallbackTitles = {
+                "", "",
+                "Slide 2 — Promoción Destacada",
+                "Slide 3 — Nueva Colección",
+                "Slide 4 — Especial de Temporada",
+                "Slide 5 — Lanzamiento Exclusivo"
+        };
+
+        for (int i = 2; i <= count; i++) {
+            String p = "slide" + i;
+            String baseKey = p + "Image";
+            String img = settingStr(baseKey + "Url", "");
+            String mobImg = effectiveMobileImageUrl(baseKey);
+            String title = settingStr(p + "Title", "");
+            String sub = settingStr(p + "Subtitle", "");
+            boolean hasContent = !title.isEmpty() || !img.isEmpty() || !mobImg.isEmpty() || !sub.isEmpty();
+            if (!hasContent && !isDraftPreview) continue;
+
+            Map<String, Object> sl = new LinkedHashMap<>();
+            sl.put("idx", i);
+            sl.put("img", !img.isEmpty() ? img : mobImg);
+            sl.put("mobImg", !mobImg.isEmpty() ? mobImg : img);
+            sl.put("imgFrame", frameStyle(baseKey));
+            sl.put("mobFrame", mobileFrameStyle(baseKey));
+            sl.put("badge", settingStr(p + "BadgeText", ""));
+            sl.put("title", !title.isEmpty() ? title : fallbackTitles[i]);
+            sl.put("subtitle", sub);
+            sl.put("btnText", settingStr(p + "ButtonText", "Ver Catálogo"));
+            sl.put("btnUrl", settingStr(p + "ButtonUrl", "/catalog").trim());
+            sl.put("secText", settingStr(p + "SecondaryButtonText", ""));
+            sl.put("secUrl", settingStr(p + "SecondaryButtonUrl", "/catalog").trim());
+            list.add(sl);
+        }
+        return list;
+    }
+
+    @JsonIgnore
+    public List<Map<String, Object>> getMultiBannerCards() {
+        int count = Math.max(2, Math.min(4, settingInt("cardCount", 2)));
+        String[] defBadges = { "Destacado", "Ofertas", "Exclusivo", "Recomendado" };
+        String[] defTitles = { "Nueva Temporada", "Descuentos Especiales", "Edición Limitada", "Favoritos del Mes" };
+        String[] defSubs = {
+                "Conoce los últimos ingresos",
+                "Referencias seleccionadas a precios únicos",
+                "Diseños pensados para destacar",
+                "Los más pedidos por nuestros clientes"
+        };
+        String[] defBtns = { "Explorar", "Ver ofertas", "Descubrir", "Ver colección" };
+        String[] defBgs = { "#1e293b", "#4f46e5", "#0f766e", "#be123c" };
+
+        List<Map<String, Object>> cards = new ArrayList<>();
+        for (int i = 1; i <= count; i++) {
+            String p = "card" + i;
+            String baseKey = p + "Image";
+            String pcImg = settingStr(baseKey + "Url", "");
+            String mobImg = effectiveMobileImageUrl(baseKey);
+            Map<String, Object> c = new LinkedHashMap<>();
+            c.put("idx", i);
+            c.put("badge", settingStr(p + "Badge", defBadges[i - 1]));
+            c.put("title", settingStr(p + "Title", defTitles[i - 1]));
+            c.put("sub", settingStr(p + "Subtitle", defSubs[i - 1]));
+            c.put("btn", settingStr(p + "ButtonText", defBtns[i - 1]));
+            c.put("url", settingStr(p + "ButtonUrl", "/catalog").trim());
+            c.put("img", !pcImg.isEmpty() ? pcImg : mobImg);
+            c.put("mobImg", !mobImg.isEmpty() ? mobImg : pcImg);
+            c.put("bg", settingStr(p + "BgColor", defBgs[i - 1]));
+            c.put("frame", frameStyle(baseKey));
+            c.put("mobFrame", mobileFrameStyle(baseKey));
+            cards.add(c);
+        }
+        return cards;
+    }
+
+    @JsonIgnore
+    public List<Map<String, Object>> getTrustBadgeItems() {
+        String[] defIcons = { "shield", "truck", "chat", "star", "refresh", "card" };
+        String[] defTitles = {
+                "Compra 100% Segura",
+                "Envíos a Todo el País",
+                "Atención Personalizada",
+                "", "", ""
+        };
+        String[] defTexts = {
+                "Tus datos y pedidos están protegidos en todo momento.",
+                "Despachamos tu pedido rápido con transportadoras aliadas.",
+                "Resolvemos tus dudas directamente por WhatsApp.",
+                "", "", ""
+        };
+        List<Map<String, Object>> list = new ArrayList<>();
+        for (int i = 1; i <= 6; i++) {
+            String title = settingStr("item" + i + "Title", defTitles[i - 1]);
+            if (title.isEmpty()) continue;
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("icon", settingStr("item" + i + "Icon", defIcons[i - 1]));
+            item.put("title", title);
+            item.put("text", settingStr("item" + i + "Text", defTexts[i - 1]));
+            list.add(item);
+        }
+        return list;
+    }
+
+    @JsonIgnore
+    public List<Map<String, Object>> getManualTestimonialItems() {
+        List<Map<String, Object>> list = new ArrayList<>();
+        if (settings == null || !(settings.get("manualItems") instanceof Collection<?> col)) {
+            return list;
+        }
+        for (Object obj : col) {
+            if (!(obj instanceof Map<?, ?> raw)) continue;
+            String author = raw.get("authorName") != null ? String.valueOf(raw.get("authorName")).trim() : "";
+            String meta = raw.get("authorMeta") != null ? String.valueOf(raw.get("authorMeta")).trim() : "";
+            String text = raw.get("text") != null ? String.valueOf(raw.get("text")).trim() : "";
+            String source = raw.get("sourceType") != null ? String.valueOf(raw.get("sourceType")).trim() : "direct";
+            boolean auth = raw.get("authorized") != null && Boolean.parseBoolean(String.valueOf(raw.get("authorized")).trim());
+            String img = (auth && raw.get("imageUrl") != null) ? String.valueOf(raw.get("imageUrl")).trim() : "";
+            if (author.isEmpty() && text.isEmpty() && img.isEmpty()) continue;
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("authorName", author.isEmpty() ? "Cliente" : author);
+            item.put("authorMeta", meta);
+            item.put("text", text);
+            item.put("sourceType", source);
+            item.put("authorized", auth);
+            item.put("imageUrl", img);
+            list.add(item);
+        }
+        return list;
+    }
+
+    @JsonIgnore
+    public List<Map<String, String>> getFaqItems() {
+        List<Map<String, String>> list = new ArrayList<>();
+        if (settings != null && settings.get("items") instanceof Collection<?> col && !col.isEmpty()) {
+            for (Object obj : col) {
+                if (!(obj instanceof Map<?, ?> raw)) continue;
+                String q = raw.get("q") != null ? String.valueOf(raw.get("q")).trim() : "";
+                String a = raw.get("a") != null ? String.valueOf(raw.get("a")).trim() : "";
+                if (!q.isEmpty() && !a.isEmpty()) {
+                    Map<String, String> pair = new LinkedHashMap<>();
+                    pair.put("q", q);
+                    pair.put("a", a);
+                    list.add(pair);
+                }
+            }
+            if (!list.isEmpty()) return list;
+        }
+        String[] defQ = {
+                "¿Cuáles son los métodos de pago disponibles?",
+                "¿Cuánto tarda en llegar mi pedido?",
+                "¿Tienen cambios o garantías?",
+                "", ""
+        };
+        String[] defA = {
+                "Puedes realizar tu pedido con pago seguro en línea o coordinar directamente con nosotros por WhatsApp.",
+                "Despachamos a todo el país. El tiempo estimado de entrega es de 2 a 5 días hábiles según tu ciudad.",
+                "Sí, todos nuestros productos cuentan con garantía y soporte directo.",
+                "", ""
+        };
+        for (int i = 1; i <= 5; i++) {
+            String q = (settings != null && settings.containsKey("q" + i)) ? settingStr("q" + i, "") : defQ[i - 1];
+            String a = (settings != null && settings.containsKey("a" + i)) ? settingStr("a" + i, "") : defA[i - 1];
+            if (!q.isEmpty() && !a.isEmpty()) {
+                Map<String, String> pair = new LinkedHashMap<>();
+                pair.put("q", q);
+                pair.put("a", a);
+                list.add(pair);
+            }
+        }
+        return list;
+    }
+
+    public List<String> getBulletLines(String key) {
+        String raw = settingStr(key, "");
+        if (raw.isEmpty()) return Collections.emptyList();
+        List<String> lines = new ArrayList<>();
+        for (String line : raw.split("\\r?\\n")) {
+            String clean = line.trim();
+            if (!clean.isEmpty()) {
+                lines.add(clean);
+            }
+        }
+        return lines;
+    }
 }
