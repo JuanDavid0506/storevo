@@ -225,6 +225,10 @@
             .storevo-theme-section.sv-space-bottom-none > div.sv-ann-bar { padding-bottom: 0 !important; }
             .storevo-theme-section.sv-space-bottom-sm > section { padding-bottom: 1.5rem !important; }
             .storevo-theme-section.sv-space-bottom-lg > section { padding-bottom: 4.5rem !important; }
+            /* Impedir que el anuncio configurado "above_menu" se pinte dentro de <main> antes de pasar arriba del navbar */
+            #storevoMainContent .storevo-theme-section[data-section-type="announcement_bar"]:not(.sv-ann-below-hero-nav):has(.sv-ann-bar[data-header-pos="above_menu"]) {
+                display: none !important;
+            }
         </style>
         </style>
         <!-- Estilos exclusivos cuando la tienda se visualiza dentro del Editor Visual (preview=draft) -->
@@ -412,6 +416,7 @@
                      data-sv-footer-copyright=${gs != null and gs.footerCopyrightText != null ? gs.footerCopyrightText : ''},
                      data-sv-footer-show-credit=${gs == null or gs.footerShowCredit == null or gs.footerShowCredit}">
 
+    <div id="storevoTopAnnouncementHost"></div>
     <nav th:replace="~{components/store-navbar :: storeNavbar}"></nav>
     <script th:src="@{/js/ui/navbarStyle.js}"></script>
 
@@ -475,6 +480,23 @@
         <div class="flex-1 w-full">
             <div layout:fragment="content"></div>
         </div>
+        <script>
+            (function() {
+                const topHost = document.getElementById('storevoTopAnnouncementHost');
+                const mainEl = document.getElementById('storevoMainContent');
+                if (!topHost || !mainEl) return;
+                const firstSec = mainEl.querySelector('.storevo-theme-section');
+                if (firstSec && firstSec.getAttribute('data-section-type') === 'announcement_bar') {
+                    const annBarEl = firstSec.querySelector('.sv-ann-bar');
+                    const pos = annBarEl ? (annBarEl.getAttribute('data-header-pos') || 'below_menu') : 'below_menu';
+                    if (pos === 'above_menu') {
+                        topHost.appendChild(firstSec);
+                    } else {
+                        firstSec.classList.add('sv-ann-below-hero-nav');
+                    }
+                }
+            })();
+        </script>
     </main>
     <!-- Footer multi-diseño conectado a globalStyles (retrocompatible al 100% con el diseño clásico por defecto) -->
     <footer id="storeFooter"
@@ -2557,6 +2579,11 @@
                         // Si <main> se refrescó (mismo ID o nueva plantilla con otro ID), descartar el nodo viejo del host superior
                         topAnnHost.innerHTML = '';
                     } else {
+                        const hoistedAnnBar = currentHoisted.querySelector('.sv-ann-bar');
+                        const hoistedPos = hoistedAnnBar ? (hoistedAnnBar.getAttribute('data-header-pos') || 'below_menu') : 'below_menu';
+                        if (hoistedPos === 'above_menu') {
+                            return;
+                        }
                         const firstContainer = mainEl.querySelector(':scope > div') || mainEl;
                         firstContainer.insertBefore(currentHoisted, firstContainer.firstElementChild);
                     }

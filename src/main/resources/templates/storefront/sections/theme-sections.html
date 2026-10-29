@@ -921,6 +921,25 @@
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
 
+        <script th:inline="javascript">
+            (function() {
+                const root = document.getElementById(/*[[${'ann-bar-root-' + sec.id}]]*/ '');
+                if (!root) return;
+                const secWrap = root.closest('.storevo-theme-section');
+                const mainEl = document.getElementById('storevoMainContent');
+                const topHost = document.getElementById('storevoTopAnnouncementHost');
+                if (secWrap && mainEl && topHost && mainEl.contains(secWrap)) {
+                    const firstSecInMain = mainEl.querySelector('.storevo-theme-section');
+                    const pos = root.getAttribute('data-header-pos') || 'below_menu';
+                    if (firstSecInMain === secWrap && pos === 'above_menu') {
+                        topHost.replaceChildren(secWrap);
+                    } else {
+                        secWrap.classList.add('sv-ann-below-hero-nav');
+                    }
+                }
+            })();
+        </script>
+
         <script th:if="${animMode != 'marquee' and animMode != 'static'}" th:inline="javascript">
             (function() {
                 const root = document.getElementById(/*[[${'ann-bar-root-' + sec.id}]]*/ '');
