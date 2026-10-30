@@ -18,7 +18,7 @@ Storevo.ThemeEditor = {
             label: 'Barra de Anuncio Superior',
             description: 'Cintillo superior animado (Marquesina continua, carrusel vertical, giro 3D, máquina de escribir y más).',
             defaultSettings: {
-                text: '🚚 ¡Envío gratis en compras superiores a $150.000!',
+                text: '¡Envío gratis en compras superiores a $150.000!',
                 text2: '',
                 text3: '',
                 headerPosition: 'below_menu',
@@ -78,7 +78,7 @@ Storevo.ThemeEditor = {
             description: 'Destaca un producto específico en gran formato con foto grande, precio y compra rápida.',
             defaultSettings: {
                 productId: '',
-                badgeText: '🔥 Producto Estrella',
+                badgeText: 'Producto Estrella',
                 customTitle: '',
                 customSubtitle: '',
                 imageSide: 'left'
@@ -100,7 +100,7 @@ Storevo.ThemeEditor = {
             label: 'Oferta con Contador Regresivo',
             description: 'Banner de urgencia con reloj en vivo (Días, Horas, Minutos y Segundos) para ofertas.',
             defaultSettings: {
-                badgeText: '⚡ Oferta por Tiempo Limitado',
+                badgeText: 'Oferta por Tiempo Limitado',
                 title: '¡Aprovecha nuestros descuentos especiales!',
                 subtitle: 'Unidades limitadas disponibles antes de que termine la promoción.',
                 endDate: '',
@@ -231,7 +231,7 @@ Storevo.ThemeEditor = {
             label: 'Video Destacado (YouTube)',
             description: 'Muestra un video de tus productos o marca en formato horizontal (16:9) o vertical (Shorts 9:16).',
             defaultSettings: {
-                badgeText: '🎥 Conoce Más',
+                badgeText: 'Conoce Más',
                 title: 'Mira nuestros productos en acción',
                 subtitle: 'Calidad, detalles y acabados reales antes de hacer tu pedido.',
                 videoUrl: '',
@@ -355,7 +355,7 @@ Storevo.ThemeEditor = {
             label: 'Visítanos (Tienda Física)',
             description: 'Presenta la dirección, ciudad, horarios de atención, foto y cómo llegar a tu punto físico.',
             defaultSettings: {
-                badgeText: '📍 Punto Físico',
+                badgeText: 'Punto Físico',
                 title: 'Visítanos en Nuestra Tienda',
                 subtitle: 'Conoce nuestros productos personalmente y recibe asesoría directa.',
                 city: '',
@@ -689,9 +689,9 @@ Storevo.ThemeEditor = {
         const mainGroup = document.createElement('optgroup');
         mainGroup.label = 'Páginas Principales';
         [
-            { value: 'home', label: '🏠 Página de Inicio (Portada)' },
-            { value: 'catalog', label: '🛍️ Página de Catálogo General' },
-            { value: 'product', label: '📦 Ficha de Producto (Detalle)' }
+            { value: 'home', label: 'Página de Inicio (Portada)' },
+            { value: 'catalog', label: 'Página de Catálogo General' },
+            { value: 'product', label: 'Ficha de Producto (Detalle)' }
         ].forEach(item => {
             const o = document.createElement('option');
             o.value = item.value;
@@ -711,8 +711,8 @@ Storevo.ThemeEditor = {
                 navCats.forEach(c => {
                     const o = document.createElement('option');
                     o.value = 'category:' + c.id;
-                    const customTag = this.isCategoryCustomized(c.id) ? ' ✨ Personalizada' : '';
-                    o.textContent = `🏷️ ${c.name}${customTag}`;
+                    const customTag = this.isCategoryCustomized(c.id) ? ' · Personalizada' : '';
+                    o.textContent = c.name + customTag;
                     navCatGroup.appendChild(o);
                 });
                 sel.appendChild(navCatGroup);
@@ -724,8 +724,8 @@ Storevo.ThemeEditor = {
                 otherCats.forEach(c => {
                     const o = document.createElement('option');
                     o.value = 'category:' + c.id;
-                    const customTag = this.isCategoryCustomized(c.id) ? ' ✨ Personalizada' : '';
-                    o.textContent = `📁 ${c.name}${customTag}`;
+                    const customTag = this.isCategoryCustomized(c.id) ? ' · Personalizada' : '';
+                    o.textContent = c.name + customTag;
                     otherCatGroup.appendChild(o);
                 });
                 sel.appendChild(otherCatGroup);
@@ -740,7 +740,7 @@ Storevo.ThemeEditor = {
                 if (!cp || !cp.slug) return;
                 const o = document.createElement('option');
                 o.value = 'page:' + cp.slug;
-                o.textContent = `📄 ${cp.title || cp.slug}${cp.showInNavbar !== false ? ' (En menú)' : ''}`;
+                o.textContent = (cp.title || cp.slug) + (cp.showInNavbar !== false ? ' (En menú)' : '');
                 customGroup.appendChild(o);
             });
             sel.appendChild(customGroup);
@@ -789,7 +789,7 @@ Storevo.ThemeEditor = {
         }
         if (badgeEl) {
             if (isCustom) {
-                badgeEl.textContent = '✨ Diseño propio';
+                badgeEl.textContent = 'Diseño propio';
                 badgeEl.className = 'text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-storevo-500/15 text-storevo-300 border border-storevo-500/30 flex-shrink-0';
             } else {
                 badgeEl.textContent = 'Diseño general';
@@ -1584,9 +1584,9 @@ Storevo.ThemeEditor = {
                 : ((sec.settings && (sec.settings.title || sec.settings.customTitle || sec.settings.badgeText || sec.settings.text || sec.settings.card1Title || sec.settings.headerTitle)) || def.label);
             const metaTags = [];
             if (!isLocked && sec.settings) {
-                if (sec.settings.layoutVisibility === 'desktop_only') metaTags.push('🖥️ Solo PC');
-                else if (sec.settings.layoutVisibility === 'mobile_only') metaTags.push('📱 Solo móvil');
-                if (sec.settings.scheduleStart || sec.settings.scheduleEnd) metaTags.push('🗓️ Programada');
+                if (sec.settings.layoutVisibility === 'desktop_only') metaTags.push('Solo PC');
+                else if (sec.settings.layoutVisibility === 'mobile_only') metaTags.push('Solo móvil');
+                if (sec.settings.scheduleStart || sec.settings.scheduleEnd) metaTags.push('Programada');
             }
             const subtitle = metaTags.length > 0 ? `${metaTags.join(' · ')} — ${baseSubtitle}` : baseSubtitle;
             const isEnabled = isLocked ? true : (sec.enabled !== false);
@@ -2109,25 +2109,25 @@ Storevo.ThemeEditor = {
             const imgBox = document.createElement('div');
             imgBox.className = 'bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2.5';
 
-            const smallBtnClass = (active) => 'px-2.5 py-1 rounded-lg text-[11px] font-bold border transition ' +
+            const smallBtnClass = (active) => 'px-2.5 py-1 rounded-lg text-[11px] font-bold border transition inline-flex items-center gap-1.5 ' +
                 (active ? 'bg-storevo-500 text-white border-storevo-500' : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white');
 
             const viewRow = document.createElement('div');
             viewRow.className = 'flex items-center gap-1.5';
             const viewPcBtn = document.createElement('button');
             viewPcBtn.type = 'button';
-            viewPcBtn.textContent = '🖥️ Vista computador';
+            viewPcBtn.innerHTML = `${Storevo.EditorUI ? Storevo.EditorUI.icon('monitor', 'w-3.5 h-3.5') : ''}<span>Vista PC</span>`;
             const viewMobBtn = document.createElement('button');
             viewMobBtn.type = 'button';
-            viewMobBtn.textContent = '📱 Vista celular';
+            viewMobBtn.innerHTML = `${Storevo.EditorUI ? Storevo.EditorUI.icon('smartphone', 'w-3.5 h-3.5') : ''}<span>Vista celular</span>`;
             viewRow.appendChild(viewPcBtn);
             viewRow.appendChild(viewMobBtn);
 
             const modeStatusNote = document.createElement('p');
-            modeStatusNote.className = 'hidden text-[10px] font-semibold text-storevo-300 bg-storevo-500/10 border border-storevo-500/20 rounded-lg px-2.5 py-1.5 leading-snug';
+            modeStatusNote.className = 'hidden sv-ed-callout-info';
 
             const frame = document.createElement('div');
-            frame.style.cssText = 'position:relative;overflow:hidden;width:100%;border-radius:10px;border:1px solid #1e293b;background:#0f172a;touch-action:none;';
+            frame.className = 'sv-ed-img-frame';
             const imgEl = document.createElement('img');
             imgEl.draggable = false;
             imgEl.alt = 'Vista previa';
@@ -2162,7 +2162,7 @@ Storevo.ThemeEditor = {
             fitRow.appendChild(resetBtn);
 
             const containVariableNote = document.createElement('p');
-            containVariableNote.className = 'hidden text-[10px] text-amber-300/95 bg-amber-500/10 border border-amber-500/25 rounded-lg px-2.5 py-1.5 leading-snug';
+            containVariableNote.className = 'hidden sv-ed-callout-warn';
 
             const zoomRow = document.createElement('div');
             zoomRow.className = 'flex items-center gap-2';
@@ -2252,9 +2252,9 @@ Storevo.ThemeEditor = {
 
             const paintInfo = () => {
                 const spec = getFrameSpec();
+                infoLine.classList.remove('sv-ed-warn-text');
                 if (!spec) {
                     infoLine.textContent = 'Recomendado: 400×160 px · JPG, PNG o WEBP · máx. 10 MB.';
-                    infoLine.style.color = '';
                     return;
                 }
                 const isMob = viewMode === 'mobile';
@@ -2262,13 +2262,12 @@ Storevo.ThemeEditor = {
                 const targetMinW = isMob ? (spec.mobileMinW || 700) : spec.minW;
                 const deviceLabel = isMob ? 'Recomendado en celular' : 'Recomendado en PC';
                 let text = `${deviceLabel}: ${targetSize} · JPG, PNG o WEBP · máx. 10 MB.`;
-                infoLine.style.color = '';
                 const effUrl = getEffectiveUrl();
                 if (effUrl && imgEl.naturalWidth) {
                     text += ` Tu foto: ${imgEl.naturalWidth}×${imgEl.naturalHeight} px.`;
                     if (imgEl.naturalWidth < targetMinW) {
                         text += ' Es pequeña y puede verse borrosa.';
-                        infoLine.style.color = '#fbbf24';
+                        infoLine.classList.add('sv-ed-warn-text');
                     }
                 }
                 infoLine.textContent = text;
@@ -2300,10 +2299,10 @@ Storevo.ThemeEditor = {
                         : 'Subir otra imagen exclusiva para celular';
                     removeBtn.textContent = mobUrlVal ? 'Usar la de PC' : 'Quitar imagen';
                     if (pcUrlVal && !mobUrlVal) {
-                        modeStatusNote.textContent = '📱 Usando la misma imagen de PC. Puedes mover su encuadre aquí para celular o subir otra imagen distinta solo para celular.';
+                        modeStatusNote.textContent = 'Usando la misma imagen de PC. Puedes ajustar su encuadre aquí para celular o subir otra imagen exclusiva para celular.';
                         modeStatusNote.classList.remove('hidden');
                     } else if (mobUrlVal) {
-                        modeStatusNote.textContent = '📱 Mostrando imagen exclusiva para celular (la de PC se conserva intacta).';
+                        modeStatusNote.textContent = 'Mostrando imagen exclusiva para celular (la de PC se conserva intacta).';
                         modeStatusNote.classList.remove('hidden');
                     } else {
                         modeStatusNote.classList.add('hidden');
@@ -2566,7 +2565,12 @@ Storevo.ThemeEditor = {
 
             const label = document.createElement('label');
             label.className = 'block text-xs font-bold text-slate-300';
-            label.textContent = field.label;
+            label.textContent = Storevo.EditorUI
+                ? Storevo.EditorUI.getFriendlyLabel(sec.type, field.key, field.label)
+                : field.label;
+            if (Storevo.EditorUI) {
+                Storevo.EditorUI.decorateBrandLabel(label, sec.type, field.key);
+            }
             wrapper.appendChild(label);
 
             const currentVal = sec.settings[field.key] !== undefined && sec.settings[field.key] !== null
@@ -2616,8 +2620,8 @@ Storevo.ThemeEditor = {
                     catGroup.label = 'Categorías de tu Tienda';
                     this.categories.forEach(c => {
                         const o = document.createElement('option');
-                        o.value = `/catalog?category=${c.id}`;
-                        o.textContent = `Categoría: ${c.name}`;
+                        o.value = '/catalog?category=' + c.id;
+                        o.textContent = 'Categoría: ' + c.name;
                         if (o.value === normalizedCurrent) {
                             o.selected = true;
                             matchedPreset = true;
@@ -2633,8 +2637,8 @@ Storevo.ThemeEditor = {
                     this.theme.customPages.forEach(cp => {
                         if (!cp || !cp.slug) return;
                         const o = document.createElement('option');
-                        o.value = `/page/${cp.slug}`;
-                        o.textContent = `Página: ${cp.title || cp.slug}`;
+                        o.value = '/page/' + cp.slug;
+                        o.textContent = 'Página: ' + (cp.title || cp.slug);
                         if (o.value === normalizedCurrent) {
                             o.selected = true;
                             matchedPreset = true;
@@ -2651,8 +2655,8 @@ Storevo.ThemeEditor = {
                         const anchorId = String(s.settings.layoutAnchor).trim();
                         const sDef = this.catalogDefinitions[s.type] || { label: s.type };
                         return {
-                            value: pageBasePath ? `${pageBasePath}#${anchorId}` : `#${anchorId}`,
-                            label: `⚓ #${anchorId} (${sDef.label})`
+                            value: pageBasePath ? (pageBasePath + '#' + anchorId) : ('#' + anchorId),
+                            label: '#' + anchorId + ' (' + sDef.label + ')'
                         };
                     });
 
@@ -2702,7 +2706,7 @@ Storevo.ThemeEditor = {
                 customUrlInput.addEventListener('input', () => {
                     let raw = customUrlInput.value.trim();
                     if (raw.startsWith('#') && raw.length > 1 && pageBasePath) {
-                        raw = `${pageBasePath}${raw}`;
+                        raw = pageBasePath + raw;
                     }
                     commitSectionChange(field.key, raw);
                 });
@@ -2728,7 +2732,7 @@ Storevo.ThemeEditor = {
                 (field.options || []).forEach(opt => {
                     const o = document.createElement('option');
                     o.value = opt.value;
-                    o.textContent = opt.label;
+                    o.textContent = Storevo.EditorUI ? Storevo.EditorUI.cleanOptionText(opt.label) : opt.label;
                     if (String(opt.value) === String(currentVal)) o.selected = true;
                     select.appendChild(o);
                 });
@@ -2749,6 +2753,9 @@ Storevo.ThemeEditor = {
                     }
                 });
                 wrapper.appendChild(select);
+                if (Storevo.EditorUI) {
+                    Storevo.EditorUI.enhanceSelect(wrapper, select, field, sec.type);
+                }
 
                 if (sec.type === 'product_grid' && field.key === 'categoryId') {
                     const currentSource = sec.settings.source || 'NEWEST';
@@ -2776,9 +2783,10 @@ Storevo.ThemeEditor = {
                     commitSectionChange(field.key, colorInput.value);
                 });
                 hexInput.addEventListener('input', () => {
-                    if (/^#[0-9a-fA-F]{6}$/.test(hexInput.value.trim())) {
-                        colorInput.value = hexInput.value.trim();
-                        commitSectionChange(field.key, hexInput.value.trim());
+                    const cleanHex = hexInput.value.trim();
+                    if (cleanHex.length === 7 && /^#[0-9a-fA-F]{6}/.test(cleanHex)) {
+                        colorInput.value = cleanHex;
+                        commitSectionChange(field.key, cleanHex);
                     }
                 });
 
@@ -2801,6 +2809,9 @@ Storevo.ThemeEditor = {
                 span.textContent = field.placeholder || 'Activar opción';
                 checkLabel.appendChild(chk);
                 checkLabel.appendChild(span);
+                if (Storevo.EditorUI) {
+                    Storevo.EditorUI.enhanceCheckbox(checkLabel, chk, field);
+                }
                 wrapper.innerHTML = '';
                 wrapper.appendChild(checkLabel);
 
@@ -2809,7 +2820,7 @@ Storevo.ThemeEditor = {
                 input.type = field.type || 'text';
                 input.value = currentVal;
                 input.placeholder = field.placeholder || '';
-                input.className = 'w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:border-storevo-500 focus:outline-none [color-scheme:dark]';
+                input.className = 'w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:border-storevo-500 focus:outline-none';
                 input.addEventListener('input', () => {
                     if (sec.type === 'featured_video' && field.key === 'videoUrl') {
                         if (!sec.settings) sec.settings = {};
@@ -2829,6 +2840,9 @@ Storevo.ThemeEditor = {
                     }
                 });
                 wrapper.appendChild(input);
+                if (sec.type === 'hero_banner' && field.key === 'overlayOpacity' && Storevo.EditorUI) {
+                    Storevo.EditorUI.enhanceOverlayRange(wrapper, input, currentVal, commitSectionChange);
+                }
             }
 
             if (sec.type === 'hero_banner' && field.key === 'secondaryButtonUrl') {
@@ -2845,6 +2859,10 @@ Storevo.ThemeEditor = {
 
             container.appendChild(wrapper);
         });
+
+        if (Storevo.EditorUI) {
+            Storevo.EditorUI.organizeInspectorFields(container, sec);
+        }
 
         // Bloque transversal colapsable: "Diseño de la sección"
         const layoutSupport = this.getLayoutSupport(sec.type);
@@ -2959,7 +2977,7 @@ Storevo.ThemeEditor = {
 
         if (layoutFields.length > 0) {
             const detailsEl = document.createElement('details');
-            detailsEl.className = 'style-acc mt-4';
+            detailsEl.className = 'sv-ed-group';
             detailsEl.setAttribute('data-acc', 'section-layout');
 
             const hasCustomLayout = [
@@ -2972,17 +2990,20 @@ Storevo.ThemeEditor = {
             }
 
             const summaryEl = document.createElement('summary');
-            summaryEl.innerHTML = `
-                <span class="min-w-0">
-                    <span class="style-acc-title">Diseño y programación de la sección</span>
-                    <span class="style-acc-hint">Espaciado, fondo, visibilidad PC/móvil, fechas y ancla</span>
-                </span>
-                <svg class="style-acc-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-            `;
+            summaryEl.className = 'sv-ed-group-summary';
+            summaryEl.innerHTML =
+                '<div class="sv-ed-group-header-left">' +
+                '<span class="sv-ed-group-icon">' + (Storevo.EditorUI ? Storevo.EditorUI.icon('sliders') : '') + '</span>' +
+                '<div class="sv-ed-group-titles">' +
+                '<span class="sv-ed-group-title">Diseño y programación de la sección</span>' +
+                '<span class="sv-ed-group-subtitle">Espaciado, fondo, visibilidad PC/móvil, fechas y ancla</span>' +
+                '</div>' +
+                '</div>' +
+                '<svg class="sv-ed-group-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>';
             detailsEl.appendChild(summaryEl);
 
             const bodyEl = document.createElement('div');
-            bodyEl.className = 'style-acc-body';
+            bodyEl.className = 'sv-ed-group-body';
 
             layoutFields.forEach(field => {
                 const wrapper = document.createElement('div');
@@ -3053,6 +3074,9 @@ Storevo.ThemeEditor = {
                         this.renderSectionsList();
                     });
                     wrapper.appendChild(select);
+                    if (Storevo.EditorUI) {
+                        Storevo.EditorUI.enhanceSelect(wrapper, select, field, sec.type);
+                    }
                 } else if (field.type === 'color') {
                     const colorRow = document.createElement('div');
                     colorRow.className = 'flex items-center gap-2';
@@ -3096,20 +3120,20 @@ Storevo.ThemeEditor = {
                     wrapper.appendChild(buildInteractiveImageWidget(field, currentVal));
                 } else if (field.type === 'range_overlay') {
                     const row = document.createElement('div');
-                    row.className = 'flex items-center gap-3 bg-slate-950 p-2.5 rounded-xl border border-slate-800';
+                    row.className = 'sv-ed-range-wrap';
                     const range = document.createElement('input');
                     range.type = 'range';
                     range.min = '0';
                     range.max = '90';
                     range.step = '5';
                     range.value = String(currentVal !== undefined && currentVal !== null ? currentVal : 40);
-                    range.className = 'flex-1';
+                    range.className = 'sv-ed-range-input';
                     const badge = document.createElement('span');
-                    badge.className = 'text-xs font-mono font-bold text-white w-10 text-right';
-                    badge.textContent = `${range.value}%`;
+                    badge.className = 'sv-ed-range-badge';
+                    badge.textContent = range.value + '%';
 
                     range.addEventListener('input', () => {
-                        badge.textContent = `${range.value}%`;
+                        badge.textContent = range.value + '%';
                     });
                     range.addEventListener('change', () => {
                         commitSectionChange('layoutBgOverlay', parseInt(range.value, 10));
@@ -3128,12 +3152,12 @@ Storevo.ThemeEditor = {
                         <div class="space-y-1">
                             <label class="block text-[11px] font-bold text-slate-400">Mostrar desde (Fecha y hora de inicio)</label>
                             <input type="datetime-local" data-sched-input="start" value="${this.escapeHtml(startVal)}"
-                                   class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white focus:border-storevo-500 focus:outline-none [color-scheme:dark]">
+                                   class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white focus:border-storevo-500 focus:outline-none">
                         </div>
                         <div class="space-y-1">
                             <label class="block text-[11px] font-bold text-slate-400">Ocultar después de (Fecha y hora de fin)</label>
                             <input type="datetime-local" data-sched-input="end" value="${this.escapeHtml(endVal)}"
-                                   class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white focus:border-storevo-500 focus:outline-none [color-scheme:dark]">
+                                   class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white focus:border-storevo-500 focus:outline-none">
                         </div>
                         <p class="sv-sched-error hidden text-[11px] font-bold text-red-400 leading-snug"></p>
                         <div class="flex items-center justify-between gap-2 pt-1">
@@ -3337,18 +3361,18 @@ Storevo.ThemeEditor = {
                             { value: 'below_menu', label: 'Debajo del menú de la tienda y arriba del Banner (Predeterminado)' },
                             { value: 'above_menu', label: 'Arriba del todo (Encima del menú de la tienda)' }
                         ], showIf: isFirstSectionOnPage },
-                    { key: 'text', label: 'Mensaje principal del anuncio', type: 'text', placeholder: 'Ej: 🚚 Envío gratis en compras mayores a $150.000' },
-                    { key: 'text2', label: '2do mensaje rotativo (Opcional)', type: 'text', placeholder: 'Ej: 💳 Paga en línea o pide fácil por WhatsApp' },
-                    { key: 'text3', label: '3er mensaje rotativo (Opcional)', type: 'text', placeholder: 'Ej: ✨ Nuevos lanzamientos disponibles hoy' },
+                    { key: 'text', label: 'Mensaje principal del anuncio', type: 'text', placeholder: 'Ej:  Envío gratis en compras mayores a $150.000' },
+                    { key: 'text2', label: '2do mensaje rotativo (Opcional)', type: 'text', placeholder: 'Ej:  Paga en línea o pide fácil por WhatsApp' },
+                    { key: 'text3', label: '3er mensaje rotativo (Opcional)', type: 'text', placeholder: 'Ej:  Nuevos lanzamientos disponibles hoy' },
                     { key: 'animationMode', label: 'Animación del anuncio', type: 'select', defaultVal: 'fade', options: [
-                            { value: 'fade', label: '✨ Desvanecimiento suave (Fade)' },
-                            { value: 'slide_vertical', label: '⬆️ Carrusel vertical (Deslizar arriba)' },
-                            { value: 'slide_horizontal', label: '➡️ Deslizamiento lateral (Slide)' },
-                            { value: 'marquee', label: '🎞️ Cinta continua infinita (Marquee)' },
-                            { value: 'flip', label: '🔄 Giro 3D (Flip vertical)' },
-                            { value: 'typewriter', label: '⌨️ Máquina de escribir (Typewriter)' },
-                            { value: 'pulse_glow', label: '💫 Pulso / Zoom de atención' },
-                            { value: 'static', label: '📌 Estático (Sin animación)' }
+                            { value: 'fade', label: ' Desvanecimiento suave (Fade)' },
+                            { value: 'slide_vertical', label: '⬆ Carrusel vertical (Deslizar arriba)' },
+                            { value: 'slide_horizontal', label: '➡ Deslizamiento lateral (Slide)' },
+                            { value: 'marquee', label: ' Cinta continua infinita (Marquee)' },
+                            { value: 'flip', label: ' Giro 3D (Flip vertical)' },
+                            { value: 'typewriter', label: ' Máquina de escribir (Typewriter)' },
+                            { value: 'pulse_glow', label: ' Pulso / Zoom de atención' },
+                            { value: 'static', label: ' Estático (Sin animación)' }
                         ]},
                     { key: 'speed', label: 'Velocidad de la animación', type: 'select', defaultVal: 'normal', options: [
                             { value: 'fast', label: 'Rápida (Dinámica)' },
@@ -3441,13 +3465,13 @@ Storevo.ThemeEditor = {
                     { key: 'subtitle', label: 'Subtítulo (Opcional)', type: 'text', placeholder: 'Los favoritos de la temporada' },
                     { key: 'source', label: 'Qué productos mostrar', type: 'select', options: [
                             { value: 'NEWEST', label: 'Últimos productos agregados' },
-                            { value: 'BEST_SELLERS', label: '🔥 Más vendidos (Ranking de ventas reales)' },
-                            { value: 'RECOMMENDED', label: '✨ Recomendados (En stock + Destacados + Ofertas)' },
-                            { value: 'OFFERS', label: '🏷️ Solo productos en oferta / descuento' },
-                            { value: 'FEATURED', label: '★ Productos destacados' },
-                            { value: 'CATEGORY', label: '📁 Productos de una categoría específica' },
-                            { value: 'BRAND', label: '🏷️ Productos de una marca específica' },
-                            { value: 'MANUAL', label: '✋ Selección manual de productos' }
+                            { value: 'BEST_SELLERS', label: ' Más vendidos (Ranking de ventas reales)' },
+                            { value: 'RECOMMENDED', label: ' Recomendados (En stock + Destacados + Ofertas)' },
+                            { value: 'OFFERS', label: ' Solo productos en oferta / descuento' },
+                            { value: 'FEATURED', label: ' Productos destacados' },
+                            { value: 'CATEGORY', label: ' Productos de una categoría específica' },
+                            { value: 'BRAND', label: ' Productos de una marca específica' },
+                            { value: 'MANUAL', label: ' Selección manual de productos' }
                         ]},
                     { key: 'categoryId', label: 'Categoría a mostrar', type: 'select', options: catOptions },
                     { key: 'defaultSort', label: 'Ordenamiento de los productos', type: 'select', defaultVal: 'default', options: [
@@ -3480,7 +3504,7 @@ Storevo.ThemeEditor = {
             case 'spotlight_product':
                 return [
                     { key: 'productId', label: 'Producto a destacar', type: 'select', defaultVal: '', options: spotlightProductOptions },
-                    { key: 'badgeText', label: 'Etiqueta destacada', type: 'text', defaultVal: '🔥 Producto Estrella', placeholder: 'Ej: Lanzamiento de la Semana' },
+                    { key: 'badgeText', label: 'Etiqueta destacada', type: 'text', defaultVal: ' Producto Estrella', placeholder: 'Ej: Lanzamiento de la Semana' },
                     { key: 'customTitle', label: 'Título personalizado (Opcional)', type: 'text', placeholder: 'Dejar vacío para usar el nombre del producto' },
                     { key: 'customSubtitle', label: 'Descripción destacada (Opcional)', type: 'textarea', placeholder: 'Dejar vacío para usar la descripción del producto' },
                     { key: 'imageSide', label: 'Posición de la foto en PC', type: 'select', defaultVal: 'left', options: [
@@ -3513,7 +3537,7 @@ Storevo.ThemeEditor = {
                 ];
             case 'countdown_promo':
                 return [
-                    { key: 'badgeText', label: 'Etiqueta superior', type: 'text', defaultVal: '⚡ Oferta por Tiempo Limitado' },
+                    { key: 'badgeText', label: 'Etiqueta superior', type: 'text', defaultVal: 'Oferta por Tiempo Limitado' },
                     { key: 'title', label: 'Título de la oferta', type: 'text', defaultVal: '¡Aprovecha nuestros descuentos especiales!' },
                     { key: 'subtitle', label: 'Descripción de la promoción', type: 'textarea' },
                     { key: 'endDate', label: 'Fecha y hora límite de la oferta', type: 'datetime-local' },
@@ -3642,7 +3666,7 @@ Storevo.ThemeEditor = {
             }
             case 'visit_us':
                 return [
-                    { key: 'badgeText', label: 'Etiqueta superior (Opcional)', type: 'text', defaultVal: '📍 Punto Físico' },
+                    { key: 'badgeText', label: 'Etiqueta superior (Opcional)', type: 'text', defaultVal: 'Punto Físico' },
                     { key: 'title', label: 'Título de la sección', type: 'text', defaultVal: 'Visítanos en Nuestra Tienda' },
                     { key: 'subtitle', label: 'Subtítulo descriptivo', type: 'textarea', defaultVal: 'Conoce nuestros productos personalmente y recibe asesoría directa.' },
                     { key: 'address', label: 'Dirección física del local', type: 'text', placeholder: 'Ej: Calle 85 # 12-34, Local 102' },
@@ -3694,7 +3718,7 @@ Storevo.ThemeEditor = {
             }
             case 'featured_video':
                 return [
-                    { key: 'badgeText', label: 'Etiqueta superior (Opcional)', type: 'text', placeholder: 'Ej: 🎥 Conoce Más' },
+                    { key: 'badgeText', label: 'Etiqueta superior (Opcional)', type: 'text', placeholder: 'Ej: Conoce Más' },
                     { key: 'title', label: 'Título de la sección (Opcional)', type: 'text', placeholder: 'Mira nuestros productos en acción' },
                     { key: 'subtitle', label: 'Descripción opcional', type: 'textarea', placeholder: 'Explica brevemente qué verán tus clientes en el video...' },
                     { key: 'videoUrl', label: 'Enlace del video de YouTube', type: 'text', placeholder: 'Ej: https://www.youtube.com/watch?v=... o Shorts' },
@@ -5099,6 +5123,9 @@ Storevo.ThemeEditor = {
         }
 
         syncFooterUI();
+        if (Storevo.EditorUI && typeof Storevo.EditorUI.enhanceGlobalStylesPanel === 'function') {
+            Storevo.EditorUI.enhanceGlobalStylesPanel();
+        }
     },
 
     syncFontPairHighlight: function() {
@@ -5628,6 +5655,10 @@ Storevo.ThemeEditor = {
     renderAddSectionModalCatalog: function() {
         const grid = document.getElementById('available-sections-grid');
         if (!grid) return;
+        if (Storevo.EditorUI && typeof Storevo.EditorUI.renderCategorizedAddSectionModal === 'function') {
+            Storevo.EditorUI.renderCategorizedAddSectionModal(grid, this.catalogDefinitions, (type) => this.addSection(type));
+            return;
+        }
         grid.innerHTML = '';
 
         Object.entries(this.catalogDefinitions).forEach(([type, def]) => {
@@ -5635,15 +5666,12 @@ Storevo.ThemeEditor = {
             const btn = document.createElement('button');
             btn.type = 'button';
             btn.className = 'text-left p-4 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-storevo-500 transition flex flex-col justify-between gap-2 group';
-            btn.innerHTML = `
-                <div>
-                    <p class="text-sm font-bold text-white group-hover:text-storevo-400 transition-colors">${this.escapeHtml(def.label)}</p>
-                    <p class="text-xs text-slate-400 mt-1">${this.escapeHtml(def.description)}</p>
-                </div>
-                <span class="text-[11px] font-bold text-storevo-400 inline-flex items-center gap-1 mt-2">
-                    + Añadir sección
-                </span>
-            `;
+            btn.innerHTML =
+                '<div>' +
+                '<p class="text-sm font-bold text-white group-hover:text-storevo-400 transition-colors">' + this.escapeHtml(def.label) + '</p>' +
+                '<p class="text-xs text-slate-400 mt-1">' + this.escapeHtml(def.description) + '</p>' +
+                '</div>' +
+                '<span class="text-[11px] font-bold text-storevo-400 inline-flex items-center gap-1 mt-2">+ Añadir sección</span>';
             btn.addEventListener('click', () => this.addSection(type));
             grid.appendChild(btn);
         });
@@ -6183,8 +6211,8 @@ if (document.readyState === 'loading') {
                 if (src === 'FEATURED') {
                     extraHost.innerHTML = `
                         <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-xs text-amber-200 leading-relaxed">
-                            <p class="font-bold text-amber-300 mb-0.5">★ Productos Destacados</p>
-                            <p class="text-[11px] text-slate-300">Se mostrarán automáticamente los productos activos marcados con la estrella (★) en el listado de Productos del Dashboard.</p>
+                            <p class="font-bold text-amber-300 mb-0.5 inline-flex items-center gap-1.5">${Storevo.EditorUI ? Storevo.EditorUI.icon('star', 'w-3.5 h-3.5') : ''}<span>Productos Destacados</span></p>
+                            <p class="text-[11px] text-slate-300">Se mostrarán automáticamente los productos activos marcados como destacados en el listado de Productos del Dashboard.</p>
                         </div>
                     `;
                     return;
@@ -6193,7 +6221,7 @@ if (document.readyState === 'loading') {
                 if (src === 'BEST_SELLERS') {
                     extraHost.innerHTML = `
                         <div class="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-xs text-emerald-200 leading-relaxed">
-                            <p class="font-bold text-emerald-300 mb-0.5">🔥 Ranking de Más Vendidos</p>
+                            <p class="font-bold text-emerald-300 mb-0.5 inline-flex items-center gap-1.5">${Storevo.EditorUI ? Storevo.EditorUI.icon('flame', 'w-3.5 h-3.5') : ''}<span>Ranking de Más Vendidos</span></p>
                             <p class="text-[11px] text-slate-300">Ordena tus productos automáticamente según las unidades vendidas en pedidos confirmados y pagados.</p>
                         </div>
                     `;
@@ -6203,7 +6231,7 @@ if (document.readyState === 'loading') {
                 if (src === 'RECOMMENDED') {
                     extraHost.innerHTML = `
                         <div class="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/25 text-xs text-indigo-200 leading-relaxed">
-                            <p class="font-bold text-indigo-300 mb-0.5">✨ Selección Recomendada</p>
+                            <p class="font-bold text-indigo-300 mb-0.5 inline-flex items-center gap-1.5">${Storevo.EditorUI ? Storevo.EditorUI.icon('sparkles', 'w-3.5 h-3.5') : ''}<span>Selección Recomendada</span></p>
                             <p class="text-[11px] text-slate-300">Prioriza productos con disponibilidad inmediata combinando destacados, ofertas activas e historial de ventas.</p>
                         </div>
                     `;
@@ -6225,7 +6253,7 @@ if (document.readyState === 'loading') {
                             <div class="space-y-1.5">
                                 <div class="flex items-center justify-between">
                                     <label class="block text-xs font-bold text-slate-300">Marca a mostrar</label>
-                                    <button type="button" class="sv-refresh-brands-btn text-[11px] font-bold text-indigo-400 hover:text-indigo-300">↻ Actualizar marcas</button>
+                                    <button type="button" class="sv-refresh-brands-btn text-[11px] font-bold text-indigo-400 hover:text-indigo-300">Actualizar marcas</button>
                                 </div>
                                 <select class="sv-brand-picker-select w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-indigo-500 focus:outline-none">
                                     ${optionsHtml}
@@ -6466,12 +6494,12 @@ if (document.readyState === 'loading') {
                                        class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white focus:border-indigo-500 focus:outline-none">
                                 <select data-tab-src="${i}" class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white focus:border-indigo-500 focus:outline-none">
                                     <option value="NEWEST" ${tSrc === 'NEWEST' ? 'selected' : ''}>Últimos productos agregados</option>
-                                    <option value="BEST_SELLERS" ${tSrc === 'BEST_SELLERS' ? 'selected' : ''}>🔥 Más vendidos</option>
-                                    <option value="RECOMMENDED" ${tSrc === 'RECOMMENDED' ? 'selected' : ''}>✨ Recomendados</option>
-                                    <option value="OFFERS" ${tSrc === 'OFFERS' ? 'selected' : ''}>🏷️ En oferta / descuento</option>
-                                    <option value="FEATURED" ${tSrc === 'FEATURED' ? 'selected' : ''}>★ Destacados</option>
-                                    <option value="CATEGORY" ${tSrc === 'CATEGORY' ? 'selected' : ''}>📁 Categoría específica</option>
-                                    <option value="BRAND" ${tSrc === 'BRAND' ? 'selected' : ''}>🏷️ Marca específica</option>
+                                    <option value="BEST_SELLERS" ${tSrc === 'BEST_SELLERS' ? 'selected' : ''}>Más vendidos</option>
+                                    <option value="RECOMMENDED" ${tSrc === 'RECOMMENDED' ? 'selected' : ''}>Recomendados</option>
+                                    <option value="OFFERS" ${tSrc === 'OFFERS' ? 'selected' : ''}>En oferta / descuento</option>
+                                    <option value="FEATURED" ${tSrc === 'FEATURED' ? 'selected' : ''}>Destacados</option>
+                                    <option value="CATEGORY" ${tSrc === 'CATEGORY' ? 'selected' : ''}>Categoría específica</option>
+                                    <option value="BRAND" ${tSrc === 'BRAND' ? 'selected' : ''}>Marca específica</option>
                                 </select>
                                 <div data-tab-cat-wrap="${i}" class="${tSrc === 'CATEGORY' ? '' : 'hidden'}">
                                     <select data-tab-cat="${i}" class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white">
@@ -6683,7 +6711,10 @@ if (document.readyState === 'loading') {
                         return `
                             <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5" data-testim-idx="${idx}">
                                 <div class="flex items-center justify-between gap-2">
-                                    <span class="text-[11px] font-black uppercase tracking-wider text-storevo-400">Testimonio #${idx + 1}</span>
+                                    <span class="text-[11px] font-black uppercase tracking-wider text-storevo-400 inline-flex items-center gap-1.5">
+                                        ${Storevo.EditorUI && (it.sourceType === 'whatsapp' || it.sourceType === 'instagram') ? Storevo.EditorUI.brandBadge(it.sourceType) : ''}
+                                        <span>Testimonio #${idx + 1}</span>
+                                    </span>
                                     <div class="flex items-center gap-1">
                                         <button type="button" data-t-up="${idx}" ${idx === 0 ? 'disabled' : ''} class="px-1.5 py-0.5 rounded bg-slate-900 hover:bg-slate-800 text-xs text-slate-300 disabled:opacity-30">↑</button>
                                         <button type="button" data-t-down="${idx}" ${idx === lastIdx ? 'disabled' : ''} class="px-1.5 py-0.5 rounded bg-slate-900 hover:bg-slate-800 text-xs text-slate-300 disabled:opacity-30">↓</button>
@@ -6697,9 +6728,9 @@ if (document.readyState === 'loading') {
                                            class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white focus:border-storevo-500 focus:outline-none">
                                 </div>
                                 <select data-t-field="sourceType" class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white">
-                                    <option value="whatsapp" ${it.sourceType === 'whatsapp' ? 'selected' : ''}>💬 Recibido por WhatsApp</option>
-                                    <option value="instagram" ${it.sourceType === 'instagram' ? 'selected' : ''}>📸 Recibido por Instagram</option>
-                                    <option value="direct" ${(!it.sourceType || it.sourceType === 'direct') ? 'selected' : ''}>💬 Cliente directo</option>
+                                    <option value="whatsapp" ${it.sourceType === 'whatsapp' ? 'selected' : ''}>Recibido por WhatsApp</option>
+                                    <option value="instagram" ${it.sourceType === 'instagram' ? 'selected' : ''}>Recibido por Instagram</option>
+                                    <option value="direct" ${(!it.sourceType || it.sourceType === 'direct') ? 'selected' : ''}>Cliente directo</option>
                                 </select>
                                 <textarea data-t-field="text" rows="2" placeholder="Escribe el mensaje del testimonio..."
                                           class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white focus:border-storevo-500 focus:outline-none">${TE.escapeHtml(it.text || '')}</textarea>
@@ -7234,7 +7265,7 @@ if (document.readyState === 'loading') {
                             <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-300">Colores de paginación</label>
                             <button type="button" id="gs-pag-sync-brand-btn"
                                     class="hidden text-[10px] font-bold text-storevo-400 hover:text-storevo-300 transition">
-                                ↻ Tomar colores de la tienda
+                                Tomar colores de la tienda
                             </button>
                         </div>
                         <select id="gs-pag-color-mode" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-semibold text-white focus:border-storevo-500 focus:outline-none">
@@ -7276,6 +7307,9 @@ if (document.readyState === 'loading') {
             stylesContainer.appendChild(details);
             syncInputsFromGlobalStyles();
             bindPaginationInputs();
+            if (Storevo.EditorUI && typeof Storevo.EditorUI.enhanceGlobalStylesPanel === 'function') {
+                Storevo.EditorUI.enhanceGlobalStylesPanel();
+            }
         }
 
         function updateModeSpecificVisibility(mode, colorMode) {

@@ -4,6 +4,7 @@
       layout:decorate="~{layouts/dashboard-layout}">
 <head>
     <title>Editor Visual de Tienda</title>
+    <link rel="stylesheet" th:href="@{/css/editor-ui.css}">
     <style>
         /* Layout blindado independiente de compilación JIT de Tailwind */
         #theme-editor-workspace {
@@ -69,20 +70,20 @@
         .card-preset-opt.is-selected,
         .detail-preset-opt.is-selected,
         .detail-info-opt.is-selected {
-            border-color: #6366f1;
-            background: rgba(99, 102, 241, 0.14);
-            color: #ffffff;
+            border-color: var(--adm-accent, #6366f1);
+            background: var(--adm-accent-soft, rgba(99, 102, 241, 0.14));
+            color: var(--adm-text-heading, #ffffff);
         }
         /* Secciones recogibles del panel de Estilos (independiente de Tailwind JIT) */
         .style-acc {
-            border: 1px solid #1e293b;
+            border: 1px solid var(--adm-border, #1e293b);
             border-radius: 0.75rem;
-            background: rgba(2, 6, 23, 0.45);
+            background: var(--adm-bg-subtle, rgba(2, 6, 23, 0.45));
             overflow: hidden;
             transition: border-color 0.15s ease;
         }
         .style-acc[open] {
-            border-color: rgba(99, 102, 241, 0.4);
+            border-color: var(--adm-accent-border, rgba(99, 102, 241, 0.4));
         }
         .style-acc > summary {
             list-style: none;
@@ -98,7 +99,7 @@
             display: none;
         }
         .style-acc > summary:hover {
-            background: rgba(30, 41, 59, 0.5);
+            background: var(--adm-bg-hover, rgba(30, 41, 59, 0.5));
         }
         .style-acc-title {
             display: block;
@@ -106,18 +107,18 @@
             font-weight: 900;
             letter-spacing: 0.05em;
             text-transform: uppercase;
-            color: #e2e8f0;
+            color: var(--adm-text-heading, #e2e8f0);
         }
         .style-acc-hint {
             display: block;
             font-size: 11px;
-            color: #64748b;
+            color: var(--adm-text-muted, #64748b);
             margin-top: 2px;
         }
         .style-acc-chevron {
             width: 1rem;
             height: 1rem;
-            color: #94a3b8;
+            color: var(--adm-text-muted, #94a3b8);
             flex-shrink: 0;
             transition: transform 0.2s ease;
         }
@@ -247,9 +248,9 @@
                 <select id="editor-page-select"
                         onchange="Storevo.ThemeEditor.switchPage(this.value)"
                         class="w-full px-3 py-2 bg-slate-900 border border-slate-700 hover:border-storevo-500/60 rounded-xl text-xs font-bold text-white focus:border-storevo-500 focus:outline-none cursor-pointer transition">
-                    <option value="home">🏠 Página de Inicio (Portada)</option>
-                    <option value="catalog">🛍️ Página de Catálogo General</option>
-                    <option value="product">📦 Ficha de Producto (Detalle)</option>
+                    <option value="home">Página de Inicio (Portada)</option>
+                    <option value="catalog">Página de Catálogo General</option>
+                    <option value="product">Ficha de Producto (Detalle)</option>
                 </select>
 
                 <!-- Barra contextual cuando se edita una Categoría existente del Navbar -->
@@ -318,7 +319,10 @@
             <!-- VISTA 1: LISTA DE SECCIONES ARRASTRABLES -->
             <div id="panel-sections-list" class="flex-1 flex flex-col overflow-hidden">
                 <div class="px-4 py-2.5 border-b border-slate-800/80 flex items-center justify-between">
-                    <p class="text-[11px] font-bold text-slate-400">Arrastra (☰) para ordenar o haz clic en la vista previa</p>
+                    <p class="text-[11px] font-bold text-slate-400 inline-flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5 text-storevo-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path></svg>
+                        <span>Arrastra para ordenar o haz doble clic en la vista previa</span>
+                    </p>
                 </div>
 
                 <div id="sortable-sections-container" class="flex-1 overflow-y-auto p-3 space-y-2">
@@ -418,7 +422,7 @@
                             </button>
                         </div>
                         <!-- Identidad de la tienda: logo o nombre -->
-                        <div class="space-y-3" style="border-bottom:1px solid #1e293b;padding-bottom:1rem;margin-bottom:0.25rem;">
+                        <div class="space-y-3" style="border-bottom:1px solid var(--adm-border, #1e293b);padding-bottom:1rem;margin-bottom:0.25rem;">
                             <div>
                                 <label class="block text-xs font-bold text-slate-300 mb-1.5">Identidad de la tienda</label>
                                 <select id="style-navbar-brand-mode" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:border-storevo-500">
@@ -434,7 +438,7 @@
                                     <label class="block text-xs font-bold text-slate-300 mb-1.5">Logo principal</label>
                                     <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2.5">
                                         <div id="style-logo-light-wrap" class="hidden">
-                                            <div style="height:64px;display:flex;align-items:center;justify-content:center;padding:8px;border-radius:8px;border:1px solid #1e293b;background:#ffffff;">
+                                            <div style="height:64px;display:flex;align-items:center;justify-content:center;padding:8px;border-radius:8px;border:1px solid var(--adm-border, #1e293b);background:#ffffff;">
                                                 <img id="style-logo-light-preview" src="" alt="Vista previa del logo" style="max-height:100%;max-width:100%;object-fit:contain;">
                                             </div>
                                         </div>
@@ -2208,10 +2212,10 @@
                         <label class="block text-xs font-bold text-slate-300 mb-1">Estructura inicial</label>
                         <select id="new-custom-page-template"
                                 class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-bold text-white focus:border-storevo-500 focus:outline-none cursor-pointer">
-                            <option value="about">✨ Sobre Nosotros (Historia + Confianza + WhatsApp)</option>
-                            <option value="promo">🔥 Especial de Ofertas (Banner + Vitrina con Filtros + Contador)</option>
-                            <option value="faq">❓ Centro de Ayuda (Preguntas Frecuentes + Cómo Comprar)</option>
-                            <option value="blank">📄 Página Limpia (Bloque de texto inicial)</option>
+                            <option value="about">Sobre Nosotros (Historia + Confianza + WhatsApp)</option>
+                            <option value="promo">Especial de Ofertas (Banner + Vitrina con Filtros + Contador)</option>
+                            <option value="faq">Centro de Ayuda (Preguntas Frecuentes + Cómo Comprar)</option>
+                            <option value="blank">Página Limpia (Bloque de texto inicial)</option>
                         </select>
                     </div>
 
@@ -2240,6 +2244,7 @@
 
 <th:block layout:fragment="scripts">
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+    <script th:src="@{/js/modules/editorUi.js}"></script>
     <script th:src="@{/js/modules/themeEditor.js}"></script>
 </th:block>
 </body>

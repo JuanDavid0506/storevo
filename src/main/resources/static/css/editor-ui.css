@@ -1,0 +1,661 @@
+/* ==========================================================================
+   Storevo Visual Editor UI — Sistema de Componentes y Controles Visuales
+   100% basado en variables --adm-* (Soporte nativo Modo Oscuro y Modo Claro)
+   ========================================================================== */
+
+/* 1. ACORDEONES DE CATEGORÍA DENTRO DEL INSPECTOR DE SECCIÓN */
+.sv-ed-group {
+    border: 1px solid var(--adm-border);
+    border-radius: 0.75rem;
+    background-color: var(--adm-bg-subtle);
+    overflow: hidden;
+    transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+}
+
+html[data-admin-theme="light"] .sv-ed-group {
+    background-color: var(--adm-bg-surface);
+    box-shadow: var(--adm-shadow-card);
+}
+
+.sv-ed-group[open] {
+    border-color: var(--adm-accent-border);
+}
+
+.sv-ed-group-summary {
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.625rem;
+    padding: 0.75rem 0.875rem;
+    cursor: pointer;
+    user-select: none;
+    background-color: transparent;
+    transition: background-color 140ms ease;
+}
+
+.sv-ed-group-summary::-webkit-details-marker {
+    display: none;
+}
+
+.sv-ed-group-summary:hover {
+    background-color: var(--adm-bg-hover);
+}
+
+.sv-ed-group-summary:focus-visible {
+    outline: none;
+    box-shadow: inset 0 0 0 2px var(--adm-accent);
+}
+
+.sv-ed-group-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    min-width: 0;
+}
+
+.sv-ed-group-icon {
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 0.5rem;
+    background-color: var(--adm-accent-soft);
+    color: var(--adm-accent-text);
+    border: 1px solid var(--adm-accent-border);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.sv-ed-group-icon svg {
+    width: 0.95rem;
+    height: 0.95rem;
+}
+
+.sv-ed-group-titles {
+    min-width: 0;
+}
+
+.sv-ed-group-title {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: var(--adm-text-heading);
+    letter-spacing: 0.01em;
+    line-height: 1.25;
+}
+
+.sv-ed-group-subtitle {
+    display: block;
+    font-size: 0.6875rem;
+    color: var(--adm-text-muted);
+    margin-top: 0.1rem;
+    line-height: 1.2;
+}
+
+.sv-ed-group-chevron {
+    width: 1rem;
+    height: 1rem;
+    color: var(--adm-text-muted);
+    flex-shrink: 0;
+    transition: transform 180ms ease, color 140ms ease;
+}
+
+.sv-ed-group[open] > .sv-ed-group-summary .sv-ed-group-chevron {
+    transform: rotate(180deg);
+    color: var(--adm-accent-text);
+}
+
+.sv-ed-group-body {
+    padding: 0.75rem 0.875rem 0.95rem;
+    border-top: 1px solid var(--adm-border);
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+}
+
+/* 2. PESTAÑAS COMPACTAS PARA SECCIONES MULTI-ÍTEM (Hero Slides, Tarjetas, Fotos, Marcas, Pasos, etc.) */
+.sv-ed-tabs-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.sv-ed-tabs-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem;
+    border-radius: 0.65rem;
+    background-color: var(--adm-bg-canvas);
+    border: 1px solid var(--adm-border);
+    overflow-x: auto;
+}
+
+html[data-admin-theme="light"] .sv-ed-tabs-nav {
+    background-color: var(--adm-bg-subtle);
+}
+
+.sv-ed-tab-btn {
+    flex: 1 1 auto;
+    min-width: max-content;
+    padding: 0.42rem 0.65rem;
+    border-radius: 0.45rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--adm-text-muted);
+    background: transparent;
+    border: 1px solid transparent;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    cursor: pointer;
+    transition: all 140ms ease;
+}
+
+.sv-ed-tab-btn:hover:not(.is-active):not(:disabled) {
+    color: var(--adm-text-heading);
+    background-color: var(--adm-bg-hover);
+}
+
+.sv-ed-tab-btn.is-active {
+    background-color: var(--adm-bg-surface);
+    color: var(--adm-text-heading);
+    border-color: var(--adm-accent-border);
+    box-shadow: 0 1px 2px rgba(2, 6, 23, 0.12);
+}
+
+html[data-admin-theme="light"] .sv-ed-tab-btn.is-active {
+    background-color: #FFFFFF;
+    color: var(--adm-accent-text);
+    border-color: var(--adm-accent-border);
+}
+
+.sv-ed-tab-dot {
+    width: 0.4rem;
+    height: 0.4rem;
+    border-radius: 9999px;
+    background-color: var(--adm-border-strong);
+    transition: background-color 150ms ease;
+}
+
+.sv-ed-tab-btn.has-content .sv-ed-tab-dot {
+    background-color: #10b981;
+}
+
+.sv-ed-tab-pane {
+    display: none;
+    flex-direction: column;
+    gap: 0.85rem;
+    padding: 0.75rem;
+    border-radius: 0.65rem;
+    background-color: var(--adm-bg-surface);
+    border: 1px solid var(--adm-border);
+}
+
+html[data-admin-theme="light"] .sv-ed-tab-pane {
+    background-color: var(--adm-bg-subtle);
+}
+
+.sv-ed-tab-pane.is-active {
+    display: flex;
+}
+
+/* 3. CONTROL SEGMENTADO (Reemplazo visual para <select> de 2 a 4 opciones) */
+.sv-ed-segmented {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    gap: 0.25rem;
+    padding: 0.25rem;
+    border-radius: 0.65rem;
+    background-color: var(--adm-bg-canvas);
+    border: 1px solid var(--adm-border-input);
+}
+
+html[data-admin-theme="light"] .sv-ed-segmented {
+    background-color: var(--adm-bg-muted);
+    border-color: var(--adm-border);
+}
+
+.sv-ed-seg-btn {
+    padding: 0.42rem 0.4rem;
+    border-radius: 0.45rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--adm-text-muted);
+    background: transparent;
+    border: 1px solid transparent;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    text-align: center;
+    line-height: 1.15;
+    white-space: normal;
+    word-break: break-word;
+    cursor: pointer;
+    transition: all 140ms ease;
+    min-width: 0;
+}
+
+.sv-ed-seg-btn svg {
+    width: 0.85rem;
+    height: 0.85rem;
+    flex-shrink: 0;
+}
+
+/* Optimizar lectura de <select> nativos dentro de columnas dobles y triples */
+#theme-editor-sidebar .grid-cols-2 select,
+#theme-editor-sidebar .grid-cols-3 select {
+    padding-left: 0.55rem !important;
+    padding-right: 1.4rem !important;
+    font-size: 0.72rem !important;
+    text-overflow: ellipsis;
+}
+
+.sv-ed-seg-btn:hover:not(.is-selected):not(:disabled) {
+    color: var(--adm-text-heading);
+    background-color: var(--adm-bg-hover);
+}
+
+.sv-ed-seg-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--adm-accent);
+}
+
+.sv-ed-seg-btn.is-selected {
+    background-color: var(--adm-accent);
+    color: #ffffff !important;
+    border-color: var(--adm-accent);
+    box-shadow: 0 1px 3px rgba(79, 70, 229, 0.28);
+}
+
+.sv-ed-seg-btn.is-selected span,
+.sv-ed-seg-btn.is-selected svg {
+    color: #ffffff !important;
+}
+
+/* 4. TARJETAS VISUALES DE DISEÑO (Layout Cards con miniatura SVG) */
+.sv-ed-layout-cards {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.45rem;
+}
+
+.sv-ed-layout-cards[data-cols="2"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.sv-ed-layout-card {
+    padding: 0.55rem 0.45rem;
+    border-radius: 0.65rem;
+    border: 1px solid var(--adm-border-input);
+    background-color: var(--adm-bg-input);
+    color: var(--adm-text-muted);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    cursor: pointer;
+    text-align: center;
+    transition: all 140ms ease;
+}
+
+.sv-ed-layout-card:hover:not(.is-selected) {
+    border-color: var(--adm-border-strong);
+    color: var(--adm-text-heading);
+    background-color: var(--adm-bg-hover);
+}
+
+.sv-ed-layout-card.is-selected {
+    border-color: var(--adm-accent);
+    background-color: var(--adm-accent-soft);
+    color: var(--adm-text-heading);
+    box-shadow: 0 0 0 1px var(--adm-accent-border);
+}
+
+html[data-admin-theme="light"] .sv-ed-layout-card.is-selected {
+    color: var(--adm-accent-text);
+}
+
+.sv-ed-layout-card-preview {
+    width: 100%;
+    height: 1.65rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: currentColor;
+}
+
+.sv-ed-layout-card-title {
+    font-size: 0.68rem;
+    font-weight: 700;
+    line-height: 1.15;
+}
+
+/* 5. SELECTOR VISUAL DE ICONOS (Para stats_counter y trust_badges) */
+.sv-ed-icon-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.35rem;
+}
+
+.sv-ed-icon-btn {
+    padding: 0.45rem 0.3rem;
+    border-radius: 0.55rem;
+    border: 1px solid var(--adm-border-input);
+    background-color: var(--adm-bg-input);
+    color: var(--adm-text-muted);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    cursor: pointer;
+    transition: all 140ms ease;
+}
+
+.sv-ed-icon-btn svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+.sv-ed-icon-btn span {
+    font-size: 0.625rem;
+    font-weight: 700;
+    line-height: 1.1;
+    text-align: center;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sv-ed-icon-btn:hover:not(.is-selected) {
+    border-color: var(--adm-border-strong);
+    color: var(--adm-text-heading);
+    background-color: var(--adm-bg-hover);
+}
+
+.sv-ed-icon-btn.is-selected {
+    border-color: var(--adm-accent);
+    background-color: var(--adm-accent-soft);
+    color: var(--adm-accent-text);
+    box-shadow: 0 0 0 1px var(--adm-accent-border);
+}
+
+/* 6. INTERRUPTOR MODERNO (Toggle Switch sobre checkbox nativo) */
+.sv-ed-switch-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.65rem 0.75rem;
+    border-radius: 0.75rem;
+    background-color: var(--adm-bg-input);
+    border: 1px solid var(--adm-border-input);
+    cursor: pointer;
+    user-select: none;
+    transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+.sv-ed-switch-card:hover {
+    border-color: var(--adm-border-strong);
+}
+
+.sv-ed-switch-texts {
+    min-width: 0;
+    flex: 1;
+}
+
+.sv-ed-switch-title {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--adm-text-heading);
+    line-height: 1.25;
+}
+
+.sv-ed-switch-desc {
+    display: block;
+    font-size: 0.6875rem;
+    color: var(--adm-text-muted);
+    margin-top: 0.125rem;
+    line-height: 1.3;
+}
+
+.sv-ed-switch-track {
+    position: relative;
+    width: 2.25rem;
+    height: 1.25rem;
+    border-radius: 9999px;
+    background-color: var(--adm-border-strong);
+    flex-shrink: 0;
+    transition: background-color 160ms ease;
+}
+
+.sv-ed-switch-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 9999px;
+    background-color: #ffffff;
+    box-shadow: 0 1px 2px rgba(2, 6, 23, 0.3);
+    transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.sv-ed-switch-card:has(input[type="checkbox"]:checked) .sv-ed-switch-track {
+    background-color: var(--adm-accent);
+}
+
+.sv-ed-switch-card:has(input[type="checkbox"]:checked) .sv-ed-switch-thumb {
+    transform: translateX(1rem);
+}
+
+.sv-ed-switch-card:has(input[type="checkbox"]:focus-visible) {
+    box-shadow: 0 0 0 2px var(--adm-focus-ring);
+    border-color: var(--adm-accent);
+}
+
+/* 7. DESLIZADOR CON VALOR EN VIVO (Range Slider para Opacidad / Oscuridad) */
+.sv-ed-range-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.55rem 0.75rem;
+    border-radius: 0.75rem;
+    background-color: var(--adm-bg-input);
+    border: 1px solid var(--adm-border-input);
+}
+
+.sv-ed-range-input {
+    flex: 1;
+    accent-color: var(--adm-accent);
+    cursor: pointer;
+    height: 0.375rem;
+}
+
+.sv-ed-range-badge {
+    min-width: 2.75rem;
+    padding: 0.2rem 0.45rem;
+    border-radius: 0.4rem;
+    background-color: var(--adm-bg-muted);
+    color: var(--adm-text-heading);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-align: center;
+    border: 1px solid var(--adm-border);
+}
+
+/* 8. CAMPO DE COLOR E INSIGNIAS DE MARCAS OFICIALES */
+.sv-ed-brand-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.sv-ed-brand-badge {
+    width: 1.15rem;
+    height: 1.15rem;
+    border-radius: 0.32rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.sv-ed-brand-badge svg {
+    width: 0.85rem;
+    height: 0.85rem;
+}
+
+/* 9. AVISOS Y CALLOUTS ADAPTABLES A TEMA CLARO Y OSCURO */
+.sv-ed-warn-text {
+    color: var(--adm-warning-text) !important;
+    font-weight: 600;
+}
+
+.sv-ed-callout-info {
+    padding: 0.6rem 0.75rem;
+    border-radius: 0.65rem;
+    background-color: var(--adm-accent-soft);
+    border: 1px solid var(--adm-accent-border);
+    color: var(--adm-text-body);
+    font-size: 0.6875rem;
+    line-height: 1.35;
+}
+
+.sv-ed-callout-warn {
+    padding: 0.6rem 0.75rem;
+    border-radius: 0.65rem;
+    background-color: var(--adm-warning-bg);
+    border: 1px solid var(--adm-warning-border);
+    color: var(--adm-warning-text);
+    font-size: 0.6875rem;
+    line-height: 1.35;
+}
+
+.sv-ed-img-frame {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    border-radius: 0.65rem;
+    border: 1px solid var(--adm-border-input);
+    background-color: var(--adm-bg-canvas);
+    touch-action: none;
+}
+
+/* 10. MODAL «AGREGAR SECCIÓN» CATEGORIZADO Y TARJETAS CON ICONOS LUCIDE */
+.sv-ed-modal-cat-header {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.25rem;
+    border-bottom: 1px solid var(--adm-border);
+    margin-top: 0.25rem;
+}
+
+.sv-ed-modal-cat-header:first-child {
+    padding-top: 0;
+    margin-top: 0;
+}
+
+.sv-ed-modal-cat-title {
+    font-size: 0.6875rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--adm-accent-text);
+}
+
+.sv-ed-sec-card {
+    text-align: left;
+    padding: 0.875rem;
+    border-radius: 0.85rem;
+    background-color: var(--adm-bg-subtle);
+    border: 1px solid var(--adm-border);
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    cursor: pointer;
+    transition: border-color 150ms ease, background-color 150ms ease, transform 150ms ease, box-shadow 150ms ease;
+}
+
+html[data-admin-theme="light"] .sv-ed-sec-card {
+    background-color: var(--adm-bg-surface);
+    box-shadow: var(--adm-shadow-card);
+}
+
+.sv-ed-sec-card:hover {
+    border-color: var(--adm-accent);
+    background-color: var(--adm-bg-hover);
+    transform: translateY(-1px);
+}
+
+.sv-ed-sec-card:focus-visible {
+    outline: none;
+    border-color: var(--adm-accent);
+    box-shadow: 0 0 0 2px var(--adm-focus-ring);
+}
+
+.sv-ed-sec-card-icon {
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 0.65rem;
+    background-color: var(--adm-accent-soft);
+    color: var(--adm-accent-text);
+    border: 1px solid var(--adm-accent-border);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+    transition: background-color 150ms ease, color 150ms ease;
+}
+
+.sv-ed-sec-card:hover .sv-ed-sec-card-icon {
+    background-color: var(--adm-accent);
+    color: #ffffff;
+}
+
+.sv-ed-sec-card-icon svg {
+    width: 1.1rem;
+    height: 1.1rem;
+}
+
+.sv-ed-sec-card-body {
+    min-width: 0;
+    flex: 1;
+}
+
+.sv-ed-sec-card-title {
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: var(--adm-text-heading);
+    line-height: 1.25;
+}
+
+.sv-ed-sec-card-desc {
+    font-size: 0.7rem;
+    color: var(--adm-text-muted);
+    margin-top: 0.25rem;
+    line-height: 1.35;
+}
+
+.sv-ed-sec-card-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.68rem;
+    font-weight: 800;
+    color: var(--adm-accent-text);
+    margin-top: 0.45rem;
+}

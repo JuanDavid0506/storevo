@@ -3,11 +3,47 @@
    Exclusivo para layouts/dashboard-layout.html (No afecta tiendas públicas)
    ========================================================================== */
 
-:root {
+:root,
+html[data-admin-theme="dark"] {
+    color-scheme: dark;
     --adm-sidebar-expanded-w: 16rem;   /* 256px */
     --adm-sidebar-collapsed-w: 4.5rem; /* 72px  */
     --adm-sidebar-current-w: var(--adm-sidebar-expanded-w);
     --adm-transition-speed: 220ms;
+
+    --adm-bg-canvas: #020617;
+    --adm-bg-surface: #0f172a;
+    --adm-bg-subtle: #020617;
+    --adm-bg-elevated: #1e293b;
+    --adm-bg-input: #020617;
+    --adm-bg-muted: #1e293b;
+    --adm-bg-hover: #1e293b;
+    --adm-border: #1e293b;
+    --adm-border-input: #1e293b;
+    --adm-border-strong: #334155;
+    --adm-text-heading: #f8fafc;
+    --adm-text-body: #cbd5e1;
+    --adm-text-muted: #94a3b8;
+    --adm-text-subtle: #64748b;
+
+    --adm-accent: #6366f1;
+    --adm-accent-hover: #4f46e5;
+    --adm-accent-text: #818cf8;
+    --adm-accent-soft: rgba(99, 102, 241, 0.14);
+    --adm-accent-border: rgba(99, 102, 241, 0.42);
+    --adm-focus-ring: rgba(99, 102, 241, 0.25);
+
+    --adm-warning-bg: rgba(245, 158, 11, 0.12);
+    --adm-warning-border: rgba(245, 158, 11, 0.3);
+    --adm-warning-text: #fbbf24;
+    --adm-success-bg: rgba(16, 185, 129, 0.12);
+    --adm-success-border: rgba(16, 185, 129, 0.3);
+    --adm-success-text: #34d399;
+    --adm-danger-bg: rgba(239, 68, 68, 0.12);
+    --adm-danger-border: rgba(239, 68, 68, 0.3);
+    --adm-danger-text: #f87171;
+
+    --adm-shadow-card: 0 4px 12px -2px rgba(2, 6, 23, 0.45);
 }
 
 html[data-sidebar-collapsed="true"] {
@@ -186,6 +222,7 @@ html[data-admin-theme="light"] {
     --adm-bg-canvas: #dedede;        /* Fondo general elegido para resaltar las tarjetas blancas */
     --adm-bg-surface: #FFFFFF;       /* Blanco puro para tarjetas, sidebar, topbar y tablas */
     --adm-bg-subtle: #F4F6F9;        /* Contenedores anidados (ej. árbol desplegable de categorías) */
+    --adm-bg-elevated: #FFFFFF;
     --adm-bg-input: #FAFBFC;         /* Fondo limpio de campos de formulario */
     --adm-bg-muted: #EEF1F6;         /* Etiquetas/badges neutros (ej. documento en clientes) y botones secundarios */
     --adm-bg-hover: #E5E9F0;         /* Estado hover sutil para controles y filas */
@@ -196,6 +233,24 @@ html[data-admin-theme="light"] {
     --adm-text-body: #334155;
     --adm-text-muted: #64748B;
     --adm-text-subtle: #94A3B8;
+
+    --adm-accent: #4F46E5;
+    --adm-accent-hover: #4338CA;
+    --adm-accent-text: #4338CA;
+    --adm-accent-soft: rgba(79, 70, 229, 0.09);
+    --adm-accent-border: rgba(79, 70, 229, 0.45);
+    --adm-focus-ring: rgba(79, 70, 229, 0.16);
+
+    --adm-warning-bg: #FFFBEB;
+    --adm-warning-border: #FDE68A;
+    --adm-warning-text: #B45309;
+    --adm-success-bg: #ECFDF5;
+    --adm-success-border: #A7F3D0;
+    --adm-success-text: #047857;
+    --adm-danger-bg: #FEF2F2;
+    --adm-danger-border: #FECACA;
+    --adm-danger-text: #B91C1C;
+
     --adm-shadow-card: 0 1px 3px 0 rgba(15, 23, 42, 0.05), 0 1px 2px -1px rgba(15, 23, 42, 0.03);
 }
 
@@ -464,10 +519,25 @@ html[data-admin-theme="light"] .style-acc-chevron {
 }
 html[data-admin-theme="light"] .nav-layout-opt.is-selected,
 html[data-admin-theme="light"] .font-pair-opt.is-selected,
-html[data-admin-theme="light"] .card-style-opt.is-selected {
-    border-color: #6366F1 !important;
-    background: rgba(99, 102, 241, 0.1) !important;
-    color: #4F46E5 !important;
+html[data-admin-theme="light"] .card-style-opt.is-selected,
+html[data-admin-theme="light"] .card-preset-opt.is-selected,
+html[data-admin-theme="light"] .detail-preset-opt.is-selected,
+html[data-admin-theme="light"] .detail-info-opt.is-selected {
+    border-color: #4F46E5 !important;
+    background: rgba(79, 70, 229, 0.1) !important;
+    color: #3730A3 !important;
+}
+html[data-admin-theme="light"] :is(.nav-layout-opt, .font-pair-opt, .card-style-opt, .card-preset-opt, .detail-preset-opt, .detail-info-opt).is-selected span:first-child {
+    color: #312E81 !important;
+}
+html[data-admin-theme="light"] .text-amber-200 {
+    color: #92400E !important;
+}
+html[data-admin-theme="light"] .text-emerald-200 {
+    color: #065F46 !important;
+}
+html[data-admin-theme="light"] .text-indigo-200 {
+    color: #3730A3 !important;
 }
 html[data-admin-theme="light"] #preview-viewport-wrapper[data-device="desktop"] #preview-frame-container {
     border-color: var(--adm-border-input) !important;
