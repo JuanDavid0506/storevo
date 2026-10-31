@@ -541,12 +541,16 @@ public class ProductService {
             product.setDiscountPrice(dto.getDiscountPrice());
             product.setStock(Boolean.TRUE.equals(product.getIsMadeToOrder()) ? 0 : (dto.getStock() != null ? dto.getStock() : 0));
             product.setWeight(dto.getWeight());
-
             product.getOptions().clear();
             product.getVariantsList().clear();
         } else {
-            if (isNew) {
+            product.setDiscountPrice(dto.getDiscountPrice());
+            if (dto.getPrice() != null && dto.getPrice() > 0) {
+                product.setPrice(dto.getPrice());
+            } else if (isNew) {
                 product.setPrice(0.0);
+            }
+            if (isNew) {
                 product.setStock(0);
             }
         }
@@ -732,14 +736,18 @@ public class ProductService {
 
                 newVariantsList.add(variant);
 
-                if (variant.getPrice() < minPrice) minPrice = variant.getPrice();
+                if (variant.getPrice() != null && variant.getPrice() > 0 && variant.getPrice() < minPrice) {
+                    minPrice = variant.getPrice();
+                }
                 totalStock += variant.getStock();
             }
 
             product.getVariantsList().clear();
             product.getVariantsList().addAll(newVariantsList);
-
-            product.setPrice(minPrice == Double.MAX_VALUE ? 0.0 : minPrice);
+            double fallbackParentPrice = (dto.getPrice() != null && dto.getPrice() > 0)
+                    ? dto.getPrice()
+                    : (product.getPrice() != null && product.getPrice() > 0 ? product.getPrice() : 0.0);
+            product.setPrice(minPrice == Double.MAX_VALUE ? fallbackParentPrice : minPrice);
             product.setStock(totalStock);
         }
 

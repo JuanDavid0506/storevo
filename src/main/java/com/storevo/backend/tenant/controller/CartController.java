@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/s/{slug}/cart")
@@ -43,44 +42,35 @@ public class CartController {
         if (item == null || item.getProductId() == null || item.getQuantity() == null || item.getQuantity() <= 0) {
             return false;
         }
-        if (item.getPrice() == null || Double.isNaN(item.getPrice()) || Double.isInfinite(item.getPrice()) || item.getPrice() <= 0.0) {
-            return false;
-        }
         String itemKey = item.getProductId() + "-" + item.getVariantId();
         try {
             Product p = productService.getProductById(item.getProductId());
             if (Boolean.TRUE.equals(p.getIsDeleted()) || !Boolean.TRUE.equals(p.getIsActive()) || Boolean.TRUE.equals(p.getIsDraft())) {
                 return false;
             }
+            ProductVariant v = null;
             if (Boolean.TRUE.equals(p.getHasVariants())) {
                 if (item.getVariantId() == null) {
                     return false;
                 }
-                ProductVariant v = variantRepository.findByIdAndProductId(item.getVariantId(), p.getId()).orElse(null);
+                v = variantRepository.findByIdAndProductId(item.getVariantId(), p.getId()).orElse(null);
                 if (v == null || !Boolean.TRUE.equals(v.getIsActive())) {
-                    return false;
-                }
-                Double validVarPrice = cartManager.resolveValidVariantPrice(p, v);
-                if (validVarPrice == null || validVarPrice <= 0.0) {
                     return false;
                 }
                 if (!Boolean.TRUE.equals(p.getIsMadeToOrder()) && itemMaxStock != null) {
                     itemMaxStock.put(itemKey, v.getStock() != null ? v.getStock() : 0);
                 }
-                return true;
             } else {
                 if (item.getVariantId() != null) {
-                    return false;
-                }
-                Double validProdPrice = cartManager.resolveValidProductPrice(p);
-                if (validProdPrice == null || validProdPrice <= 0.0) {
                     return false;
                 }
                 if (!Boolean.TRUE.equals(p.getIsMadeToOrder()) && itemMaxStock != null) {
                     itemMaxStock.put(itemKey, p.getStock() != null ? p.getStock() : 0);
                 }
-                return true;
             }
+
+            Double effectivePrice = cartManager.resolveEffectivePrice(p, v);
+            return effectivePrice != null && effectivePrice > 0.0;
         } catch (Exception e) {
             return false;
         }
@@ -155,9 +145,7 @@ public class CartController {
 
             boolean isMadeToOrder = Boolean.TRUE.equals(product.getIsMadeToOrder());
             int availableStock;
-            Double itemPrice;
-            String itemVariantText = null;
-            String imageUrl = product.getMainImageUrl();
+            ProductVariant variant = null;
 
             if (Boolean.TRUE.equals(product.getHasVariants())) {
                 if (variantId == null) {
@@ -165,7 +153,7 @@ public class CartController {
                     redirectAttributes.addFlashAttribute("cartError", "Debe seleccionar las opciones del producto.");
                     return "redirect:/s/" + slug + "/cart";
                 }
-                ProductVariant variant = variantRepository.findByIdAndProductId(variantId, product.getId()).orElse(null);
+                variant = variantRepository.findByIdAndProductId(variantId, product.getId()).orElse(null);
                 if (variant == null) {
                     cartManager.removeItem(guestId, productId, variantId);
                     redirectAttributes.addFlashAttribute("cartError", "La variante seleccionada no pertenece a este producto.");
@@ -176,37 +164,25 @@ public class CartController {
                     redirectAttributes.addFlashAttribute("cartError", "La variante seleccionada ya no está disponible.");
                     return "redirect:/s/" + slug + "/cart";
                 }
-                Double validVarPrice = cartManager.resolveValidVariantPrice(product, variant);
-                if (validVarPrice == null) {
-                    cartManager.removeItem(guestId, productId, variantId);
-                    redirectAttributes.addFlashAttribute("cartError", "La variante seleccionada no tiene un precio válido.");
-                    return "redirect:/s/" + slug + "/cart";
-                }
                 availableStock = variant.getStock() != null ? variant.getStock() : 0;
-                itemPrice = validVarPrice;
-                itemVariantText = variant.getOptionValues().stream()
-                        .map(ov -> ov.getValueName())
-                        .collect(Collectors.joining(" / "));
-
-                if (variant.getImages() != null && !variant.getImages().isEmpty()) {
-                    imageUrl = variant.getImages().get(0).getThumbnailUrl();
-                    if (imageUrl == null) imageUrl = variant.getImages().get(0).getSecureUrl();
-                }
             } else {
                 if (variantId != null) {
                     cartManager.removeItem(guestId, productId, variantId);
                     redirectAttributes.addFlashAttribute("cartError", "La variante seleccionada no pertenece a este producto.");
                     return "redirect:/s/" + slug + "/cart";
                 }
-                Double validProdPrice = cartManager.resolveValidProductPrice(product);
-                if (validProdPrice == null) {
-                    cartManager.removeItem(guestId, productId, null);
-                    redirectAttributes.addFlashAttribute("cartError", "Este producto no tiene un precio válido.");
-                    return "redirect:/s/" + slug + "/cart";
-                }
                 availableStock = product.getStock() != null ? product.getStock() : 0;
-                itemPrice = validProdPrice;
             }
+
+            Double itemPrice = cartManager.resolveEffectivePrice(product, variant);
+            if (itemPrice == null || itemPrice <= 0.0) {
+                cartManager.removeItem(guestId, productId, variantId);
+                redirectAttributes.addFlashAttribute("cartError", "Este producto no tiene un precio válido.");
+                return "redirect:/s/" + slug + "/cart";
+            }
+
+            String itemVariantText = cartManager.buildVariantText(variant);
+            String imageUrl = cartManager.resolveItemImageUrl(product, variant);
 
             int finalQty = quantity;
             if (!isMadeToOrder) {
@@ -223,7 +199,7 @@ public class CartController {
             cartManager.removeItem(guestId, productId, variantId);
             CartItemDto updatedItem = CartItemDto.builder()
                     .productId(product.getId())
-                    .variantId(variantId)
+                    .variantId(variant != null ? variant.getId() : null)
                     .name(product.getName())
                     .variantText(itemVariantText)
                     .price(itemPrice)
@@ -270,16 +246,14 @@ public class CartController {
 
         boolean isMadeToOrder = Boolean.TRUE.equals(product.getIsMadeToOrder());
         int availableStock;
-        Double itemPrice;
-        String itemVariantText = null;
-        String imageUrl = product.getMainImageUrl();
+        ProductVariant variant = null;
 
         if (Boolean.TRUE.equals(product.getHasVariants())) {
             if (variantId == null) {
                 return ResponseEntity.ok(Map.of("success", false, "message", "Debe seleccionar las opciones del producto."));
             }
 
-            ProductVariant variant = variantRepository.findByIdAndProductId(variantId, product.getId()).orElse(null);
+            variant = variantRepository.findByIdAndProductId(variantId, product.getId()).orElse(null);
             if (variant == null) {
                 return ResponseEntity.ok(Map.of("success", false, "message", "La variante seleccionada no pertenece a este producto."));
             }
@@ -287,39 +261,26 @@ public class CartController {
                 return ResponseEntity.ok(Map.of("success", false, "message", "Esta combinación no está disponible."));
             }
 
-            Double validVariantPrice = cartManager.resolveValidVariantPrice(product, variant);
-            if (validVariantPrice == null) {
-                return ResponseEntity.ok(Map.of("success", false, "message", "Esta variante no tiene un precio válido disponible."));
-            }
-
             availableStock = variant.getStock() != null ? variant.getStock() : 0;
-            itemPrice = validVariantPrice;
-
-            itemVariantText = variant.getOptionValues().stream()
-                    .map(ov -> ov.getValueName())
-                    .collect(Collectors.joining(" / "));
-
-            if (variant.getImages() != null && !variant.getImages().isEmpty()) {
-                imageUrl = variant.getImages().get(0).getThumbnailUrl();
-                if (imageUrl == null) imageUrl = variant.getImages().get(0).getSecureUrl();
-            }
         } else {
             if (variantId != null) {
                 return ResponseEntity.ok(Map.of("success", false, "message", "La variante seleccionada no pertenece a este producto."));
             }
-
-            Double validProductPrice = cartManager.resolveValidProductPrice(product);
-            if (validProductPrice == null) {
-                return ResponseEntity.ok(Map.of("success", false, "message", "Este producto no tiene un precio válido disponible."));
-            }
-
             availableStock = product.getStock() != null ? product.getStock() : 0;
-            itemPrice = validProductPrice;
         }
+
+        Double itemPrice = cartManager.resolveEffectivePrice(product, variant);
+        if (itemPrice == null || itemPrice <= 0.0) {
+            return ResponseEntity.ok(Map.of("success", false, "message", "Este producto no tiene un precio válido disponible."));
+        }
+
+        String itemVariantText = cartManager.buildVariantText(variant);
+        String imageUrl = cartManager.resolveItemImageUrl(product, variant);
+        Long verifiedVariantId = variant != null ? variant.getId() : null;
 
         int qtyToAdd = quantity;
         if (!isMadeToOrder) {
-            int currentQtyInCart = cartManager.getItemQuantity(guestId, productId, variantId);
+            int currentQtyInCart = cartManager.getItemQuantity(guestId, product.getId(), verifiedVariantId);
             int remainingStock = availableStock - currentQtyInCart;
 
             if (remainingStock <= 0) {
@@ -333,7 +294,7 @@ public class CartController {
 
         CartItemDto item = CartItemDto.builder()
                 .productId(product.getId())
-                .variantId(variantId)
+                .variantId(verifiedVariantId)
                 .name(product.getName())
                 .variantText(itemVariantText)
                 .price(itemPrice)
@@ -487,7 +448,7 @@ public class CartController {
 
         for (CartItemDto item : cart) {
             if (!isCartItemValidAndPopulateMaxStock(item, null)) {
-                redirectAttributes.addFlashAttribute("cartError", "Tu bolsa contiene productos o variantes no disponibles o con precio inválido. Por favor, revísala antes de continuar.");
+                redirectAttributes.addFlashAttribute("cartError", "Tu bolsa contiene productos o variantes no disponibles. Por favor, revísala antes de continuar.");
                 return "redirect:/s/" + slug + "/cart";
             }
         }

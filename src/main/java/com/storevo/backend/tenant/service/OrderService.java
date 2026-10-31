@@ -251,40 +251,33 @@ public class OrderService {
                 throw new IllegalArgumentException("El producto '" + product.getName() + "' ya no está disponible.");
             }
 
-            Double verifiedPrice;
-            String verifiedVariantText = null;
+            ProductVariant variant = null;
             Long verifiedVariantId = null;
 
             if (Boolean.TRUE.equals(product.getHasVariants())) {
                 if (dto.getVariantId() == null) {
                     throw new IllegalArgumentException("Debes seleccionar una variante válida para el producto: " + product.getName());
                 }
-                ProductVariant variant = variantRepository.findByIdAndProductId(dto.getVariantId(), product.getId())
+                variant = variantRepository.findByIdAndProductId(dto.getVariantId(), product.getId())
                         .orElseThrow(() -> new IllegalArgumentException("La variante seleccionada no pertenece al producto: " + product.getName()));
 
                 if (!Boolean.TRUE.equals(variant.getIsActive())) {
                     throw new IllegalArgumentException("La variante seleccionada para '" + product.getName() + "' no está disponible.");
                 }
-
-                verifiedPrice = cartManager.resolveValidVariantPrice(product, variant);
-                if (verifiedPrice == null || verifiedPrice <= 0.0) {
-                    throw new IllegalArgumentException("La variante seleccionada para '" + product.getName() + "' no tiene un precio válido.");
-                }
-
                 verifiedVariantId = variant.getId();
-                if (variant.getOptionValues() != null && !variant.getOptionValues().isEmpty()) {
-                    verifiedVariantText = variant.getOptionValues().stream()
-                            .map(ProductOptionValue::getValueName)
-                            .collect(Collectors.joining(" / "));
-                }
-            } else {
-                if (dto.getVariantId() != null) {
-                    throw new IllegalArgumentException("La variante seleccionada no pertenece al producto: " + product.getName());
-                }
-                verifiedPrice = cartManager.resolveValidProductPrice(product);
-                if (verifiedPrice == null || verifiedPrice <= 0.0) {
-                    throw new IllegalArgumentException("El producto '" + product.getName() + "' no tiene un precio válido.");
-                }
+            } else if (dto.getVariantId() != null) {
+                throw new IllegalArgumentException("La variante seleccionada no pertenece al producto: " + product.getName());
+            }
+
+            Double verifiedPrice = cartManager.resolveEffectivePrice(product, variant);
+            if (verifiedPrice == null || verifiedPrice <= 0.0) {
+                throw new IllegalArgumentException("El producto '" + product.getName() + "' no tiene un precio válido.");
+            }
+
+            String verifiedVariantText = variant != null ? cartManager.buildVariantText(variant) : null;
+            if ((verifiedVariantText == null || verifiedVariantText.isBlank())
+                    && dto.getVariantText() != null && !dto.getVariantText().isBlank()) {
+                verifiedVariantText = dto.getVariantText().trim();
             }
 
             if (!inventoryService.isAvailable(product.getId(), verifiedVariantId, dto.getQuantity())) {

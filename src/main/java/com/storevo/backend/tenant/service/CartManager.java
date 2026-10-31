@@ -3,6 +3,7 @@ package com.storevo.backend.tenant.service;
 import com.storevo.backend.tenant.dto.CartItemDto;
 import com.storevo.backend.tenant.model.CartItem;
 import com.storevo.backend.tenant.model.Product;
+import com.storevo.backend.tenant.model.ProductImage;
 import com.storevo.backend.tenant.model.ProductVariant;
 import com.storevo.backend.tenant.repository.CartItemRepository;
 import com.storevo.backend.tenant.repository.ProductRepository;
@@ -24,45 +25,92 @@ public class CartManager {
     private final ProductVariantRepository variantRepository;
 
     /**
-     * Resuelve el precio unitario efectivo de un producto sin variantes desde la BD.
-     * Devuelve null si el precio base o el descuento es inválido (<= 0, nulo, NaN o infinito).
+     * Calcula el precio unitario efectivo verificando la relación producto-variante:
+     * 1. Si el producto usa variantes y la variante tiene precio > 0, usa el precio de la variante.
+     * 2. Si el precio de la variante es <= 0 o null (o el producto no usa variantes),
+     *    usa el discountPrice del producto padre (si es > 0 y menor al precio base) o el price base.
+     * 3. Devuelve null si la relación producto-variante es inválida o si el precio resultante es <= 0.
      */
-    public Double resolveValidProductPrice(Product product) {
-        if (product == null || product.getPrice() == null) {
+    public Double resolveEffectivePrice(Product product, ProductVariant variant) {
+        if (product == null) {
             return null;
         }
-        double basePrice = product.getPrice();
-        if (Double.isNaN(basePrice) || Double.isInfinite(basePrice) || basePrice <= 0.0) {
-            return null;
-        }
-        Double discountPrice = product.getDiscountPrice();
-        if (discountPrice != null) {
-            if (Double.isNaN(discountPrice) || Double.isInfinite(discountPrice) || discountPrice < 0.0) {
+
+        if (Boolean.TRUE.equals(product.getHasVariants())) {
+            if (variant == null || variant.getProduct() == null || product.getId() == null
+                    || !product.getId().equals(variant.getProduct().getId())) {
                 return null;
             }
-            if (discountPrice > 0.0 && discountPrice < basePrice) {
+            Double varPrice = variant.getPrice();
+            if (varPrice != null && !Double.isNaN(varPrice) && !Double.isInfinite(varPrice) && varPrice > 0.0) {
+                return varPrice;
+            }
+        } else if (variant != null) {
+            return null;
+        }
+
+        Double basePrice = product.getPrice();
+        Double discountPrice = product.getDiscountPrice();
+
+        if (discountPrice != null && !Double.isNaN(discountPrice) && !Double.isInfinite(discountPrice) && discountPrice > 0.0) {
+            if (basePrice == null || basePrice <= 0.0 || discountPrice < basePrice) {
                 return discountPrice;
             }
         }
-        return basePrice;
+
+        if (basePrice != null && !Double.isNaN(basePrice) && !Double.isInfinite(basePrice) && basePrice > 0.0) {
+            return basePrice;
+        }
+
+        return null;
     }
 
     /**
-     * Resuelve el precio unitario efectivo de una variante verificando que pertenezca al producto.
-     * Devuelve null si la variante no pertenece al producto o su precio es <= 0 / nulo.
+     * Construye el texto legible de las opciones de la variante (ej. "Rojo / M").
      */
-    public Double resolveValidVariantPrice(Product product, ProductVariant variant) {
-        if (product == null || variant == null || variant.getProduct() == null) {
+    public String buildVariantText(ProductVariant variant) {
+        if (variant == null || variant.getOptionValues() == null || variant.getOptionValues().isEmpty()) {
             return null;
         }
-        if (product.getId() == null || !product.getId().equals(variant.getProduct().getId())) {
+        String text = variant.getOptionValues().stream()
+                .filter(ov -> ov != null && ov.getValueName() != null && !ov.getValueName().isBlank())
+                .map(ov -> ov.getValueName().trim())
+                .collect(Collectors.joining(" / "));
+        return text.isEmpty() ? null : text;
+    }
+
+    /**
+     * Obtiene primero la miniatura/imagen asociada a la variante; si no tiene, usa la imagen principal del producto.
+     */
+    public String resolveItemImageUrl(Product product, ProductVariant variant) {
+        if (product == null) {
             return null;
         }
-        Double variantPrice = variant.getPrice();
-        if (variantPrice == null || Double.isNaN(variantPrice) || Double.isInfinite(variantPrice) || variantPrice <= 0.0) {
-            return null;
+        if (variant != null && variant.getId() != null) {
+            if (variant.getImages() != null && !variant.getImages().isEmpty()) {
+                ProductImage vImg = variant.getImages().get(0);
+                if (vImg != null) {
+                    String url = vImg.getThumbnailUrl() != null ? vImg.getThumbnailUrl() : vImg.getSecureUrl();
+                    if (url != null && !url.isBlank()) {
+                        return url;
+                    }
+                }
+            }
+            if (product.getImages() != null && !product.getImages().isEmpty()) {
+                String matchedUrl = product.getImages().stream()
+                        .filter(img -> img != null && variant.getId().equals(img.getVariantId()))
+                        .map(img -> img.getThumbnailUrl() != null ? img.getThumbnailUrl() : img.getSecureUrl())
+                        .filter(url -> url != null && !url.isBlank())
+                        .findFirst()
+                        .orElse(null);
+                if (matchedUrl != null) {
+                    return matchedUrl;
+                }
+            }
         }
-        return variantPrice;
+        return product.getMainImageThumbnailUrl() != null
+                ? product.getMainImageThumbnailUrl()
+                : product.getMainImageUrl();
     }
 
     @Transactional(readOnly = true)
@@ -78,38 +126,12 @@ public class CartManager {
                     && p != null && p.getId() != null
                     && p.getId().equals(v.getProduct().getId()));
 
-            double finalPrice = 0.0;
-            if (p != null) {
-                if (Boolean.TRUE.equals(p.getHasVariants())) {
-                    Double validVarPrice = variantBelongsToProduct ? resolveValidVariantPrice(p, v) : null;
-                    finalPrice = validVarPrice != null ? validVarPrice : 0.0;
-                } else if (v == null) {
-                    Double validProdPrice = resolveValidProductPrice(p);
-                    finalPrice = validProdPrice != null ? validProdPrice : 0.0;
-                }
-            }
+            ProductVariant validVariant = variantBelongsToProduct ? v : null;
+            Double resolvedPrice = resolveEffectivePrice(p, validVariant);
+            double finalPrice = resolvedPrice != null ? resolvedPrice : 0.0;
 
-            String variantText = null;
-            if (variantBelongsToProduct && v.getOptionValues() != null && !v.getOptionValues().isEmpty()) {
-                variantText = v.getOptionValues().stream()
-                        .map(ov -> ov.getValueName())
-                        .collect(Collectors.joining(" / "));
-            }
-
-            String imageUrl = (p != null && p.getMainImageThumbnailUrl() != null)
-                    ? p.getMainImageThumbnailUrl()
-                    : (p != null ? p.getMainImageUrl() : null);
-
-            if (variantBelongsToProduct && v.getId() != null && p.getImages() != null) {
-                String variantImg = p.getImages().stream()
-                        .filter(img -> v.getId().equals(img.getVariantId()))
-                        .map(img -> img.getThumbnailUrl() != null ? img.getThumbnailUrl() : img.getSecureUrl())
-                        .findFirst()
-                        .orElse(null);
-                if (variantImg != null && !variantImg.isBlank()) {
-                    imageUrl = variantImg;
-                }
-            }
+            String variantText = validVariant != null ? buildVariantText(validVariant) : null;
+            String imageUrl = resolveItemImageUrl(p, validVariant);
 
             return CartItemDto.builder()
                     .productId(p != null ? p.getId() : null)
@@ -160,18 +182,13 @@ public class CartManager {
             if (!Boolean.TRUE.equals(variant.getIsActive())) {
                 throw new IllegalArgumentException("Esta combinación no está disponible.");
             }
-            Double validVariantPrice = resolveValidVariantPrice(product, variant);
-            if (validVariantPrice == null) {
-                throw new IllegalArgumentException("La variante seleccionada no tiene un precio válido.");
-            }
-        } else {
-            if (newItem.getVariantId() != null) {
-                throw new IllegalArgumentException("La variante seleccionada no pertenece a este producto.");
-            }
-            Double validProductPrice = resolveValidProductPrice(product);
-            if (validProductPrice == null) {
-                throw new IllegalArgumentException("Este producto no tiene un precio válido.");
-            }
+        } else if (newItem.getVariantId() != null) {
+            throw new IllegalArgumentException("La variante seleccionada no pertenece a este producto.");
+        }
+
+        Double effectivePrice = resolveEffectivePrice(product, variant);
+        if (effectivePrice == null || effectivePrice <= 0.0) {
+            throw new IllegalArgumentException("Este producto o variante no tiene un precio válido.");
         }
 
         Long verifiedVariantId = variant != null ? variant.getId() : null;
