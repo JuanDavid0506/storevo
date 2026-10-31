@@ -3,7 +3,7 @@ package com.storevo.backend.tenant.service;
 import com.storevo.backend.tenant.model.Product;
 import com.storevo.backend.tenant.model.ProductVariant;
 import com.storevo.backend.tenant.repository.ProductRepository;
-import com.storevo.backend.tenant.repository.ProductVariantRepository; // (Deberás crearlo vacío como un JpaRepository normal)
+import com.storevo.backend.tenant.repository.ProductVariantRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,7 +13,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class InventoryService {
 
     private final ProductRepository productRepository;
-    // Asume que creaste la interfaz ProductVariantRepository
     private final ProductVariantRepository variantRepository;
 
     public boolean isAvailable(Long productId, Long variantId, int requestedQty) {

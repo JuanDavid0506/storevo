@@ -16,6 +16,9 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
     // Encuentra solo las variantes activas de un producto (útil para el catálogo público)
     List<ProductVariant> findByProductIdAndIsActiveTrue(Long productId);
 
+    // Verifica que la variante exista y pertenezca estrictamente al producto indicado (Objetivo C2)
+    Optional<ProductVariant> findByIdAndProductId(Long id, Long productId);
+
     // Busca una variante exacta por su SKU (vital para escáneres de código de barras o importaciones)
     Optional<ProductVariant> findBySku(String sku);
 }

@@ -13,6 +13,8 @@ import com.storevo.backend.tenant.exception.OrderNotFoundException;
 import com.storevo.backend.tenant.exception.ShipmentRequiredException;
 import com.storevo.backend.tenant.model.*;
 import com.storevo.backend.tenant.repository.OrderRepository;
+import com.storevo.backend.tenant.repository.ProductRepository;
+import com.storevo.backend.tenant.repository.ProductVariantRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -36,6 +38,8 @@ import java.util.stream.Collectors;
 public class OrderService {
 
     private final OrderRepository orderRepository;
+    private final ProductRepository productRepository;
+    private final ProductVariantRepository variantRepository;
     private final CartManager cartManager;
     private final InventoryService inventoryService;
     private final StoreIntegrationRepository integrationRepository;
@@ -208,7 +212,6 @@ public class OrderService {
             OrderChannel channel) {
 
         List<CartItemDto> cartItems = cartManager.getCart(slug);
-
         if (cartItems.isEmpty()) {
             throw new IllegalArgumentException("El carrito está vacío");
         }
@@ -228,33 +231,92 @@ public class OrderService {
                 .address(address != null ? address.trim() : "")
                 .city(city != null ? city.trim() : "")
                 .notes(cleanNullable(notes))
-                .total(cartManager.getTotal(slug))
+                .total(0.0)
                 .status(OrderStatus.PENDING)
                 .channel(channel)
                 .paymentMethod(initialPaymentMethod)
                 .build();
 
         List<OrderItem> items = cartItems.stream().map(dto -> {
-            if (!inventoryService.isAvailable(dto.getProductId(), dto.getVariantId(), dto.getQuantity())) {
-                String finalName = dto.getName() + (dto.getVariantText() != null ? " (" + dto.getVariantText() + ")" : "");
+            if (dto.getProductId() == null || dto.getQuantity() == null || dto.getQuantity() <= 0) {
+                throw new IllegalArgumentException("Datos de producto o cantidad inválidos en el carrito.");
+            }
+
+            Product product = productRepository.findById(dto.getProductId())
+                    .orElseThrow(() -> new IllegalArgumentException("Uno de los productos de tu bolsa ya no existe."));
+
+            if (Boolean.TRUE.equals(product.getIsDeleted())
+                    || !Boolean.TRUE.equals(product.getIsActive())
+                    || Boolean.TRUE.equals(product.getIsDraft())) {
+                throw new IllegalArgumentException("El producto '" + product.getName() + "' ya no está disponible.");
+            }
+
+            Double verifiedPrice;
+            String verifiedVariantText = null;
+            Long verifiedVariantId = null;
+
+            if (Boolean.TRUE.equals(product.getHasVariants())) {
+                if (dto.getVariantId() == null) {
+                    throw new IllegalArgumentException("Debes seleccionar una variante válida para el producto: " + product.getName());
+                }
+                ProductVariant variant = variantRepository.findByIdAndProductId(dto.getVariantId(), product.getId())
+                        .orElseThrow(() -> new IllegalArgumentException("La variante seleccionada no pertenece al producto: " + product.getName()));
+
+                if (!Boolean.TRUE.equals(variant.getIsActive())) {
+                    throw new IllegalArgumentException("La variante seleccionada para '" + product.getName() + "' no está disponible.");
+                }
+
+                verifiedPrice = cartManager.resolveValidVariantPrice(product, variant);
+                if (verifiedPrice == null || verifiedPrice <= 0.0) {
+                    throw new IllegalArgumentException("La variante seleccionada para '" + product.getName() + "' no tiene un precio válido.");
+                }
+
+                verifiedVariantId = variant.getId();
+                if (variant.getOptionValues() != null && !variant.getOptionValues().isEmpty()) {
+                    verifiedVariantText = variant.getOptionValues().stream()
+                            .map(ProductOptionValue::getValueName)
+                            .collect(Collectors.joining(" / "));
+                }
+            } else {
+                if (dto.getVariantId() != null) {
+                    throw new IllegalArgumentException("La variante seleccionada no pertenece al producto: " + product.getName());
+                }
+                verifiedPrice = cartManager.resolveValidProductPrice(product);
+                if (verifiedPrice == null || verifiedPrice <= 0.0) {
+                    throw new IllegalArgumentException("El producto '" + product.getName() + "' no tiene un precio válido.");
+                }
+            }
+
+            if (!inventoryService.isAvailable(product.getId(), verifiedVariantId, dto.getQuantity())) {
+                String finalName = product.getName() + (verifiedVariantText != null ? " (" + verifiedVariantText + ")" : "");
                 throw new InsufficientStockException(finalName);
             }
 
-            inventoryService.deductStock(dto.getProductId(), dto.getVariantId(), dto.getQuantity());
+            inventoryService.deductStock(product.getId(), verifiedVariantId, dto.getQuantity());
 
-            String receiptName = dto.getName() + (dto.getVariantText() != null ? " - " + dto.getVariantText() : "");
+            String receiptName = product.getName() + (verifiedVariantText != null ? " - " + verifiedVariantText : "");
+            double verifiedSubtotal = verifiedPrice * dto.getQuantity();
 
             return OrderItem.builder()
                     .order(order)
-                    .productId(dto.getProductId())
-                    .variantId(dto.getVariantId())
+                    .productId(product.getId())
+                    .variantId(verifiedVariantId)
                     .productName(receiptName)
-                    .price(dto.getPrice())
+                    .price(verifiedPrice)
                     .quantity(dto.getQuantity())
-                    .subtotal(dto.getSubtotal())
+                    .subtotal(verifiedSubtotal)
                     .build();
         }).collect(Collectors.toList());
 
+        double verifiedOrderTotal = items.stream()
+                .mapToDouble(OrderItem::getSubtotal)
+                .sum();
+
+        if (Double.isNaN(verifiedOrderTotal) || Double.isInfinite(verifiedOrderTotal) || verifiedOrderTotal <= 0.0) {
+            throw new IllegalArgumentException("El importe total del pedido no es válido.");
+        }
+
+        order.setTotal(verifiedOrderTotal);
         order.setItems(items);
 
         String historyDescription = channel == OrderChannel.WHATSAPP
@@ -270,10 +332,12 @@ public class OrderService {
                 .description(historyDescription)
                 .userId(null)
                 .build();
+
         order.getHistory().add(historyObj);
 
         Order savedOrder = orderRepository.save(order);
         cartManager.clearCart(slug);
+
         return savedOrder;
     }
 
