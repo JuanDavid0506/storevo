@@ -77,32 +77,59 @@ public class InventoryService {
 
     @Transactional
     public void deductStock(Long productId, Long variantId, int qty) {
-        if (!isAvailable(productId, variantId, qty)) {
-            throw new RuntimeException("Inventario insuficiente o combinación de producto y variante inválida.");
+        if (productId == null || qty <= 0) {
+            throw new IllegalArgumentException("Datos de descuento de inventario inválidos.");
         }
 
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("Producto no encontrado."));
 
         if (Boolean.TRUE.equals(product.getHasVariants())) {
+            if (variantId == null) {
+                throw new IllegalArgumentException("Este producto requiere seleccionar una variante válida.");
+            }
             ProductVariant variant = variantRepository.findByIdAndProductId(variantId, productId)
-                    .orElseThrow(() -> new RuntimeException("La variante seleccionada no pertenece a este producto."));
+                    .orElseThrow(() -> new IllegalArgumentException("La variante seleccionada no pertenece a este producto."));
+
+            if (!Boolean.TRUE.equals(product.getIsActive())
+                    || Boolean.TRUE.equals(product.getIsDeleted())
+                    || Boolean.TRUE.equals(product.getIsDraft())
+                    || !Boolean.TRUE.equals(variant.getIsActive())) {
+                throw new RuntimeException("El producto o la variante seleccionada no está disponible.");
+            }
+
             if (Boolean.TRUE.equals(product.getIsMadeToOrder())) {
                 return;
             }
+
             int currentStock = variant.getStock() != null ? variant.getStock() : 0;
-            variant.setStock(Math.max(0, currentStock - qty));
+            if (currentStock < qty) {
+                throw new RuntimeException("Inventario insuficiente para la variante seleccionada.");
+            }
+
+            variant.setStock(currentStock - qty);
             variantRepository.save(variant);
             syncParentProductStock(product);
         } else {
             if (variantId != null) {
-                throw new RuntimeException("El producto no utiliza variantes.");
+                throw new IllegalArgumentException("La variante indicada no pertenece a este producto.");
             }
+            if (!Boolean.TRUE.equals(product.getIsActive())
+                    || Boolean.TRUE.equals(product.getIsDeleted())
+                    || Boolean.TRUE.equals(product.getIsDraft())) {
+                throw new RuntimeException("El producto no está disponible.");
+            }
+
             if (Boolean.TRUE.equals(product.getIsMadeToOrder())) {
                 return;
             }
+
             int currentStock = product.getStock() != null ? product.getStock() : 0;
-            product.setStock(Math.max(0, currentStock - qty));
+            if (currentStock < qty) {
+                throw new RuntimeException("Inventario insuficiente.");
+            }
+
+            product.setStock(currentStock - qty);
             productRepository.save(product);
         }
     }
@@ -112,31 +139,41 @@ public class InventoryService {
         if (productId == null || qty <= 0) {
             return;
         }
-        if (variantId != null) {
-            variantRepository.findByIdAndProductId(variantId, productId).ifPresent(v -> {
-                Product product = v.getProduct();
-                if (Boolean.TRUE.equals(product.getIsMadeToOrder())) {
-                    return;
-                }
-                int currentStock = v.getStock() != null ? v.getStock() : 0;
-                v.setStock(currentStock + qty);
-                variantRepository.save(v);
-                syncParentProductStock(product);
-            });
+
+        Product product = productRepository.findById(productId).orElse(null);
+        if (product == null || Boolean.TRUE.equals(product.getIsMadeToOrder())) {
+            return;
+        }
+
+        if (Boolean.TRUE.equals(product.getHasVariants())) {
+            // Si el producto usa variantes, solo restauramos a la variante si aún existe y pertenece al producto.
+            // Si la variante fue eliminada o variantId es nulo, NO sumamos stock huérfano al padre
+            // y mantenemos el stock del padre igual a la suma real de sus variantes activas.
+            if (variantId != null) {
+                variantRepository.findByIdAndProductId(variantId, productId).ifPresent(v -> {
+                    int currentStock = v.getStock() != null ? Math.max(0, v.getStock()) : 0;
+                    v.setStock(currentStock + qty);
+                    variantRepository.save(v);
+                });
+            }
+            syncParentProductStock(product);
         } else {
-            productRepository.findById(productId).ifPresent(p -> {
-                if (Boolean.TRUE.equals(p.getIsMadeToOrder())) {
-                    return;
-                }
-                int currentStock = p.getStock() != null ? p.getStock() : 0;
-                p.setStock(currentStock + qty);
-                productRepository.save(p);
-            });
+            if (variantId != null) {
+                return;
+            }
+            int currentStock = product.getStock() != null ? Math.max(0, product.getStock()) : 0;
+            product.setStock(currentStock + qty);
+            productRepository.save(product);
         }
     }
 
-    private void syncParentProductStock(Product product) {
-        if (product == null || product.getId() == null || Boolean.TRUE.equals(product.getIsMadeToOrder())) {
+    public void syncParentProductStock(Product product) {
+        if (product == null || product.getId() == null) {
+            return;
+        }
+        if (Boolean.TRUE.equals(product.getIsMadeToOrder())) {
+            product.setStock(0);
+            productRepository.save(product);
             return;
         }
         int totalActiveStock = variantRepository.findByProductIdAndIsActiveTrue(product.getId())

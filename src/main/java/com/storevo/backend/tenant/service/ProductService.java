@@ -873,8 +873,18 @@ public class ProductService {
 
     @Transactional
     public void updateQuickStock(Long productId, Integer newStock) {
+        if (newStock == null || newStock < 0) {
+            throw new IllegalArgumentException("El stock no puede ser negativo.");
+        }
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado"));
+
+        if (Boolean.TRUE.equals(product.getHasVariants())) {
+            throw new IllegalStateException("No puedes editar el stock rápido en un producto con variantes. Edita el stock desde cada variante.");
+        }
+        if (Boolean.TRUE.equals(product.getIsMadeToOrder())) {
+            throw new IllegalStateException("No puedes editar el stock en un producto bajo pedido.");
+        }
 
         product.setStock(newStock);
         productRepository.save(product);

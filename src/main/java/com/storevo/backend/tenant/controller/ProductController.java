@@ -347,17 +347,15 @@ public class ProductController {
             @PathVariable String slug,
             @PathVariable("id") Long productId,
             @RequestBody java.util.Map<String, Integer> payload) {
-
         try {
-            Integer newStock = payload.get("stock");
+            Integer newStock = payload != null ? payload.get("stock") : null;
             if (newStock == null || newStock < 0) {
-                return ResponseEntity.badRequest().body(java.util.Map.of("error", "Stock inválido"));
+                return ResponseEntity.badRequest().body(java.util.Map.of("error", "El stock no puede ser negativo."));
             }
-
             productService.updateQuickStock(productId, newStock);
-
             return ResponseEntity.ok(java.util.Map.of("success", true, "newStock", newStock));
-
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(java.util.Map.of("error", "Error al actualizar el stock"));
         }
