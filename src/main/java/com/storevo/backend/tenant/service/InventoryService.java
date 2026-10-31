@@ -39,15 +39,21 @@ public class InventoryService {
         }
 
         if (variantId != null) {
-            ProductVariant variant = variantRepository.findById(variantId).get();
+            ProductVariant variant = variantRepository.findById(variantId)
+                    .orElseThrow(() -> new RuntimeException("Variante no encontrada."));
+            Product product = variant.getProduct();
             // Bajo pedido: nada que descontar, el número de stock no representa nada.
-            if (Boolean.TRUE.equals(variant.getProduct().getIsMadeToOrder())) return;
-            variant.setStock(variant.getStock() - qty);
-            variantRepository.save(variant);
-        } else {
-            Product product = productRepository.findById(productId).get();
             if (Boolean.TRUE.equals(product.getIsMadeToOrder())) return;
-            product.setStock(product.getStock() - qty);
+            int currentStock = variant.getStock() != null ? variant.getStock() : 0;
+            variant.setStock(Math.max(0, currentStock - qty));
+            variantRepository.save(variant);
+            syncParentProductStock(product);
+        } else {
+            Product product = productRepository.findById(productId)
+                    .orElseThrow(() -> new RuntimeException("Producto no encontrado."));
+            if (Boolean.TRUE.equals(product.getIsMadeToOrder())) return;
+            int currentStock = product.getStock() != null ? product.getStock() : 0;
+            product.setStock(Math.max(0, currentStock - qty));
             productRepository.save(product);
         }
     }
@@ -56,16 +62,32 @@ public class InventoryService {
     public void restoreStock(Long productId, Long variantId, int qty) {
         if (variantId != null) {
             variantRepository.findById(variantId).ifPresent(v -> {
-                if (Boolean.TRUE.equals(v.getProduct().getIsMadeToOrder())) return;
-                v.setStock(v.getStock() + qty);
+                Product product = v.getProduct();
+                if (Boolean.TRUE.equals(product.getIsMadeToOrder())) return;
+                int currentStock = v.getStock() != null ? v.getStock() : 0;
+                v.setStock(currentStock + qty);
                 variantRepository.save(v);
+                syncParentProductStock(product);
             });
         } else {
             productRepository.findById(productId).ifPresent(p -> {
                 if (Boolean.TRUE.equals(p.getIsMadeToOrder())) return;
-                p.setStock(p.getStock() + qty);
+                int currentStock = p.getStock() != null ? p.getStock() : 0;
+                p.setStock(currentStock + qty);
                 productRepository.save(p);
             });
         }
+    }
+
+    private void syncParentProductStock(Product product) {
+        if (product == null || product.getId() == null || Boolean.TRUE.equals(product.getIsMadeToOrder())) {
+            return;
+        }
+        int totalActiveStock = variantRepository.findByProductIdAndIsActiveTrue(product.getId())
+                .stream()
+                .mapToInt(v -> v.getStock() != null ? Math.max(0, v.getStock()) : 0)
+                .sum();
+        product.setStock(totalActiveStock);
+        productRepository.save(product);
     }
 }

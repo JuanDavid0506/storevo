@@ -74,8 +74,8 @@ public class WompiService {
         // Referencia única
         String reference = "STOREVO-" + order.getId() + "-" + System.currentTimeMillis();
 
-        // Convertimos el Double total exacto de tu entidad Order a centavos
-        long amountInCents = (long) (order.getTotal() * 100);
+        // Convertimos el Double total exacto de tu entidad Order a centavos con redondeo idéntico al validador
+        long amountInCents = Math.round((order.getTotal() != null ? order.getTotal() : 0.0) * 100);
 
         // 4. GENERAR FIRMA SHA-256
         String signature = generateSignature(reference, amountInCents, currency, integritySecret);

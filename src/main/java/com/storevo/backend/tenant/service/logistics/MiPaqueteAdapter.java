@@ -10,6 +10,7 @@ import com.storevo.backend.admin.model.StoreIntegration;
 import com.storevo.backend.admin.repository.StoreIntegrationRepository;
 import com.storevo.backend.admin.service.StoreSettingsService;
 import com.storevo.backend.admin.service.TenantPlanService;
+import com.storevo.backend.config.tenant.TenantContext;
 import com.storevo.backend.tenant.dto.StoreSettingsDto;
 import com.storevo.backend.tenant.model.Order;
 import com.storevo.backend.tenant.model.Shipment;
@@ -18,11 +19,15 @@ import com.storevo.backend.tenant.dto.ShipmentQuoteResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 @Component
 @RequiredArgsConstructor
@@ -33,8 +38,26 @@ public class MiPaqueteAdapter implements CarrierAdapter {
     private final StoreSettingsService storeSettingsService;
     private final DaneCityResolver daneCityResolver;
     private final MiPaqueteLocationService miPaqueteLocationService;
+    private final PlatformTransactionManager transactionManager;
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper mapper = new ObjectMapper();
+
+    private record AdminShippingContext(StoreIntegration config, StoreSettingsDto settings) {}
+
+    private <T> T executeInAdminSchema(Supplier<T> supplier) {
+        String previousTenant = TenantContext.getCurrentTenant();
+        TenantContext.clear();
+        try {
+            TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
+            txTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+            txTemplate.setReadOnly(true);
+            return txTemplate.execute(status -> supplier.get());
+        } finally {
+            if (previousTenant != null) {
+                TenantContext.setCurrentTenant(previousTenant);
+            }
+        }
+    }
 
     @Override
     public boolean supports(String carrierCode) {
@@ -43,8 +66,10 @@ public class MiPaqueteAdapter implements CarrierAdapter {
 
     @Override
     public List<ShipmentQuoteResponse> quoteShipment(Store store, String originCode, String destCode, double weight, String dimensions) {
-        tenantPlanService.validateFeatureOrThrow(store, Feature.SHIPPING_INTEGRATION);
-        StoreIntegration config = getIntegrationConfig(store);
+        StoreIntegration config = executeInAdminSchema(() -> {
+            tenantPlanService.validateFeatureOrThrow(store, Feature.SHIPPING_INTEGRATION);
+            return getIntegrationConfig(store);
+        });
 
         int[] dims = parseDimensions(dimensions);
 
@@ -88,9 +113,14 @@ public class MiPaqueteAdapter implements CarrierAdapter {
 
     @Override
     public ShipmentLabelResponse createLabel(Store store, Order order, String carrierCode, double weight, String dimensions) {
-        tenantPlanService.validateFeatureOrThrow(store, Feature.SHIPPING_INTEGRATION);
-        StoreIntegration config = getIntegrationConfig(store);
-        StoreSettingsDto storeSettings = storeSettingsService.getSettingsByStore(store);
+        AdminShippingContext adminCtx = executeInAdminSchema(() -> {
+            tenantPlanService.validateFeatureOrThrow(store, Feature.SHIPPING_INTEGRATION);
+            StoreIntegration cfg = getIntegrationConfig(store);
+            StoreSettingsDto st = storeSettingsService.getSettingsByStore(store);
+            return new AdminShippingContext(cfg, st);
+        });
+        StoreIntegration config = adminCtx.config();
+        StoreSettingsDto storeSettings = adminCtx.settings();
         validateSenderData(storeSettings);
 
         int[] dims = parseDimensions(dimensions);
@@ -113,15 +143,22 @@ public class MiPaqueteAdapter implements CarrierAdapter {
             // 2. Receiver (Destinatario)
             ObjectNode receiver = mapper.createObjectNode();
             String[] names = order.getCustomerName().split(" ", 2);
+            String receiverEmail = (order.getCustomerEmail() != null && !order.getCustomerEmail().isBlank())
+                    ? order.getCustomerEmail()
+                    : (storeSettings.getShippingContactEmail() != null && !storeSettings.getShippingContactEmail().isBlank()
+                    ? storeSettings.getShippingContactEmail() : "cliente@correo.com");
+            String receiverDocType = (order.getDocumentType() != null && !order.getDocumentType().isBlank())
+                    ? order.getDocumentType() : "CC";
+
             receiver.put("name", names[0]);
             receiver.put("surname", names.length > 1 ? names[1] : ".");
-            receiver.put("email", "cliente@correo.com");
+            receiver.put("email", receiverEmail);
             receiver.put("prefix", "+57");
             receiver.put("cellPhone", order.getCustomerPhone());
             receiver.put("destinationAddress", order.getAddress() + ", " + order.getCity());
             receiver.put("nit", order.getCustomerDocument() != null && !order.getCustomerDocument().isBlank()
                     ? order.getCustomerDocument() : "0");
-            receiver.put("nitType", "CC");
+            receiver.put("nitType", receiverDocType);
             payload.set("receiver", receiver);
 
             // 3. Product Info
@@ -140,10 +177,8 @@ public class MiPaqueteAdapter implements CarrierAdapter {
             // (getLocations); si esa ciudad no aparece ahí (o el catálogo no cargó
             // todavía), caemos al catálogo estático de respaldo.
             miPaqueteLocationService.ensureLoaded(config.getApiKey(), config.getEnvironment());
-
             String originCode = miPaqueteLocationService.resolve(storeSettings.getShippingPickupCity());
             if (originCode == null) originCode = daneCityResolver.resolve(storeSettings.getShippingPickupCity());
-
             String destinyCode = miPaqueteLocationService.resolve(order.getCity());
             if (destinyCode == null) destinyCode = daneCityResolver.resolve(order.getCity());
 
@@ -169,11 +204,11 @@ public class MiPaqueteAdapter implements CarrierAdapter {
             // EJECUCIÓN
             HttpHeaders headers = buildHeaders(config.getApiKey());
             HttpEntity<String> entity = new HttpEntity<>(mapper.writeValueAsString(payload), headers);
+
             String url = getApiUrl(config.getEnvironment()) + "/createSending";
-
             ResponseEntity<JsonNode> response = restTemplate.exchange(url, HttpMethod.POST, entity, JsonNode.class);
-            JsonNode body = response.getBody();
 
+            JsonNode body = response.getBody();
             if (body == null || !body.has("mpCode")) {
                 throw new RuntimeException("Respuesta inválida de Mi Paquete");
             }

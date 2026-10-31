@@ -31,11 +31,16 @@ public class OrderController {
     private final StoreReviewRepository storeReviewRepository;
 
     @GetMapping("/{id}/success")
-    public String orderSuccess(@PathVariable String slug, @PathVariable Long id, HttpServletRequest request, Model model) {
-        Order order = orderService.getOrderById(id);
+    public String orderSuccess(
+            @PathVariable String slug,
+            @PathVariable Long id,
+            @RequestParam(name = "token") String token,
+            HttpServletRequest request,
+            Model model) {
+        Order order = orderService.getOrderByIdAndToken(id, token);
 
         if (order.getStatus() == OrderStatus.PAID) {
-            return "redirect:/s/" + slug + "/order/" + id + "/wompi-result";
+            return "redirect:/s/" + slug + "/order/" + id + "/wompi-result?token=" + order.getPublicToken();
         }
 
         Store store = (Store) request.getAttribute("currentStore");
@@ -53,7 +58,8 @@ public class OrderController {
             int serverPort = request.getServerPort();
             String portSuffix = (serverPort == 80 || serverPort == 443) ? "" : ":" + serverPort;
             String baseUrl = scheme + "://" + serverName + portSuffix;
-            String redirectUrl = baseUrl + "/s/" + slug + "/order/" + order.getId() + "/wompi-result";
+
+            String redirectUrl = baseUrl + "/s/" + slug + "/order/" + order.getId() + "/wompi-result?token=" + order.getPublicToken();
 
             model.addAttribute("paymentAvailable", true);
             model.addAttribute("wompiPublicKey", checkoutData.getPublicKey());
@@ -61,10 +67,10 @@ public class OrderController {
             model.addAttribute("amountInCents", checkoutData.getAmountInCents());
             model.addAttribute("wompiSignature", checkoutData.getSignature());
             model.addAttribute("wompiRedirectUrl", redirectUrl);
+
         } catch (RuntimeException e) {
             TenantContext.setCurrentTenant(store.getSchemaName());
             e.printStackTrace();
-
             model.addAttribute("paymentAvailable", false);
             model.addAttribute("paymentErrorMessage", e.getMessage());
         }
@@ -73,9 +79,13 @@ public class OrderController {
     }
 
     @GetMapping("/{id}/whatsapp")
-    public String orderWhatsapp(@PathVariable String slug, @PathVariable Long id, HttpServletRequest request, Model model) {
-        Order order = orderService.getOrderById(id);
-
+    public String orderWhatsapp(
+            @PathVariable String slug,
+            @PathVariable Long id,
+            @RequestParam(name = "token") String token,
+            HttpServletRequest request,
+            Model model) {
+        Order order = orderService.getOrderByIdAndToken(id, token);
         Store store = (Store) request.getAttribute("currentStore");
 
         TenantContext.clear();
@@ -93,6 +103,7 @@ public class OrderController {
             String message = orderService.buildWhatsappMessage(order);
             String encodedMessage = URLEncoder.encode(message, StandardCharsets.UTF_8);
             String normalizedNumber = normalizeWhatsappNumber(rawWhatsapp);
+
             model.addAttribute("whatsappConfigured", true);
             model.addAttribute("whatsappLink", "https://wa.me/" + normalizedNumber + "?text=" + encodedMessage);
         }
@@ -104,23 +115,30 @@ public class OrderController {
     public String wompiReturn(
             @PathVariable String slug,
             @PathVariable Long id,
+            @RequestParam(name = "token") String token,
             @RequestParam(name = "id", required = false) String wompiTransactionId,
+            @RequestParam(name = "txId", required = false) String altTransactionId,
             HttpServletRequest request,
             Model model) {
 
         Store store = (Store) request.getAttribute("currentStore");
-        String wompiTxStatus = null;
+        Order verifiedOrder = orderService.getOrderByIdAndToken(id, token);
 
-        if (wompiTransactionId != null && !wompiTransactionId.isBlank()) {
-            wompiTxStatus = orderService.verifyTransactionWithWompi(store, id, wompiTransactionId.trim());
+        String resolvedTxId = (altTransactionId != null && !altTransactionId.isBlank())
+                ? altTransactionId.trim()
+                : (wompiTransactionId != null && !wompiTransactionId.isBlank() && !wompiTransactionId.trim().equals(String.valueOf(id))
+                ? wompiTransactionId.trim() : null);
+
+        String wompiTxStatus = null;
+        if (resolvedTxId != null) {
+            wompiTxStatus = orderService.verifyTransactionWithWompi(store, verifiedOrder.getId(), resolvedTxId);
         }
 
         TenantContext.setCurrentTenant(store.getSchemaName());
-
-        Order order = orderService.getOrderById(id);
+        Order order = orderService.getOrderByIdAndToken(id, token);
 
         model.addAttribute("order", order);
-        model.addAttribute("wompiTransactionId", wompiTransactionId);
+        model.addAttribute("wompiTransactionId", resolvedTxId);
         model.addAttribute("wompiTxStatus", wompiTxStatus);
         model.addAttribute("existingReview", storeReviewRepository.findByOrderId(id).orElse(null));
 
@@ -146,6 +164,7 @@ public class OrderController {
     public String submitOrderReview(
             @PathVariable String slug,
             @PathVariable Long id,
+            @RequestParam(name = "token") String token,
             @RequestParam(defaultValue = "5") Integer rating,
             @RequestParam String comment,
             @RequestParam(defaultValue = "result") String origin,
@@ -157,12 +176,13 @@ public class OrderController {
             TenantContext.setCurrentTenant(store.getSchemaName());
         }
 
+        Order order = orderService.getOrderByIdAndToken(id, token);
+
         String redirectTarget = "whatsapp".equalsIgnoreCase(origin)
-                ? "redirect:/s/" + slug + "/order/" + id + "/whatsapp?reviewed=true"
-                : "redirect:/s/" + slug + "/order/" + id + "/wompi-result";
+                ? "redirect:/s/" + slug + "/order/" + id + "/whatsapp?token=" + order.getPublicToken() + "&reviewed=true"
+                : "redirect:/s/" + slug + "/order/" + id + "/wompi-result?token=" + order.getPublicToken();
 
         try {
-            Order order = orderService.getOrderById(id);
             if (order.getStatus() == OrderStatus.CANCELLED) {
                 return redirectTarget;
             }

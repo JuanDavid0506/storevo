@@ -114,8 +114,10 @@ CREATE TABLE product_images (
                                 ai_tags       JSON,
                                 is_primary    BOOLEAN NOT NULL DEFAULT FALSE,
                                 sort_position INT NOT NULL DEFAULT 0,
-                                created_at    TIMESTAMP,
-                                updated_at    TIMESTAMP
+                                created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                updated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                                FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+                                FOREIGN KEY (variant_id) REFERENCES product_variants(id) ON DELETE SET NULL
 );
 
 -- ============================================================
@@ -123,19 +125,26 @@ CREATE TABLE product_images (
 -- ============================================================
 
 CREATE TABLE orders (
-                        id                    BIGINT AUTO_INCREMENT PRIMARY KEY,
-                        customer_name         VARCHAR(150)   NOT NULL,
-                        customer_phone        VARCHAR(50)    NOT NULL,
-                        customer_document     VARCHAR(255)   NULL,
-                        address               VARCHAR(255)   NOT NULL,
-                        city                  VARCHAR(100)   NOT NULL,
-                        notes                 TEXT,
-                        total                 DOUBLE         NOT NULL DEFAULT 0,
-                        status                VARCHAR(30)    NOT NULL DEFAULT 'PENDING',
-                        payment_method        VARCHAR(50)    DEFAULT 'Wompi / Tarjeta',
-                        channel               VARCHAR(30)    NOT NULL DEFAULT 'ONLINE',
-                        created_at            TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
-                        updated_at            TIMESTAMP      DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                        id                          BIGINT AUTO_INCREMENT PRIMARY KEY,
+                        public_token                VARCHAR(64)    NOT NULL UNIQUE,
+                        customer_name               VARCHAR(150)   NOT NULL,
+                        customer_phone              VARCHAR(50)    NOT NULL,
+                        customer_email              VARCHAR(120)   NULL,
+                        document_type               VARCHAR(10)    NULL,
+                        customer_document           VARCHAR(255)   NULL,
+                        verification_digit          VARCHAR(5)     NULL,
+                        legal_name                  VARCHAR(150)   NULL,
+                        tax_regime                  VARCHAR(40)    NULL,
+                        requires_electronic_invoice BOOLEAN        DEFAULT FALSE,
+                        address                     VARCHAR(255)   NOT NULL,
+                        city                        VARCHAR(100)   NOT NULL,
+                        notes                       TEXT,
+                        total                       DOUBLE         NOT NULL DEFAULT 0,
+                        status                      VARCHAR(30)    NOT NULL DEFAULT 'PENDING',
+                        payment_method              VARCHAR(50)    DEFAULT 'Wompi / Tarjeta',
+                        channel                     VARCHAR(30)    NOT NULL DEFAULT 'ONLINE',
+                        created_at                  TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
+                        updated_at                  TIMESTAMP      DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 CREATE TABLE order_history (
@@ -221,17 +230,31 @@ INSERT INTO carriers (name, code, tracking_url_template) VALUES
                                                              ('Entrega Propia / Otro', 'CUSTOM', null);
 
 CREATE TABLE shipments (
-                           id                   BIGINT AUTO_INCREMENT PRIMARY KEY,
-                           order_id             BIGINT       NOT NULL,
-                           carrier_id           BIGINT       NOT NULL,
-                           tracking_number      VARCHAR(100),
-                           external_shipment_id VARCHAR(100),
-                           status               VARCHAR(50)  NOT NULL DEFAULT 'CREATED',
-                           package_number       INT          NOT NULL DEFAULT 1,
-                           weight               DOUBLE,
-                           dimensions           VARCHAR(50),
-                           created_at           TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
-                           updated_at           TIMESTAMP    DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                           id                    BIGINT AUTO_INCREMENT PRIMARY KEY,
+                           order_id              BIGINT       NOT NULL,
+                           carrier_id            BIGINT       NOT NULL,
+                           tracking_number       VARCHAR(100),
+                           label_pdf_url         VARCHAR(500),
+                           last_tracking_message VARCHAR(255),
+                           external_shipment_id  VARCHAR(100),
+                           status                VARCHAR(50)  NOT NULL DEFAULT 'CREATED',
+                           package_number        INT          NOT NULL DEFAULT 1,
+                           weight                DOUBLE,
+                           dimensions            VARCHAR(50),
+                           created_at            TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+                           updated_at            TIMESTAMP    DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                            FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
                            FOREIGN KEY (carrier_id) REFERENCES carriers(id)
+);
+
+CREATE TABLE store_reviews (
+                               id            BIGINT AUTO_INCREMENT PRIMARY KEY,
+                               order_id      BIGINT       NOT NULL UNIQUE,
+                               customer_name VARCHAR(100) NOT NULL,
+                               customer_city VARCHAR(100),
+                               rating        INT          NOT NULL DEFAULT 5,
+                               comment       VARCHAR(500) NOT NULL,
+                               is_visible    BOOLEAN      NOT NULL DEFAULT TRUE,
+                               created_at    TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+                               FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
 );

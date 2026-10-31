@@ -65,6 +65,7 @@ public class ShipmentService {
                 .carrier(carrier)
                 .trackingNumber(apiResponse.getTrackingNumber())
                 .externalShipmentId(apiResponse.getExternalShipmentId())
+                .labelPdfUrl(apiResponse.getLabelPdfUrl())
                 .weight(weight)
                 .dimensions(dimensions)
                 .packageNumber(order.getShipments().size() + 1)

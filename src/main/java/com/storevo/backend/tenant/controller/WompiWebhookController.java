@@ -32,26 +32,13 @@ public class WompiWebhookController {
             @PathVariable String storeSlug,
             @RequestBody WompiEventPayload payload) {
 
-        // 1. Identificar la tienda usando el método findBySlug
+        TenantContext.clear();
+
+        // 1. Identificar la tienda en storevo_admin usando el método findBySlug
         Store store = storeRepository.findBySlug(storeSlug)
                 .orElseThrow(() -> new RuntimeException("Tienda no encontrada"));
 
-        // IMPORTANTE: esta ruta (/api/webhooks/wompi/**) no pasa por TenantFilter
-        // (que solo cambia de esquema para /s/** y /dashboard/**), así que sin este
-        // cambio explícito el resto del método seguiría consultando el esquema
-        // "storevo_admin" en vez del esquema real de la tienda — y la orden nunca
-        // se encontraría, fallando en silencio. Por eso lo hacemos a mano aquí,
-        // con su try/finally para no dejar el hilo "pegado" a este tenant.
-        TenantContext.setCurrentTenant(store.getSchemaName());
-        try {
-            return processEvent(store, payload);
-        } finally {
-            TenantContext.clear();
-        }
-    }
-
-    private ResponseEntity<Void> processEvent(Store store, WompiEventPayload payload) {
-        // 2. Extraer configuración de Wompi
+        // 2. Extraer configuración de Wompi en storevo_admin ANTES de cambiar al esquema de la tienda
         StoreIntegration wompiConfig = integrationRepository
                 .findByStoreAndIntegrationTypeAndIsActiveTrue(store, IntegrationType.WOMPI)
                 .orElseThrow(() -> new RuntimeException("Configuración de Wompi no encontrada."));
@@ -62,7 +49,16 @@ public class WompiWebhookController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build(); // Falsificación detectada
         }
 
-        // 4. Procesar el estado del pago y actualizar la orden usando tu lógica exacta
+        // 4. Cambiar al esquema real de la tienda para actualizar la orden
+        TenantContext.setCurrentTenant(store.getSchemaName());
+        try {
+            return processEvent(payload);
+        } finally {
+            TenantContext.clear();
+        }
+    }
+
+    private ResponseEntity<Void> processEvent(WompiEventPayload payload) {
         String reference = payload.getData().getTransaction().getReference();
         Long orderId = extractOrderIdFromReference(reference);
 
@@ -76,11 +72,6 @@ public class WompiWebhookController {
                     orderService.updateOrderStatus(orderId, OrderStatus.CANCELLED, EventOrigin.WEBHOOK, null);
                 }
             } catch (Exception e) {
-                // Captura controlada para no fallar el Webhook ante excepciones de negocio
-                // (ej: la orden ya estaba en un estado que no permite esta transición).
-                // OJO: esto es distinto del bug de esquema — este catch es a propósito,
-                // porque Wompi reintenta el webhook si respondemos error, y no queremos
-                // reintentos infinitos por una regla de negocio que nunca va a cambiar.
                 System.out.println("No se pudo actualizar la orden desde el Webhook Wompi: " + e.getMessage());
             }
         } else {

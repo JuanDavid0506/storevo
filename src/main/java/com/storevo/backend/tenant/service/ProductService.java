@@ -5,13 +5,10 @@ import com.storevo.backend.config.tenant.TenantContext;
 import com.storevo.backend.tenant.dto.ProductDto;
 import com.storevo.backend.tenant.model.*;
 import com.storevo.backend.tenant.repository.CategoryRepository;
+import com.storevo.backend.tenant.repository.OrderRepository;
 import com.storevo.backend.tenant.repository.ProductRepository;
-
-import groovy.util.logging.Slf4j;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
@@ -22,6 +19,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -29,10 +28,11 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class ProductService {
-    private static final Logger log = LoggerFactory.getLogger(CloudinaryService.class);
+
     private final Cloudinary cloudinary;
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
+    private final OrderRepository orderRepository;
     private final CategoryService categoryService;
     private final BrandService brandService;
     private final CloudinaryService cloudinaryService;
@@ -904,16 +904,29 @@ public class ProductService {
     @Transactional(readOnly = true)
     public Map<Long, Map<String, Object>> getBulkStatistics(List<Long> productIds) {
         Map<Long, Map<String, Object>> statsMap = new HashMap<>();
-
         if (productIds == null || productIds.isEmpty()) return statsMap;
 
         for (Long id : productIds) {
             Map<String, Object> productStats = new HashMap<>();
-            productStats.put("sold", 0);
+            productStats.put("sold", 0L);
             productStats.put("lastSale", "Sin ventas");
             statsMap.put(id, productStats);
         }
 
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        List<Object[]> rows = orderRepository.findProductSalesStatistics(productIds, VALID_SALES_STATUSES);
+        for (Object[] row : rows) {
+            if (row == null || row[0] == null) continue;
+            Long prodId = ((Number) row[0]).longValue();
+            long soldQty = row[1] != null ? ((Number) row[1]).longValue() : 0L;
+            String lastSaleStr = "Sin ventas";
+            if (row[2] instanceof LocalDateTime ldt) {
+                lastSaleStr = ldt.format(fmt);
+            }
+            Map<String, Object> productStats = statsMap.computeIfAbsent(prodId, k -> new HashMap<>());
+            productStats.put("sold", soldQty);
+            productStats.put("lastSale", lastSaleStr);
+        }
         return statsMap;
     }
 }

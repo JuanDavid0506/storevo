@@ -19,13 +19,16 @@ public class MetricsService {
     public DashboardMetricsDto getMetrics() {
         // Definimos los estados que ya representan flujo de caja aprobado
         List<OrderStatus> validStatuses = Arrays.asList(
-                OrderStatus.PAID, OrderStatus.PREPARING, OrderStatus.SHIPPED, OrderStatus.DELIVERED
+                OrderStatus.PAID, OrderStatus.CONFIRMED, OrderStatus.PREPARING, OrderStatus.PACKED, OrderStatus.SHIPPED, OrderStatus.DELIVERED
         );
 
         Double totalRevenue = orderRepository.sumTotalByStatuses(validStatuses);
         Long totalOrders = orderRepository.count();
         Long pendingOrders = orderRepository.countByStatus(OrderStatus.PENDING);
-        Long activeProducts = productRepository.count(); // Cantidad de productos en catálogo
+        ProductRepository.ProductCountsProjection productCounts = productRepository.countProductsByStatus();
+        Long activeProducts = (productCounts != null && productCounts.getActivos() != null)
+                ? productCounts.getActivos()
+                : 0L;
 
         // Procesar el ranking de productos más vendidos (Limitado a Top 5)
         List<Object[]> rawTopProducts = orderRepository.findTopSellingProducts();

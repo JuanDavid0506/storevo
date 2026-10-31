@@ -12,9 +12,12 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long> {
+
+    Optional<Order> findByIdAndPublicToken(Long id, String publicToken);
 
     List<Order> findAllByOrderByCreatedAtDesc();
 
@@ -54,9 +57,18 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     // 2. Contar pedidos por un estado específico
     Long countByStatus(OrderStatus status);
 
-    // 3. Ranking de productos más vendidos agregando las cantidades de order_items
-    @Query("SELECT oi.productName, SUM(oi.quantity) as totalQty FROM OrderItem oi GROUP BY oi.productId, oi.productName ORDER BY totalQty DESC")
+    // 3. Ranking de productos más vendidos excluyendo pedidos cancelados o reembolsados
+    @Query("SELECT oi.productName, SUM(oi.quantity) as totalQty FROM OrderItem oi JOIN oi.order o WHERE o.status NOT IN (com.storevo.backend.tenant.model.OrderStatus.CANCELLED, com.storevo.backend.tenant.model.OrderStatus.REFUNDED) GROUP BY oi.productId, oi.productName ORDER BY totalQty DESC")
     List<Object[]> findTopSellingProducts();
+
+    // 4. Estadísticas en bloque por producto (unidades vendidas y fecha de última venta válida)
+    @Query("SELECT oi.productId, COALESCE(SUM(oi.quantity), 0), MAX(o.createdAt) " +
+            "FROM OrderItem oi JOIN oi.order o " +
+            "WHERE oi.productId IN :productIds AND o.status IN :validStatuses " +
+            "GROUP BY oi.productId")
+    List<Object[]> findProductSalesStatistics(
+            @Param("productIds") List<Long> productIds,
+            @Param("validStatuses") List<OrderStatus> validStatuses);
 
     @Query("SELECT o.customerName, o.customerPhone, o.city, COUNT(o.id), SUM(o.total), MAX(o.createdAt) " +
             "FROM Order o " +

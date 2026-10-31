@@ -28,7 +28,8 @@ public class ProductVariant {
     private List<ProductOptionValue> optionValues = new ArrayList<>();
 
     // RELACIÓN FLEXIBLE DE IMÁGENES
-    @OneToMany(mappedBy = "variantId", fetch = FetchType.LAZY)
+    @OneToMany(fetch = FetchType.LAZY)
+    @JoinColumn(name = "variant_id", referencedColumnName = "id", insertable = false, updatable = false)
     @Builder.Default
     private List<ProductImage> images = new ArrayList<>();
 

@@ -135,18 +135,34 @@ public class OrderService {
     public Order getOrderById(Long id) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new OrderNotFoundException(id));
-
         order.getItems().size();
         order.getHistory().size();
         order.getInternalNotes().size();
         order.getShipments().size();
-
         order.getShipments().forEach(shipment -> {
             if (shipment.getCarrier() != null) {
                 shipment.getCarrier().getName();
             }
         });
+        return order;
+    }
 
+    @Transactional(readOnly = true)
+    public Order getOrderByIdAndToken(Long id, String publicToken) {
+        if (publicToken == null || publicToken.isBlank()) {
+            throw new OrderNotFoundException(id);
+        }
+        Order order = orderRepository.findByIdAndPublicToken(id, publicToken.trim())
+                .orElseThrow(() -> new OrderNotFoundException(id));
+        order.getItems().size();
+        order.getHistory().size();
+        order.getInternalNotes().size();
+        order.getShipments().size();
+        order.getShipments().forEach(shipment -> {
+            if (shipment.getCarrier() != null) {
+                shipment.getCarrier().getName();
+            }
+        });
         return order;
     }
 
@@ -223,7 +239,11 @@ public class OrderService {
                 String finalName = dto.getName() + (dto.getVariantText() != null ? " (" + dto.getVariantText() + ")" : "");
                 throw new InsufficientStockException(finalName);
             }
+
+            inventoryService.deductStock(dto.getProductId(), dto.getVariantId(), dto.getQuantity());
+
             String receiptName = dto.getName() + (dto.getVariantText() != null ? " - " + dto.getVariantText() : "");
+
             return OrderItem.builder()
                     .order(order)
                     .productId(dto.getProductId())
@@ -312,6 +332,11 @@ public class OrderService {
         Order order = orderRepository.findById(orderId).orElseThrow(() -> new OrderNotFoundException(orderId));
         OrderStatus oldStatus = order.getStatus();
 
+        // Idempotencia ante llegada simultánea de Webhook y retorno web
+        if (oldStatus == newStatus) {
+            return order.getHistory().isEmpty() ? null : order.getHistory().get(0);
+        }
+
         if (!oldStatus.canTransitionTo(newStatus)) {
             throw new InvalidOrderStatusException(oldStatus, newStatus);
         }
@@ -320,11 +345,7 @@ public class OrderService {
             throw new ShipmentRequiredException(orderId);
         }
 
-        if (oldStatus == OrderStatus.PENDING && newStatus == OrderStatus.PAID) {
-            deductOrderStock(order);
-        }
-
-        if ((oldStatus == OrderStatus.PAID || oldStatus == OrderStatus.CONFIRMED || oldStatus == OrderStatus.PREPARING || oldStatus == OrderStatus.PACKED)
+        if ((oldStatus == OrderStatus.PENDING || oldStatus == OrderStatus.PAID || oldStatus == OrderStatus.CONFIRMED || oldStatus == OrderStatus.PREPARING || oldStatus == OrderStatus.PACKED)
                 && (newStatus == OrderStatus.CANCELLED || newStatus == OrderStatus.REFUNDED)) {
             restoreOrderStock(order);
         }
@@ -343,7 +364,6 @@ public class OrderService {
 
         order.getHistory().add(historyObj);
         orderRepository.save(order);
-
         return historyObj;
     }
 
@@ -403,13 +423,15 @@ public class OrderService {
     public String verifyTransactionWithWompi(Store store, Long orderId, String wompiTransactionId) {
         try {
             TenantContext.setCurrentTenant(store.getSchemaName());
-
             Order order = orderRepository.findById(orderId).orElse(null);
             if (order == null) {
                 return "INVALID";
             }
             if (order.getStatus() == OrderStatus.PAID) {
                 return "APPROVED";
+            }
+            if (wompiTransactionId == null || wompiTransactionId.isBlank()) {
+                return "PENDING";
             }
             if (order.getStatus() != OrderStatus.PENDING) {
                 return order.getStatus().name();

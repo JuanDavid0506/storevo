@@ -12,7 +12,7 @@ import com.storevo.backend.tenant.repository.ShipmentRepository;
 import com.storevo.backend.tenant.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.bind.annotation.*;
 
 // Recibe los dos tipos de evento que Mi Paquete envía a la URL registrada con
@@ -30,21 +30,20 @@ public class MiPaqueteWebhookController {
     private final StoreRepository storeRepository;
     private final ShipmentRepository shipmentRepository;
     private final OrderService orderService;
+    private final TransactionTemplate transactionTemplate;
 
     @PostMapping("/{storeSlug}")
-    @Transactional
     public ResponseEntity<Void> handleEvent(@PathVariable String storeSlug, @RequestBody JsonNode payload) {
+        TenantContext.clear();
         Store store = storeRepository.findBySlug(storeSlug).orElse(null);
         if (store == null) {
             return ResponseEntity.notFound().build();
         }
 
-        // Igual que con el webhook de Wompi: esta ruta no pasa por TenantFilter
-        // (no empieza con /s/ ni /dashboard/), así que sin este cambio explícito
-        // se quedaría consultando el esquema storevo_admin en vez del de la tienda.
+        // Cambiamos primero al esquema de la tienda y luego abrimos la transacción en ese esquema
         TenantContext.setCurrentTenant(store.getSchemaName());
         try {
-            processEvent(payload);
+            transactionTemplate.executeWithoutResult(status -> processEvent(payload));
         } catch (Exception e) {
             System.out.println("Error procesando webhook de Mi Paquete: " + e.getMessage());
         } finally {

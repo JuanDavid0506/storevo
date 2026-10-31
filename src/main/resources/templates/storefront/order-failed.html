@@ -36,7 +36,7 @@
 
         <div class="flex flex-col sm:flex-row justify-center gap-4">
             <!-- Botón para intentar pagar de nuevo -->
-            <a th:href="@{/s/{slug}/order/{id}/success(slug=${slug}, id=${order.id})}" class="inline-block bg-brand hover-bg-brand text-white font-bold py-3 px-8 rounded-xl shadow-md transition">
+            <a th:href="@{/s/{slug}/order/{id}/success(slug=${slug}, id=${order.id}, token=${order.publicToken})}" class="inline-block bg-brand hover-bg-brand text-white font-bold py-3 px-8 rounded-xl shadow-md transition">
                 Intentar pagar de nuevo
             </a>
             <!-- Botón para rendirse y volver al catálogo -->

@@ -1,6 +1,10 @@
 package com.storevo.backend.tenant.controller;
 
+import com.storevo.backend.admin.model.Feature;
+import com.storevo.backend.admin.model.IntegrationType;
 import com.storevo.backend.admin.model.Store;
+import com.storevo.backend.admin.repository.StoreIntegrationRepository;
+import com.storevo.backend.admin.service.TenantPlanService;
 import com.storevo.backend.config.tenant.TenantContext;
 import com.storevo.backend.tenant.exception.InvalidOrderStatusException;
 import com.storevo.backend.tenant.exception.ShipmentRequiredException;
@@ -34,15 +38,41 @@ public class DashboardOrderController {
     private final OrderService orderService;
     private final CarrierRepository carrierRepository;
     private final ShipmentService shipmentService;
+    private final TenantPlanService tenantPlanService;
+    private final StoreIntegrationRepository integrationRepository;
 
     @ModelAttribute
     public void setupTenant(@PathVariable String slug, Model model, HttpServletRequest request) {
         Store store = (Store) request.getAttribute("currentStore");
-        if (store == null) throw new RuntimeException("Tienda no encontrada en la petición");
-
+        if (store == null) {
+            throw new RuntimeException("Tienda no encontrada en la petición");
+        }
         model.addAttribute("store", store);
         model.addAttribute("slug", slug);
         TenantContext.setCurrentTenant(store.getSchemaName());
+    }
+
+    private Long resolveCurrentUserId(HttpServletRequest request) {
+        Object attr = request.getAttribute("currentUserId");
+        return (attr instanceof Long) ? (Long) attr : 1L;
+    }
+
+    private boolean isMiPaqueteActiveForStore(Store store) {
+        if (store == null) {
+            return false;
+        }
+        String prevTenant = TenantContext.getCurrentTenant();
+        try {
+            TenantContext.clear();
+            return tenantPlanService.hasFeature(store, Feature.SHIPPING_INTEGRATION)
+                    && integrationRepository.findByStoreAndIntegrationTypeAndIsActiveTrue(store, IntegrationType.MI_PAQUETE).isPresent();
+        } catch (Exception e) {
+            return false;
+        } finally {
+            if (prevTenant != null) {
+                TenantContext.setCurrentTenant(prevTenant);
+            }
+        }
     }
 
     private static final List<Integer> ALLOWED_PAGE_SIZES = List.of(10, 12, 15, 20, 24, 25, 48, 50, 100);
@@ -69,7 +99,6 @@ public class DashboardOrderController {
         LocalDate parsedFromDate = parseLocalDate(fromDate);
         LocalDate parsedToDate = parseLocalDate(toDate);
 
-        // Si el usuario envió fechas manuales sin preset, asumimos "custom"
         String effectivePreset = datePreset;
         if ((effectivePreset == null || effectivePreset.isBlank())
                 && (parsedFromDate != null || parsedToDate != null)) {
@@ -82,7 +111,6 @@ public class DashboardOrderController {
 
         model.addAttribute("page", ordersPage);
         model.addAttribute("orders", ordersPage.getContent());
-
         model.addAttribute("currentSearch", q);
         model.addAttribute("currentStatus", statusFilter);
         model.addAttribute("currentChannel", channelFilter);
@@ -110,12 +138,13 @@ public class DashboardOrderController {
         model.addAttribute("channelOptions", channelOptions);
         model.addAttribute("datePresetOptions", datePresetOptions);
         model.addAttribute("pageTitle", "Gestión de Pedidos");
-
         return "dashboard/orders/index";
     }
 
     private static <E extends Enum<E>> E parseEnum(Class<E> type, String value) {
-        if (value == null || value.isBlank()) return null;
+        if (value == null || value.isBlank()) {
+            return null;
+        }
         try {
             return Enum.valueOf(type, value.trim().toUpperCase());
         } catch (IllegalArgumentException e) {
@@ -124,7 +153,9 @@ public class DashboardOrderController {
     }
 
     private static LocalDate parseLocalDate(String value) {
-        if (value == null || value.isBlank()) return null;
+        if (value == null || value.isBlank()) {
+            return null;
+        }
         try {
             return LocalDate.parse(value.trim());
         } catch (DateTimeParseException e) {
@@ -133,20 +164,28 @@ public class DashboardOrderController {
     }
 
     @GetMapping("/{id}")
-    public String orderDetail(@PathVariable Long id, Model model) {
+    public String orderDetail(@PathVariable Long id, HttpServletRequest request, Model model) {
+        Store store = (Store) request.getAttribute("currentStore");
+        boolean miPaqueteEnabled = isMiPaqueteActiveForStore(store);
+
         Order order = orderService.getOrderById(id);
         model.addAttribute("order", order);
         model.addAttribute("orderStatuses", OrderStatus.values());
         model.addAttribute("carriers", carrierRepository.findByIsActiveTrueOrderByNameAsc());
+        model.addAttribute("miPaqueteEnabled", miPaqueteEnabled);
         model.addAttribute("pageTitle", "Pedido #" + order.getId());
         return "dashboard/orders/detail";
     }
 
     @PostMapping("/{id}/status-ajax")
     @ResponseBody
-    public ResponseEntity<Map<String, Object>> updateStatusAjax(@PathVariable Long id, @RequestParam OrderStatus status) {
-        Long currentUserId = 1L;
+    public ResponseEntity< Map<String, Object> > updateStatusAjax(
+            @PathVariable Long id,
+            @RequestParam OrderStatus status,
+            HttpServletRequest request) {
+        Long currentUserId = resolveCurrentUserId(request);
         Map<String, Object> response = new HashMap<>();
+
         OrderHistory history;
         try {
             history = orderService.updateOrderStatus(id, status, EventOrigin.ADMIN, currentUserId);
@@ -181,9 +220,13 @@ public class DashboardOrderController {
 
     @PostMapping("/{id}/notes-ajax")
     @ResponseBody
-    public ResponseEntity<Map<String, Object>> addInternalNoteAjax(@PathVariable Long id, @RequestParam String note) {
-        Long currentUserId = 1L;
+    public ResponseEntity< Map<String, Object> > addInternalNoteAjax(
+            @PathVariable Long id,
+            @RequestParam String note,
+            HttpServletRequest request) {
+        Long currentUserId = resolveCurrentUserId(request);
         Map<String, Object> response = new HashMap<>();
+
         OrderNote internalNote;
         try {
             internalNote = orderService.addInternalNote(id, note, currentUserId);
@@ -206,19 +249,34 @@ public class DashboardOrderController {
 
     @PostMapping("/{id}/shipments-ajax")
     @ResponseBody
-    public ResponseEntity<Map<String, Object>> createShipmentAjax(
+    public ResponseEntity< Map<String, Object> > createShipmentAjax(
             @PathVariable Long id,
             @RequestParam Long carrierId,
             @RequestParam(required = false) String trackingNumber,
             @RequestParam(required = false) Double weight,
-            @RequestParam(required = false) String dimensions) {
+            @RequestParam(required = false) String dimensions,
+            @RequestParam(required = false, defaultValue = "MANUAL") String shippingMode,
+            HttpServletRequest request) {
 
-        Long currentUserId = 1L;
+        Long currentUserId = resolveCurrentUserId(request);
+        Store store = (Store) request.getAttribute("currentStore");
         Map<String, Object> response = new HashMap<>();
+
         try {
-            Shipment shipment = shipmentService.createManualShipment(id, carrierId, trackingNumber, weight, dimensions, currentUserId);
-            response.put("success", true);
-            response.put("message", "¡Envío generado exitosamente! El pedido ha avanzado a estado ENVIADO.");
+            boolean useMiPaquete = "MI_PAQUETE".equalsIgnoreCase(shippingMode)
+                    || ((trackingNumber == null || trackingNumber.isBlank()) && isMiPaqueteActiveForStore(store));
+
+            if (useMiPaquete) {
+                double safeWeight = (weight != null && weight > 0) ? weight : 1.0;
+                String safeDims = (dimensions != null && !dimensions.isBlank()) ? dimensions : "10x10x10";
+                shipmentService.createIntegratedShipment(store, id, carrierId, "MI_PAQUETE", safeWeight, safeDims, currentUserId);
+                response.put("success", true);
+                response.put("message", "¡Guía solicitada automáticamente en Mi Paquete! El pedido ha avanzado a estado ENVIADO.");
+            } else {
+                shipmentService.createManualShipment(id, carrierId, trackingNumber, weight, dimensions, currentUserId);
+                response.put("success", true);
+                response.put("message", "¡Envío manual generado exitosamente! El pedido ha avanzado a estado ENVIADO.");
+            }
         } catch (Exception e) {
             response.put("success", false);
             response.put("message", "Error al generar el envío: " + e.getMessage());

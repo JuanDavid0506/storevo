@@ -26,28 +26,46 @@ public class CartManager {
     @Transactional(readOnly = true)
     public List<CartItemDto> getCart(String sessionId) {
         if (sessionId == null) return List.of();
-
         List<CartItem> dbItems = cartItemRepository.findBySessionId(sessionId);
+
         return dbItems.stream().map(item -> {
             Product p = item.getProduct();
             ProductVariant v = item.getVariant();
 
-            double finalPrice = p.getPrice();
+            double finalPrice = p.getPrice() != null ? p.getPrice() : 0.0;
             if (p.getDiscountPrice() != null && p.getDiscountPrice() > 0) {
                 finalPrice = p.getDiscountPrice();
             }
-            if (v != null && v.getPrice() != null) {
+            if (v != null && v.getPrice() != null && v.getPrice() > 0) {
                 finalPrice = v.getPrice();
             }
 
-            String imageUrl = null;
-            if (p.getImages() != null && !p.getImages().isEmpty()) {
-                imageUrl = p.getImages().get(0).getSecureUrl();
+            String variantText = null;
+            if (v != null && v.getOptionValues() != null && !v.getOptionValues().isEmpty()) {
+                variantText = v.getOptionValues().stream()
+                        .map(ov -> ov.getValueName())
+                        .collect(Collectors.joining(" / "));
+            }
+
+            String imageUrl = p.getMainImageThumbnailUrl() != null
+                    ? p.getMainImageThumbnailUrl()
+                    : p.getMainImageUrl();
+
+            if (v != null && v.getId() != null && p.getImages() != null) {
+                String variantImg = p.getImages().stream()
+                        .filter(img -> v.getId().equals(img.getVariantId()))
+                        .map(img -> img.getThumbnailUrl() != null ? img.getThumbnailUrl() : img.getSecureUrl())
+                        .findFirst()
+                        .orElse(null);
+                if (variantImg != null && !variantImg.isBlank()) {
+                    imageUrl = variantImg;
+                }
             }
 
             return CartItemDto.builder()
                     .productId(p.getId())
                     .variantId(v != null ? v.getId() : null)
+                    .variantText(variantText)
                     .name(p.getName())
                     .price(finalPrice)
                     .quantity(item.getQuantity())
