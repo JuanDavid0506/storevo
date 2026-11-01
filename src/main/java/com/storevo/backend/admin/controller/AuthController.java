@@ -25,7 +25,7 @@ public class AuthController {
             return "redirect:/dashboard/" + authResponse.getStoreSlug();
         } catch (Exception e) {
             System.err.println("❌ ERROR DURANTE EL REGISTRO:");
-            e.printStackTrace(); // ESTO ES ORO: Te dirá exactamente qué explotó.
+            e.printStackTrace();
             return "redirect:/register?error=true";
         }
     }
@@ -46,6 +46,7 @@ public class AuthController {
     private void setJwtCookie(HttpServletResponse response, String token) {
         Cookie cookie = new Cookie("jwt", token);
         cookie.setHttpOnly(true);
+        cookie.setSecure(true);
         cookie.setPath("/");
         cookie.setMaxAge(24 * 60 * 60);
         cookie.setAttribute("SameSite", "Lax");

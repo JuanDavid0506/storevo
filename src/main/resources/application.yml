@@ -1,9 +1,6 @@
 spring:
   application:
     name: storevo
-
-
-
     servlet:
       multipart:
         enabled: true
@@ -12,41 +9,36 @@ spring:
   datasource:
     url: ${DB_URL:jdbc:mysql://localhost:3306/storevo_admin?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
     username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:juan123}
+    password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
-
   jpa:
     open-in-view: false
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: ${SHOW_SQL:false}
     properties:
       hibernate:
-        format_sql: true
+        format_sql: ${FORMAT_SQL:false}
         default_batch_fetch_size: 50
         dialect: org.hibernate.dialect.MySQLDialect
-
   thymeleaf:
     cache: false
     mode: HTML
     encoding: UTF-8
 
-# application.yml
 cloudinary:
   cloud-name: ${CLOUDINARY_CLOUD_NAME}
   api-key: ${CLOUDINARY_API_KEY}
   api-secret: ${CLOUDINARY_API_SECRET}
-
-
 
 server:
   forward-headers-strategy: native
 
 security:
   jwt:
-    secret: ${JWT_SECRET:StorevoSuperSecretKey2026_CambiarEnProduccion}
+    secret: ${JWT_SECRET}
 
-wompi:
-  public-key: "pub_test_rXNURvf5usUF3DkyAQnu702qYj9fS8ts"
-  integrity-secret: "test_integrity_SdYPQHAW9XUM4vjFq17eIZwaXoSzzvBw"
-  events-secret: "test_events_gFqoObHOl6DKRKngPNY1wwDmvhvzL1ch"
+storevo:
+  crypto:
+    secret-key: ${STOREVO_CRYPTO_SECRET_KEY}
+    legacy-secret-key: ${STOREVO_CRYPTO_LEGACY_SECRET_KEY:}

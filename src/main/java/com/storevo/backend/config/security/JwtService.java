@@ -13,15 +13,40 @@ import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 
 @Service
 public class JwtService {
 
-    @Value("${security.jwt.secret:StorevoSuperSecretKey2026_CambiarEnProduccion}")
-    private String secretKey;
+    private static final long EXPIRATION_TIME = 86400000L;
+    private static final int MIN_SECRET_BYTES = 32; // 256 bits mínimo
 
-    private static final long EXPIRATION_TIME = 86400000;
+    private static final Set<String> FORBIDDEN_EXAMPLE_SECRETS = Set.of(
+            "storevosupersecretkey2026_cambiarenproduccion",
+            "4gqkgl4vdcwl0cmflti7b6hfothsenmn",
+            "changeme",
+            "secret",
+            "default_jwt_secret_key_change_me_now",
+            "12345678901234567890123456789012"
+    );
+
+    private final Key signingKey;
+
+    public JwtService(@Value("${security.jwt.secret}") String secretKey) {
+        if (secretKey == null || secretKey.isBlank()) {
+            throw new IllegalStateException("Error crítico de seguridad (C8): La variable de entorno JWT_SECRET es obligatoria y no puede estar vacía.");
+        }
+        String trimmed = secretKey.trim();
+        if (FORBIDDEN_EXAMPLE_SECRETS.contains(trimmed.toLowerCase())) {
+            throw new IllegalStateException("Error crítico de seguridad (C8): JWT_SECRET contiene una clave de ejemplo o por defecto prohibida.");
+        }
+        byte[] keyBytes = trimmed.getBytes(StandardCharsets.UTF_8);
+        if (keyBytes.length < MIN_SECRET_BYTES) {
+            throw new IllegalStateException("Error crítico de seguridad (C8): JWT_SECRET debe tener al menos 32 bytes (256 bits). Longitud actual: " + keyBytes.length + " bytes.");
+        }
+        this.signingKey = Keys.hmacShaKeyFor(keyBytes);
+    }
 
     public String generateToken(UserDetails userDetails) {
         return generateToken(new HashMap<>(), userDetails);
@@ -76,9 +101,6 @@ public class JwtService {
     }
 
     private Key getSignInKey() {
-        // SOLUCIÓN: Usamos UTF-8 directamente para no depender de decodificadores estrictos de Base64.
-        // Esto permite que el String en application.yml contenga _, -, letras y números normalmente.
-        byte[] keyBytes = secretKey.getBytes(StandardCharsets.UTF_8);
-        return Keys.hmacShaKeyFor(keyBytes);
+        return this.signingKey;
     }
 }
