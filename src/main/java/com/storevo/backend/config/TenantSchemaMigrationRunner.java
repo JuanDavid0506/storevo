@@ -1,4 +1,4 @@
-package com.storevo.backend.config;
+package com.storevo.backend.admin.config;
 
 import com.storevo.backend.admin.model.Store;
 import com.storevo.backend.admin.repository.StoreRepository;
@@ -6,10 +6,15 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.stereotype.Component;
 
+import javax.sql.DataSource;
+import java.sql.Connection;
 import java.util.List;
+import java.util.regex.Pattern;
 
 @Slf4j
 @Component
@@ -19,70 +24,163 @@ public class TenantSchemaMigrationRunner implements CommandLineRunner {
 
     private final StoreRepository storeRepository;
     private final JdbcTemplate jdbcTemplate;
+    private final DataSource dataSource;
+
+    private static final Pattern VALID_SCHEMA_PATTERN = Pattern.compile("^[a-z0-9_]+$");
+
+    /**
+     * Estructura evolutiva para declarar nuevas columnas y su SQL opcional de inicialización (backfill).
+     */
+    private record ColumnMigration(String table, String column, String definition, String backfillSql) {
+        ColumnMigration(String table, String column, String definition) {
+            this(table, column, definition, null);
+        }
+    }
+
+    /**
+     * Estructura evolutiva para declarar índices únicos o compuestos sobre tablas existentes.
+     */
+    private record IndexMigration(String table, String indexName, String columnsSql, boolean unique) {}
+
+    /**
+     * Catálogo evolutivo de columnas por tabla.
+     * Para agregar nuevas columnas en el futuro (ej. en orders), basta con añadir una entrada aquí.
+     */
+    private static final List<ColumnMigration> TENANT_COLUMN_MIGRATIONS = List.of(
+            // --- Evolución de categories ---
+            new ColumnMigration("categories", "image_url", "VARCHAR(500) NULL"),
+            new ColumnMigration("categories", "show_in_nav", "BOOLEAN NOT NULL DEFAULT TRUE"),
+            new ColumnMigration("categories", "display_order", "INT NOT NULL DEFAULT 0"),
+
+            // --- Evolución de products ---
+            new ColumnMigration("products", "brand_id", "BIGINT NULL"),
+            new ColumnMigration("products", "has_variants", "BOOLEAN NOT NULL DEFAULT FALSE"),
+            new ColumnMigration("products", "is_made_to_order", "BOOLEAN NOT NULL DEFAULT FALSE"),
+            new ColumnMigration("products", "is_featured", "BOOLEAN NOT NULL DEFAULT FALSE"),
+            new ColumnMigration("products", "attributes_json", "JSON NULL"),
+            new ColumnMigration("products", "is_deleted", "BOOLEAN NOT NULL DEFAULT FALSE"),
+            new ColumnMigration("products", "is_draft", "BOOLEAN NOT NULL DEFAULT FALSE"),
+            new ColumnMigration("products", "version", "BIGINT NOT NULL DEFAULT 0"),
+
+            // --- Evolución de product_variants ---
+            new ColumnMigration("product_variants", "version", "BIGINT NOT NULL DEFAULT 0"),
+
+            // --- Evolución de product_images ---
+            new ColumnMigration("product_images", "variant_id", "BIGINT NULL"),
+
+            // --- Evolución de orders (token público, datos DIAN y control de stock) ---
+            new ColumnMigration(
+                    "orders",
+                    "public_token",
+                    "VARCHAR(64) NULL",
+                    "UPDATE `%s`.orders SET public_token = UUID() WHERE public_token IS NULL OR public_token = ''"
+            ),
+            new ColumnMigration("orders", "customer_email", "VARCHAR(120) NULL"),
+            new ColumnMigration("orders", "document_type", "VARCHAR(10) NULL"),
+            new ColumnMigration("orders", "customer_document", "VARCHAR(30) NULL"),
+            new ColumnMigration("orders", "verification_digit", "VARCHAR(5) NULL"),
+            new ColumnMigration("orders", "legal_name", "VARCHAR(150) NULL"),
+            new ColumnMigration("orders", "tax_regime", "VARCHAR(40) NULL"),
+            new ColumnMigration("orders", "requires_electronic_invoice", "BOOLEAN DEFAULT FALSE"),
+            new ColumnMigration(
+                    "orders",
+                    "stock_deducted",
+                    "BOOLEAN NOT NULL DEFAULT FALSE",
+                    "UPDATE `%s`.orders SET stock_deducted = TRUE WHERE status IN ('PAID', 'CONFIRMED', 'PREPARING', 'PACKED', 'SHIPPED', 'DELIVERED')"
+            ),
+
+            // --- Evolución de shipments ---
+            new ColumnMigration("shipments", "label_pdf_url", "VARCHAR(500) NULL"),
+            new ColumnMigration("shipments", "last_tracking_message", "VARCHAR(255) NULL")
+    );
+
+    private static final List<IndexMigration> TENANT_INDEX_MIGRATIONS = List.of(
+            new IndexMigration("orders", "uk_orders_public_token", "`public_token`", true),
+            new IndexMigration("orders", "idx_orders_status_created", "`status`, `created_at`", false),
+            new IndexMigration("orders", "idx_orders_customer_phone", "`customer_phone`, `created_at`", false),
+            new IndexMigration("order_items", "idx_order_items_product", "`product_id`, `order_id`", false),
+            new IndexMigration("shipments", "idx_shipments_external_id", "`external_shipment_id`", false)
+    );
 
     @Override
     public void run(String... args) {
-        log.info("TenantSchemaMigrationRunner: verificando esquemas de tiendas existentes...");
         List<Store> stores = storeRepository.findAll();
+        if (stores.isEmpty()) {
+            return;
+        }
+
+        log.info("TenantSchemaMigrationRunner: verificando y migrando {} esquema(s) de tiendas...", stores.size());
 
         for (Store store : stores) {
-            String schema = store.getSchemaName();
-            if (schema == null || schema.isBlank() || !schema.matches("^[a-z0-9_]+$")) {
+            if (store == null || "SUSPENDED".equalsIgnoreCase(store.getStatus())) {
                 continue;
             }
-            try {
-                // 1. Columnas faltantes en orders
-                addColumnIfMissing(schema, "orders", "public_token", "VARCHAR(64) NULL");
-                addColumnIfMissing(schema, "orders", "customer_email", "VARCHAR(120) NULL");
-                addColumnIfMissing(schema, "orders", "document_type", "VARCHAR(10) NULL");
-                addColumnIfMissing(schema, "orders", "verification_digit", "VARCHAR(5) NULL");
-                addColumnIfMissing(schema, "orders", "legal_name", "VARCHAR(150) NULL");
-                addColumnIfMissing(schema, "orders", "tax_regime", "VARCHAR(40) NULL");
-                addColumnIfMissing(schema, "orders", "requires_electronic_invoice", "BOOLEAN DEFAULT FALSE");
-                if (addColumnIfMissing(schema, "orders", "stock_deducted", "BOOLEAN NOT NULL DEFAULT FALSE")) {
-                    jdbcTemplate.update(
-                            "UPDATE `" + schema + "`.orders SET stock_deducted = TRUE " +
-                                    "WHERE status IN ('PAID', 'CONFIRMED', 'PREPARING', 'PACKED', 'SHIPPED', 'DELIVERED')"
-                    );
-                }
-
-                // Control de versión en products y product_variants (Objetivo C6)
-                addColumnIfMissing(schema, "products", "version", "BIGINT NOT NULL DEFAULT 0");
-                addColumnIfMissing(schema, "product_variants", "version", "BIGINT NOT NULL DEFAULT 0");
-
-                // Generar UUID para pedidos anteriores que no tengan public_token
-                jdbcTemplate.update(
-                        "UPDATE `" + schema + "`.orders SET public_token = UUID() WHERE public_token IS NULL OR public_token = ''"
-                );
-                addUniqueIndexIfMissing(schema, "orders", "uk_orders_public_token", "public_token");
-
-                // 2. Columnas faltantes en shipments
-                addColumnIfMissing(schema, "shipments", "label_pdf_url", "VARCHAR(500) NULL");
-                addColumnIfMissing(schema, "shipments", "last_tracking_message", "VARCHAR(255) NULL");
-
-                // 3. Tabla store_reviews si no existe
-                jdbcTemplate.execute(
-                        "CREATE TABLE IF NOT EXISTS `" + schema + "`.store_reviews (" +
-                                "  id BIGINT AUTO_INCREMENT PRIMARY KEY," +
-                                "  order_id BIGINT NOT NULL UNIQUE," +
-                                "  customer_name VARCHAR(100) NOT NULL," +
-                                "  customer_city VARCHAR(100) NULL," +
-                                "  rating INT NOT NULL DEFAULT 5," +
-                                "  comment VARCHAR(500) NOT NULL," +
-                                "  is_visible BOOLEAN NOT NULL DEFAULT TRUE," +
-                                "  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
-                                "  FOREIGN KEY (order_id) REFERENCES `" + schema + "`.orders(id) ON DELETE CASCADE" +
-                                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;"
-                );
-
-                log.info("TenantSchemaMigrationRunner: esquema {} sincronizado.", schema);
-            } catch (Exception e) {
-                log.error("TenantSchemaMigrationRunner: error sincronizando esquema {}: {}", schema, e.getMessage());
+            String schema = store.getSchemaName();
+            if (schema == null || schema.isBlank() || !VALID_SCHEMA_PATTERN.matcher(schema).matches()) {
+                log.warn("TenantSchemaMigrationRunner: esquema inválido omitido para tienda id={}: {}", store.getId(), schema);
+                continue;
             }
+            migrateSingleTenantSchema(schema);
+        }
+
+        log.info("TenantSchemaMigrationRunner: migración multi-tenant finalizada.");
+    }
+
+    public void migrateSingleTenantSchema(String schema) {
+        try {
+            // 1. Asegurar que el esquema exista en MySQL
+            jdbcTemplate.execute("CREATE SCHEMA IF NOT EXISTS `" + schema + "` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+
+            // 2. Ejecutar tenant-baseline.sql de forma idempotente para crear tablas nuevas que falten (ej. brands, store_reviews)
+            executeIdempotentBaselineTables(schema);
+
+            // 3. Aplicar migraciones de columnas faltantes en tablas ya existentes
+            for (ColumnMigration migration : TENANT_COLUMN_MIGRATIONS) {
+                boolean added = addColumnIfMissing(schema, migration.table(), migration.column(), migration.definition());
+                if (migration.backfillSql() != null && !migration.backfillSql().isBlank()) {
+                    // Para public_token garantizamos siempre que ningún registro quede nulo;
+                    // para otros backfills solo se ejecuta cuando se crea la columna por primera vez.
+                    if (added || "public_token".equals(migration.column())) {
+                        jdbcTemplate.update(String.format(migration.backfillSql(), schema));
+                    }
+                }
+            }
+
+            // 4. Aplicar índices únicos y de rendimiento faltantes
+            for (IndexMigration idx : TENANT_INDEX_MIGRATIONS) {
+                addIndexIfMissing(schema, idx.table(), idx.indexName(), idx.columnsSql(), idx.unique());
+            }
+
+            log.info("TenantSchemaMigrationRunner: esquema '{}' sincronizado correctamente.", schema);
+        } catch (Exception e) {
+            log.error("TenantSchemaMigrationRunner: error migrando esquema '{}': {}", schema, e.getMessage());
+        }
+    }
+
+    private void executeIdempotentBaselineTables(String schema) {
+        ResourceDatabasePopulator populator = new ResourceDatabasePopulator();
+        populator.setContinueOnError(true);
+        populator.addScript(new ClassPathResource("db/tenant-baseline.sql"));
+
+        try (Connection connection = dataSource.getConnection()) {
+            String previousCatalog = connection.getCatalog();
+            try {
+                connection.setCatalog(schema);
+                populator.populate(connection);
+            } finally {
+                if (previousCatalog != null) {
+                    connection.setCatalog(previousCatalog);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("TenantSchemaMigrationRunner: aviso al aplicar baseline en '{}': {}", schema, e.getMessage());
         }
     }
 
     private boolean addColumnIfMissing(String schema, String table, String column, String definition) {
+        if (!tableExists(schema, table)) {
+            return false;
+        }
         Integer count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS " +
                         "WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?",
@@ -90,19 +188,34 @@ public class TenantSchemaMigrationRunner implements CommandLineRunner {
         );
         if (count == null || count == 0) {
             jdbcTemplate.execute("ALTER TABLE `" + schema + "`.`" + table + "` ADD COLUMN `" + column + "` " + definition);
+            log.info("TenantSchemaMigrationRunner: columna '{}.{}' agregada en '{}'", table, column, schema);
             return true;
         }
         return false;
     }
 
-    private void addUniqueIndexIfMissing(String schema, String table, String indexName, String column) {
+    private void addIndexIfMissing(String schema, String table, String indexName, String columnsSql, boolean unique) {
+        if (!tableExists(schema, table)) {
+            return;
+        }
         Integer count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS " +
                         "WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND INDEX_NAME = ?",
                 Integer.class, schema, table, indexName
         );
         if (count == null || count == 0) {
-            jdbcTemplate.execute("ALTER TABLE `" + schema + "`.`" + table + "` ADD CONSTRAINT `" + indexName + "` UNIQUE (`" + column + "`)");
+            String sql = unique
+                    ? "ALTER TABLE `" + schema + "`.`" + table + "` ADD CONSTRAINT `" + indexName + "` UNIQUE (" + columnsSql + ")"
+                    : "CREATE INDEX `" + indexName + "` ON `" + schema + "`.`" + table + "` (" + columnsSql + ")";
+            jdbcTemplate.execute(sql);
         }
+    }
+
+    private boolean tableExists(String schema, String table) {
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?",
+                Integer.class, schema, table
+        );
+        return count != null && count > 0;
     }
 }

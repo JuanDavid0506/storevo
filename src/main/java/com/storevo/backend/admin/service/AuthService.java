@@ -28,26 +28,34 @@ public class AuthService {
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
+        String cleanEmail = request.getEmail() != null ? request.getEmail().trim().toLowerCase(java.util.Locale.ROOT) : "";
+        if (cleanEmail.isEmpty()) {
+            throw new RuntimeException("El correo electrónico es obligatorio");
+        }
+
         // Validación 1: Correo duplicado
-        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+        if (userRepository.findByEmail(cleanEmail).isPresent()) {
             throw new RuntimeException("El email ya está registrado");
         }
 
-        // Validación 2: Slug/Enlace duplicado (Evita el error SQL 1062)
-        if (storeRepository.findBySlug(request.getSlug()).isPresent()) {
+        // Validación 2: Formato de slug y colisión de slug o de schemaName normalizado
+        String normalizedSlug = storeRegistrationService.normalizeAndValidateSlug(request.getSlug());
+        String candidateSchema = storeRegistrationService.buildSchemaNameFromSlug(normalizedSlug);
+
+        if (storeRepository.existsBySlug(normalizedSlug) || storeRepository.existsBySchemaName(candidateSchema)) {
             throw new RuntimeException("El enlace de la tienda ya está en uso");
         }
 
-        // Creación neutra de la tienda
+        // Creación neutra de la tienda con validación de esquema físico en MySQL
         Store newStore = storeRegistrationService.registerNewStore(
                 request.getStoreName(),
-                request.getSlug(),
-                request.getEmail()
+                normalizedSlug,
+                cleanEmail
         );
 
         User user = User.builder()
-                .name(request.getOwnerName())
-                .email(request.getEmail())
+                .name(request.getOwnerName() != null ? request.getOwnerName().trim() : "")
+                .email(cleanEmail)
                 .password(passwordEncoder.encode(request.getPassword()))
                 .store(newStore)
                 .role("ROLE_STORE_OWNER")
