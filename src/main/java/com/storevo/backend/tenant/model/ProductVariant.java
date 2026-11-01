@@ -63,6 +63,22 @@ public class ProductVariant {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    @PrePersist protected void onCreate() { this.createdAt = LocalDateTime.now(); this.updatedAt = LocalDateTime.now(); }
-    @PreUpdate protected void onUpdate() { this.updatedAt = LocalDateTime.now(); }
+    @Version
+    @Column(name = "version", nullable = false)
+    @Builder.Default
+    private Long version = 0L;
+
+    @PrePersist
+    protected void onCreate() {
+        if (this.version == null) {
+            this.version = 0L;
+        }
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
 }

@@ -235,6 +235,7 @@ public class OrderService {
                 .status(OrderStatus.PENDING)
                 .channel(channel)
                 .paymentMethod(initialPaymentMethod)
+                .stockDeducted(false)
                 .build();
 
         List<OrderItem> items = cartItems.stream().map(dto -> {
@@ -284,8 +285,6 @@ public class OrderService {
                 String finalName = product.getName() + (verifiedVariantText != null ? " (" + verifiedVariantText + ")" : "");
                 throw new InsufficientStockException(finalName);
             }
-
-            inventoryService.deductStock(product.getId(), verifiedVariantId, dto.getQuantity());
 
             String receiptName = product.getName() + (verifiedVariantText != null ? " - " + verifiedVariantText : "");
             double verifiedSubtotal = verifiedPrice * dto.getQuantity();
@@ -402,29 +401,38 @@ public class OrderService {
             throw new ShipmentRequiredException(orderId);
         }
 
-        boolean alreadyReservedAtCreation = order.getHistory() != null && order.getHistory().stream()
-                .anyMatch(h -> h.getOldStatus() == null && h.getNewStatus() == OrderStatus.PENDING);
+        // 1. Descontar stock al pasar por primera vez a PAID o CONFIRMED
+        if ((newStatus == OrderStatus.PAID || newStatus == OrderStatus.CONFIRMED)
+                && !Boolean.TRUE.equals(order.getStockDeducted())) {
 
-        if (oldStatus == OrderStatus.PENDING && newStatus == OrderStatus.PAID && !alreadyReservedAtCreation) {
-            java.util.List<String> stockWarnings = deductOrderStockSafely(order);
-            if (!stockWarnings.isEmpty()) {
-                OrderHistory alertHistory = OrderHistory.builder()
-                        .order(order)
-                        .eventType(OrderHistoryType.SYSTEM_EVENT)
-                        .origin(origin)
-                        .oldStatus(oldStatus)
-                        .newStatus(newStatus)
-                        .description("ALERTA CRÍTICA DE INVENTARIO: Pago aprobado pero sin stock suficiente para: "
-                                + String.join(", ", stockWarnings) + ". Verificar cumplimiento o reembolso con el cliente.")
-                        .userId(userId)
-                        .build();
-                order.getHistory().add(alertHistory);
+            if (newStatus == OrderStatus.PAID && origin == EventOrigin.WEBHOOK) {
+                // Si el pago ya fue cobrado por Wompi, descontamos de forma segura sin perder el estado PAID
+                java.util.List<String> stockWarnings = deductOrderStockSafely(order);
+                if (!stockWarnings.isEmpty()) {
+                    OrderHistory alertHistory = OrderHistory.builder()
+                            .order(order)
+                            .eventType(OrderHistoryType.SYSTEM_EVENT)
+                            .origin(origin)
+                            .oldStatus(oldStatus)
+                            .newStatus(newStatus)
+                            .description("ALERTA CRÍTICA DE INVENTARIO: Pago aprobado pero sin stock suficiente para: "
+                                    + String.join(", ", stockWarnings) + ". Verificar cumplimiento o reembolso con el cliente.")
+                            .userId(userId)
+                            .build();
+                    order.getHistory().add(alertHistory);
+                }
+            } else {
+                // En confirmación manual (ej. pedido WhatsApp en el Dashboard), exigir stock real con bloqueo pesimista
+                deductOrderStock(order);
+                order.setStockDeducted(true);
             }
         }
 
-        if ((oldStatus == OrderStatus.PENDING || oldStatus == OrderStatus.PAID || oldStatus == OrderStatus.CONFIRMED || oldStatus == OrderStatus.PREPARING || oldStatus == OrderStatus.PACKED)
-                && (newStatus == OrderStatus.CANCELLED || newStatus == OrderStatus.REFUNDED)) {
+        // 2. Restaurar stock al pasar a CANCELLED o REFUNDED únicamente si ya había sido descontado
+        if ((newStatus == OrderStatus.CANCELLED || newStatus == OrderStatus.REFUNDED)
+                && Boolean.TRUE.equals(order.getStockDeducted())) {
             restoreOrderStock(order);
+            order.setStockDeducted(false);
         }
 
         order.setStatus(newStatus);
@@ -484,15 +492,24 @@ public class OrderService {
         return internalNote;
     }
 
+    private void deductOrderStock(Order order) {
+        for (OrderItem item : order.getItems()) {
+            inventoryService.deductStock(item.getProductId(), item.getVariantId(), item.getQuantity());
+        }
+    }
+
     private java.util.List<String> deductOrderStockSafely(Order order) {
         java.util.List<String> failedItems = new java.util.ArrayList<>();
+        boolean anyDeducted = false;
         for (OrderItem item : order.getItems()) {
             try {
                 inventoryService.deductStock(item.getProductId(), item.getVariantId(), item.getQuantity());
+                anyDeducted = true;
             } catch (Exception e) {
                 failedItems.add(item.getProductName() + " (x" + item.getQuantity() + ")");
             }
         }
+        order.setStockDeducted(anyDeducted && failedItems.isEmpty());
         return failedItems;
     }
 

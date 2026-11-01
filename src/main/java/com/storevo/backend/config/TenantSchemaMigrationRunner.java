@@ -39,6 +39,16 @@ public class TenantSchemaMigrationRunner implements CommandLineRunner {
                 addColumnIfMissing(schema, "orders", "legal_name", "VARCHAR(150) NULL");
                 addColumnIfMissing(schema, "orders", "tax_regime", "VARCHAR(40) NULL");
                 addColumnIfMissing(schema, "orders", "requires_electronic_invoice", "BOOLEAN DEFAULT FALSE");
+                if (addColumnIfMissing(schema, "orders", "stock_deducted", "BOOLEAN NOT NULL DEFAULT FALSE")) {
+                    jdbcTemplate.update(
+                            "UPDATE `" + schema + "`.orders SET stock_deducted = TRUE " +
+                                    "WHERE status IN ('PAID', 'CONFIRMED', 'PREPARING', 'PACKED', 'SHIPPED', 'DELIVERED')"
+                    );
+                }
+
+                // Control de versión en products y product_variants (Objetivo C6)
+                addColumnIfMissing(schema, "products", "version", "BIGINT NOT NULL DEFAULT 0");
+                addColumnIfMissing(schema, "product_variants", "version", "BIGINT NOT NULL DEFAULT 0");
 
                 // Generar UUID para pedidos anteriores que no tengan public_token
                 jdbcTemplate.update(
@@ -72,7 +82,7 @@ public class TenantSchemaMigrationRunner implements CommandLineRunner {
         }
     }
 
-    private void addColumnIfMissing(String schema, String table, String column, String definition) {
+    private boolean addColumnIfMissing(String schema, String table, String column, String definition) {
         Integer count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS " +
                         "WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?",
@@ -80,7 +90,9 @@ public class TenantSchemaMigrationRunner implements CommandLineRunner {
         );
         if (count == null || count == 0) {
             jdbcTemplate.execute("ALTER TABLE `" + schema + "`.`" + table + "` ADD COLUMN `" + column + "` " + definition);
+            return true;
         }
+        return false;
     }
 
     private void addUniqueIndexIfMissing(String schema, String table, String indexName, String column) {

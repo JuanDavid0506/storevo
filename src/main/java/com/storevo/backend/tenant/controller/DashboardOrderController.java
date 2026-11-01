@@ -189,7 +189,7 @@ public class DashboardOrderController {
         OrderHistory history;
         try {
             history = orderService.updateOrderStatus(id, status, EventOrigin.ADMIN, currentUserId);
-        } catch (ShipmentRequiredException e) {
+        } catch (com.storevo.backend.tenant.exception.InsufficientStockException | ShipmentRequiredException e) {
             response.put("success", false);
             response.put("message", "Operación rechazada: " + e.getMessage());
             return ResponseEntity.ok(response);

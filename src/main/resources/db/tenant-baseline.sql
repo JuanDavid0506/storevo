@@ -48,6 +48,7 @@ CREATE TABLE products (
                           is_active        BOOLEAN         NOT NULL DEFAULT TRUE,
                           is_deleted       BOOLEAN         NOT NULL DEFAULT FALSE,
                           is_draft         BOOLEAN         NOT NULL DEFAULT FALSE,
+                          version          BIGINT          NOT NULL DEFAULT 0,
                           created_at       TIMESTAMP       DEFAULT CURRENT_TIMESTAMP,
                           updated_at       TIMESTAMP       DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                           FOREIGN KEY (category_id) REFERENCES categories(id),
@@ -89,6 +90,7 @@ CREATE TABLE product_variants (
                                   low_stock_alert  INT             NULL,
                                   weight           DOUBLE          NULL,
                                   is_active        BOOLEAN         NOT NULL DEFAULT TRUE,
+                                  version          BIGINT          NOT NULL DEFAULT 0,
                                   created_at       TIMESTAMP       DEFAULT CURRENT_TIMESTAMP,
                                   updated_at       TIMESTAMP       DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                                   FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
@@ -143,6 +145,7 @@ CREATE TABLE orders (
                         status                      VARCHAR(30)    NOT NULL DEFAULT 'PENDING',
                         payment_method              VARCHAR(50)    DEFAULT 'Wompi / Tarjeta',
                         channel                     VARCHAR(30)    NOT NULL DEFAULT 'ONLINE',
+                        stock_deducted              BOOLEAN        NOT NULL DEFAULT FALSE,
                         created_at                  TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
                         updated_at                  TIMESTAMP      DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );

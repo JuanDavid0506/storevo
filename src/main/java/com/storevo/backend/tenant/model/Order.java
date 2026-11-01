@@ -57,7 +57,7 @@ public class Order {
     private String city;
 
     @Column(columnDefinition = "TEXT")
-    private String notes; // Nota que deja el cliente al comprar
+    private String notes;
 
     @Column(nullable = false)
     private Double total;
@@ -73,6 +73,10 @@ public class Order {
 
     @Column(name = "payment_method", length = 50)
     private String paymentMethod;
+
+    @Column(name = "stock_deducted", nullable = false)
+    @Builder.Default
+    private Boolean stockDeducted = false;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("createdAt DESC")
@@ -99,6 +103,9 @@ public class Order {
     protected void onCreate() {
         if (this.publicToken == null || this.publicToken.isBlank()) {
             this.publicToken = UUID.randomUUID().toString();
+        }
+        if (this.stockDeducted == null) {
+            this.stockDeducted = false;
         }
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();

@@ -1,5 +1,6 @@
 package com.storevo.backend.tenant.service;
 
+import com.storevo.backend.tenant.exception.InsufficientStockException;
 import com.storevo.backend.tenant.model.Product;
 import com.storevo.backend.tenant.model.ProductVariant;
 import com.storevo.backend.tenant.repository.ProductRepository;
@@ -81,21 +82,24 @@ public class InventoryService {
             throw new IllegalArgumentException("Datos de descuento de inventario inválidos.");
         }
 
-        Product product = productRepository.findById(productId)
+        // Bloqueo pesimista (SELECT ... FOR UPDATE) sobre el producto padre
+        Product product = productRepository.findByIdWithLock(productId)
                 .orElseThrow(() -> new RuntimeException("Producto no encontrado."));
 
         if (Boolean.TRUE.equals(product.getHasVariants())) {
             if (variantId == null) {
                 throw new IllegalArgumentException("Este producto requiere seleccionar una variante válida.");
             }
-            ProductVariant variant = variantRepository.findByIdAndProductId(variantId, productId)
+            // Bloqueo pesimista (SELECT ... FOR UPDATE) sobre la variante específica
+            ProductVariant variant = variantRepository.findByIdAndProductIdWithLock(variantId, productId)
                     .orElseThrow(() -> new IllegalArgumentException("La variante seleccionada no pertenece a este producto."));
 
             if (!Boolean.TRUE.equals(product.getIsActive())
                     || Boolean.TRUE.equals(product.getIsDeleted())
                     || Boolean.TRUE.equals(product.getIsDraft())
-                    || !Boolean.TRUE.equals(variant.getIsActive())) {
-                throw new RuntimeException("El producto o la variante seleccionada no está disponible.");
+                    || !Boolean.TRUE.equals(variant.getIsActive())
+                    || !hasValidEffectivePrice(product, variant)) {
+                throw new InsufficientStockException(product.getName());
             }
 
             if (Boolean.TRUE.equals(product.getIsMadeToOrder())) {
@@ -104,7 +108,7 @@ public class InventoryService {
 
             int currentStock = variant.getStock() != null ? variant.getStock() : 0;
             if (currentStock < qty) {
-                throw new RuntimeException("Inventario insuficiente para la variante seleccionada.");
+                throw new InsufficientStockException(product.getName());
             }
 
             variant.setStock(currentStock - qty);
@@ -116,8 +120,9 @@ public class InventoryService {
             }
             if (!Boolean.TRUE.equals(product.getIsActive())
                     || Boolean.TRUE.equals(product.getIsDeleted())
-                    || Boolean.TRUE.equals(product.getIsDraft())) {
-                throw new RuntimeException("El producto no está disponible.");
+                    || Boolean.TRUE.equals(product.getIsDraft())
+                    || !hasValidEffectivePrice(product, null)) {
+                throw new InsufficientStockException(product.getName());
             }
 
             if (Boolean.TRUE.equals(product.getIsMadeToOrder())) {
@@ -126,7 +131,7 @@ public class InventoryService {
 
             int currentStock = product.getStock() != null ? product.getStock() : 0;
             if (currentStock < qty) {
-                throw new RuntimeException("Inventario insuficiente.");
+                throw new InsufficientStockException(product.getName());
             }
 
             product.setStock(currentStock - qty);
@@ -140,17 +145,15 @@ public class InventoryService {
             return;
         }
 
-        Product product = productRepository.findById(productId).orElse(null);
+        // Bloqueo pesimista sobre el producto padre al restaurar unidades
+        Product product = productRepository.findByIdWithLock(productId).orElse(null);
         if (product == null || Boolean.TRUE.equals(product.getIsMadeToOrder())) {
             return;
         }
 
         if (Boolean.TRUE.equals(product.getHasVariants())) {
-            // Si el producto usa variantes, solo restauramos a la variante si aún existe y pertenece al producto.
-            // Si la variante fue eliminada o variantId es nulo, NO sumamos stock huérfano al padre
-            // y mantenemos el stock del padre igual a la suma real de sus variantes activas.
             if (variantId != null) {
-                variantRepository.findByIdAndProductId(variantId, productId).ifPresent(v -> {
+                variantRepository.findByIdAndProductIdWithLock(variantId, productId).ifPresent(v -> {
                     int currentStock = v.getStock() != null ? Math.max(0, v.getStock()) : 0;
                     v.setStock(currentStock + qty);
                     variantRepository.save(v);

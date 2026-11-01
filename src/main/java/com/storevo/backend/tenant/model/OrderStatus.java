@@ -27,15 +27,29 @@ public enum OrderStatus {
 
         switch (this) {
             case PENDING:
-                return nextStatus == PAID || nextStatus == CANCELLED;
+                return nextStatus == PAID
+                        || nextStatus == CONFIRMED
+                        || nextStatus == CANCELLED;
             case PAID:
-                return nextStatus == CONFIRMED || nextStatus == PREPARING || nextStatus == REFUNDED;
+                return nextStatus == CONFIRMED
+                        || nextStatus == PREPARING
+                        || nextStatus == PACKED
+                        || nextStatus == CANCELLED
+                        || nextStatus == REFUNDED;
             case CONFIRMED:
-                return nextStatus == PREPARING || nextStatus == PACKED;
+                return nextStatus == PAID
+                        || nextStatus == PREPARING
+                        || nextStatus == PACKED
+                        || nextStatus == CANCELLED
+                        || nextStatus == REFUNDED;
             case PREPARING:
-                return nextStatus == PACKED;
+                return nextStatus == PACKED
+                        || nextStatus == CANCELLED
+                        || nextStatus == REFUNDED;
             case PACKED:
-                return nextStatus == SHIPPED;
+                return nextStatus == SHIPPED
+                        || nextStatus == CANCELLED
+                        || nextStatus == REFUNDED;
             case SHIPPED:
                 return nextStatus == DELIVERED;
             case DELIVERED:
