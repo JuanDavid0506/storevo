@@ -402,6 +402,26 @@ public class OrderService {
             throw new ShipmentRequiredException(orderId);
         }
 
+        boolean alreadyReservedAtCreation = order.getHistory() != null && order.getHistory().stream()
+                .anyMatch(h -> h.getOldStatus() == null && h.getNewStatus() == OrderStatus.PENDING);
+
+        if (oldStatus == OrderStatus.PENDING && newStatus == OrderStatus.PAID && !alreadyReservedAtCreation) {
+            java.util.List<String> stockWarnings = deductOrderStockSafely(order);
+            if (!stockWarnings.isEmpty()) {
+                OrderHistory alertHistory = OrderHistory.builder()
+                        .order(order)
+                        .eventType(OrderHistoryType.SYSTEM_EVENT)
+                        .origin(origin)
+                        .oldStatus(oldStatus)
+                        .newStatus(newStatus)
+                        .description("ALERTA CRÍTICA DE INVENTARIO: Pago aprobado pero sin stock suficiente para: "
+                                + String.join(", ", stockWarnings) + ". Verificar cumplimiento o reembolso con el cliente.")
+                        .userId(userId)
+                        .build();
+                order.getHistory().add(alertHistory);
+            }
+        }
+
         if ((oldStatus == OrderStatus.PENDING || oldStatus == OrderStatus.PAID || oldStatus == OrderStatus.CONFIRMED || oldStatus == OrderStatus.PREPARING || oldStatus == OrderStatus.PACKED)
                 && (newStatus == OrderStatus.CANCELLED || newStatus == OrderStatus.REFUNDED)) {
             restoreOrderStock(order);
@@ -429,7 +449,8 @@ public class OrderService {
         Order order = orderRepository.findById(orderId).orElse(null);
         if (order == null || order.getStatus() != OrderStatus.PENDING) return;
 
-        String txDesc = "Intento de pago en Wompi no completado (" + wompiStatus + "). ID Transacción: " + wompiTransactionId;
+        String safeTxId = (wompiTransactionId != null && !wompiTransactionId.isBlank()) ? wompiTransactionId : "N/A";
+        String txDesc = "Intento de pago en Wompi no completado (" + wompiStatus + "). ID Transacción: " + safeTxId;
         boolean alreadyRecorded = order.getHistory().stream()
                 .anyMatch(h -> txDesc.equals(h.getDescription()));
 
@@ -443,7 +464,6 @@ public class OrderService {
                     .description(txDesc)
                     .userId(null)
                     .build();
-
             order.getHistory().add(historyObj);
             orderRepository.save(order);
         }
@@ -461,14 +481,19 @@ public class OrderService {
 
         order.getInternalNotes().add(internalNote);
         orderRepository.save(order);
-
         return internalNote;
     }
 
-    private void deductOrderStock(Order order) {
+    private java.util.List<String> deductOrderStockSafely(Order order) {
+        java.util.List<String> failedItems = new java.util.ArrayList<>();
         for (OrderItem item : order.getItems()) {
-            inventoryService.deductStock(item.getProductId(), item.getVariantId(), item.getQuantity());
+            try {
+                inventoryService.deductStock(item.getProductId(), item.getVariantId(), item.getQuantity());
+            } catch (Exception e) {
+                failedItems.add(item.getProductName() + " (x" + item.getQuantity() + ")");
+            }
         }
+        return failedItems;
     }
 
     private void restoreOrderStock(Order order) {
