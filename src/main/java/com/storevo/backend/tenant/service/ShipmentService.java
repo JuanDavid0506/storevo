@@ -24,7 +24,6 @@ public class ShipmentService {
     public Shipment createManualShipment(Long orderId, Long carrierId, String trackingNumber, Double weight, String dimensions, Long adminUserId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
-
         Carrier carrier = carrierRepository.findById(carrierId)
                 .orElseThrow(() -> new RuntimeException("Transportadora no encontrada"));
 
@@ -39,9 +38,7 @@ public class ShipmentService {
                 .build();
 
         order.getShipments().add(shipment);
-
         orderService.updateOrderStatus(orderId, OrderStatus.SHIPPED, EventOrigin.SYSTEM, adminUserId);
-
         return shipment;
     }
 
@@ -49,7 +46,6 @@ public class ShipmentService {
     public Shipment createIntegratedShipment(Store store, Long orderId, Long carrierId, String integrationCode, Double weight, String dimensions, Long adminUserId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
-
         Carrier carrier = carrierRepository.findById(carrierId)
                 .orElseThrow(() -> new RuntimeException("Transportadora no encontrada"));
 
@@ -59,7 +55,7 @@ public class ShipmentService {
         // 2. Ejecutar con parámetros completos
         ShipmentLabelResponse apiResponse = adapter.createLabel(store, order, carrier.getCode(), weight, dimensions);
 
-        // 3. Persistir el envío pendiente
+        // 3. Persistir el envío incluyendo labelPdfUrl devuelto por el adaptador (Objetivo A5)
         Shipment shipment = Shipment.builder()
                 .order(order)
                 .carrier(carrier)
@@ -76,7 +72,6 @@ public class ShipmentService {
 
         // 4. Cambiar estado de la orden
         orderService.updateOrderStatus(orderId, OrderStatus.SHIPPED, EventOrigin.SYSTEM, adminUserId);
-
         return shipment;
     }
 }

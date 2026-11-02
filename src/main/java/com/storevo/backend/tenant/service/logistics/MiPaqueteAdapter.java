@@ -140,15 +140,25 @@ public class MiPaqueteAdapter implements CarrierAdapter {
             sender.put("nitType", "NIT");
             payload.set("sender", sender);
 
-            // 2. Receiver (Destinatario)
+            // 2. Receiver (Destinatario) — usa customerEmail (con fallback al correo de la tienda) y documentType reales de Order
             ObjectNode receiver = mapper.createObjectNode();
-            String[] names = order.getCustomerName().split(" ", 2);
-            String receiverEmail = (order.getCustomerEmail() != null && !order.getCustomerEmail().isBlank())
-                    ? order.getCustomerEmail()
-                    : (storeSettings.getShippingContactEmail() != null && !storeSettings.getShippingContactEmail().isBlank()
-                    ? storeSettings.getShippingContactEmail() : "cliente@correo.com");
-            String receiverDocType = (order.getDocumentType() != null && !order.getDocumentType().isBlank())
-                    ? order.getDocumentType() : "CC";
+            String safeCustomerName = order.getCustomerName() != null ? order.getCustomerName().trim() : "Cliente";
+            String[] names = safeCustomerName.split("\\s+", 2);
+
+            String receiverEmail;
+            if (!isBlank(order.getCustomerEmail())) {
+                receiverEmail = order.getCustomerEmail().trim();
+            } else if (!isBlank(storeSettings.getShippingContactEmail())) {
+                receiverEmail = storeSettings.getShippingContactEmail().trim();
+            } else if (!isBlank(storeSettings.getEmailContact())) {
+                receiverEmail = storeSettings.getEmailContact().trim();
+            } else {
+                receiverEmail = "cliente@correo.com";
+            }
+
+            String receiverDocType = !isBlank(order.getDocumentType())
+                    ? order.getDocumentType().trim().toUpperCase()
+                    : "CC";
 
             receiver.put("name", names[0]);
             receiver.put("surname", names.length > 1 ? names[1] : ".");
@@ -156,8 +166,7 @@ public class MiPaqueteAdapter implements CarrierAdapter {
             receiver.put("prefix", "+57");
             receiver.put("cellPhone", order.getCustomerPhone());
             receiver.put("destinationAddress", order.getAddress() + ", " + order.getCity());
-            receiver.put("nit", order.getCustomerDocument() != null && !order.getCustomerDocument().isBlank()
-                    ? order.getCustomerDocument() : "0");
+            receiver.put("nit", !isBlank(order.getCustomerDocument()) ? order.getCustomerDocument().trim() : "0");
             receiver.put("nitType", receiverDocType);
             payload.set("receiver", receiver);
 
@@ -173,13 +182,12 @@ public class MiPaqueteAdapter implements CarrierAdapter {
             productInfo.put("declaredValue", (int) Math.round(order.getTotal()));
             payload.set("productInformation", productInfo);
 
-            // 4. Locate — primero intentamos el catálogo real de Mi Paquete
-            // (getLocations); si esa ciudad no aparece ahí (o el catálogo no cargó
-            // todavía), caemos al catálogo estático de respaldo.
-            miPaqueteLocationService.ensureLoaded(config.getApiKey(), config.getEnvironment());
-            String originCode = miPaqueteLocationService.resolve(storeSettings.getShippingPickupCity());
+            // 4. Locate — consulta la caché aislada por el environment de la tienda y cae a DaneCityResolver como respaldo
+            String env = config.getEnvironment();
+            miPaqueteLocationService.ensureLoaded(config.getApiKey(), env);
+            String originCode = miPaqueteLocationService.resolve(storeSettings.getShippingPickupCity(), env);
             if (originCode == null) originCode = daneCityResolver.resolve(storeSettings.getShippingPickupCity());
-            String destinyCode = miPaqueteLocationService.resolve(order.getCity());
+            String destinyCode = miPaqueteLocationService.resolve(order.getCity(), env);
             if (destinyCode == null) destinyCode = daneCityResolver.resolve(order.getCity());
 
             ObjectNode locate = mapper.createObjectNode();
