@@ -85,7 +85,6 @@ public class DashboardCustomerController {
 
         return "dashboard/customers/detail";
     }
-
     @PostMapping("/update")
     public String updateCustomer(
             @PathVariable String slug,
@@ -99,15 +98,21 @@ public class DashboardCustomerController {
             @RequestParam(required = false) String city,
             @RequestParam(required = false) String address,
             @RequestParam(required = false) String legalName,
-            @RequestParam(required = false) String taxRegime) {
+            @RequestParam(required = false) String taxRegime,
+            org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes) {
 
-        customerService.updateCustomerData(
-                originalPhone, name, phone, documentType, document,
-                verificationDigit, email, city, address, legalName, taxRegime
-        );
-
-        String targetPhone = (phone != null && !phone.isBlank()) ? phone.trim() : originalPhone;
-        String encodedPhone = UriUtils.encodeQueryParam(targetPhone, StandardCharsets.UTF_8);
-        return "redirect:/dashboard/" + slug + "/customers/detail?phone=" + encodedPhone + "&success=true";
+        try {
+            customerService.updateCustomerData(
+                    originalPhone, name, phone, documentType, document,
+                    verificationDigit, email, city, address, legalName, taxRegime
+            );
+            String targetPhone = (phone != null && !phone.isBlank()) ? phone.trim() : originalPhone;
+            String encodedPhone = UriUtils.encodeQueryParam(targetPhone, StandardCharsets.UTF_8);
+            return "redirect:/dashboard/" + slug + "/customers/detail?phone=" + encodedPhone + "&success=true";
+        } catch (RuntimeException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+            String encodedOriginal = UriUtils.encodeQueryParam(originalPhone, StandardCharsets.UTF_8);
+            return "redirect:/dashboard/" + slug + "/customers/detail?phone=" + encodedOriginal + "&error=true";
+        }
     }
 }

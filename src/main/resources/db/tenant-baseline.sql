@@ -128,9 +128,38 @@ CREATE TABLE IF NOT EXISTS product_images (
 -- OMS: MÓDULO DE PEDIDOS, HISTORIAL, NOTAS Y RESEÑAS
 -- ============================================================
 
+CREATE TABLE IF NOT EXISTS customers (
+                                         id                          BIGINT AUTO_INCREMENT PRIMARY KEY,
+                                         phone_key                   VARCHAR(40)    NOT NULL,
+    name                        VARCHAR(100)   NOT NULL,
+    phone                       VARCHAR(20)    NOT NULL,
+    email                       VARCHAR(120)   NULL,
+    document_type               VARCHAR(10)    NULL,
+    document                    VARCHAR(30)    NULL,
+    verification_digit          VARCHAR(5)     NULL,
+    legal_name                  VARCHAR(150)   NULL,
+    tax_regime                  VARCHAR(40)    NULL,
+    requires_electronic_invoice BOOLEAN        DEFAULT FALSE,
+    address                     VARCHAR(200)   NULL,
+    city                        VARCHAR(100)   NULL,
+    total_orders                BIGINT         NOT NULL DEFAULT 0,
+    total_spent                 DOUBLE         NOT NULL DEFAULT 0.0,
+    last_order_date             DATETIME       NULL,
+    last_channel                VARCHAR(20)    NULL,
+    channels_csv                VARCHAR(60)    NULL,
+    created_at                  TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at                  TIMESTAMP      DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_customers_phone_key (phone_key),
+    INDEX idx_customers_last_order (last_order_date, id),
+    INDEX idx_customers_total_spent (total_spent, id),
+    INDEX idx_customers_total_orders (total_orders, id),
+    INDEX idx_customers_name (name)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS orders (
                                       id                          BIGINT AUTO_INCREMENT PRIMARY KEY,
                                       public_token                VARCHAR(64)    NOT NULL,
+    customer_id                 BIGINT         NULL,
     customer_name               VARCHAR(100)   NOT NULL,
     customer_phone              VARCHAR(20)    NOT NULL,
     customer_email              VARCHAR(120)   NULL,
@@ -151,11 +180,12 @@ CREATE TABLE IF NOT EXISTS orders (
     created_at                  TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at                  TIMESTAMP      DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY uk_orders_public_token (public_token),
+    CONSTRAINT fk_orders_customer FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL,
+    INDEX idx_orders_customer_id (customer_id, created_at),
     INDEX idx_orders_status_created (status, created_at),
     INDEX idx_orders_channel_created (channel, created_at),
     INDEX idx_orders_customer_phone (customer_phone, created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 CREATE TABLE IF NOT EXISTS order_history (
                                              id              BIGINT AUTO_INCREMENT PRIMARY KEY,
                                              order_id        BIGINT         NOT NULL,

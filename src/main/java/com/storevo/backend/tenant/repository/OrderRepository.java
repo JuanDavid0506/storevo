@@ -22,6 +22,10 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     Optional<Order> findByIdAndPublicToken(Long id, String publicToken);
 
+    List<Order> findByCustomerIdOrderByCreatedAtDesc(Long customerId);
+
+    List<Order> findByCustomerPhoneOrderByCreatedAtDesc(String customerPhone);
+
     List<Order> findAllByOrderByCreatedAtDesc();
 
     // Listado paginado del dashboard: búsqueda + estado + canal + rango de fechas en base de datos.

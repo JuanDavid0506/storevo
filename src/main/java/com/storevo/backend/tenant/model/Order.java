@@ -22,6 +22,12 @@ public class Order {
     @Column(name = "public_token", nullable = false, length = 64, unique = true, updatable = false)
     private String publicToken;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "customer_id")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private Customer customer;
+
     @Column(nullable = false, length = 100)
     private String customerName;
 

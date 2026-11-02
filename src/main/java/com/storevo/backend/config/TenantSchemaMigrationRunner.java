@@ -68,7 +68,8 @@ public class TenantSchemaMigrationRunner implements CommandLineRunner {
             // --- Evolución de product_images ---
             new ColumnMigration("product_images", "variant_id", "BIGINT NULL"),
 
-            // --- Evolución de orders (token público, datos DIAN y control de stock) ---
+            // --- Evolución de orders (token público, customer_id, datos DIAN y control de stock) ---
+            new ColumnMigration("orders", "customer_id", "BIGINT NULL"),
             new ColumnMigration(
                     "orders",
                     "public_token",
@@ -96,6 +97,7 @@ public class TenantSchemaMigrationRunner implements CommandLineRunner {
 
     private static final List<IndexMigration> TENANT_INDEX_MIGRATIONS = List.of(
             new IndexMigration("orders", "uk_orders_public_token", "`public_token`", true),
+            new IndexMigration("orders", "idx_orders_customer_id", "`customer_id`, `created_at`", false),
             new IndexMigration("orders", "idx_orders_status_created", "`status`, `created_at`", false),
             new IndexMigration("orders", "idx_orders_customer_phone", "`customer_phone`, `created_at`", false),
             new IndexMigration("order_items", "idx_order_items_product", "`product_id`, `order_id`", false),
@@ -151,10 +153,88 @@ public class TenantSchemaMigrationRunner implements CommandLineRunner {
                 addIndexIfMissing(schema, idx.table(), idx.indexName(), idx.columnsSql(), idx.unique());
             }
 
+            // 5. Poblar tabla customers y vincular orders.customer_id desde pedidos históricos (Objetivo A7)
+            backfillCustomersFromExistingOrders(schema);
+
             log.info("TenantSchemaMigrationRunner: esquema '{}' sincronizado correctamente.", schema);
         } catch (Exception e) {
             log.error("TenantSchemaMigrationRunner: error migrando esquema '{}': {}", schema, e.getMessage());
         }
+    }
+
+    private void backfillCustomersFromExistingOrders(String schema) {
+        if (!tableExists(schema, "customers") || !tableExists(schema, "orders")) {
+            return;
+        }
+        Integer unlinkedCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM `" + schema + "`.orders WHERE customer_id IS NULL",
+                Integer.class
+        );
+        if (unlinkedCount == null || unlinkedCount == 0) {
+            return;
+        }
+
+        // 1. Insertar o actualizar clientes consolidados desde los pedidos existentes
+        String upsertCustomersSql =
+                "INSERT INTO `" + schema + "`.customers (" +
+                        "  phone_key, name, phone, email, document_type, document, verification_digit, " +
+                        "  legal_name, tax_regime, requires_electronic_invoice, address, city, " +
+                        "  total_orders, total_spent, last_order_date, last_channel, channels_csv, created_at, updated_at" +
+                        ") " +
+                        "SELECT " +
+                        "  CASE " +
+                        "    WHEN REGEXP_REPLACE(o.customer_phone, '[^0-9]', '') LIKE '57__________' " +
+                        "      THEN SUBSTRING(REGEXP_REPLACE(o.customer_phone, '[^0-9]', ''), 3) " +
+                        "    WHEN REGEXP_REPLACE(o.customer_phone, '[^0-9]', '') <> '' " +
+                        "      THEN LEFT(REGEXP_REPLACE(o.customer_phone, '[^0-9]', ''), 35) " +
+                        "    ELSE CONCAT('NAME_', MIN(o.id)) " +
+                        "  END AS phone_key, " +
+                        "  SUBSTRING_INDEX(GROUP_CONCAT(o.customer_name ORDER BY o.created_at DESC SEPARATOR '||'), '||', 1) AS name, " +
+                        "  SUBSTRING_INDEX(GROUP_CONCAT(o.customer_phone ORDER BY o.created_at DESC SEPARATOR '||'), '||', 1) AS phone, " +
+                        "  SUBSTRING_INDEX(GROUP_CONCAT(NULLIF(o.customer_email, '') ORDER BY o.created_at DESC SEPARATOR '||'), '||', 1) AS email, " +
+                        "  SUBSTRING_INDEX(GROUP_CONCAT(NULLIF(o.document_type, '') ORDER BY o.created_at DESC SEPARATOR '||'), '||', 1) AS document_type, " +
+                        "  SUBSTRING_INDEX(GROUP_CONCAT(NULLIF(o.customer_document, '') ORDER BY o.created_at DESC SEPARATOR '||'), '||', 1) AS document, " +
+                        "  SUBSTRING_INDEX(GROUP_CONCAT(NULLIF(o.verification_digit, '') ORDER BY o.created_at DESC SEPARATOR '||'), '||', 1) AS verification_digit, " +
+                        "  SUBSTRING_INDEX(GROUP_CONCAT(NULLIF(o.legal_name, '') ORDER BY o.created_at DESC SEPARATOR '||'), '||', 1) AS legal_name, " +
+                        "  SUBSTRING_INDEX(GROUP_CONCAT(NULLIF(o.tax_regime, '') ORDER BY o.created_at DESC SEPARATOR '||'), '||', 1) AS tax_regime, " +
+                        "  MAX(COALESCE(o.requires_electronic_invoice, 0)) AS requires_electronic_invoice, " +
+                        "  SUBSTRING_INDEX(GROUP_CONCAT(NULLIF(o.address, '') ORDER BY o.created_at DESC SEPARATOR '||'), '||', 1) AS address, " +
+                        "  SUBSTRING_INDEX(GROUP_CONCAT(NULLIF(o.city, '') ORDER BY o.created_at DESC SEPARATOR '||'), '||', 1) AS city, " +
+                        "  COUNT(o.id) AS total_orders, " +
+                        "  COALESCE(SUM(CASE WHEN o.status NOT IN ('CANCELLED', 'REFUNDED') THEN o.total ELSE 0 END), 0) AS total_spent, " +
+                        "  MAX(o.created_at) AS last_order_date, " +
+                        "  SUBSTRING_INDEX(GROUP_CONCAT(o.channel ORDER BY o.created_at DESC SEPARATOR ','), ',', 1) AS last_channel, " +
+                        "  GROUP_CONCAT(DISTINCT o.channel ORDER BY o.channel ASC SEPARATOR ',') AS channels_csv, " +
+                        "  MIN(o.created_at) AS created_at, " +
+                        "  NOW() AS updated_at " +
+                        "FROM `" + schema + "`.orders o " +
+                        "GROUP BY phone_key " +
+                        "ON DUPLICATE KEY UPDATE " +
+                        "  total_orders = VALUES(total_orders), " +
+                        "  total_spent = VALUES(total_spent), " +
+                        "  last_order_date = VALUES(last_order_date), " +
+                        "  last_channel = VALUES(last_channel), " +
+                        "  channels_csv = VALUES(channels_csv)";
+
+        jdbcTemplate.execute(upsertCustomersSql);
+
+        // 2. Vincular orders.customer_id con el registro correspondiente en customers
+        String linkOrdersSql =
+                "UPDATE `" + schema + "`.orders o " +
+                        "JOIN `" + schema + "`.customers c ON c.phone_key = (" +
+                        "  CASE " +
+                        "    WHEN REGEXP_REPLACE(o.customer_phone, '[^0-9]', '') LIKE '57__________' " +
+                        "      THEN SUBSTRING(REGEXP_REPLACE(o.customer_phone, '[^0-9]', ''), 3) " +
+                        "    WHEN REGEXP_REPLACE(o.customer_phone, '[^0-9]', '') <> '' " +
+                        "      THEN LEFT(REGEXP_REPLACE(o.customer_phone, '[^0-9]', ''), 35) " +
+                        "    ELSE CONCAT('NAME_', o.id) " +
+                        "  END" +
+                        ") " +
+                        "SET o.customer_id = c.id " +
+                        "WHERE o.customer_id IS NULL";
+
+        int linked = jdbcTemplate.update(linkOrdersSql);
+        log.info("TenantSchemaMigrationRunner: {} pedido(s) histórico(s) vinculados a la tabla customers en '{}'", linked, schema);
     }
 
     private void executeIdempotentBaselineTables(String schema) {

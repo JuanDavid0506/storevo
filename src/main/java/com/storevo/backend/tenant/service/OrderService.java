@@ -42,6 +42,7 @@ public class OrderService {
     private final ProductVariantRepository variantRepository;
     private final CartManager cartManager;
     private final InventoryService inventoryService;
+    private final CustomerService customerService;
     private final StoreIntegrationRepository integrationRepository;
 
     @Autowired
@@ -327,6 +328,9 @@ public class OrderService {
 
         order.getHistory().add(historyObj);
 
+        Customer customer = customerService.syncCustomerOnOrderCreated(order);
+        order.setCustomer(customer);
+
         Order savedOrder = orderRepository.save(order);
         cartManager.clearCart(slug);
 
@@ -448,7 +452,13 @@ public class OrderService {
                 .build();
 
         order.getHistory().add(historyObj);
-        orderRepository.save(order);
+        Order savedOrder = orderRepository.save(order);
+
+        if ((newStatus == OrderStatus.CANCELLED || newStatus == OrderStatus.REFUNDED)
+                && savedOrder.getCustomer() != null) {
+            customerService.recalculateCustomerMetrics(savedOrder.getCustomer());
+        }
+
         return historyObj;
     }
 
