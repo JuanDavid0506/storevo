@@ -56,7 +56,7 @@
             <div th:if="${existingReview == null}" class="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-3">
                 <h3 class="text-sm font-black text-slate-900">¿Qué te pareció hacer tu pedido en nuestra tienda?</h3>
                 <p class="text-xs text-slate-500">Deja tu calificación verificada para ayudar a otros compradores.</p>
-                <form th:action="@{/s/{slug}/order/{id}/review(slug=${slug}, id=${order.id}, token=${order.publicToken})}" method="POST" class="space-y-3">
+                <form th:action="@{/s/{slug}/order/{token}/review(slug=${slug}, token=${order.publicToken})}" method="POST" class="space-y-3">
                     <input type="hidden" name="origin" value="whatsapp">
                     <input type="hidden" name="token" th:value="${order.publicToken}">
                     <div>

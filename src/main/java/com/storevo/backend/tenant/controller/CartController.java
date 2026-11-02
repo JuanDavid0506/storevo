@@ -388,7 +388,7 @@ public class CartController {
                     documentType, finalDoc, verificationDigit, legalName, taxRegime, requiresElectronicInvoice,
                     address, city, notes, OrderChannel.ONLINE
             );
-            return "redirect:/s/" + slug + "/order/" + order.getId() + "/success?token=" + order.getPublicToken();
+            return "redirect:/s/" + slug + "/order/" + order.getPublicToken() + "/success";
         } catch (Exception e) {
             e.printStackTrace();
             redirectAttributes.addFlashAttribute("checkoutError", e.getMessage() != null ? e.getMessage() : "No se pudo procesar tu pedido. Verifica los datos e intenta nuevamente.");
@@ -423,7 +423,7 @@ public class CartController {
                     documentType, finalDoc, verificationDigit, legalName, taxRegime, requiresElectronicInvoice,
                     address, city, notes, OrderChannel.WHATSAPP
             );
-            return "redirect:/s/" + slug + "/order/" + order.getId() + "/whatsapp?token=" + order.getPublicToken();
+            return "redirect:/s/" + slug + "/order/" + order.getPublicToken() + "/whatsapp";
         } catch (Exception e) {
             e.printStackTrace();
             redirectAttributes.addFlashAttribute("checkoutError", e.getMessage() != null ? e.getMessage() : "No se pudo registrar tu pedido. Verifica los datos e intenta nuevamente.");

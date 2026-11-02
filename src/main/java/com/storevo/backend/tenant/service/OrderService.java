@@ -152,12 +152,12 @@ public class OrderService {
     }
 
     @Transactional(readOnly = true)
-    public Order getOrderByIdAndToken(Long id, String publicToken) {
+    public Order getOrderByPublicToken(String publicToken) {
         if (publicToken == null || publicToken.isBlank()) {
-            throw new OrderNotFoundException(id);
+            throw new OrderNotFoundException("vacio");
         }
-        Order order = orderRepository.findByIdAndPublicToken(id, publicToken.trim())
-                .orElseThrow(() -> new OrderNotFoundException(id));
+        Order order = orderRepository.findByPublicToken(publicToken.trim())
+                .orElseThrow(() -> new OrderNotFoundException(publicToken));
         order.getItems().size();
         order.getHistory().size();
         order.getInternalNotes().size();

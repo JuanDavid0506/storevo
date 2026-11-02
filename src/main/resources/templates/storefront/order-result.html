@@ -60,7 +60,7 @@
             <div th:if="${existingReview == null}" class="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-3">
                 <h3 class="text-sm font-black text-slate-900">¿Qué te pareció comprar en nuestra tienda?</h3>
                 <p class="text-xs text-slate-500">Tu opinión real ayuda a otros compradores y se publica con sello de pedido verificado.</p>
-                <form th:action="@{/s/{slug}/order/{id}/review(slug=${slug}, id=${order.id}, token=${order.publicToken})}" method="POST" class="space-y-3">
+                <form th:action="@{/s/{slug}/order/{token}/review(slug=${slug}, token=${order.publicToken})}" method="POST" class="space-y-3">
                     <input type="hidden" name="origin" value="result">
                     <input type="hidden" name="token" th:value="${order.publicToken}">
                     <div>
@@ -93,12 +93,12 @@
 
         <div class="flex flex-col sm:flex-row justify-center gap-3">
             <a th:if="${!isPaid and wompiTransactionId != null and !wompiTransactionId.isBlank()}"
-               th:href="@{/s/{slug}/order/{id}/wompi-result(slug=${slug}, id=${order.id}, token=${order.publicToken}, txId=${wompiTransactionId})}"
+               th:href="@{/s/{slug}/order/{token}/wompi-result(slug=${slug}, token=${order.publicToken}, id=${wompiTransactionId})}"
                class="inline-block bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 px-6 rounded-xl shadow-md transition">
                 Actualizar estado del pago
             </a>
             <a th:if="${!isPaid and (wompiTransactionId == null or wompiTransactionId.isBlank())}"
-               th:href="@{/s/{slug}/order/{id}/success(slug=${slug}, id=${order.id}, token=${order.publicToken})}"
+               th:href="@{/s/{slug}/order/{token}/success(slug=${slug}, token=${order.publicToken})}"
                class="inline-block bg-brand hover-bg-brand text-white font-bold py-3 px-8 rounded-xl shadow-md transition">
                 Ir a pagar ahora
             </a>
