@@ -937,31 +937,48 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
-    public Map<Long, Map<String, Object>> getBulkStatistics(List<Long> productIds) {
-        Map<Long, Map<String, Object>> statsMap = new HashMap<>();
-        if (productIds == null || productIds.isEmpty()) return statsMap;
+    public Map<Long, Map<String, Object> > getBulkStatistics(List<Long> productIds) {
+        Map<Long, Map<String, Object> > statsMap = new HashMap<>();
+        if (productIds == null || productIds.isEmpty()) {
+            return statsMap;
+        }
 
-        for (Long id : productIds) {
+        List<Long> uniqueIds = productIds.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+
+        if (uniqueIds.isEmpty()) {
+            return statsMap;
+        }
+
+        for (Long id : uniqueIds) {
             Map<String, Object> productStats = new HashMap<>();
             productStats.put("sold", 0L);
             productStats.put("lastSale", "Sin ventas");
             statsMap.put(id, productStats);
         }
 
-        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-        List<Object[]> rows = orderRepository.findProductSalesStatistics(productIds, VALID_SALES_STATUSES);
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        List<Object[]> rows = orderRepository.findProductSalesStatistics(uniqueIds, VALID_SALES_STATUSES);
+
         for (Object[] row : rows) {
             if (row == null || row[0] == null) continue;
             Long prodId = ((Number) row[0]).longValue();
-            long soldQty = row[1] != null ? ((Number) row[1]).longValue() : 0L;
-            String lastSaleStr = "Sin ventas";
-            if (row[2] instanceof LocalDateTime ldt) {
-                lastSaleStr = ldt.format(fmt);
+            long totalSold = row[1] != null ? ((Number) row[1]).longValue() : 0L;
+
+            String lastSaleText = "Sin ventas";
+            if (row[2] instanceof LocalDateTime lastSaleDate) {
+                lastSaleText = lastSaleDate.format(formatter);
+            } else if (row[2] instanceof java.sql.Timestamp ts) {
+                lastSaleText = ts.toLocalDateTime().format(formatter);
             }
+
             Map<String, Object> productStats = statsMap.computeIfAbsent(prodId, k -> new HashMap<>());
-            productStats.put("sold", soldQty);
-            productStats.put("lastSale", lastSaleStr);
+            productStats.put("sold", totalSold);
+            productStats.put("lastSale", totalSold > 0 ? lastSaleText : "Sin ventas");
         }
+
         return statsMap;
     }
 }

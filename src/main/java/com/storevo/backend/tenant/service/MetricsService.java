@@ -5,7 +5,9 @@ import com.storevo.backend.tenant.model.OrderStatus;
 import com.storevo.backend.tenant.repository.OrderRepository;
 import com.storevo.backend.tenant.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 
@@ -16,39 +18,41 @@ public class MetricsService {
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
 
-    public DashboardMetricsDto getMetrics() {
-        // Estados que ya representan ventas confirmadas / flujo de caja válido (incluyendo CONFIRMED y PACKED)
-        List<OrderStatus> validStatuses = Arrays.asList(
-                OrderStatus.PAID,
-                OrderStatus.CONFIRMED,
-                OrderStatus.PREPARING,
-                OrderStatus.PACKED,
-                OrderStatus.SHIPPED,
-                OrderStatus.DELIVERED
-        );
+    private static final List<OrderStatus> VALID_SALES_STATUSES = List.of(
+            OrderStatus.PAID,
+            OrderStatus.CONFIRMED,
+            OrderStatus.PREPARING,
+            OrderStatus.PACKED,
+            OrderStatus.SHIPPED,
+            OrderStatus.DELIVERED
+    );
 
-        Double totalRevenue = orderRepository.sumTotalByStatuses(validStatuses);
+    @Transactional(readOnly = true)
+    public DashboardMetricsDto getMetrics() {
+        Double totalRevenue = orderRepository.sumTotalByStatuses(VALID_SALES_STATUSES);
         Long totalOrders = orderRepository.count();
         Long pendingOrders = orderRepository.countByStatus(OrderStatus.PENDING);
 
-        ProductRepository.ProductCountsProjection counts = productRepository.countProductsByStatus();
-        Long activeProducts = (counts != null && counts.getActivos() != null) ? counts.getActivos() : 0L;
+        ProductRepository.ProductCountsProjection productCounts = productRepository.countProductsByStatus();
+        Long activeProducts = (productCounts != null && productCounts.getActivos() != null)
+                ? productCounts.getActivos()
+                : 0L;
 
-        // Procesar el ranking de productos más vendidos (Limitado a Top 5)
-        List<Object[]> rawTopProducts = orderRepository.findTopSellingProducts();
-        List<Map<String, Object>> topProductsList = new ArrayList<>();
+        // Top 5 productos más vendidos filtrados por estados válidos y limitados con Pageable en BD
+        List<Object[]> rawTopProducts = orderRepository.findTopSellingProducts(
+                VALID_SALES_STATUSES, PageRequest.of(0, 5));
+        List< Map<String, Object> > topProductsList = new ArrayList<>();
 
-        int limit = Math.min(rawTopProducts.size(), 5);
-        for (int i = 0; i < limit; i++) {
-            Object[] row = rawTopProducts.get(i);
+        for (Object[] row : rawTopProducts) {
+            if (row == null) continue;
             Map<String, Object> item = new HashMap<>();
             item.put("name", row[0]);
-            item.put("units", row[1]);
+            item.put("units", row[1] != null ? ((Number) row[1]).longValue() : 0L);
             topProductsList.add(item);
         }
 
         return DashboardMetricsDto.builder()
-                .totalRevenue(totalRevenue)
+                .totalRevenue(totalRevenue != null ? totalRevenue : 0.0)
                 .totalOrdersCount(totalOrders)
                 .pendingOrdersCount(pendingOrders)
                 .activeProductsCount(activeProducts)

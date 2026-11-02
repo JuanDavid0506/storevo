@@ -423,7 +423,7 @@ public class StoreThemeService {
                 source = "CATEGORY";
             }
 
-            List> hydratedTabs = new ArrayList<>();
+            List<Map<String, Object>> hydratedTabs = new ArrayList<>();
             if (section.settingBool("enableTabs", false)) {
                 for (int i = 1; i <= 4; i++) {
                     String tabLabel = section.settingStr("tab" + i + "Label", "");
