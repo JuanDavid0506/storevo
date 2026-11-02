@@ -1,4 +1,4 @@
-package com.storevo.backend.admin.config;
+package com.storevo.backend.config;
 
 import com.storevo.backend.admin.model.Store;
 import com.storevo.backend.admin.repository.StoreRepository;
