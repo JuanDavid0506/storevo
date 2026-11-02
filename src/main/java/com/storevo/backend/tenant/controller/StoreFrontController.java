@@ -493,7 +493,7 @@ public class StoreFrontController {
             Model model) {
 
         Product product = productService.getProductById(id);
-        if (Boolean.TRUE.equals(product.getIsDeleted())) {
+        if (!productService.isProductPubliclyVisible(product)) {
             boolean isDraft = "draft".equalsIgnoreCase(request.getParameter("preview"));
             return "redirect:/s/" + slug + "/catalog" + (isDraft ? "?preview=draft" : "");
         }

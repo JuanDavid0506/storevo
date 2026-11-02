@@ -56,6 +56,71 @@ public class CategoryService {
         }
     }
 
+    /**
+     * Verifica que la categoría y todos sus ancestros (categoría padre y abuela) estén activos.
+     */
+    public boolean isCategoryBranchActive(Category category) {
+        if (category == null) {
+            return false;
+        }
+        Category current = category;
+        int depth = 0;
+        while (current != null && depth < 10) {
+            if (!Boolean.TRUE.equals(current.getIsActive())) {
+                return false;
+            }
+            current = current.getParentCategory();
+            depth++;
+        }
+        return true;
+    }
+
+    /**
+     * Verifica que el producto no tenga categoría o que toda la rama de su categoría esté activa.
+     */
+    public boolean isProductCategoryActive(com.storevo.backend.tenant.model.Product product) {
+        if (product == null) {
+            return false;
+        }
+        if (product.getCategory() == null) {
+            return true;
+        }
+        return isCategoryBranchActive(product.getCategory());
+    }
+
+    /**
+     * Exclusivo para el Storefront público (Objetivo A2):
+     * Si la categoría solicitada o alguno de sus padres está inactivo, devuelve lista vacía.
+     * Si está activa, recolecta su ID y únicamente los IDs de las subcategorías descendientes activas.
+     */
+    @Transactional(readOnly = true)
+    public List<Long> getActiveCategoryAndDescendantIds(Long categoryId) {
+        if (categoryId == null) {
+            return java.util.Collections.emptyList();
+        }
+        Category category = categoryRepository.findById(categoryId).orElse(null);
+        if (!isCategoryBranchActive(category)) {
+            return java.util.Collections.emptyList();
+        }
+        List<Long> ids = new ArrayList<>();
+        collectActiveIdsRecursive(category, ids);
+        return ids;
+    }
+
+    private void collectActiveIdsRecursive(Category category, List<Long> ids) {
+        if (category == null || !Boolean.TRUE.equals(category.getIsActive())) {
+            return;
+        }
+        ids.add(category.getId());
+        if (category.getSubCategories() != null) {
+            for (Category sub : category.getSubCategories()) {
+                if (sub != null && Boolean.TRUE.equals(sub.getIsActive())) {
+                    collectActiveIdsRecursive(sub, ids);
+                }
+            }
+        }
+    }
+
     // Arma el árbol completo de categorías (raíces + descendientes) como DTOs
     public List<CategoryTreeDto> getCategoryTree() {
         List<Category> roots = getRootCategories();

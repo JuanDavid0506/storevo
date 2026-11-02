@@ -1,6 +1,7 @@
 package com.storevo.backend.tenant.service;
 
 import com.storevo.backend.tenant.exception.InsufficientStockException;
+import com.storevo.backend.tenant.model.Category;
 import com.storevo.backend.tenant.model.Product;
 import com.storevo.backend.tenant.model.ProductVariant;
 import com.storevo.backend.tenant.repository.ProductRepository;
@@ -15,6 +16,25 @@ public class InventoryService {
 
     private final ProductRepository productRepository;
     private final ProductVariantRepository variantRepository;
+
+    /**
+     * Verifica que el producto no tenga categoría o que su categoría y todos sus padres estén activos (Objetivo A2).
+     */
+    private boolean isCategoryBranchActive(Product product) {
+        if (product == null) {
+            return false;
+        }
+        Category current = product.getCategory();
+        int depth = 0;
+        while (current != null && depth < 10) {
+            if (!Boolean.TRUE.equals(current.getIsActive())) {
+                return false;
+            }
+            current = current.getParentCategory();
+            depth++;
+        }
+        return true;
+    }
 
     private boolean hasValidEffectivePrice(Product product, ProductVariant variant) {
         if (product == null) return false;
@@ -41,7 +61,8 @@ public class InventoryService {
         if (product == null
                 || !Boolean.TRUE.equals(product.getIsActive())
                 || Boolean.TRUE.equals(product.getIsDeleted())
-                || Boolean.TRUE.equals(product.getIsDraft())) {
+                || Boolean.TRUE.equals(product.getIsDraft())
+                || !isCategoryBranchActive(product)) {
             return false;
         }
 
@@ -85,6 +106,10 @@ public class InventoryService {
         // Bloqueo pesimista (SELECT ... FOR UPDATE) sobre el producto padre
         Product product = productRepository.findByIdWithLock(productId)
                 .orElseThrow(() -> new RuntimeException("Producto no encontrado."));
+
+        if (!isCategoryBranchActive(product)) {
+            throw new InsufficientStockException(product.getName());
+        }
 
         if (Boolean.TRUE.equals(product.getHasVariants())) {
             if (variantId == null) {

@@ -61,11 +61,28 @@ public class ProductService {
         return productRepository.findByIsDeletedFalseOrderByIdDesc();
     }
 
+    public boolean isProductPubliclyVisible(Product product) {
+        if (product == null) return false;
+        if (!Boolean.TRUE.equals(product.getIsActive())
+                || Boolean.TRUE.equals(product.getIsDeleted())
+                || Boolean.TRUE.equals(product.getIsDraft())) {
+            return false;
+        }
+        if (product.getBrandRef() != null && Boolean.FALSE.equals(product.getBrandRef().getIsActive())) {
+            return false;
+        }
+        return categoryService.isProductCategoryActive(product);
+    }
+
+    @Transactional(readOnly = true)
     public List<Product> getPublicCatalog(Long categoryId) {
         if (categoryId == null) {
             return productRepository.findByIsActiveTrueAndIsDeletedFalseOrderByIdDesc();
         }
-        List<Long> categoryIds = categoryService.getCategoryAndDescendantIds(categoryId);
+        List<Long> categoryIds = categoryService.getActiveCategoryAndDescendantIds(categoryId);
+        if (categoryIds == null || categoryIds.isEmpty()) {
+            return Collections.emptyList();
+        }
         return productRepository.findActiveProductsByCategoryIds(categoryIds);
     }
 
@@ -90,7 +107,7 @@ public class ProductService {
 
         List<Long> categoryIds = null;
         if (categoryId != null) {
-            categoryIds = categoryService.getCategoryAndDescendantIds(categoryId);
+            categoryIds = categoryService.getActiveCategoryAndDescendantIds(categoryId);
             if (categoryIds == null || categoryIds.isEmpty()) {
                 return new PageImpl<>(Collections.emptyList(), PageRequest.of(safePage, safeSize), 0);
             }
@@ -317,7 +334,7 @@ public class ProductService {
         if (categoryId == null) {
             return getNewestPublicProducts(safeLimit);
         }
-        List<Long> categoryIds = categoryService.getCategoryAndDescendantIds(categoryId);
+        List<Long> categoryIds = categoryService.getActiveCategoryAndDescendantIds(categoryId);
         if (categoryIds == null || categoryIds.isEmpty()) {
             return Collections.emptyList();
         }

@@ -32,6 +32,7 @@ public class StoreThemeService {
 
     private final ObjectMapper objectMapper;
     private final ProductService productService;
+    private final CategoryService categoryService;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -394,7 +395,7 @@ public class StoreThemeService {
             try {
                 if (targetId != null && targetId > 0) {
                     Product found = productService.getProductById(targetId);
-                    if (found != null && Boolean.TRUE.equals(found.getIsActive()) && !Boolean.TRUE.equals(found.getIsDeleted()) && !Boolean.TRUE.equals(found.getIsDraft())) {
+                    if (productService.isProductPubliclyVisible(found)) {
                         matched.add(found);
                     }
                 } else if ("__offer__".equalsIgnoreCase(rawProdId)) {
@@ -409,6 +410,7 @@ public class StoreThemeService {
             section.setResolvedProducts(matched);
             return;
         }
+
         if ("product_grid".equalsIgnoreCase(section.getType())) {
             String rawSource = section.settingStr("source", "NEWEST").toUpperCase(Locale.ROOT);
             String source = ALLOWED_PRODUCT_GRID_SOURCES.contains(rawSource) ? rawSource : "NEWEST";
@@ -421,23 +423,27 @@ public class StoreThemeService {
                 source = "CATEGORY";
             }
 
-            List<Map<String, Object>> hydratedTabs = new ArrayList<>();
+            List> hydratedTabs = new ArrayList<>();
             if (section.settingBool("enableTabs", false)) {
                 for (int i = 1; i <= 4; i++) {
                     String tabLabel = section.settingStr("tab" + i + "Label", "");
                     if (tabLabel.isEmpty()) continue;
+
                     String rawTabSrc = section.settingStr("tab" + i + "Source", i == 1 ? source : "NEWEST").toUpperCase(Locale.ROOT);
                     String tabSrc = ALLOWED_PRODUCT_GRID_SOURCES.contains(rawTabSrc) ? rawTabSrc : "NEWEST";
+
                     Long tabCatId = section.settingLong("tab" + i + "CategoryId");
                     if (tabCatId == null && i == 1 && "CATEGORY".equals(tabSrc)) {
                         tabCatId = categoryId;
                     }
+
                     Long tabBrandId = section.settingLong("tab" + i + "BrandId");
                     String tabBrandName = section.settingStr("tab" + i + "BrandName", "");
                     if (tabBrandId == null && tabBrandName.isEmpty() && i == 1 && "BRAND".equals(tabSrc)) {
                         tabBrandId = section.settingLong("brandId");
                         tabBrandName = section.settingStr("brandName", "");
                     }
+
                     List<Long> tabManualIds = section.settingLongList("tab" + i + "ProductIds");
                     if (tabManualIds.isEmpty() && i == 1 && "MANUAL".equals(tabSrc)) {
                         tabManualIds = section.settingLongList("productIds");
@@ -503,6 +509,9 @@ public class StoreThemeService {
         String safeSort = (defaultSort != null && ALLOWED_PRODUCT_GRID_SORTS.contains(defaultSort)) ? defaultSort : "default";
         switch (source) {
             case "CATEGORY": {
+                if (categoryId != null && categoryService.getActiveCategoryAndDescendantIds(categoryId).isEmpty()) {
+                    return new org.springframework.data.domain.PageImpl<>(Collections.emptyList(), org.springframework.data.domain.PageRequest.of(0, pageSize), 0);
+                }
                 String cacheKey = "CATEGORY:" + (categoryId != null ? categoryId : "ALL") + ":" + safeSort + ":" + pageSize;
                 return pageCache.computeIfAbsent(cacheKey,
                         k -> productService.searchPublicCatalogPage(categoryId, null, null, null, false, false, false, null, null, safeSort, 0, pageSize, null));
@@ -589,6 +598,7 @@ public class StoreThemeService {
                             }
                         }
                     } catch (Exception ignored) {}
+                    if (!categoryService.isProductCategoryActive(managed)) continue;
 
                     Map<String, Object> pMeta = new LinkedHashMap<>();
                     String name = managed.getName() != null ? managed.getName().trim() : "";

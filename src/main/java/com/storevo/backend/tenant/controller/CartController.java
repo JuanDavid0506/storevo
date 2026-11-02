@@ -45,7 +45,7 @@ public class CartController {
         String itemKey = item.getProductId() + "-" + item.getVariantId();
         try {
             Product p = productService.getProductById(item.getProductId());
-            if (Boolean.TRUE.equals(p.getIsDeleted()) || !Boolean.TRUE.equals(p.getIsActive()) || Boolean.TRUE.equals(p.getIsDraft())) {
+            if (!productService.isProductPubliclyVisible(p)) {
                 return false;
             }
             ProductVariant v = null;
@@ -137,7 +137,7 @@ public class CartController {
 
         try {
             Product product = productService.getProductById(productId);
-            if (Boolean.TRUE.equals(product.getIsDeleted()) || !Boolean.TRUE.equals(product.getIsActive()) || Boolean.TRUE.equals(product.getIsDraft())) {
+            if (!productService.isProductPubliclyVisible(product)) {
                 cartManager.removeItem(guestId, productId, variantId);
                 redirectAttributes.addFlashAttribute("cartError", "Este producto ya no está disponible.");
                 return "redirect:/s/" + slug + "/cart";
@@ -238,9 +238,7 @@ public class CartController {
             return ResponseEntity.ok(Map.of("success", false, "message", "Producto no encontrado."));
         }
 
-        if (Boolean.TRUE.equals(product.getIsDeleted())
-                || !Boolean.TRUE.equals(product.getIsActive())
-                || Boolean.TRUE.equals(product.getIsDraft())) {
+        if (!productService.isProductPubliclyVisible(product)) {
             return ResponseEntity.ok(Map.of("success", false, "message", "Producto no disponible."));
         }
 

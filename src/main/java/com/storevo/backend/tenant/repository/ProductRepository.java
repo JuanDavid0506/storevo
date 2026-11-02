@@ -3,9 +3,9 @@ package com.storevo.backend.tenant.repository;
 import com.storevo.backend.tenant.model.Brand;
 import com.storevo.backend.tenant.model.OrderStatus;
 import com.storevo.backend.tenant.model.Product;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
@@ -26,21 +26,45 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     List<Product> findByIsDeletedFalseOrderByIdDesc();
 
+    @Query("SELECT p FROM Product p LEFT JOIN p.brandRef b LEFT JOIN p.category c LEFT JOIN c.parentCategory cp1 LEFT JOIN cp1.parentCategory cp2 " +
+            "WHERE p.isActive = true AND p.isDeleted = false AND p.isDraft = false " +
+            "AND (b IS NULL OR b.isActive = true) " +
+            "AND (c IS NULL OR (c.isActive = true AND (cp1 IS NULL OR (cp1.isActive = true AND (cp2 IS NULL OR cp2.isActive = true))))) " +
+            "ORDER BY p.id DESC")
     List<Product> findByIsActiveTrueAndIsDeletedFalseOrderByIdDesc();
 
-    @Query("SELECT p FROM Product p WHERE p.isActive = true AND p.isDeleted = false AND p.isDraft = false ORDER BY p.id DESC")
+    @Query("SELECT p FROM Product p LEFT JOIN p.brandRef b LEFT JOIN p.category c LEFT JOIN c.parentCategory cp1 LEFT JOIN cp1.parentCategory cp2 " +
+            "WHERE p.isActive = true AND p.isDeleted = false AND p.isDraft = false " +
+            "AND (b IS NULL OR b.isActive = true) " +
+            "AND (c IS NULL OR (c.isActive = true AND (cp1 IS NULL OR (cp1.isActive = true AND (cp2 IS NULL OR cp2.isActive = true))))) " +
+            "ORDER BY p.id DESC")
     List<Product> findActiveNewestProducts(Pageable pageable);
 
-    @Query("SELECT p FROM Product p WHERE p.isActive = true AND p.isDeleted = false AND p.isDraft = false AND p.discountPrice IS NOT NULL AND p.discountPrice > 0 AND (p.price IS NULL OR p.discountPrice < p.price) ORDER BY p.id DESC")
+    @Query("SELECT p FROM Product p LEFT JOIN p.brandRef b LEFT JOIN p.category c LEFT JOIN c.parentCategory cp1 LEFT JOIN cp1.parentCategory cp2 " +
+            "WHERE p.isActive = true AND p.isDeleted = false AND p.isDraft = false " +
+            "AND (b IS NULL OR b.isActive = true) " +
+            "AND (c IS NULL OR (c.isActive = true AND (cp1 IS NULL OR (cp1.isActive = true AND (cp2 IS NULL OR cp2.isActive = true))))) " +
+            "AND p.discountPrice IS NOT NULL AND p.discountPrice > 0 AND (p.price IS NULL OR p.discountPrice < p.price) " +
+            "ORDER BY p.id DESC")
     List<Product> findActiveOfferProducts(Pageable pageable);
 
-    @Query("SELECT p FROM Product p WHERE p.category.id IN :categoryIds AND p.isActive = true AND p.isDeleted = false ORDER BY p.id DESC")
+    @Query("SELECT p FROM Product p LEFT JOIN p.brandRef b LEFT JOIN p.category c LEFT JOIN c.parentCategory cp1 LEFT JOIN cp1.parentCategory cp2 " +
+            "WHERE c.id IN :categoryIds AND p.isActive = true AND p.isDeleted = false AND p.isDraft = false " +
+            "AND (b IS NULL OR b.isActive = true) " +
+            "AND c.isActive = true AND (cp1 IS NULL OR (cp1.isActive = true AND (cp2 IS NULL OR cp2.isActive = true))) " +
+            "ORDER BY p.id DESC")
     List<Product> findActiveProductsByCategoryIds(@Param("categoryIds") List<Long> categoryIds);
 
-    @Query("SELECT p FROM Product p WHERE p.category.id IN :categoryIds AND p.isActive = true AND p.isDeleted = false AND p.isDraft = false ORDER BY p.id DESC")
+    @Query("SELECT p FROM Product p LEFT JOIN p.brandRef b LEFT JOIN p.category c LEFT JOIN c.parentCategory cp1 LEFT JOIN cp1.parentCategory cp2 " +
+            "WHERE c.id IN :categoryIds AND p.isActive = true AND p.isDeleted = false AND p.isDraft = false " +
+            "AND (b IS NULL OR b.isActive = true) " +
+            "AND c.isActive = true AND (cp1 IS NULL OR (cp1.isActive = true AND (cp2 IS NULL OR cp2.isActive = true))) " +
+            "ORDER BY p.id DESC")
     List<Product> findActiveProductsByCategoryIds(@Param("categoryIds") List<Long> categoryIds, Pageable pageable);
 
-    @Query("SELECT p FROM Product p LEFT JOIN p.brandRef b WHERE p.isActive = true AND p.isDeleted = false AND p.isDraft = false " +
+    @Query("SELECT p FROM Product p LEFT JOIN p.brandRef b LEFT JOIN p.category c LEFT JOIN c.parentCategory cp1 LEFT JOIN cp1.parentCategory cp2 " +
+            "WHERE p.isActive = true AND p.isDeleted = false AND p.isDraft = false " +
+            "AND (c IS NULL OR (c.isActive = true AND (cp1 IS NULL OR (cp1.isActive = true AND (cp2 IS NULL OR cp2.isActive = true))))) " +
             "AND ((:brandId IS NOT NULL AND b.id = :brandId AND (b.isActive IS NULL OR b.isActive = true)) " +
             "OR (:brandName IS NOT NULL AND :brandName <> '' AND LOWER(p.brand) = LOWER(:brandName) AND (b IS NULL OR b.isActive = true))) " +
             "ORDER BY p.id DESC")
@@ -48,13 +72,23 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
                                             @Param("brandName") String brandName,
                                             Pageable pageable);
 
-    @Query("SELECT p FROM Product p WHERE p.isActive = true AND p.isDeleted = false AND p.isDraft = false AND p.isFeatured = true ORDER BY p.id DESC")
+    @Query("SELECT p FROM Product p LEFT JOIN p.brandRef b LEFT JOIN p.category c LEFT JOIN c.parentCategory cp1 LEFT JOIN cp1.parentCategory cp2 " +
+            "WHERE p.isActive = true AND p.isDeleted = false AND p.isDraft = false AND p.isFeatured = true " +
+            "AND (b IS NULL OR b.isActive = true) " +
+            "AND (c IS NULL OR (c.isActive = true AND (cp1 IS NULL OR (cp1.isActive = true AND (cp2 IS NULL OR cp2.isActive = true))))) " +
+            "ORDER BY p.id DESC")
     List<Product> findActiveFeaturedProducts(Pageable pageable);
 
-    @Query("SELECT p FROM Product p WHERE p.id IN :ids AND p.isActive = true AND p.isDeleted = false AND p.isDraft = false")
+    @Query("SELECT p FROM Product p LEFT JOIN p.brandRef b LEFT JOIN p.category c LEFT JOIN c.parentCategory cp1 LEFT JOIN cp1.parentCategory cp2 " +
+            "WHERE p.id IN :ids AND p.isActive = true AND p.isDeleted = false AND p.isDraft = false " +
+            "AND (b IS NULL OR b.isActive = true) " +
+            "AND (c IS NULL OR (c.isActive = true AND (cp1 IS NULL OR (cp1.isActive = true AND (cp2 IS NULL OR cp2.isActive = true)))))")
     List<Product> findActivePublicProductsByIdIn(@Param("ids") Collection<Long> ids);
 
-    @Query("SELECT p FROM Product p WHERE p.isActive = true AND p.isDeleted = false AND p.isDraft = false " +
+    @Query("SELECT p FROM Product p LEFT JOIN p.brandRef b LEFT JOIN p.category c LEFT JOIN c.parentCategory cp1 LEFT JOIN cp1.parentCategory cp2 " +
+            "WHERE p.isActive = true AND p.isDeleted = false AND p.isDraft = false " +
+            "AND (b IS NULL OR b.isActive = true) " +
+            "AND (c IS NULL OR (c.isActive = true AND (cp1 IS NULL OR (cp1.isActive = true AND (cp2 IS NULL OR cp2.isActive = true))))) " +
             "AND (:q IS NULL OR :q = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :q, '%')) " +
             "OR LOWER(p.sku) LIKE LOWER(CONCAT('%', :q, '%')) " +
             "OR LOWER(p.brand) LIKE LOWER(CONCAT('%', :q, '%'))) " +
@@ -82,10 +116,11 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             @Param("quick") String quick,
             Pageable pageable);
 
-    @Query(value = "SELECT p FROM Product p LEFT JOIN p.brandRef b WHERE " +
+    @Query(value = "SELECT p FROM Product p LEFT JOIN p.brandRef b LEFT JOIN p.category c LEFT JOIN c.parentCategory cp1 LEFT JOIN cp1.parentCategory cp2 WHERE " +
             "p.isActive = true AND p.isDeleted = false AND p.isDraft = false AND " +
             "(b IS NULL OR b.isActive = true) AND " +
-            "(:categoryIds IS NULL OR p.category.id IN :categoryIds) AND " +
+            "(c IS NULL OR (c.isActive = true AND (cp1 IS NULL OR (cp1.isActive = true AND (cp2 IS NULL OR cp2.isActive = true))))) AND " +
+            "(:categoryIds IS NULL OR c.id IN :categoryIds) AND " +
             "(:brandId IS NULL OR b.id = :brandId) AND " +
             "(:brandName IS NULL OR :brandName = '' OR LOWER(p.brand) = LOWER(:brandName)) AND " +
             "(:q IS NULL OR :q = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :q, '%')) " +
@@ -103,10 +138,11 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             "CASE WHEN :sortMode = 'discount_desc' THEN (CASE WHEN p.discountPrice IS NOT NULL AND p.discountPrice > 0 AND p.price IS NOT NULL AND p.price > p.discountPrice THEN ((p.price - p.discountPrice) * 100.0 / p.price) ELSE 0.0 END) END DESC, " +
             "CASE WHEN :sortMode = 'name_asc' THEN LOWER(p.name) END ASC, " +
             "p.id DESC",
-            countQuery = "SELECT COUNT(p) FROM Product p LEFT JOIN p.brandRef b WHERE " +
+            countQuery = "SELECT COUNT(p) FROM Product p LEFT JOIN p.brandRef b LEFT JOIN p.category c LEFT JOIN c.parentCategory cp1 LEFT JOIN cp1.parentCategory cp2 WHERE " +
                     "p.isActive = true AND p.isDeleted = false AND p.isDraft = false AND " +
                     "(b IS NULL OR b.isActive = true) AND " +
-                    "(:categoryIds IS NULL OR p.category.id IN :categoryIds) AND " +
+                    "(c IS NULL OR (c.isActive = true AND (cp1 IS NULL OR (cp1.isActive = true AND (cp2 IS NULL OR cp2.isActive = true))))) AND " +
+                    "(:categoryIds IS NULL OR c.id IN :categoryIds) AND " +
                     "(:brandId IS NULL OR b.id = :brandId) AND " +
                     "(:brandName IS NULL OR :brandName = '' OR LOWER(p.brand) = LOWER(:brandName)) AND " +
                     "(:q IS NULL OR :q = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :q, '%')) " +
@@ -132,18 +168,20 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             @Param("sortMode") String sortMode,
             Pageable pageable);
 
-    @Query(value = "SELECT p FROM Product p LEFT JOIN p.brandRef b WHERE " +
+    @Query(value = "SELECT p FROM Product p LEFT JOIN p.brandRef b LEFT JOIN p.category c LEFT JOIN c.parentCategory cp1 LEFT JOIN cp1.parentCategory cp2 WHERE " +
             "p.isActive = true AND p.isDeleted = false AND p.isDraft = false AND " +
             "(b IS NULL OR b.isActive = true) AND " +
+            "(c IS NULL OR (c.isActive = true AND (cp1 IS NULL OR (cp1.isActive = true AND (cp2 IS NULL OR cp2.isActive = true))))) AND " +
             "(:q IS NULL OR :q = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :q, '%')) " +
             "  OR LOWER(p.sku) LIKE LOWER(CONCAT('%', :q, '%')) " +
             "  OR LOWER(p.brand) LIKE LOWER(CONCAT('%', :q, '%'))) " +
             "ORDER BY (SELECT COALESCE(SUM(oi.quantity), 0) FROM OrderItem oi JOIN oi.order o " +
             "  WHERE oi.productId = p.id AND o.status IN :validStatuses) DESC, " +
             "p.isFeatured DESC, p.id DESC",
-            countQuery = "SELECT COUNT(p) FROM Product p LEFT JOIN p.brandRef b WHERE " +
+            countQuery = "SELECT COUNT(p) FROM Product p LEFT JOIN p.brandRef b LEFT JOIN p.category c LEFT JOIN c.parentCategory cp1 LEFT JOIN cp1.parentCategory cp2 WHERE " +
                     "p.isActive = true AND p.isDeleted = false AND p.isDraft = false AND " +
                     "(b IS NULL OR b.isActive = true) AND " +
+                    "(c IS NULL OR (c.isActive = true AND (cp1 IS NULL OR (cp1.isActive = true AND (cp2 IS NULL OR cp2.isActive = true))))) AND " +
                     "(:q IS NULL OR :q = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :q, '%')) " +
                     "  OR LOWER(p.sku) LIKE LOWER(CONCAT('%', :q, '%')) " +
                     "  OR LOWER(p.brand) LIKE LOWER(CONCAT('%', :q, '%')))")
@@ -152,9 +190,10 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             @Param("validStatuses") Collection<OrderStatus> validStatuses,
             Pageable pageable);
 
-    @Query(value = "SELECT p FROM Product p LEFT JOIN p.brandRef b WHERE " +
+    @Query(value = "SELECT p FROM Product p LEFT JOIN p.brandRef b LEFT JOIN p.category c LEFT JOIN c.parentCategory cp1 LEFT JOIN cp1.parentCategory cp2 WHERE " +
             "p.isActive = true AND p.isDeleted = false AND p.isDraft = false AND " +
             "(b IS NULL OR b.isActive = true) AND " +
+            "(c IS NULL OR (c.isActive = true AND (cp1 IS NULL OR (cp1.isActive = true AND (cp2 IS NULL OR cp2.isActive = true))))) AND " +
             "(:q IS NULL OR :q = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :q, '%')) " +
             "  OR LOWER(p.sku) LIKE LOWER(CONCAT('%', :q, '%')) " +
             "  OR LOWER(p.brand) LIKE LOWER(CONCAT('%', :q, '%'))) " +
@@ -165,9 +204,10 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             " (CASE WHEN (SELECT COALESCE(SUM(oi.quantity), 0) FROM OrderItem oi JOIN oi.order o WHERE oi.productId = p.id AND o.status IN :validStatuses) > 0 THEN 25 ELSE 0 END)) DESC, " +
             "(SELECT COALESCE(SUM(oi.quantity), 0) FROM OrderItem oi JOIN oi.order o WHERE oi.productId = p.id AND o.status IN :validStatuses) DESC, " +
             "p.id DESC",
-            countQuery = "SELECT COUNT(p) FROM Product p LEFT JOIN p.brandRef b WHERE " +
+            countQuery = "SELECT COUNT(p) FROM Product p LEFT JOIN p.brandRef b LEFT JOIN p.category c LEFT JOIN c.parentCategory cp1 LEFT JOIN cp1.parentCategory cp2 WHERE " +
                     "p.isActive = true AND p.isDeleted = false AND p.isDraft = false AND " +
                     "(b IS NULL OR b.isActive = true) AND " +
+                    "(c IS NULL OR (c.isActive = true AND (cp1 IS NULL OR (cp1.isActive = true AND (cp2 IS NULL OR cp2.isActive = true))))) AND " +
                     "(:q IS NULL OR :q = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :q, '%')) " +
                     "  OR LOWER(p.sku) LIKE LOWER(CONCAT('%', :q, '%')) " +
                     "  OR LOWER(p.brand) LIKE LOWER(CONCAT('%', :q, '%')))")
