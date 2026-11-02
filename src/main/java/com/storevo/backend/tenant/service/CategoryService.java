@@ -256,6 +256,18 @@ public class CategoryService {
 
     @Transactional
     public void saveCategory(CategoryDto dto) {
+        if (dto == null) {
+            throw new RuntimeException("Datos de categoría inválidos.");
+        }
+
+        String cleanName = dto.getName() != null ? dto.getName().trim().replaceAll("\\s+", " ") : "";
+        if (cleanName.isEmpty()) {
+            throw new RuntimeException("El nombre de la categoría no puede estar vacío.");
+        }
+        if (cleanName.length() > 100) {
+            cleanName = cleanName.substring(0, 100).trim();
+        }
+
         Category category;
         if (dto.getId() != null) {
             category = getCategoryById(dto.getId());
@@ -263,12 +275,32 @@ public class CategoryService {
             category = new Category();
         }
 
-        category.setName(dto.getName());
-        category.setDescription(dto.getDescription());
+        // Validar que no exista otra categoría con el mismo nombre bajo el mismo padre o en el nivel raíz
+        java.util.Optional<Category> duplicateOpt = (dto.getParentId() != null)
+                ? categoryRepository.findByParentIdAndNameIgnoreCase(dto.getParentId(), cleanName)
+                : categoryRepository.findRootByNameIgnoreCase(cleanName);
+
+        if (duplicateOpt.isPresent() && !duplicateOpt.get().getId().equals(category.getId())) {
+            throw new RuntimeException("Ya existe una categoría llamada \"" + duplicateOpt.get().getName() + "\" en este mismo nivel.");
+        }
+
+        category.setName(cleanName);
+        category.setDescription(dto.getDescription() != null ? dto.getDescription().trim() : null);
         category.setIsActive(dto.getIsActive() != null ? dto.getIsActive() : false);
         category.setDisplayOrder(dto.getDisplayOrder() != null ? dto.getDisplayOrder() : 0);
 
+        // Persistencia de imagen propia: actualizar si viene nueva URL, limpiar si se solicita eliminar, o conservar la actual al editar
+        if (dto.getImageUrl() != null && !dto.getImageUrl().isBlank()) {
+            category.setImageUrl(dto.getImageUrl().trim());
+        } else if (Boolean.TRUE.equals(dto.getRemoveImage())) {
+            category.setImageUrl(null);
+        }
+
         if (dto.getParentId() != null) {
+            if (category.getId() != null && category.getId().equals(dto.getParentId())) {
+                throw new RuntimeException("Movimiento inválido: Una categoría no puede ser padre de sí misma.");
+            }
+
             // CANDADO DE SEGURIDAD: Las subcategorías NUNCA van en el Navbar principal
             category.setShowInNav(false);
 
