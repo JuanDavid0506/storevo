@@ -84,4 +84,9 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             "GROUP BY o.customerPhone, o.customerName, o.city " +
             "ORDER BY MAX(o.createdAt) DESC")
     List<Object[]> findCustomerAggregates();
+
+    // Identifica las variantes de un producto que están referenciadas en pedidos previos (Objetivo A6)
+    @Query("SELECT DISTINCT oi.variantId FROM OrderItem oi WHERE oi.productId = :productId AND oi.variantId IS NOT NULL")
+    java.util.Set<Long> findReferencedVariantIdsByProductId(@Param("productId") Long productId);
+
 }

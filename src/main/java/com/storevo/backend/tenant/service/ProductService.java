@@ -469,15 +469,115 @@ public class ProductService {
         return product;
     }
 
+    private void validateProductDto(ProductDto dto, Product existingProduct) {
+        if (dto == null) {
+            throw new IllegalArgumentException("Los datos del producto son obligatorios.");
+        }
+
+        boolean isDraft = Boolean.TRUE.equals(dto.getIsDraft());
+        boolean hasVariants = Boolean.TRUE.equals(dto.getHasVariants());
+
+        String cleanName = dto.getName() != null ? dto.getName().trim() : "";
+        if (!isDraft && cleanName.isEmpty()) {
+            throw new IllegalArgumentException("El nombre del producto es obligatorio.");
+        }
+        if (cleanName.length() > 150) {
+            cleanName = cleanName.substring(0, 150).trim();
+        }
+        dto.setName(cleanName);
+
+        if (dto.getPrice() != null && (Double.isNaN(dto.getPrice()) || Double.isInfinite(dto.getPrice()) || dto.getPrice() < 0.0)) {
+            throw new IllegalArgumentException("El precio del producto no puede ser negativo.");
+        }
+        if (dto.getDiscountPrice() != null) {
+            if (Double.isNaN(dto.getDiscountPrice()) || Double.isInfinite(dto.getDiscountPrice()) || dto.getDiscountPrice() < 0.0) {
+                throw new IllegalArgumentException("El precio de descuento no puede ser negativo.");
+            }
+            if (dto.getDiscountPrice() == 0.0) {
+                dto.setDiscountPrice(null);
+            }
+        }
+        if (dto.getStock() != null && dto.getStock() < 0) {
+            throw new IllegalArgumentException("El stock del producto no puede ser negativo.");
+        }
+        if (dto.getWeight() != null && (Double.isNaN(dto.getWeight()) || Double.isInfinite(dto.getWeight()) || dto.getWeight() < 0.0)) {
+            throw new IllegalArgumentException("El peso del producto no puede ser negativo.");
+        }
+
+        if (hasVariants && dto.getVariants() != null) {
+            for (ProductDto.VariantDto v : dto.getVariants()) {
+                if (v == null) continue;
+                if (v.getPrice() != null && (Double.isNaN(v.getPrice()) || Double.isInfinite(v.getPrice()) || v.getPrice() < 0.0)) {
+                    throw new IllegalArgumentException("El precio de una variante no puede ser negativo.");
+                }
+                if (v.getStock() != null && v.getStock() < 0) {
+                    throw new IllegalArgumentException("El stock de una variante no puede ser negativo.");
+                }
+                if (v.getWeight() != null && (Double.isNaN(v.getWeight()) || Double.isInfinite(v.getWeight()) || v.getWeight() < 0.0)) {
+                    throw new IllegalArgumentException("El peso de una variante no puede ser negativo.");
+                }
+            }
+        }
+
+        if (!isDraft) {
+            if (!hasVariants) {
+                double basePrice = dto.getPrice() != null ? dto.getPrice() : 0.0;
+                if (basePrice <= 0.0) {
+                    throw new IllegalArgumentException("El precio del producto debe ser mayor a cero.");
+                }
+                if (dto.getDiscountPrice() != null && dto.getDiscountPrice() > 0.0 && dto.getDiscountPrice() >= basePrice) {
+                    throw new IllegalArgumentException("El precio de descuento debe ser menor al precio normal del producto.");
+                }
+            } else {
+                List<ProductDto.VariantDto> validVariants = dto.getVariants() != null
+                        ? dto.getVariants().stream()
+                        .filter(v -> v != null && v.getCombination() != null && !v.getCombination().isEmpty())
+                        .collect(Collectors.toList())
+                        : Collections.emptyList();
+
+                if (validVariants.isEmpty()) {
+                    throw new IllegalArgumentException("Debes configurar al menos una variante válida para publicar el producto.");
+                }
+
+                double fallbackBasePrice = (dto.getPrice() != null && dto.getPrice() > 0.0)
+                        ? dto.getPrice()
+                        : (existingProduct != null && existingProduct.getPrice() != null && existingProduct.getPrice() > 0.0
+                        ? existingProduct.getPrice() : 0.0);
+
+                if (dto.getDiscountPrice() != null && dto.getDiscountPrice() > 0.0
+                        && fallbackBasePrice > 0.0 && dto.getDiscountPrice() >= fallbackBasePrice) {
+                    throw new IllegalArgumentException("El precio de descuento debe ser menor al precio base del producto.");
+                }
+
+                for (ProductDto.VariantDto v : validVariants) {
+                    double vPrice = v.getPrice() != null ? v.getPrice() : 0.0;
+                    if (vPrice <= 0.0 && fallbackBasePrice <= 0.0) {
+                        throw new IllegalArgumentException("Todas las variantes deben tener un precio mayor a cero (o definir un precio base en el producto).");
+                    }
+                }
+            }
+        }
+    }
+
     @Transactional
     public void saveProduct(ProductDto dto) {
+        Product product;
+        boolean isNew = dto.getId() == null;
+
+        if (!isNew) {
+            product = getProductById(dto.getId());
+        } else {
+            product = new Product();
+        }
+
+        validateProductDto(dto, isNew ? null : product);
+
         if (dto.getSku() == null || dto.getSku().trim().isEmpty()) {
             long nextNumber = productRepository.findTopByOrderByIdDesc()
                     .map(p -> p.getId() + 1)
                     .orElse(1L);
             dto.setSku(String.format("PROD-%04d", nextNumber));
         }
-
         if (Boolean.TRUE.equals(dto.getHasVariants()) && dto.getVariants() != null) {
             int variantCounter = 1;
             for (ProductDto.VariantDto variant : dto.getVariants()) {
@@ -488,17 +588,9 @@ public class ProductService {
             }
         }
 
-        Product product;
-        boolean isNew = dto.getId() == null;
-
-        if (!isNew) {
-            product = getProductById(dto.getId());
-        } else {
-            product = new Product();
-        }
-
-        product.setName(dto.getName());
+        product.setName(dto.getName() != null ? dto.getName() : "");
         product.setDescription(dto.getDescription());
+
         // --- MARCA: se normaliza contra la tabla de marcas (Nike = nike = NIKE) ---
         String rawBrand = dto.getBrand();
         if ((rawBrand == null || rawBrand.isBlank()) && dto.getAttrKeys() != null && dto.getAttrValues() != null) {
@@ -513,6 +605,7 @@ public class ProductService {
         Brand brandEntity = brandService.resolveOrCreate(rawBrand);
         product.setBrandRef(brandEntity);
         product.setBrand(brandEntity != null ? brandEntity.getName() : null);
+
         product.setSku(dto.getSku());
         product.setIsActive(dto.getIsActive() != null ? dto.getIsActive() : false);
         product.setHasVariants(dto.getHasVariants() != null ? dto.getHasVariants() : false);
@@ -537,11 +630,9 @@ public class ProductService {
             for (int i = 0; i < dto.getAttrKeys().size(); i++) {
                 String k = dto.getAttrKeys().get(i);
                 String v = dto.getAttrValues().get(i);
-
                 String key = (k != null) ? k.trim() : "";
                 String value = (v != null) ? v.trim() : "";
-                if (key.equalsIgnoreCase("marca")) continue; // la marca ya no vive en la ficha técnica
-
+                if (key.equalsIgnoreCase("marca")) continue;
                 if (Boolean.TRUE.equals(product.getIsDraft())) {
                     attributes.put(key, value);
                 } else {
@@ -558,8 +649,13 @@ public class ProductService {
             product.setDiscountPrice(dto.getDiscountPrice());
             product.setStock(Boolean.TRUE.equals(product.getIsMadeToOrder()) ? 0 : (dto.getStock() != null ? dto.getStock() : 0));
             product.setWeight(dto.getWeight());
-            product.getOptions().clear();
-            product.getVariantsList().clear();
+            // Protección de variantes (Objetivo A6): desactivar variantes en vez de destruirlas físicamente
+            if (product.getVariantsList() != null && !product.getVariantsList().isEmpty()) {
+                for (ProductVariant oldVar : product.getVariantsList()) {
+                    oldVar.setIsActive(false);
+                    oldVar.setStock(0);
+                }
+            }
         } else {
             product.setDiscountPrice(dto.getDiscountPrice());
             if (dto.getPrice() != null && dto.getPrice() > 0) {
@@ -573,9 +669,11 @@ public class ProductService {
         }
 
         int existingCount = dto.getExistingImages() != null ? dto.getExistingImages().size() : 0;
-        int newCount = (dto.getNewImages() != null && !dto.getNewImages().isEmpty() && dto.getNewImages().get(0).getSize() > 0) ? dto.getNewImages().size() : 0;
+        int newCount = (dto.getNewImages() != null)
+                ? (int) dto.getNewImages().stream().filter(f -> f != null && !f.isEmpty() && f.getSize() > 0).count()
+                : 0;
         if ((existingCount + newCount) > 10) {
-            throw new RuntimeException("Límite excedido. Un producto solo puede tener 10 imágenes.");
+            throw new IllegalArgumentException("Límite excedido. Un producto solo puede tener hasta 10 imágenes.");
         }
 
         if (isNew) {
@@ -587,76 +685,101 @@ public class ProductService {
         List<ProductImage> oldImagesList = product.getImages() != null ? new ArrayList<>(product.getImages()) : new ArrayList<>();
         if (product.getImages() == null) product.setImages(new ArrayList<>());
 
-        for (ProductImage oldImg : oldImagesList) {
-            if (!existingUrlsFromDto.contains(oldImg.getSecureUrl())) {
-                cloudinaryService.deleteImage(oldImg.getPublicId());
-            }
-        }
-        product.getImages().clear();
-
         Map<String, Map<String, String>> newImagesMap = new HashMap<>();
-        if (dto.getNewImages() != null && !dto.getNewImages().isEmpty() && dto.getNewImages().get(0).getSize() > 0) {
+        if (dto.getNewImages() != null && !dto.getNewImages().isEmpty()) {
             for (MultipartFile file : dto.getNewImages()) {
+                if (file == null || file.isEmpty() || file.getSize() <= 0) continue;
                 try {
                     Map<String, String> uploadResult = cloudinaryService.uploadImage(file, tenantSchema);
                     newImagesMap.put(file.getOriginalFilename(), uploadResult);
-                } catch (IOException e) {
-                    log.error("Fallo al subir imagen a Cloudinary", e);
+                } catch (IOException | RuntimeException e) {
+                    log.error("Fallo al subir imagen '{}' a Cloudinary en tenant '{}'", file.getOriginalFilename(), tenantSchema, e);
+                    throw new RuntimeException("Error al subir la imagen '" + file.getOriginalFilename() + "': " + e.getMessage(), e);
                 }
             }
         }
 
-        if (dto.getImageOrder() != null) {
-            int position = 0;
-            for (String ref : dto.getImageOrder()) {
-                boolean isPrimary = false;
-                ProductImage imgEntity = null;
+        boolean isPartialDraftAutoSaveWithoutImagePayload = Boolean.TRUE.equals(product.getIsDraft())
+                && dto.getExistingImages() == null
+                && newImagesMap.isEmpty()
+                && (dto.getImageOrder() == null || dto.getImageOrder().isEmpty());
 
-                if (existingUrlsFromDto.contains(ref)) {
-                    if (dto.getMainImageRef() != null && dto.getMainImageRef().equals(ref)) isPrimary = true;
-                    ProductImage oldMatch = oldImagesList.stream().filter(img -> img.getSecureUrl().equals(ref)).findFirst().orElse(null);
+        if (!isPartialDraftAutoSaveWithoutImagePayload) {
+            // Protección de fotos (Objetivo A6): no borrar de Cloudinary durante autoguardados de borrador
+            if (!Boolean.TRUE.equals(product.getIsDraft())) {
+                Set<String> keptPublicIds = oldImagesList.stream()
+                        .filter(img -> existingUrlsFromDto.contains(img.getSecureUrl()))
+                        .map(ProductImage::getPublicId)
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toSet());
 
-                    if (oldMatch != null) {
-                        oldMatch.setIsPrimary(isPrimary);
-                        oldMatch.setSortPosition(position++);
-                        oldMatch.setVariantId(null);
+                Set<String> deletedPublicIds = new HashSet<>();
+                for (ProductImage oldImg : oldImagesList) {
+                    String pubId = oldImg.getPublicId();
+                    if (!existingUrlsFromDto.contains(oldImg.getSecureUrl())
+                            && pubId != null
+                            && !keptPublicIds.contains(pubId)
+                            && deletedPublicIds.add(pubId)) {
+                        cloudinaryService.deleteImage(pubId, tenantSchema);
+                    }
+                }
+            }
 
-                        if (oldMatch.getPublicId() == null) {
-                            oldMatch.setPublicId("legacy_image_" + UUID.randomUUID().toString().substring(0, 8));
+            product.getImages().clear();
+
+            if (dto.getImageOrder() != null) {
+                int position = 0;
+                for (String ref : dto.getImageOrder()) {
+                    boolean isPrimary = false;
+                    ProductImage imgEntity = null;
+
+                    if (existingUrlsFromDto.contains(ref)) {
+                        if (dto.getMainImageRef() != null && dto.getMainImageRef().equals(ref)) isPrimary = true;
+                        ProductImage oldMatch = oldImagesList.stream()
+                                .filter(img -> img.getSecureUrl().equals(ref))
+                                .findFirst()
+                                .orElse(null);
+                        if (oldMatch != null) {
+                            oldMatch.setIsPrimary(isPrimary);
+                            oldMatch.setSortPosition(position++);
+                            oldMatch.setVariantId(null);
+                            if (oldMatch.getPublicId() == null) {
+                                oldMatch.setPublicId("legacy_image_" + UUID.randomUUID().toString().substring(0, 8));
+                            }
+                            imgEntity = oldMatch;
                         }
-
-                        imgEntity = oldMatch;
+                    } else if (newImagesMap.containsKey(ref)) {
+                        Map<String, String> meta = newImagesMap.get(ref);
+                        String secureUrl = meta.get("secure_url");
+                        if (dto.getMainImageRef() != null && (dto.getMainImageRef().equals(ref) || dto.getMainImageRef().equals(secureUrl))) {
+                            isPrimary = true;
+                        }
+                        imgEntity = ProductImage.builder()
+                                .product(product)
+                                .secureUrl(secureUrl)
+                                .publicId(meta.get("public_id"))
+                                .isPrimary(isPrimary)
+                                .sortPosition(position++)
+                                .build();
                     }
-                } else if (newImagesMap.containsKey(ref)) {
-                    Map<String, String> meta = newImagesMap.get(ref);
-                    String secureUrl = meta.get("secure_url");
-                    if (dto.getMainImageRef() != null && (dto.getMainImageRef().equals(ref) || dto.getMainImageRef().equals(secureUrl))) {
-                        isPrimary = true;
-                    }
-                    imgEntity = ProductImage.builder()
-                            .product(product)
-                            .secureUrl(secureUrl)
-                            .publicId(meta.get("public_id"))
-                            .isPrimary(isPrimary)
-                            .sortPosition(position++)
-                            .build();
-                }
 
-                if (imgEntity != null) {
-                    product.getImages().add(imgEntity);
+                    if (imgEntity != null) {
+                        product.getImages().add(imgEntity);
+                    }
                 }
             }
-        }
-        if (!product.getImages().isEmpty() && product.getImages().stream().noneMatch(ProductImage::getIsPrimary)) {
-            product.getImages().get(0).setIsPrimary(true);
+
+            if (!product.getImages().isEmpty() && product.getImages().stream().noneMatch(ProductImage::getIsPrimary)) {
+                product.getImages().get(0).setIsPrimary(true);
+            }
         }
 
         if (product.getHasVariants() && dto.getOptions() != null && dto.getVariants() != null) {
-
             Map<String, ProductVariant> existingVariants = new HashMap<>();
             for (ProductVariant oldVar : product.getVariantsList()) {
                 if (oldVar.getOptionValues() != null && !oldVar.getOptionValues().isEmpty()) {
                     String sig = oldVar.getOptionValues().stream()
+                            .filter(ov -> ov != null && ov.getOption() != null)
                             .map(ov -> ov.getOption().getName() + ":" + ov.getValueName())
                             .sorted()
                             .collect(Collectors.joining("|"));
@@ -676,6 +799,7 @@ public class ProductService {
 
             int optPos = 0;
             for (ProductDto.OptionDto optDto : dto.getOptions()) {
+                if (optDto == null || optDto.getName() == null || optDto.getName().isBlank()) continue;
                 ProductOption option = existingOptionsMap.get(optDto.getName());
                 if (option == null) {
                     option = ProductOption.builder()
@@ -695,32 +819,36 @@ public class ProductService {
 
                 List<ProductOptionValue> newValuesList = new ArrayList<>();
                 int valPos = 0;
-                for (String valName : optDto.getValues()) {
-                    ProductOptionValue val = existingValuesMap.get(valName);
-                    if (val == null) {
-                        val = ProductOptionValue.builder()
-                                .option(option)
-                                .valueName(valName)
-                                .build();
+                if (optDto.getValues() != null) {
+                    for (String valName : optDto.getValues()) {
+                        if (valName == null || valName.isBlank()) continue;
+                        ProductOptionValue val = existingValuesMap.get(valName);
+                        if (val == null) {
+                            val = ProductOptionValue.builder()
+                                    .option(option)
+                                    .valueName(valName)
+                                    .build();
+                        }
+                        val.setSortPosition(valPos++);
+                        newValuesList.add(val);
+                        optionValueLookup.put(optDto.getName() + ":" + valName, val);
                     }
-                    val.setSortPosition(valPos++);
-                    newValuesList.add(val);
-                    optionValueLookup.put(optDto.getName() + ":" + valName, val);
                 }
 
-                if(option.getValues() == null) {
+                if (option.getValues() == null) {
                     option.setValues(newValuesList);
                 } else {
                     option.getValues().clear();
                     option.getValues().addAll(newValuesList);
                 }
-
                 newOptionsList.add(option);
             }
+
             product.getOptions().clear();
             product.getOptions().addAll(newOptionsList);
 
             List<ProductVariant> newVariantsList = new ArrayList<>();
+            Set<Long> activeMatchedVariantIds = new HashSet<>();
             double minPrice = Double.MAX_VALUE;
             int totalStock = 0;
 
@@ -738,6 +866,7 @@ public class ProductService {
                     variant.setProduct(product);
                 }
 
+                variant.setIsActive(true);
                 variant.setSku(varDto.getSku());
                 variant.setBarcode(varDto.getBarcode());
                 variant.setPrice(varDto.getPrice() != null ? varDto.getPrice() : 0.0);
@@ -750,13 +879,36 @@ public class ProductService {
                     if (pov != null) linkedValues.add(pov);
                 }
                 variant.setOptionValues(linkedValues);
-
                 newVariantsList.add(variant);
+                if (variant.getId() != null) {
+                    activeMatchedVariantIds.add(variant.getId());
+                }
 
                 if (variant.getPrice() != null && variant.getPrice() > 0 && variant.getPrice() < minPrice) {
                     minPrice = variant.getPrice();
                 }
                 totalStock += variant.getStock();
+            }
+
+            // Conservar desactivadas las variantes que estén referenciadas en pedidos previos para no perder historial (Objetivo A6)
+            Set<Long> referencedInOrders = (product.getId() != null)
+                    ? orderRepository.findReferencedVariantIdsByProductId(product.getId())
+                    : Collections.emptySet();
+
+            for (ProductVariant oldVar : product.getVariantsList()) {
+                if (oldVar.getId() != null
+                        && !activeMatchedVariantIds.contains(oldVar.getId())
+                        && referencedInOrders.contains(oldVar.getId())) {
+                    oldVar.setIsActive(false);
+                    oldVar.setStock(0);
+                    if (oldVar.getOptionValues() != null) {
+                        List<ProductOptionValue> validRemainingValues = oldVar.getOptionValues().stream()
+                                .filter(ov -> ov != null && optionValueLookup.containsValue(ov))
+                                .collect(Collectors.toList());
+                        oldVar.setOptionValues(validRemainingValues);
+                    }
+                    newVariantsList.add(oldVar);
+                }
             }
 
             product.getVariantsList().clear();
@@ -783,6 +935,7 @@ public class ProductService {
                             .collect(Collectors.joining("|"));
 
                     ProductVariant savedVariant = product.getVariantsList().stream()
+                            .filter(v -> Boolean.TRUE.equals(v.getIsActive()) && v.getOptionValues() != null)
                             .filter(v -> {
                                 String vSig = v.getOptionValues().stream()
                                         .map(ov -> ov.getOption().getName() + ":" + ov.getValueName())
@@ -793,7 +946,6 @@ public class ProductService {
 
                     if (savedVariant != null) {
                         List<String> targetImages = Arrays.asList(vDto.getImageRef().split(","));
-
                         List<String> resolvedTargets = targetImages.stream()
                                 .map(ref -> newImagesMap.containsKey(ref)
                                         ? newImagesMap.get(ref).get("secure_url")
@@ -852,7 +1004,15 @@ public class ProductService {
     @Transactional
     public void hardDeleteProduct(Long id) {
         Product product = getProductById(id);
-        product.getImages().forEach(img -> cloudinaryService.deleteImage(img.getPublicId()));
+        String tenantSchema = TenantContext.getCurrentTenant();
+        Set<String> deletedPublicIds = new HashSet<>();
+        if (product.getImages() != null) {
+            product.getImages().forEach(img -> {
+                if (img.getPublicId() != null && deletedPublicIds.add(img.getPublicId())) {
+                    cloudinaryService.deleteImage(img.getPublicId(), tenantSchema);
+                }
+            });
+        }
         productRepository.deleteById(id);
     }
 

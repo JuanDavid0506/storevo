@@ -154,35 +154,39 @@ public class ProductController {
             }
 
             if (product.getVariantsList() != null) {
-                variantDtos = product.getVariantsList().stream().map(var -> {
-                    ProductDto.VariantDto varDto = new ProductDto.VariantDto();
-                    varDto.setSku(var.getSku());
-                    varDto.setPrice(var.getPrice());
-                    varDto.setStock(var.getStock());
-                    varDto.setBarcode(var.getBarcode());
-                    varDto.setWeight(var.getWeight());
+                variantDtos = product.getVariantsList().stream()
+                        .filter(var -> Boolean.TRUE.equals(var.getIsActive()))
+                        .map(var -> {
+                            ProductDto.VariantDto varDto = new ProductDto.VariantDto();
+                            varDto.setSku(var.getSku());
+                            varDto.setPrice(var.getPrice());
+                            varDto.setStock(var.getStock());
+                            varDto.setBarcode(var.getBarcode());
+                            varDto.setWeight(var.getWeight());
 
-                    Map<String, String> combo = new HashMap<>();
-                    if (var.getOptionValues() != null) {
-                        var.getOptionValues().forEach(val ->
-                                combo.put(val.getOption().getName(), val.getValueName())
-                        );
-                    }
-                    varDto.setCombination(combo);
+                            Map<String, String> combo = new HashMap<>();
+                            if (var.getOptionValues() != null) {
+                                var.getOptionValues().forEach(val -> {
+                                    if (val != null && val.getOption() != null) {
+                                        combo.put(val.getOption().getName(), val.getValueName());
+                                    }
+                                });
+                            }
+                            varDto.setCombination(combo);
 
-                    if (product.getImages() != null) {
-                        String joinedImages = product.getImages().stream()
-                                .filter(img -> var.getId().equals(img.getVariantId()))
-                                .map(ProductImage::getSecureUrl)
-                                .collect(Collectors.joining(","));
+                            if (product.getImages() != null) {
+                                String joinedImages = product.getImages().stream()
+                                        .filter(img -> var.getId().equals(img.getVariantId()))
+                                        .map(ProductImage::getSecureUrl)
+                                        .collect(Collectors.joining(","));
 
-                        if (!joinedImages.isEmpty()) {
-                            varDto.setImageRef(joinedImages);
-                        }
-                    }
+                                if (!joinedImages.isEmpty()) {
+                                    varDto.setImageRef(joinedImages);
+                                }
+                            }
 
-                    return varDto;
-                }).collect(Collectors.toList());
+                            return varDto;
+                        }).collect(Collectors.toList());
             }
         }
 
@@ -206,6 +210,7 @@ public class ProductController {
                 .attrKeys(keys)
                 .attrValues(values)
                 .hasVariants(hasVariants)
+                . isMadeToOrder(product.getIsMadeToOrder())
                 .options(optionDtos)
                 .variants(variantDtos)
                 .build();
@@ -214,28 +219,32 @@ public class ProductController {
         model.addAttribute("categories", categoryService.getAllCategories());
         model.addAttribute("brands", brandService.getAllBrands());
         model.addAttribute("pageTitle", "Editar Producto");
+
         return "dashboard/products/form";
     }
 
     @PostMapping
     public String saveProduct(@PathVariable String slug,
                               @ModelAttribute ProductDto productDto,
-                              @RequestParam(required = false) String action) {
-
-        if (productDto.getId() == null) {
-            productDto.setId(productService.createEmptyDraft());
-        }
-
+                              @RequestParam(required = false) String action,
+                              org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes) {
         if (productDto.getStock() == null) productDto.setStock(0);
         if (productDto.getPrice() == null) productDto.setPrice(0.0);
         if (productDto.getWeight() == null) productDto.setWeight(0.0);
 
-        productService.saveProduct(productDto);
+        try {
+            productService.saveProduct(productDto);
+        } catch (RuntimeException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+            if (productDto.getId() != null && productDto.getId() > 0) {
+                return "redirect:/dashboard/" + slug + "/products/" + productDto.getId() + "/edit?error=true";
+            }
+            return "redirect:/dashboard/" + slug + "/products/new?error=true";
+        }
 
         if ("save_and_new".equals(action)) {
             return "redirect:/dashboard/" + slug + "/products/new?success=true&continue=true";
         }
-
         return "redirect:/dashboard/" + slug + "/products?success=true";
     }
 
