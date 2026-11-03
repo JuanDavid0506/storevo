@@ -44,6 +44,8 @@ public class OrderService {
     private final InventoryService inventoryService;
     private final CustomerService customerService;
     private final StoreIntegrationRepository integrationRepository;
+    private final com.storevo.backend.admin.repository.StoreRepository storeRepository;
+    private final com.storevo.backend.admin.service.StoreSettingsService storeSettingsService;
 
     @Autowired
     @Lazy
@@ -188,12 +190,12 @@ public class OrderService {
         return createOrderFromCart(
                 slug, customerName, customerPhone, null,
                 null, customerDocument, null, null, null, false,
-                address, city, notes, channel
+                address, city, "SHIPPING", notes, channel
         );
     }
 
     /**
-     * Crea el pedido persistiendo también correo y datos fiscales DIAN sin imponer bloqueos por plan.
+     * Sobrecarga de 14 parámetros conservada por retrocompatibilidad.
      */
     @Transactional
     public Order createOrderFromCart(
@@ -212,9 +214,63 @@ public class OrderService {
             String notes,
             OrderChannel channel) {
 
+        return createOrderFromCart(
+                slug, customerName, customerPhone, customerEmail,
+                documentType, customerDocument, verificationDigit, legalName, taxRegime, requiresElectronicInvoice,
+                address, city, "SHIPPING", notes, channel
+        );
+    }
+
+    /**
+     * Crea el pedido calculando y validando en el servidor el subtotal, el costo de envío (o recogida en tienda) y el total final (Objetivo M1).
+     */
+    @Transactional
+    public Order createOrderFromCart(
+            String slug,
+            String customerName,
+            String customerPhone,
+            String customerEmail,
+            String documentType,
+            String customerDocument,
+            String verificationDigit,
+            String legalName,
+            String taxRegime,
+            Boolean requiresElectronicInvoice,
+            String address,
+            String city,
+            String deliveryMethod,
+            String notes,
+            OrderChannel channel) {
+
         List<CartItemDto> cartItems = cartManager.getCart(slug);
         if (cartItems.isEmpty()) {
             throw new IllegalArgumentException("El carrito está vacío");
+        }
+
+        com.storevo.backend.tenant.dto.StoreSettingsDto storeSettings = loadStoreSettingsForCurrentTenant();
+
+        boolean pickupRequested = "PICKUP".equalsIgnoreCase(deliveryMethod != null ? deliveryMethod.trim() : "");
+        boolean pickupAllowed = storeSettings != null && Boolean.TRUE.equals(storeSettings.getAllowStorePickup());
+        String resolvedDeliveryMethod = (pickupRequested && pickupAllowed) ? "PICKUP" : "SHIPPING";
+
+        String resolvedCity = (city != null && !city.isBlank()) ? city.trim() : "";
+        String resolvedAddress = (address != null && !address.isBlank()) ? address.trim() : "";
+
+        if ("PICKUP".equals(resolvedDeliveryMethod)) {
+            if (resolvedCity.isEmpty()) {
+                resolvedCity = (storeSettings != null && storeSettings.getShippingPickupCity() != null && !storeSettings.getShippingPickupCity().isBlank())
+                        ? storeSettings.getShippingPickupCity().trim()
+                        : "Recogida en tienda";
+            }
+            if (resolvedAddress.isEmpty()) {
+                resolvedAddress = (storeSettings != null && storeSettings.getShippingPickupAddress() != null && !storeSettings.getShippingPickupAddress().isBlank())
+                        ? "Recogida en tienda (" + storeSettings.getShippingPickupAddress().trim() + ")"
+                        : "Recogida en tienda física";
+            }
+        } else {
+            if (resolvedCity.isEmpty() || resolvedAddress.isEmpty()) {
+                throw new IllegalArgumentException("Debes indicar la ciudad y la dirección de entrega para el envío a domicilio.");
+            }
         }
 
         String initialPaymentMethod = channel == OrderChannel.WHATSAPP ? "Pendiente por WhatsApp" : "Wompi / Tarjeta";
@@ -229,9 +285,12 @@ public class OrderService {
                 .legalName(cleanNullable(legalName))
                 .taxRegime(cleanNullable(taxRegime))
                 .requiresElectronicInvoice(Boolean.TRUE.equals(requiresElectronicInvoice))
-                .address(address != null ? address.trim() : "")
-                .city(city != null ? city.trim() : "")
+                .address(resolvedAddress)
+                .city(resolvedCity)
                 .notes(cleanNullable(notes))
+                .subtotal(0.0)
+                .shippingCost(0.0)
+                .deliveryMethod(resolvedDeliveryMethod)
                 .total(0.0)
                 .status(OrderStatus.PENDING)
                 .channel(channel)
@@ -288,7 +347,7 @@ public class OrderService {
             }
 
             String receiptName = product.getName() + (verifiedVariantText != null ? " - " + verifiedVariantText : "");
-            double verifiedSubtotal = verifiedPrice * dto.getQuantity();
+            double verifiedItemSubtotal = verifiedPrice * dto.getQuantity();
 
             return OrderItem.builder()
                     .order(order)
@@ -297,18 +356,25 @@ public class OrderService {
                     .productName(receiptName)
                     .price(verifiedPrice)
                     .quantity(dto.getQuantity())
-                    .subtotal(verifiedSubtotal)
+                    .subtotal(verifiedItemSubtotal)
                     .build();
         }).collect(Collectors.toList());
 
-        double verifiedOrderTotal = items.stream()
+        double verifiedSubtotal = items.stream()
                 .mapToDouble(OrderItem::getSubtotal)
                 .sum();
 
-        if (Double.isNaN(verifiedOrderTotal) || Double.isInfinite(verifiedOrderTotal) || verifiedOrderTotal <= 0.0) {
-            throw new IllegalArgumentException("El importe total del pedido no es válido.");
+        if (Double.isNaN(verifiedSubtotal) || Double.isInfinite(verifiedSubtotal) || verifiedSubtotal <= 0.0) {
+            throw new IllegalArgumentException("El subtotal de los productos no es válido.");
         }
 
+        double verifiedShippingCost = storeSettingsService.calculateShippingCost(
+                storeSettings, verifiedSubtotal, resolvedCity, resolvedDeliveryMethod);
+
+        double verifiedOrderTotal = verifiedSubtotal + verifiedShippingCost;
+
+        order.setSubtotal(verifiedSubtotal);
+        order.setShippingCost(verifiedShippingCost);
         order.setTotal(verifiedOrderTotal);
         order.setItems(items);
 
@@ -337,6 +403,22 @@ public class OrderService {
         return savedOrder;
     }
 
+    private com.storevo.backend.tenant.dto.StoreSettingsDto loadStoreSettingsForCurrentTenant() {
+        String currentSchema = TenantContext.getCurrentTenant();
+        if (currentSchema == null || currentSchema.isBlank() || TenantContext.DEFAULT_TENANT.equalsIgnoreCase(currentSchema)) {
+            return null;
+        }
+        try {
+            TenantContext.clear();
+            Store store = storeRepository.findBySchemaName(currentSchema).orElse(null);
+            return (store != null) ? storeSettingsService.getSettingsByStore(store) : null;
+        } catch (Exception e) {
+            return null;
+        } finally {
+            TenantContext.setCurrentTenant(currentSchema);
+        }
+    }
+
     private String cleanNullable(String value) {
         return (value != null && !value.isBlank()) ? value.trim() : null;
     }
@@ -353,8 +435,26 @@ public class OrderService {
             sb.append("\n");
         }
 
+        double sub = (order.getSubtotal() != null && order.getSubtotal() > 0.0)
+                ? order.getSubtotal()
+                : (order.getTotal() != null ? order.getTotal() : 0.0);
+        double ship = (order.getShippingCost() != null && order.getShippingCost() >= 0.0)
+                ? order.getShippingCost()
+                : 0.0;
+        boolean isPickup = "PICKUP".equalsIgnoreCase(order.getDeliveryMethod());
+
+        sb.append("\n*Subtotal productos:* $").append(formatCurrency(sub));
+        if (isPickup) {
+            sb.append("\n*Entrega:* Recogida en tienda ($0)");
+        } else if (ship > 0.0) {
+            sb.append("\n*Envío a domicilio:* $").append(formatCurrency(ship));
+        } else {
+            sb.append("\n*Envío:* Gratis / Por confirmar ($0)");
+        }
         sb.append("\n*Total a pagar:* $").append(formatCurrency(order.getTotal())).append("\n");
+
         sb.append("\n*Datos de entrega:*");
+        sb.append("\n• Modalidad: ").append(isPickup ? "Recoger en tienda física" : "Envío a domicilio");
         sb.append("\n• Cliente: ").append(order.getCustomerName());
         if (order.getCustomerPhone() != null && !order.getCustomerPhone().isBlank()) {
             sb.append("\n• Teléfono: ").append(order.getCustomerPhone());

@@ -66,6 +66,18 @@ public class Order {
     private String notes;
 
     @Column(nullable = false)
+    @Builder.Default
+    private Double subtotal = 0.0;
+
+    @Column(name = "shipping_cost", nullable = false)
+    @Builder.Default
+    private Double shippingCost = 0.0;
+
+    @Column(name = "delivery_method", nullable = false, length = 20)
+    @Builder.Default
+    private String deliveryMethod = "SHIPPING";
+
+    @Column(nullable = false)
     private Double total;
 
     @Enumerated(EnumType.STRING)
@@ -113,12 +125,30 @@ public class Order {
         if (this.stockDeducted == null) {
             this.stockDeducted = false;
         }
+        if (this.deliveryMethod == null || this.deliveryMethod.isBlank()) {
+            this.deliveryMethod = "SHIPPING";
+        }
+        if (this.shippingCost == null || this.shippingCost < 0.0) {
+            this.shippingCost = 0.0;
+        }
+        if (this.subtotal == null || this.subtotal <= 0.0) {
+            this.subtotal = (this.total != null && this.total >= this.shippingCost)
+                    ? (this.total - this.shippingCost)
+                    : 0.0;
+        }
+        this.total = this.subtotal + this.shippingCost;
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
     }
 
     @PreUpdate
     protected void onUpdate() {
+        if (this.shippingCost == null || this.shippingCost < 0.0) {
+            this.shippingCost = 0.0;
+        }
+        if (this.subtotal != null && this.subtotal > 0.0) {
+            this.total = this.subtotal + this.shippingCost;
+        }
         this.updatedAt = LocalDateTime.now();
     }
 

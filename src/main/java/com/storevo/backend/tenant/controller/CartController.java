@@ -362,8 +362,9 @@ public class CartController {
             @RequestParam(required = false) String legalName,
             @RequestParam(required = false) String taxRegime,
             @RequestParam(required = false, defaultValue = "false") Boolean requiresElectronicInvoice,
-            @RequestParam String address,
-            @RequestParam String city,
+            @RequestParam(required = false) String address,
+            @RequestParam(required = false) String city,
+            @RequestParam(required = false, defaultValue = "SHIPPING") String deliveryMethod,
             @RequestParam(required = false) String notes,
             HttpServletRequest request,
             RedirectAttributes redirectAttributes) {
@@ -384,7 +385,7 @@ public class CartController {
             Order order = orderService.createOrderFromCart(
                     guestId, customerName, customerPhone, customerEmail,
                     documentType, finalDoc, verificationDigit, legalName, taxRegime, requiresElectronicInvoice,
-                    address, city, notes, OrderChannel.ONLINE
+                    address, city, deliveryMethod, notes, OrderChannel.ONLINE
             );
             return "redirect:/s/" + slug + "/order/" + order.getPublicToken() + "/success";
         } catch (Exception e) {
@@ -406,8 +407,9 @@ public class CartController {
             @RequestParam(required = false) String legalName,
             @RequestParam(required = false) String taxRegime,
             @RequestParam(required = false, defaultValue = "false") Boolean requiresElectronicInvoice,
-            @RequestParam String address,
-            @RequestParam String city,
+            @RequestParam(required = false) String address,
+            @RequestParam(required = false) String city,
+            @RequestParam(required = false, defaultValue = "SHIPPING") String deliveryMethod,
             @RequestParam(required = false) String notes,
             HttpServletRequest request,
             RedirectAttributes redirectAttributes) {
@@ -419,7 +421,7 @@ public class CartController {
             Order order = orderService.createOrderFromCart(
                     guestId, customerName, customerPhone, customerEmail,
                     documentType, finalDoc, verificationDigit, legalName, taxRegime, requiresElectronicInvoice,
-                    address, city, notes, OrderChannel.WHATSAPP
+                    address, city, deliveryMethod, notes, OrderChannel.WHATSAPP
             );
             return "redirect:/s/" + slug + "/order/" + order.getPublicToken() + "/whatsapp";
         } catch (Exception e) {

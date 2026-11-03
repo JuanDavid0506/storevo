@@ -5,7 +5,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-
 @Data
 @Builder
 @NoArgsConstructor
@@ -37,6 +36,12 @@ public class StoreSettingsDto {
     private String shippingContactEmail;
     private String shippingPickupAddress;
     private String shippingPickupCity;
+
+    // --- Tarifas Simples de Envío y Recogida en Tienda (Objetivo M1) ---
+    private Double localShippingRate;
+    private Double nationalShippingRate;
+    private Double freeShippingThreshold;
+    private Boolean allowStorePickup;
 
     // --- Wompi ---
     private boolean wompiActive;

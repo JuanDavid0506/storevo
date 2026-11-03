@@ -96,6 +96,20 @@ public class StoreSettings {
     @Column(name = "shipping_pickup_city", length = 100)
     private String shippingPickupCity;
 
+    // --- Tarifas Simples de Envío y Recogida en Tienda (Objetivo M1) ---
+    @Column(name = "local_shipping_rate")
+    private Double localShippingRate;
+
+    @Column(name = "national_shipping_rate")
+    private Double nationalShippingRate;
+
+    @Column(name = "free_shipping_threshold")
+    private Double freeShippingThreshold;
+
+    @Column(name = "allow_store_pickup", columnDefinition = "boolean default false")
+    @Builder.Default
+    private Boolean allowStorePickup = false;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
@@ -104,6 +118,9 @@ public class StoreSettings {
 
     @PrePersist
     protected void onCreate() {
+        if (this.allowStorePickup == null) {
+            this.allowStorePickup = false;
+        }
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
     }

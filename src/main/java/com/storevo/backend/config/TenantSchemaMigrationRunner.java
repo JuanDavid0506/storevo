@@ -85,6 +85,14 @@ public class TenantSchemaMigrationRunner implements CommandLineRunner {
             new ColumnMigration("orders", "requires_electronic_invoice", "BOOLEAN DEFAULT FALSE"),
             new ColumnMigration(
                     "orders",
+                    "subtotal",
+                    "DOUBLE NOT NULL DEFAULT 0.0",
+                    "UPDATE `%s`.orders SET subtotal = total WHERE subtotal IS NULL OR subtotal = 0"
+            ),
+            new ColumnMigration("orders", "shipping_cost", "DOUBLE NOT NULL DEFAULT 0.0"),
+            new ColumnMigration("orders", "delivery_method", "VARCHAR(20) NOT NULL DEFAULT 'SHIPPING'"),
+            new ColumnMigration(
+                    "orders",
                     "stock_deducted",
                     "BOOLEAN NOT NULL DEFAULT FALSE",
                     "UPDATE `%s`.orders SET stock_deducted = TRUE WHERE status IN ('PAID', 'CONFIRMED', 'PREPARING', 'PACKED', 'SHIPPED', 'DELIVERED')"

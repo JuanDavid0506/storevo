@@ -90,6 +90,58 @@
                 </div>
             </div>
 
+            <!-- ========================================================== -->
+            <!-- TARIFAS SIMPLES DE ENVÍO Y RECOGIDA EN TIENDA (OBJETIVO M1) -->
+            <!-- ========================================================== -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl shadow-sm overflow-hidden">
+                <div class="px-6 py-5 border-b border-slate-800">
+                    <h3 class="text-lg font-medium text-white">Tarifas de Envío y Recogida en Tienda</h3>
+                    <p class="text-sm text-slate-400 mt-1">
+                        Define cuánto cobras por envío en tu misma ciudad (configurada en <span class="text-slate-300 font-medium">Ciudad de recogida</span> de la pestaña Mi Paquete), en el resto del país y desde qué monto el envío es gratis.
+                    </p>
+                </div>
+                <div class="px-6 py-6 space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <label for="localShippingRate" class="block text-sm font-medium text-slate-300 mb-1">Tarifa Envío Local (COP)</label>
+                            <input type="number" step="100" min="0" id="localShippingRate" th:field="*{localShippingRate}"
+                                   placeholder="Ej: 8000"
+                                   class="w-full px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <p class="text-xs text-slate-500 mt-1">Aplica cuando el cliente pide en la misma ciudad de tu tienda/bodega.</p>
+                        </div>
+
+                        <div>
+                            <label for="nationalShippingRate" class="block text-sm font-medium text-slate-300 mb-1">Tarifa Envío Nacional (COP)</label>
+                            <input type="number" step="100" min="0" id="nationalShippingRate" th:field="*{nationalShippingRate}"
+                                   placeholder="Ej: 16000"
+                                   class="w-full px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <p class="text-xs text-slate-500 mt-1">Aplica para todas las demás ciudades y municipios de Colombia.</p>
+                        </div>
+
+                        <div>
+                            <label for="freeShippingThreshold" class="block text-sm font-medium text-slate-300 mb-1">Envío Gratis desde (COP)</label>
+                            <input type="number" step="1000" min="0" id="freeShippingThreshold" th:field="*{freeShippingThreshold}"
+                                   placeholder="Ej: 150000 (0 = desactivado)"
+                                   class="w-full px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <p class="text-xs text-slate-500 mt-1">Si el subtotal de productos alcanza este monto, el envío cuesta $0.</p>
+                        </div>
+                    </div>
+
+                    <div class="border border-slate-800 rounded-lg p-4 bg-slate-800/40 flex items-center justify-between gap-4">
+                        <div>
+                            <h4 class="text-white font-medium text-sm">Habilitar "Recoger en tienda física" ($0)</h4>
+                            <p class="text-xs text-slate-400 mt-0.5">
+                                Permite que tus clientes elijan recoger su pedido sin costo de envío en la dirección configurada en tu tienda.
+                            </p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                            <input type="checkbox" th:field="*{allowStorePickup}" class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-storevo-500"></div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
             <details class="group bg-slate-900 border border-slate-800 rounded-xl shadow-sm overflow-hidden">
                 <summary class="px-6 py-5 cursor-pointer list-none [&::-webkit-details-marker]:hidden flex justify-between items-center hover:bg-slate-800/50 transition-colors">
                     <div>
@@ -232,8 +284,8 @@
 
             <div class="bg-slate-900 border border-slate-800 rounded-xl shadow-sm overflow-hidden">
                 <div class="px-6 py-5 border-b border-slate-800">
-                    <h3 class="text-lg font-medium text-white">Datos de Remitente</h3>
-                    <p class="text-sm text-slate-400 mt-1">Con qué datos y desde dónde se recoge cada pedido. Sin esto, Mi Paquete rechaza la generación de guías.</p>
+                    <h3 class="text-lg font-medium text-white">Datos de Remitente y Bodega</h3>
+                    <p class="text-sm text-slate-400 mt-1">Con qué datos y desde dónde se despacha o recoge cada pedido (también define tu ciudad base para la Tarifa de Envío Local).</p>
                 </div>
                 <div class="px-6 py-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
@@ -249,8 +301,39 @@
                         <input type="email" th:field="*{shippingContactEmail}" class="w-full px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-sky-500" placeholder="envios@mitienda.com">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-1">Ciudad de recogida</label>
-                        <input type="text" th:field="*{shippingPickupCity}" class="w-full px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-sky-500" placeholder="Bogotá D.C.">
+                        <label class="block text-sm font-medium text-slate-300 mb-1">Ciudad de recogida / bodega</label>
+                        <input type="text" th:field="*{shippingPickupCity}" list="settings-cities-list" class="w-full px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-sky-500" placeholder="Bogotá D.C.">
+                        <datalist id="settings-cities-list">
+                            <option value="Bogotá D.C."></option>
+                            <option value="Medellín"></option>
+                            <option value="Cali"></option>
+                            <option value="Barranquilla"></option>
+                            <option value="Cartagena"></option>
+                            <option value="Bucaramanga"></option>
+                            <option value="Pereira"></option>
+                            <option value="Manizales"></option>
+                            <option value="Santa Marta"></option>
+                            <option value="Cúcuta"></option>
+                            <option value="Ibagué"></option>
+                            <option value="Villavicencio"></option>
+                            <option value="Pasto"></option>
+                            <option value="Montería"></option>
+                            <option value="Armenia"></option>
+                            <option value="Neiva"></option>
+                            <option value="Valledupar"></option>
+                            <option value="Popayán"></option>
+                            <option value="Sincelejo"></option>
+                            <option value="Tunja"></option>
+                            <option value="Envigado"></option>
+                            <option value="Bello"></option>
+                            <option value="Itagüí"></option>
+                            <option value="Sabaneta"></option>
+                            <option value="Soacha"></option>
+                            <option value="Chía"></option>
+                            <option value="Floridablanca"></option>
+                            <option value="Palmira"></option>
+                            <option value="Turbaco"></option>
+                        </datalist>
                     </div>
                     <div class="md:col-span-2">
                         <label class="block text-sm font-medium text-slate-300 mb-1">Dirección de bodega/recogida</label>

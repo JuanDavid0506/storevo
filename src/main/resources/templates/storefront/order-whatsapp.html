@@ -27,7 +27,20 @@
                           th:text="${'$ ' + #numbers.formatDecimal(item.subtotal, 1, 'POINT', 0, 'COMMA')}"></span>
                 </div>
             </div>
-            <div class="flex justify-between items-center border-t border-slate-200 pt-4">
+            <div class="space-y-1.5 text-sm border-t border-slate-200 pt-3 mb-3">
+                <div class="flex justify-between text-slate-600">
+                    <span>Subtotal productos</span>
+                    <span class="font-semibold text-slate-800"
+                          th:text="${'$ ' + #numbers.formatDecimal((order.subtotal != null and order.subtotal > 0 ? order.subtotal : order.total), 1, 'POINT', 0, 'COMMA')}">$0</span>
+                </div>
+                <div class="flex justify-between text-slate-600">
+                    <span th:text="${order.deliveryMethod == 'PICKUP' ? 'Entrega (Recogida en tienda)' : 'Envío a domicilio'}">Envío</span>
+                    <span class="font-semibold"
+                          th:classappend="${(order.shippingCost == null or order.shippingCost <= 0) ? 'text-emerald-600' : 'text-slate-800'}"
+                          th:text="${(order.shippingCost != null and order.shippingCost > 0) ? '$ ' + #numbers.formatDecimal(order.shippingCost, 1, 'POINT', 0, 'COMMA') : 'Gratis ($ 0)'}">$0</span>
+                </div>
+            </div>
+            <div class="flex justify-between items-center border-t border-slate-200 pt-3">
                 <span class="text-slate-600 font-bold">Total</span>
                 <span class="font-black text-xl text-slate-900" th:text="${'$ ' + #numbers.formatDecimal(order.total, 1, 'POINT', 0, 'COMMA')}">$0</span>
             </div>
