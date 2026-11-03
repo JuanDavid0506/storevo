@@ -421,7 +421,7 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
-    public List<Map<String, Object>> searchProductsForEditorPicker(String query, List<Long> specificIds, int limit) {
+    public List< Map<String, Object> > searchProductsForEditorPicker(String query, List<Long> specificIds, int limit) {
         List<Product> results;
         if (specificIds != null && !specificIds.isEmpty()) {
             results = getManualPublicProductsInOrder(specificIds, Math.min(specificIds.size(), 50));
@@ -431,7 +431,7 @@ public class ProductService {
             results = productRepository.searchActiveProductsForPicker(cleanQuery, PageRequest.of(0, safeLimit));
         }
 
-        List<Map<String, Object>> items = new ArrayList<>();
+        List< Map<String, Object> > items = new ArrayList<>();
         for (Product p : results) {
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("id", p.getId());
@@ -447,6 +447,60 @@ public class ProductService {
             items.add(item);
         }
         return items;
+    }
+
+    /**
+     * Buscador de productos con sus variantes activas, stock y precios efectivos para crear pedidos manuales en el Dashboard (Objetivo M2).
+     */
+    @Transactional(readOnly = true)
+    public List< Map<String, Object> > searchProductsForManualOrder(String query, int limit) {
+        int safeLimit = Math.max(1, Math.min(limit, 30));
+        String cleanQuery = (query != null && !query.isBlank()) ? query.trim() : null;
+        List<Product> products = productRepository.searchActiveProductsForPicker(cleanQuery, PageRequest.of(0, safeLimit));
+
+        List< Map<String, Object> > result = new ArrayList<>();
+        for (Product p : products) {
+            double baseEffectivePrice = resolveEffectivePrice(p);
+
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", p.getId());
+            item.put("name", p.getName());
+            item.put("sku", p.getSku());
+            item.put("price", baseEffectivePrice);
+            item.put("stock", p.getStock() != null ? p.getStock() : 0);
+            item.put("hasVariants", Boolean.TRUE.equals(p.getHasVariants()));
+            item.put("isMadeToOrder", Boolean.TRUE.equals(p.getIsMadeToOrder()));
+            item.put("imageUrl", p.getMainImageThumbnailUrl() != null ? p.getMainImageThumbnailUrl() : p.getMainImageUrl());
+
+            List< Map<String, Object> > activeVariants = new ArrayList<>();
+            if (Boolean.TRUE.equals(p.getHasVariants()) && p.getVariantsList() != null) {
+                for (ProductVariant v : p.getVariantsList()) {
+                    if (v == null || !Boolean.TRUE.equals(v.getIsActive())) continue;
+
+                    String label = (v.getOptionValues() != null && !v.getOptionValues().isEmpty())
+                            ? v.getOptionValues().stream()
+                            .filter(ov -> ov != null && ov.getValueName() != null)
+                            .map(ProductOptionValue::getValueName)
+                            .collect(Collectors.joining(" / "))
+                            : (v.getSku() != null ? v.getSku() : "Variante #" + v.getId());
+
+                    double varEffectivePrice = (v.getPrice() != null && v.getPrice() > 0.0)
+                            ? v.getPrice()
+                            : baseEffectivePrice;
+
+                    Map<String, Object> vMap = new LinkedHashMap<>();
+                    vMap.put("id", v.getId());
+                    vMap.put("label", label);
+                    vMap.put("sku", v.getSku());
+                    vMap.put("price", varEffectivePrice);
+                    vMap.put("stock", v.getStock() != null ? v.getStock() : 0);
+                    activeVariants.add(vMap);
+                }
+            }
+            item.put("variants", activeVariants);
+            result.add(item);
+        }
+        return result;
     }
 
     @Transactional(readOnly = true)

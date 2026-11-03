@@ -43,6 +43,13 @@
             </h2>
             <p class="text-sm text-slate-400 mt-1">Administra todo el ciclo de vida de las compras de tus clientes.</p>
         </div>
+        <button type="button" onclick="abrirModalNuevoPedido()"
+                class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-storevo-500 hover:bg-storevo-600 text-white text-sm font-bold shadow-lg shadow-storevo-500/20 transition self-start sm:self-auto">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            <span>Nuevo Pedido / Link de Cobro</span>
+        </button>
     </div>
 
     <!-- PANEL DE BÚSQUEDA Y FILTROS -->
@@ -247,11 +254,634 @@
         </div>
     </div>
 
+    <!-- ========================================================================= -->
+    <!-- MODAL DE VENTA ASISTIDA Y GENERACIÓN DE LINK DE PAGO (OBJETIVO M2)        -->
+    <!-- ========================================================================= -->
+    <div id="manual-order-modal"
+         th:attr="data-slug=${slug},
+                  data-pickup-city=${storeSettings != null and storeSettings.shippingPickupCity != null ? storeSettings.shippingPickupCity : ''},
+                  data-local-rate=${storeSettings != null and storeSettings.localShippingRate != null ? storeSettings.localShippingRate : -1},
+                  data-national-rate=${storeSettings != null and storeSettings.nationalShippingRate != null ? storeSettings.nationalShippingRate : -1},
+                  data-free-threshold=${storeSettings != null and storeSettings.freeShippingThreshold != null ? storeSettings.freeShippingThreshold : 0}"
+         class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 overflow-y-auto">
+
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden my-8">
+            <!-- Encabezado del Modal -->
+            <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/90">
+                <div>
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-storevo-500"></span>
+                        Crear Pedido Manual / Generar Link de Pago
+                    </h3>
+                    <p class="text-xs text-slate-400 mt-0.5">Registra ventas de WhatsApp, redes sociales o mostrador y obtén el link de cobro al instante.</p>
+                </div>
+                <button type="button" onclick="cerrarModalNuevoPedido()" class="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <!-- PASO 1: FORMULARIO DE ARMADO DEL PEDIDO -->
+            <div id="manual-order-form-step" class="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
+                <div id="manual-order-error" class="hidden bg-red-500/10 border border-red-500/40 text-red-300 px-4 py-3 rounded-xl text-sm font-medium"></div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <!-- Columna Izquierda: Buscador y Carrito del Pedido Manual (7 cols) -->
+                    <div class="lg:col-span-7 space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">1. Buscar y Agregar Productos</label>
+                            <div class="relative">
+                                <input type="text" id="mo-product-search"
+                                       placeholder="Busca por nombre o SKU..."
+                                       autocomplete="off"
+                                       class="w-full pl-10 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-storevo-500">
+                                <svg class="w-4 h-4 text-slate-500 absolute left-3.5 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                            </div>
+                            <!-- Resultados del buscador -->
+                            <div id="mo-product-results" class="mt-2 max-h-56 overflow-y-auto bg-slate-950 border border-slate-800 rounded-xl divide-y divide-slate-800/70"></div>
+                        </div>
+
+                        <!-- Tabla de Ítems Seleccionados -->
+                        <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-4">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Productos en el Pedido</span>
+                                <span id="mo-items-count" class="text-xs font-semibold text-storevo-400">0 unidades</span>
+                            </div>
+                            <div id="mo-selected-items" class="space-y-2.5 max-h-60 overflow-y-auto">
+                                <p class="text-xs text-slate-500 text-center py-6">Aún no has agregado productos al pedido.</p>
+                            </div>
+
+                            <!-- Resumen de Totales -->
+                            <div class="mt-4 pt-3 border-t border-slate-800 space-y-1.5 text-sm">
+                                <div class="flex justify-between text-slate-400">
+                                    <span>Subtotal productos:</span>
+                                    <span id="mo-subtotal-label" class="font-semibold text-slate-200">$ 0</span>
+                                </div>
+                                <div class="flex justify-between text-slate-400 items-center">
+                                    <span>Costo de envío (COP):</span>
+                                    <input type="number" id="mo-shipping-cost" min="0" step="100" value="0"
+                                           oninput="recalcularTotalesManual()"
+                                           class="w-28 text-right px-2.5 py-1 bg-slate-900 border border-slate-700 rounded-lg text-xs font-bold text-white">
+                                </div>
+                                <div class="flex justify-between text-white font-bold text-base pt-2 border-t border-slate-800">
+                                    <span>Total a cobrar:</span>
+                                    <span id="mo-total-label" class="text-storevo-400 text-lg font-black">$ 0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Columna Derecha: Datos del Comprador y Estado (5 cols) -->
+                    <div class="lg:col-span-5 space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">2. Datos del Cliente (Autocompletado por Teléfono)</label>
+                            <div class="space-y-3 bg-slate-950/60 border border-slate-800 rounded-xl p-4">
+                                <div>
+                                    <label class="block text-xs text-slate-400 mb-1">Teléfono / WhatsApp <span class="text-red-400">*</span></label>
+                                    <div class="flex gap-2">
+                                        <input type="text" id="mo-phone" placeholder="Ej: 3001234567"
+                                               onblur="buscarClientePorTelefono()"
+                                               class="flex-1 px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-sm text-white focus:border-storevo-500 focus:outline-none">
+                                        <button type="button" onclick="buscarClientePorTelefono()"
+                                                title="Buscar cliente existente"
+                                                class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-storevo-400 rounded-lg border border-slate-700 transition">
+                                            Autocompletar
+                                        </button>
+                                    </div>
+                                    <p id="mo-customer-lookup-msg" class="text-[11px] text-emerald-400 mt-1 hidden"></p>
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs text-slate-400 mb-1">Nombre completo <span class="text-red-400">*</span></label>
+                                    <input type="text" id="mo-name" placeholder="Nombre y apellido"
+                                           class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-sm text-white focus:border-storevo-500 focus:outline-none">
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-2.5">
+                                    <div>
+                                        <label class="block text-xs text-slate-400 mb-1">Documento (Opcional)</label>
+                                        <input type="text" id="mo-document" placeholder="CC / NIT"
+                                               class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-sm text-white focus:border-storevo-500 focus:outline-none">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-slate-400 mb-1">Correo (Opcional)</label>
+                                        <input type="email" id="mo-email" placeholder="cliente@correo.com"
+                                               class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-sm text-white focus:border-storevo-500 focus:outline-none">
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs text-slate-400 mb-1">Modalidad de Entrega</label>
+                                    <select id="mo-delivery-method" onchange="actualizarModoEntregaManual()"
+                                            class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-sm text-white focus:border-storevo-500 focus:outline-none">
+                                        <option value="SHIPPING">Envío a domicilio</option>
+                                        <option value="PICKUP">Recoger en tienda física ($0)</option>
+                                    </select>
+                                </div>
+
+                                <div id="mo-shipping-fields" class="space-y-2.5">
+                                    <div>
+                                        <label class="block text-xs text-slate-400 mb-1">Ciudad / Municipio <span class="text-red-400">*</span></label>
+                                        <input type="text" id="mo-city" list="mo-colombia-cities" placeholder="Ej: Bogotá, Cartagena..."
+                                               oninput="calcularEnvioSugeridoManual()"
+                                               class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-sm text-white focus:border-storevo-500 focus:outline-none">
+                                        <datalist id="mo-colombia-cities">
+                                            <option value="Bogotá D.C."></option>
+                                            <option value="Medellín"></option>
+                                            <option value="Cali"></option>
+                                            <option value="Barranquilla"></option>
+                                            <option value="Cartagena"></option>
+                                            <option value="Bucaramanga"></option>
+                                            <option value="Pereira"></option>
+                                            <option value="Manizales"></option>
+                                            <option value="Santa Marta"></option>
+                                            <option value="Cúcuta"></option>
+                                            <option value="Ibagué"></option>
+                                            <option value="Villavicencio"></option>
+                                            <option value="Pasto"></option>
+                                            <option value="Montería"></option>
+                                            <option value="Armenia"></option>
+                                            <option value="Neiva"></option>
+                                            <option value="Valledupar"></option>
+                                            <option value="Popayán"></option>
+                                            <option value="Sincelejo"></option>
+                                            <option value="Tunja"></option>
+                                            <option value="Envigado"></option>
+                                            <option value="Bello"></option>
+                                            <option value="Itagüí"></option>
+                                            <option value="Sabaneta"></option>
+                                            <option value="Soacha"></option>
+                                            <option value="Chía"></option>
+                                            <option value="Floridablanca"></option>
+                                            <option value="Palmira"></option>
+                                            <option value="Turbaco"></option>
+                                        </datalist>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-slate-400 mb-1">Dirección de entrega <span class="text-red-400">*</span></label>
+                                        <input type="text" id="mo-address" placeholder="Calle / Carrera / Barrio"
+                                               class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-sm text-white focus:border-storevo-500 focus:outline-none">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Estado Inicial y Método de Cobro -->
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">3. Estado del Cobro</label>
+                            <div class="space-y-3 bg-slate-950/60 border border-slate-800 rounded-xl p-4">
+                                <div>
+                                    <label class="block text-xs text-slate-400 mb-1">¿Cómo se cobrará este pedido?</label>
+                                    <select id="mo-initial-status"
+                                            class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-sm text-white focus:border-storevo-500 focus:outline-none">
+                                        <option value="PENDING">Pendiente de pago (Generar Link de Cobro Wompi)</option>
+                                        <option value="CONFIRMED">Confirmado / Contraentrega (Descuenta stock ahora)</option>
+                                        <option value="PAID">Ya fue pagado — Efectivo / Transferencia (Descuenta stock ahora)</option>
+                                    </select>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2.5">
+                                    <div>
+                                        <label class="block text-xs text-slate-400 mb-1">Canal de origen</label>
+                                        <select id="mo-channel"
+                                                class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-sm text-white focus:border-storevo-500 focus:outline-none">
+                                            <option value="WHATSAPP">WhatsApp / Redes</option>
+                                            <option value="ONLINE">Tienda / Web</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-slate-400 mb-1">Medio de pago</label>
+                                        <input type="text" id="mo-payment-method" placeholder="Link Wompi / Nequi / Efectivo"
+                                               class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-sm text-white focus:border-storevo-500 focus:outline-none">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-slate-400 mb-1">Notas del pedido (Opcional)</label>
+                                    <input type="text" id="mo-notes" placeholder="Observaciones de entrega..."
+                                           class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-sm text-white focus:border-storevo-500 focus:outline-none">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Botones del Formulario -->
+                <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+                    <button type="button" onclick="cerrarModalNuevoPedido()"
+                            class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium transition">
+                        Cancelar
+                    </button>
+                    <button type="button" id="btn-submit-manual-order" onclick="guardarPedidoManual()"
+                            class="px-6 py-2.5 rounded-xl bg-storevo-500 hover:bg-storevo-600 text-white text-sm font-bold shadow-lg shadow-storevo-500/25 transition">
+                        Crear Pedido y Generar Link
+                    </button>
+                </div>
+            </div>
+
+            <!-- PASO 2: PANTALLA DE ÉXITO CON LINK DE COBRO Y ENVÍO POR WHATSAPP -->
+            <div id="manual-order-success-step" class="hidden p-8 text-center space-y-6">
+                <div class="w-14 h-14 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center mx-auto">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+                </div>
+
+                <div>
+                    <h4 id="mo-created-title" class="text-xl font-black text-white">¡Pedido creado exitosamente!</h4>
+                    <p id="mo-created-subtitle" class="text-sm text-slate-400 mt-1"></p>
+                </div>
+
+                <!-- Caja con el Link de Pago Directo -->
+                <div class="max-w-xl mx-auto bg-slate-950 border border-slate-800 rounded-xl p-4 text-left space-y-2">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-storevo-400">Enlace Público de Pago / Resumen del Pedido</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="mo-created-payment-url" readonly
+                               class="flex-1 px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs font-mono text-slate-200 select-all">
+                        <button type="button" onclick="copiarLinkPagoManual()" id="btn-copy-payment-url"
+                                class="px-4 py-2 bg-storevo-500 hover:bg-storevo-600 text-white text-xs font-bold rounded-lg transition shrink-0">
+                            Copiar Link
+                        </button>
+                    </div>
+                    <p class="text-[11px] text-slate-500">El cliente podrá abrir este enlace sin iniciar sesión y pagar con tarjeta, PSE o Nequi a través de Wompi.</p>
+                </div>
+
+                <div class="flex flex-wrap items-center justify-center gap-3 pt-2">
+                    <a id="mo-created-whatsapp-btn" href="#" target="_blank" rel="noopener"
+                       class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#25D366] hover:bg-[#1ebd5c] text-white text-sm font-bold shadow-lg transition">
+                        <span>Enviar Cobro por WhatsApp al Cliente</span>
+                    </a>
+                    <a id="mo-created-detail-btn" href="#"
+                       class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-sm font-semibold border border-slate-700 transition">
+                        <span>Ver Detalle del Pedido</span>
+                    </a>
+                    <button type="button" onclick="window.location.reload()"
+                            class="px-4 py-2.5 rounded-xl text-slate-400 hover:text-white text-sm font-medium transition">
+                        Cerrar y actualizar lista
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div th:replace="~{components/ui/listing :: scripts}"></div>
 </div>
 
 <th:block layout:fragment="scripts">
     <script th:src="@{/js/modules/ordersList.js}"></script>
+    <script>
+        let moSelectedItems = [];
+        let moSearchTimeout = null;
+
+        function formatCopDashboard(val) {
+            return '$ ' + Math.round(val || 0).toLocaleString('es-CO');
+        }
+
+        function normalizeCityDash(text) {
+            if (!text) return '';
+            return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+                .replace(/d\.?c\.?/g, '').replace(/[^a-z ]/g, '').trim().replace(/\s+/g, ' ');
+        }
+
+        function abrirModalNuevoPedido() {
+            const modal = document.getElementById('manual-order-modal');
+            if (!modal) return;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.getElementById('manual-order-form-step').classList.remove('hidden');
+            document.getElementById('manual-order-success-step').classList.add('hidden');
+            document.getElementById('manual-order-error').classList.add('hidden');
+            cargarProductosManual('');
+        }
+
+        function cerrarModalNuevoPedido() {
+            const modal = document.getElementById('manual-order-modal');
+            if (!modal) return;
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const searchInput = document.getElementById('mo-product-search');
+            if (searchInput) {
+                searchInput.addEventListener('input', function () {
+                    clearTimeout(moSearchTimeout);
+                    const q = this.value;
+                    moSearchTimeout = setTimeout(() => cargarProductosManual(q), 220);
+                });
+            }
+        });
+
+        function cargarProductosManual(query) {
+            const modal = document.getElementById('manual-order-modal');
+            if (!modal) return;
+            const slug = modal.getAttribute('data-slug');
+            const container = document.getElementById('mo-product-results');
+            container.innerHTML = '<p class="text-xs text-slate-500 p-3">Buscando productos...</p>';
+
+            fetch(`/dashboard/${slug}/orders/api/products?q=` + encodeURIComponent(query || ''))
+                .then(r => r.json())
+                .then(products => {
+                    if (!products || products.length === 0) {
+                        container.innerHTML = '<p class="text-xs text-slate-500 p-3">No se encontraron productos activos.</p>';
+                        return;
+                    }
+                    container.innerHTML = '';
+                    products.forEach(p => {
+                        const row = document.createElement('div');
+                        row.className = 'p-2.5 hover:bg-slate-900/90 transition flex items-center justify-between gap-3';
+                        const safeName = (p.name || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
+                        if (p.hasVariants && p.variants && p.variants.length > 0) {
+                            const optionsHtml = p.variants.map(v =>
+                                `<option value="${v.id}" data-price="${v.price}" data-label="${(v.label || '').replace(/"/g, '&quot;')}" data-stock="${v.stock}">
+                                    ${v.label} — ${formatCopDashboard(v.price)} (${p.isMadeToOrder ? 'Bajo pedido' : 'Stock: ' + v.stock})
+                                 </option>`
+                            ).join('');
+
+                            row.innerHTML = `
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-xs font-bold text-white truncate">${p.name}</p>
+                                    <select id="mo-var-select-${p.id}" class="mt-1 w-full px-2 py-1 bg-slate-900 border border-slate-700 rounded text-[11px] text-slate-200">
+                                        ${optionsHtml}
+                                    </select>
+                                </div>
+                                <button type="button" class="px-3 py-1.5 bg-storevo-500/20 hover:bg-storevo-500 text-storevo-400 hover:text-white border border-storevo-500/30 rounded-lg text-xs font-bold transition shrink-0"
+                                        onclick="agregarProductoConVarianteManual(${p.id}, '${safeName}', ${p.isMadeToOrder})">
+                                    + Agregar
+                                </button>`;
+                        } else {
+                            const stockLabel = p.isMadeToOrder ? 'Bajo pedido' : ('Stock: ' + p.stock);
+                            row.innerHTML = `
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-xs font-bold text-white truncate">${p.name}</p>
+                                    <p class="text-[11px] text-slate-400">${formatCopDashboard(p.price)} · <span class="text-slate-500">${stockLabel}</span></p>
+                                </div>
+                                <button type="button" class="px-3 py-1.5 bg-storevo-500/20 hover:bg-storevo-500 text-storevo-400 hover:text-white border border-storevo-500/30 rounded-lg text-xs font-bold transition shrink-0"
+                                        onclick="agregarItemAlPedidoManual(${p.id}, null, '${safeName}', null, ${p.price}, ${p.stock}, ${p.isMadeToOrder})">
+                                    + Agregar
+                                </button>`;
+                        }
+                        container.appendChild(row);
+                    });
+                })
+                .catch(() => {
+                    container.innerHTML = '<p class="text-xs text-red-400 p-3">Error al cargar productos.</p>';
+                });
+        }
+
+        function agregarProductoConVarianteManual(productId, productName, isMadeToOrder) {
+            const select = document.getElementById('mo-var-select-' + productId);
+            if (!select || !select.selectedOptions.length) return;
+            const opt = select.selectedOptions[0];
+            const variantId = parseInt(opt.value, 10);
+            const price = parseFloat(opt.getAttribute('data-price') || '0');
+            const label = opt.getAttribute('data-label') || '';
+            const stock = parseInt(opt.getAttribute('data-stock') || '0', 10);
+            agregarItemAlPedidoManual(productId, variantId, productName, label, price, stock, isMadeToOrder);
+        }
+
+        function agregarItemAlPedidoManual(productId, variantId, productName, variantLabel, price, maxStock, isMadeToOrder) {
+            const key = productId + '-' + (variantId || 'null');
+            const existing = moSelectedItems.find(i => i.key === key);
+            if (existing) {
+                if (!isMadeToOrder && existing.quantity + 1 > maxStock) {
+                    alert('Stock máximo disponible para este ítem: ' + maxStock);
+                    return;
+                }
+                existing.quantity += 1;
+            } else {
+                if (!isMadeToOrder && maxStock <= 0) {
+                    alert('Este producto o variante no tiene stock disponible.');
+                    return;
+                }
+                moSelectedItems.push({
+                    key: key,
+                    productId: productId,
+                    variantId: variantId,
+                    name: productName,
+                    variantLabel: variantLabel,
+                    price: price,
+                    quantity: 1,
+                    maxStock: maxStock,
+                    isMadeToOrder: isMadeToOrder
+                });
+            }
+            renderizarItemsManual();
+            calcularEnvioSugeridoManual();
+        }
+
+        function cambiarCantidadItemManual(idx, delta) {
+            const item = moSelectedItems[idx];
+            if (!item) return;
+            const nextQty = item.quantity + delta;
+            if (nextQty <= 0) {
+                moSelectedItems.splice(idx, 1);
+            } else if (!item.isMadeToOrder && nextQty > item.maxStock) {
+                alert('Solo hay ' + item.maxStock + ' unidad(es) disponibles.');
+                return;
+            } else {
+                item.quantity = nextQty;
+            }
+            renderizarItemsManual();
+            calcularEnvioSugeridoManual();
+        }
+
+        function renderizarItemsManual() {
+            const container = document.getElementById('mo-selected-items');
+            const countEl = document.getElementById('mo-items-count');
+            const totalUnits = moSelectedItems.reduce((acc, i) => acc + i.quantity, 0);
+            countEl.textContent = totalUnits + (totalUnits === 1 ? ' unidad' : ' unidades');
+
+            if (moSelectedItems.length === 0) {
+                container.innerHTML = '<p class="text-xs text-slate-500 text-center py-6">Aún no has agregado productos al pedido.</p>';
+                recalcularTotalesManual();
+                return;
+            }
+
+            container.innerHTML = moSelectedItems.map((item, idx) => `
+                <div class="flex items-center justify-between gap-2 p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-xs">
+                    <div class="min-w-0 flex-1">
+                        <p class="font-bold text-white truncate">${item.name}</p>
+                        ${item.variantLabel ? `<p class="text-[11px] text-storevo-400 font-medium">${item.variantLabel}</p>` : ''}
+                        <p class="text-[11px] text-slate-400">${formatCopDashboard(item.price)} c/u</p>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <button type="button" onclick="cambiarCantidadItemManual(${idx}, -1)" class="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 text-white font-bold">-</button>
+                        <span class="w-6 text-center font-bold text-white">${item.quantity}</span>
+                        <button type="button" onclick="cambiarCantidadItemManual(${idx}, 1)" class="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 text-white font-bold">+</button>
+                    </div>
+                    <div class="text-right font-bold text-white w-20">
+                        ${formatCopDashboard(item.price * item.quantity)}
+                    </div>
+                </div>
+            `).join('');
+
+            recalcularTotalesManual();
+        }
+
+        function calcularSubtotalProductosManual() {
+            return moSelectedItems.reduce((acc, i) => acc + (i.price * i.quantity), 0);
+        }
+
+        function actualizarModoEntregaManual() {
+            const mode = document.getElementById('mo-delivery-method').value;
+            const fields = document.getElementById('mo-shipping-fields');
+            const shipInput = document.getElementById('mo-shipping-cost');
+            if (mode === 'PICKUP') {
+                fields.classList.add('hidden');
+                shipInput.value = 0;
+            } else {
+                fields.classList.remove('hidden');
+                calcularEnvioSugeridoManual();
+            }
+            recalcularTotalesManual();
+        }
+
+        function calcularEnvioSugeridoManual() {
+            const modal = document.getElementById('manual-order-modal');
+            const mode = document.getElementById('mo-delivery-method').value;
+            const shipInput = document.getElementById('mo-shipping-cost');
+            if (mode === 'PICKUP') {
+                shipInput.value = 0;
+                recalcularTotalesManual();
+                return;
+            }
+
+            const subtotal = calcularSubtotalProductosManual();
+            const freeThreshold = parseFloat(modal.getAttribute('data-free-threshold') || '0') || 0;
+            const localRate = parseFloat(modal.getAttribute('data-local-rate') || '-1');
+            const nationalRate = parseFloat(modal.getAttribute('data-national-rate') || '-1');
+            const pickupCity = normalizeCityDash(modal.getAttribute('data-pickup-city') || '');
+            const destCity = normalizeCityDash(document.getElementById('mo-city').value || '');
+
+            if (subtotal <= 0) {
+                shipInput.value = 0;
+                recalcularTotalesManual();
+                return;
+            }
+            if (freeThreshold > 0 && subtotal >= freeThreshold) {
+                shipInput.value = 0;
+                recalcularTotalesManual();
+                return;
+            }
+
+            const isLocal = pickupCity !== '' && destCity !== '' && pickupCity === destCity;
+            if (isLocal && localRate >= 0) {
+                shipInput.value = Math.round(localRate);
+            } else if (nationalRate >= 0) {
+                shipInput.value = Math.round(nationalRate);
+            } else if (localRate >= 0) {
+                shipInput.value = Math.round(localRate);
+            }
+            recalcularTotalesManual();
+        }
+
+        function recalcularTotalesManual() {
+            const subtotal = calcularSubtotalProductosManual();
+            const shipping = Math.max(0, parseFloat(document.getElementById('mo-shipping-cost').value || '0') || 0);
+            document.getElementById('mo-subtotal-label').textContent = formatCopDashboard(subtotal);
+            document.getElementById('mo-total-label').textContent = formatCopDashboard(subtotal + shipping);
+        }
+
+        function buscarClientePorTelefono() {
+            const phone = document.getElementById('mo-phone').value.trim();
+            const msgEl = document.getElementById('mo-customer-lookup-msg');
+            if (!phone) return;
+            const slug = document.getElementById('manual-order-modal').getAttribute('data-slug');
+
+            fetch(`/dashboard/${slug}/orders/api/customer?phone=` + encodeURIComponent(phone))
+                .then(r => r.json())
+                .then(data => {
+                    if (data && data.found && data.customer) {
+                        const c = data.customer;
+                        if (c.name) document.getElementById('mo-name').value = c.name;
+                        if (c.email) document.getElementById('mo-email').value = c.email;
+                        if (c.document) document.getElementById('mo-document').value = c.document;
+                        if (c.city) document.getElementById('mo-city').value = c.city;
+                        if (c.address) document.getElementById('mo-address').value = c.address;
+                        msgEl.textContent = '✓ Datos autocompletados del cliente ' + c.name;
+                        msgEl.className = 'text-[11px] text-emerald-400 mt-1 block';
+                        calcularEnvioSugeridoManual();
+                    } else {
+                        msgEl.textContent = 'Cliente nuevo (se registrará automáticamente al crear el pedido).';
+                        msgEl.className = 'text-[11px] text-slate-400 mt-1 block';
+                    }
+                })
+                .catch(() => {});
+        }
+
+        function guardarPedidoManual() {
+            const errorBox = document.getElementById('manual-order-error');
+            errorBox.classList.add('hidden');
+
+            if (moSelectedItems.length === 0) {
+                errorBox.textContent = 'Agrega al menos un producto al pedido.';
+                errorBox.classList.remove('hidden');
+                return;
+            }
+
+            const payload = {
+                customerPhone: document.getElementById('mo-phone').value.trim(),
+                customerName: document.getElementById('mo-name').value.trim(),
+                customerDocument: document.getElementById('mo-document').value.trim(),
+                customerEmail: document.getElementById('mo-email').value.trim(),
+                deliveryMethod: document.getElementById('mo-delivery-method').value,
+                city: document.getElementById('mo-city').value.trim(),
+                address: document.getElementById('mo-address').value.trim(),
+                customShippingCost: Math.max(0, parseFloat(document.getElementById('mo-shipping-cost').value || '0') || 0),
+                initialStatus: document.getElementById('mo-initial-status').value,
+                channel: document.getElementById('mo-channel').value,
+                paymentMethod: document.getElementById('mo-payment-method').value.trim(),
+                notes: document.getElementById('mo-notes').value.trim(),
+                items: moSelectedItems.map(i => ({
+                    productId: i.productId,
+                    variantId: i.variantId,
+                    quantity: i.quantity
+                }))
+            };
+
+            const btn = document.getElementById('btn-submit-manual-order');
+            btn.disabled = true;
+            btn.textContent = 'Creando pedido...';
+
+            const slug = document.getElementById('manual-order-modal').getAttribute('data-slug');
+            fetch(`/dashboard/${slug}/orders/manual-ajax`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+                .then(r => r.json())
+                .then(res => {
+                    if (!res.success) {
+                        errorBox.textContent = res.message || 'Error al crear el pedido.';
+                        errorBox.classList.remove('hidden');
+                        return;
+                    }
+                    document.getElementById('manual-order-form-step').classList.add('hidden');
+                    document.getElementById('manual-order-success-step').classList.remove('hidden');
+
+                    document.getElementById('mo-created-title').textContent = '¡Pedido #' + res.orderId + ' creado (' + res.statusDisplay + ')!';
+                    document.getElementById('mo-created-subtitle').textContent = 'Total del pedido: ' + formatCopDashboard(res.total);
+                    document.getElementById('mo-created-payment-url').value = res.paymentUrl;
+                    document.getElementById('mo-created-whatsapp-btn').href = res.whatsappShareUrl;
+                    document.getElementById('mo-created-detail-btn').href = res.detailUrl;
+                })
+                .catch(() => {
+                    errorBox.textContent = 'Error de red al guardar el pedido.';
+                    errorBox.classList.remove('hidden');
+                })
+                .finally(() => {
+                    btn.disabled = false;
+                    btn.textContent = 'Crear Pedido y Generar Link';
+                });
+        }
+
+        function copiarLinkPagoManual() {
+            const input = document.getElementById('mo-created-payment-url');
+            const btn = document.getElementById('btn-copy-payment-url');
+            input.select();
+            navigator.clipboard.writeText(input.value).then(() => {
+                btn.textContent = '¡Copiado!';
+                setTimeout(() => { btn.textContent = 'Copiar Link'; }, 2000);
+            });
+        }
+    </script>
 </th:block>
 </body>
 </html>

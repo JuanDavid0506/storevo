@@ -423,6 +423,271 @@ public class OrderService {
         return (value != null && !value.isBlank()) ? value.trim() : null;
     }
 
+    /**
+     * Crea un pedido manual / venta asistida desde el panel administrativo (Objetivo M2).
+     */
+    @Transactional
+    public Order createManualOrder(com.storevo.backend.tenant.dto.ManualOrderRequestDto req, Long adminUserId) {
+        if (req == null || req.getItems() == null || req.getItems().isEmpty()) {
+            throw new IllegalArgumentException("Debes agregar al menos un producto al pedido.");
+        }
+        if (req.getCustomerName() == null || req.getCustomerName().isBlank()) {
+            throw new IllegalArgumentException("El nombre del cliente es obligatorio.");
+        }
+        if (req.getCustomerPhone() == null || req.getCustomerPhone().isBlank()) {
+            throw new IllegalArgumentException("El teléfono / WhatsApp del cliente es obligatorio.");
+        }
+
+        com.storevo.backend.tenant.dto.StoreSettingsDto storeSettings = loadStoreSettingsForCurrentTenant();
+
+        boolean pickupRequested = "PICKUP".equalsIgnoreCase(req.getDeliveryMethod() != null ? req.getDeliveryMethod().trim() : "");
+        String resolvedDeliveryMethod = pickupRequested ? "PICKUP" : "SHIPPING";
+
+        String resolvedCity = (req.getCity() != null && !req.getCity().isBlank()) ? req.getCity().trim() : "";
+        String resolvedAddress = (req.getAddress() != null && !req.getAddress().isBlank()) ? req.getAddress().trim() : "";
+
+        if ("PICKUP".equals(resolvedDeliveryMethod)) {
+            if (resolvedCity.isEmpty()) {
+                resolvedCity = (storeSettings != null && storeSettings.getShippingPickupCity() != null && !storeSettings.getShippingPickupCity().isBlank())
+                        ? storeSettings.getShippingPickupCity().trim()
+                        : "Recogida en tienda";
+            }
+            if (resolvedAddress.isEmpty()) {
+                resolvedAddress = (storeSettings != null && storeSettings.getShippingPickupAddress() != null && !storeSettings.getShippingPickupAddress().isBlank())
+                        ? "Recogida en tienda (" + storeSettings.getShippingPickupAddress().trim() + ")"
+                        : "Recogida en tienda física";
+            }
+        } else {
+            if (resolvedCity.isEmpty() || resolvedAddress.isEmpty()) {
+                throw new IllegalArgumentException("Debes indicar la ciudad y la dirección de entrega para el envío a domicilio.");
+            }
+        }
+
+        OrderChannel resolvedChannel = "ONLINE".equalsIgnoreCase(req.getChannel() != null ? req.getChannel().trim() : "")
+                ? OrderChannel.ONLINE
+                : OrderChannel.WHATSAPP;
+
+        OrderStatus targetInitialStatus = OrderStatus.PENDING;
+        if ("PAID".equalsIgnoreCase(req.getInitialStatus())) {
+            targetInitialStatus = OrderStatus.PAID;
+        } else if ("CONFIRMED".equalsIgnoreCase(req.getInitialStatus())) {
+            targetInitialStatus = OrderStatus.CONFIRMED;
+        }
+
+        String resolvedPaymentMethod = cleanNullable(req.getPaymentMethod());
+        if (resolvedPaymentMethod == null) {
+            if (targetInitialStatus == OrderStatus.PAID) {
+                resolvedPaymentMethod = "Pago registrado en panel";
+            } else if (targetInitialStatus == OrderStatus.CONFIRMED) {
+                resolvedPaymentMethod = "Contraentrega / WhatsApp";
+            } else {
+                resolvedPaymentMethod = "Link de pago / Pendiente";
+            }
+        }
+
+        String finalDoc = cleanNullable(req.getCustomerDocument());
+        String cleanDv = cleanNullable(req.getVerificationDigit());
+        if (finalDoc != null && cleanDv != null && !finalDoc.contains("-")) {
+            finalDoc = finalDoc + "-" + cleanDv;
+        }
+
+        // Consolidar cantidades por (productId, variantId) para evitar duplicados en la misma orden
+        java.util.Map<String, com.storevo.backend.tenant.dto.ManualOrderRequestDto.ManualOrderItemDto> mergedItemsMap = new java.util.LinkedHashMap<>();
+        for (com.storevo.backend.tenant.dto.ManualOrderRequestDto.ManualOrderItemDto rawItem : req.getItems()) {
+            if (rawItem == null || rawItem.getProductId() == null || rawItem.getQuantity() == null || rawItem.getQuantity() <= 0) {
+                throw new IllegalArgumentException("Cada producto del pedido debe tener una cantidad mayor a cero.");
+            }
+            String key = rawItem.getProductId() + ":" + (rawItem.getVariantId() != null ? rawItem.getVariantId() : "null");
+            com.storevo.backend.tenant.dto.ManualOrderRequestDto.ManualOrderItemDto existing = mergedItemsMap.get(key);
+            if (existing != null) {
+                existing.setQuantity(existing.getQuantity() + rawItem.getQuantity());
+            } else {
+                mergedItemsMap.put(key, com.storevo.backend.tenant.dto.ManualOrderRequestDto.ManualOrderItemDto.builder()
+                        .productId(rawItem.getProductId())
+                        .variantId(rawItem.getVariantId())
+                        .quantity(rawItem.getQuantity())
+                        .build());
+            }
+        }
+
+        boolean deductImmediately = (targetInitialStatus == OrderStatus.PAID || targetInitialStatus == OrderStatus.CONFIRMED);
+
+        Order order = Order.builder()
+                .customerName(req.getCustomerName().trim())
+                .customerPhone(req.getCustomerPhone().trim())
+                .customerEmail(cleanNullable(req.getCustomerEmail()))
+                .documentType(cleanNullable(req.getDocumentType()))
+                .customerDocument(finalDoc)
+                .verificationDigit(cleanDv)
+                .legalName(cleanNullable(req.getLegalName()))
+                .taxRegime(cleanNullable(req.getTaxRegime()))
+                .requiresElectronicInvoice(Boolean.TRUE.equals(req.getRequiresElectronicInvoice()))
+                .address(resolvedAddress)
+                .city(resolvedCity)
+                .notes(cleanNullable(req.getNotes()))
+                .subtotal(0.0)
+                .shippingCost(0.0)
+                .deliveryMethod(resolvedDeliveryMethod)
+                .total(0.0)
+                .status(targetInitialStatus)
+                .channel(resolvedChannel)
+                .paymentMethod(resolvedPaymentMethod)
+                .stockDeducted(deductImmediately)
+                .build();
+
+        List<OrderItem> orderItems = new java.util.ArrayList<>();
+        for (com.storevo.backend.tenant.dto.ManualOrderRequestDto.ManualOrderItemDto itemDto : mergedItemsMap.values()) {
+            Product product = productRepository.findById(itemDto.getProductId())
+                    .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado (ID: " + itemDto.getProductId() + ")."));
+
+            if (Boolean.TRUE.equals(product.getIsDeleted())
+                    || !Boolean.TRUE.equals(product.getIsActive())
+                    || Boolean.TRUE.equals(product.getIsDraft())) {
+                throw new IllegalArgumentException("El producto '" + product.getName() + "' no está activo ni disponible para la venta.");
+            }
+
+            ProductVariant variant = null;
+            Long verifiedVariantId = null;
+
+            if (Boolean.TRUE.equals(product.getHasVariants())) {
+                if (itemDto.getVariantId() == null) {
+                    throw new IllegalArgumentException("Debes elegir una variante (talla/color) para el producto: " + product.getName());
+                }
+                variant = variantRepository.findByIdAndProductId(itemDto.getVariantId(), product.getId())
+                        .orElseThrow(() -> new IllegalArgumentException("La variante seleccionada no pertenece al producto: " + product.getName()));
+
+                if (!Boolean.TRUE.equals(variant.getIsActive())) {
+                    throw new IllegalArgumentException("La variante seleccionada para '" + product.getName() + "' está inactiva.");
+                }
+                verifiedVariantId = variant.getId();
+            } else if (itemDto.getVariantId() != null) {
+                throw new IllegalArgumentException("El producto '" + product.getName() + "' no utiliza variantes.");
+            }
+
+            Double verifiedPrice = cartManager.resolveEffectivePrice(product, variant);
+            if (verifiedPrice == null || verifiedPrice <= 0.0) {
+                throw new IllegalArgumentException("El producto '" + product.getName() + "' no tiene un precio válido.");
+            }
+
+            String variantText = variant != null ? cartManager.buildVariantText(variant) : null;
+            String displayName = product.getName() + (variantText != null ? " (" + variantText + ")" : "");
+
+            if (!inventoryService.isAvailable(product.getId(), verifiedVariantId, itemDto.getQuantity())) {
+                throw new InsufficientStockException(displayName);
+            }
+
+            if (deductImmediately) {
+                inventoryService.deductStock(product.getId(), verifiedVariantId, itemDto.getQuantity());
+            }
+
+            String receiptName = product.getName() + (variantText != null ? " - " + variantText : "");
+            double itemSubtotal = verifiedPrice * itemDto.getQuantity();
+
+            orderItems.add(OrderItem.builder()
+                    .order(order)
+                    .productId(product.getId())
+                    .variantId(verifiedVariantId)
+                    .productName(receiptName)
+                    .price(verifiedPrice)
+                    .quantity(itemDto.getQuantity())
+                    .subtotal(itemSubtotal)
+                    .build());
+        }
+
+        double verifiedSubtotal = orderItems.stream()
+                .mapToDouble(OrderItem::getSubtotal)
+                .sum();
+
+        if (Double.isNaN(verifiedSubtotal) || Double.isInfinite(verifiedSubtotal) || verifiedSubtotal <= 0.0) {
+            throw new IllegalArgumentException("El subtotal del pedido no es válido.");
+        }
+
+        double verifiedShippingCost;
+        if ("PICKUP".equals(resolvedDeliveryMethod)) {
+            verifiedShippingCost = 0.0;
+        } else if (req.getCustomShippingCost() != null
+                && !Double.isNaN(req.getCustomShippingCost())
+                && !Double.isInfinite(req.getCustomShippingCost())
+                && req.getCustomShippingCost() >= 0.0) {
+            verifiedShippingCost = req.getCustomShippingCost();
+        } else {
+            verifiedShippingCost = storeSettingsService.calculateShippingCost(
+                    storeSettings, verifiedSubtotal, resolvedCity, resolvedDeliveryMethod);
+        }
+
+        order.setSubtotal(verifiedSubtotal);
+        order.setShippingCost(verifiedShippingCost);
+        order.setTotal(verifiedSubtotal + verifiedShippingCost);
+        order.setItems(orderItems);
+
+        String statusExplanation = switch (targetInitialStatus) {
+            case PAID -> "Pedido creado manualmente desde el panel como PAGADO (" + resolvedPaymentMethod + ").";
+            case CONFIRMED -> "Pedido creado manualmente desde el panel como CONFIRMADO (" + resolvedPaymentMethod + ").";
+            default -> "Pedido creado manualmente desde el panel (Pendiente de pago — Link de cobro generado).";
+        };
+
+        OrderHistory historyObj = OrderHistory.builder()
+                .order(order)
+                .eventType(OrderHistoryType.STATE_CHANGE)
+                .origin(EventOrigin.ADMIN)
+                .oldStatus(null)
+                .newStatus(targetInitialStatus)
+                .description(statusExplanation)
+                .userId(adminUserId)
+                .build();
+
+        order.getHistory().add(historyObj);
+
+        Customer customer = customerService.syncCustomerOnOrderCreated(order);
+        order.setCustomer(customer);
+
+        return orderRepository.save(order);
+    }
+
+    /**
+     * Construye el mensaje de cobro con el resumen del pedido y el link directo de pago para enviar por WhatsApp al comprador (Objetivo M2).
+     */
+    public String buildPaymentLinkWhatsappMessage(Order order, String storeName, String paymentUrl) {
+        String safeStore = (storeName != null && !storeName.isBlank()) ? storeName.trim() : "nuestra tienda";
+        StringBuilder sb = new StringBuilder();
+        sb.append("¡Hola ").append(order.getCustomerName()).append("! Te compartimos el resumen de tu *Pedido #")
+                .append(order.getId()).append("* en *").append(safeStore).append("*:\n\n");
+
+        for (OrderItem item : order.getItems()) {
+            sb.append("• ").append(item.getQuantity()).append("x ").append(item.getProductName());
+            if (item.getSubtotal() != null) {
+                sb.append(" ($").append(formatCurrency(item.getSubtotal())).append(")");
+            }
+            sb.append("\n");
+        }
+
+        double sub = (order.getSubtotal() != null && order.getSubtotal() > 0.0)
+                ? order.getSubtotal()
+                : (order.getTotal() != null ? order.getTotal() : 0.0);
+        double ship = (order.getShippingCost() != null && order.getShippingCost() >= 0.0)
+                ? order.getShippingCost()
+                : 0.0;
+        boolean isPickup = "PICKUP".equalsIgnoreCase(order.getDeliveryMethod());
+
+        sb.append("\n*Subtotal:* $").append(formatCurrency(sub));
+        if (isPickup) {
+            sb.append("\n*Entrega:* Recogida en tienda ($0)");
+        } else if (ship > 0.0) {
+            sb.append("\n*Envío a domicilio:* $").append(formatCurrency(ship));
+        } else {
+            sb.append("\n*Envío:* Gratis ($0)");
+        }
+        sb.append("\n*Total a pagar:* $").append(formatCurrency(order.getTotal())).append("\n");
+
+        if (order.getStatus() == OrderStatus.PENDING && paymentUrl != null && !paymentUrl.isBlank()) {
+            sb.append("\nPuedes completar tu pago en línea de forma segura en este enlace:\n").append(paymentUrl);
+        } else {
+            sb.append("\n*Estado del pedido:* ").append(order.getStatus().getDisplayName());
+        }
+
+        return sb.toString();
+    }
+
     public String buildWhatsappMessage(Order order) {
         StringBuilder sb = new StringBuilder();
         sb.append("Hola, quiero realizar el *Pedido #").append(order.getId()).append("*:").append("\n\n");

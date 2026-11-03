@@ -4,13 +4,20 @@ import com.storevo.backend.admin.model.Feature;
 import com.storevo.backend.admin.model.IntegrationType;
 import com.storevo.backend.admin.model.Store;
 import com.storevo.backend.admin.repository.StoreIntegrationRepository;
+import com.storevo.backend.admin.service.StoreSettingsService;
 import com.storevo.backend.admin.service.TenantPlanService;
 import com.storevo.backend.config.tenant.TenantContext;
+import com.storevo.backend.tenant.dto.CustomerDto;
+import com.storevo.backend.tenant.dto.ManualOrderRequestDto;
+import com.storevo.backend.tenant.dto.StoreSettingsDto;
+import com.storevo.backend.tenant.exception.InsufficientStockException;
 import com.storevo.backend.tenant.exception.InvalidOrderStatusException;
 import com.storevo.backend.tenant.exception.ShipmentRequiredException;
 import com.storevo.backend.tenant.model.*;
 import com.storevo.backend.tenant.repository.CarrierRepository;
+import com.storevo.backend.tenant.service.CustomerService;
 import com.storevo.backend.tenant.service.OrderService;
+import com.storevo.backend.tenant.service.ProductService;
 import com.storevo.backend.tenant.service.ShipmentService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +28,8 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -36,10 +45,13 @@ import java.util.Map;
 public class DashboardOrderController {
 
     private final OrderService orderService;
+    private final ProductService productService;
+    private final CustomerService customerService;
     private final CarrierRepository carrierRepository;
     private final ShipmentService shipmentService;
     private final TenantPlanService tenantPlanService;
     private final StoreIntegrationRepository integrationRepository;
+    private final StoreSettingsService storeSettingsService;
 
     @ModelAttribute
     public void setupTenant(@PathVariable String slug, Model model, HttpServletRequest request) {
@@ -55,6 +67,21 @@ public class DashboardOrderController {
     private Long resolveCurrentUserId(HttpServletRequest request) {
         Object attr = request.getAttribute("currentUserId");
         return (attr instanceof Long) ? (Long) attr : 1L;
+    }
+
+    private StoreSettingsDto loadStoreSettingsSafely(Store store) {
+        if (store == null) return null;
+        String prevTenant = TenantContext.getCurrentTenant();
+        try {
+            TenantContext.clear();
+            return storeSettingsService.getSettingsByStore(store);
+        } catch (Exception e) {
+            return null;
+        } finally {
+            if (prevTenant != null) {
+                TenantContext.setCurrentTenant(prevTenant);
+            }
+        }
     }
 
     private boolean isMiPaqueteActiveForStore(Store store) {
@@ -75,10 +102,30 @@ public class DashboardOrderController {
         }
     }
 
+    private String buildBaseUrl(HttpServletRequest request) {
+        String scheme = request.getHeader("X-Forwarded-Proto") != null
+                ? request.getHeader("X-Forwarded-Proto")
+                : request.getScheme();
+        String serverName = request.getServerName();
+        int serverPort = request.getServerPort();
+        String portSuffix = (serverPort == 80 || serverPort == 443) ? "" : ":" + serverPort;
+        return scheme + "://" + serverName + portSuffix;
+    }
+
+    private String normalizeCustomerWhatsappPhone(String rawPhone) {
+        if (rawPhone == null) return "";
+        String digits = rawPhone.replaceAll("[^0-9]", "");
+        if (digits.length() == 10) {
+            return "57" + digits;
+        }
+        return digits;
+    }
+
     private static final List<Integer> ALLOWED_PAGE_SIZES = List.of(10, 12, 15, 20, 24, 25, 48, 50, 100);
 
     @GetMapping
     public String listOrders(
+            @PathVariable String slug,
             @RequestParam(required = false) String q,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String channel,
@@ -90,6 +137,9 @@ public class DashboardOrderController {
             @RequestParam(defaultValue = "10") int size,
             HttpServletRequest request,
             Model model) {
+
+        Store store = (Store) request.getAttribute("currentStore");
+        StoreSettingsDto storeSettings = loadStoreSettingsSafely(store);
 
         int safePage = Math.max(page, 0);
         int safeSize = ALLOWED_PAGE_SIZES.contains(size) ? size : 10;
@@ -111,6 +161,7 @@ public class DashboardOrderController {
 
         model.addAttribute("page", ordersPage);
         model.addAttribute("orders", ordersPage.getContent());
+        model.addAttribute("storeSettings", storeSettings);
         model.addAttribute("currentSearch", q);
         model.addAttribute("currentStatus", statusFilter);
         model.addAttribute("currentChannel", channelFilter);
@@ -164,17 +215,104 @@ public class DashboardOrderController {
     }
 
     @GetMapping("/{id}")
-    public String orderDetail(@PathVariable Long id, HttpServletRequest request, Model model) {
+    public String orderDetail(@PathVariable String slug, @PathVariable Long id, HttpServletRequest request, Model model) {
         Store store = (Store) request.getAttribute("currentStore");
         boolean miPaqueteEnabled = isMiPaqueteActiveForStore(store);
 
         Order order = orderService.getOrderById(id);
+
+        String paymentLink = buildBaseUrl(request) + "/s/" + slug + "/order/" + order.getPublicToken() + "/success";
+        String normalizedPhone = normalizeCustomerWhatsappPhone(order.getCustomerPhone());
+        String waMsg = orderService.buildPaymentLinkWhatsappMessage(
+                order, store != null ? store.getName() : slug, paymentLink);
+        String customerWhatsappShareLink = !normalizedPhone.isEmpty()
+                ? "https://wa.me/" + normalizedPhone + "?text=" + URLEncoder.encode(waMsg, StandardCharsets.UTF_8)
+                : "https://wa.me/?text=" + URLEncoder.encode(waMsg, StandardCharsets.UTF_8);
+
         model.addAttribute("order", order);
+        model.addAttribute("paymentLink", paymentLink);
+        model.addAttribute("customerWhatsappShareLink", customerWhatsappShareLink);
         model.addAttribute("orderStatuses", OrderStatus.values());
         model.addAttribute("carriers", carrierRepository.findByIsActiveTrueOrderByNameAsc());
         model.addAttribute("miPaqueteEnabled", miPaqueteEnabled);
         model.addAttribute("pageTitle", "Pedido #" + order.getId());
         return "dashboard/orders/detail";
+    }
+
+    // =========================================================================
+    // ENDPOINTS PARA CREACIÓN MANUAL DE PEDIDOS Y VENTA ASISTIDA (OBJETIVO M2)
+    // =========================================================================
+
+    @GetMapping("/api/products")
+    @ResponseBody
+    public ResponseEntity< List< Map<String, Object> > > searchProductsForManualOrder(
+            @RequestParam(required = false, defaultValue = "") String q,
+            @RequestParam(required = false, defaultValue = "20") int limit) {
+        return ResponseEntity.ok(productService.searchProductsForManualOrder(q, limit));
+    }
+
+    @GetMapping("/api/customer")
+    @ResponseBody
+    public ResponseEntity< Map<String, Object> > lookupCustomerByPhone(@RequestParam String phone) {
+        Map<String, Object> res = new HashMap<>();
+        CustomerDto customer = customerService.getCustomerByPhone(phone);
+        if (customer == null) {
+            res.put("found", false);
+            return ResponseEntity.ok(res);
+        }
+        res.put("found", true);
+        res.put("customer", customer);
+        return ResponseEntity.ok(res);
+    }
+
+    @PostMapping("/manual-ajax")
+    @ResponseBody
+    public ResponseEntity< Map<String, Object> > createManualOrderAjax(
+            @PathVariable String slug,
+            @RequestBody ManualOrderRequestDto requestDto,
+            HttpServletRequest request) {
+
+        Long currentUserId = resolveCurrentUserId(request);
+        Store store = (Store) request.getAttribute("currentStore");
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            Order createdOrder = orderService.createManualOrder(requestDto, currentUserId);
+
+            String baseUrl = buildBaseUrl(request);
+            String paymentUrl = baseUrl + "/s/" + slug + "/order/" + createdOrder.getPublicToken() + "/success";
+            String detailUrl = "/dashboard/" + slug + "/orders/" + createdOrder.getId();
+
+            String storeName = store != null ? store.getName() : slug;
+            String waMessage = orderService.buildPaymentLinkWhatsappMessage(createdOrder, storeName, paymentUrl);
+            String encodedMsg = URLEncoder.encode(waMessage, StandardCharsets.UTF_8);
+            String normalizedPhone = normalizeCustomerWhatsappPhone(createdOrder.getCustomerPhone());
+            String whatsappShareUrl = !normalizedPhone.isEmpty()
+                    ? "https://wa.me/" + normalizedPhone + "?text=" + encodedMsg
+                    : "https://wa.me/?text=" + encodedMsg;
+
+            response.put("success", true);
+            response.put("orderId", createdOrder.getId());
+            response.put("publicToken", createdOrder.getPublicToken());
+            response.put("status", createdOrder.getStatus().name());
+            response.put("statusDisplay", createdOrder.getStatus().getDisplayName());
+            response.put("subtotal", createdOrder.getSubtotal());
+            response.put("shippingCost", createdOrder.getShippingCost());
+            response.put("total", createdOrder.getTotal());
+            response.put("paymentUrl", paymentUrl);
+            response.put("whatsappShareUrl", whatsappShareUrl);
+            response.put("detailUrl", detailUrl);
+            response.put("message", "Pedido #" + createdOrder.getId() + " creado exitosamente.");
+            return ResponseEntity.ok(response);
+        } catch (InsufficientStockException | IllegalArgumentException e) {
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "No se pudo crear el pedido: " + e.getMessage());
+            return ResponseEntity.ok(response);
+        }
     }
 
     @PostMapping("/{id}/status-ajax")
@@ -189,7 +327,7 @@ public class DashboardOrderController {
         OrderHistory history;
         try {
             history = orderService.updateOrderStatus(id, status, EventOrigin.ADMIN, currentUserId);
-        } catch (com.storevo.backend.tenant.exception.InsufficientStockException | ShipmentRequiredException e) {
+        } catch (InsufficientStockException | ShipmentRequiredException e) {
             response.put("success", false);
             response.put("message", "Operación rechazada: " + e.getMessage());
             return ResponseEntity.ok(response);
