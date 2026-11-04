@@ -20,6 +20,13 @@ import java.util.Optional;
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
+
+    /**
+     * Devuelve si la marca del producto está activa SIN cargar el proxy lazy de Brand
+     * (vacío si el producto no tiene marca).
+     */
+    @Query("SELECT b.isActive FROM Product p JOIN p.brandRef b WHERE p.id = :productId")
+    Optional<Boolean> findBrandActiveByProductId(@Param("productId") Long productId);
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT p FROM Product p WHERE p.id = :id")
     Optional<Product> findByIdWithLock(@Param("id") Long id);

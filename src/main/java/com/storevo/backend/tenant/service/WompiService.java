@@ -68,11 +68,15 @@ public class WompiService {
 
         // 3. DATOS DE LA TRANSACCIÓN
         String publicKey = wompiConfig.getApiKey();
-        String integritySecret = wompiConfig.getExtraData();        String environment = wompiConfig.getEnvironment();
+        // Secreto de integridad propio; si la tienda es antigua y no lo tiene, se usa el campo anterior (extraData)
+        String integritySecret = (wompiConfig.getIntegritySecret() != null && !wompiConfig.getIntegritySecret().isBlank())
+                ? wompiConfig.getIntegritySecret()
+                : wompiConfig.getExtraData();
+        String environment = wompiConfig.getEnvironment();
         String currency = "COP";
 
         // Referencia única
-        String reference = "STOREVO-" + order.getId() + "-" + System.currentTimeMillis();
+        String reference = buildReference(order.getId(), order.getPublicToken());
 
         // Convertimos el Double total exacto de tu entidad Order a centavos con redondeo idéntico al validador
         long amountInCents = Math.round((order.getTotal() != null ? order.getTotal() : 0.0) * 100);
@@ -88,6 +92,15 @@ public class WompiService {
                 .currency(currency)
                 .environment(environment)
                 .build();
+    }
+    /**
+     * Referencia única y verificable de un pedido: STOREVO-{id}-{16 caracteres del token privado}.
+     * Solo quien recibió el enlace del pedido conoce el token.
+     */
+    public static String buildReference(Long orderId, String publicToken) {
+        String clean = publicToken != null ? publicToken.replace("-", "") : "";
+        String fragment = clean.length() > 16 ? clean.substring(0, 16) : clean;
+        return "STOREVO-" + orderId + "-" + fragment;
     }
 
     private String generateSignature(String reference, long amountInCents, String currency, String secret) {

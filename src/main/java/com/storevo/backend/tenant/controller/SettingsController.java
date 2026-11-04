@@ -99,7 +99,10 @@ public class SettingsController {
             wompi.setApiSecret(settingsDto.getWompiPrivateKey()); // JPA lo cifra con AES automáticamente
         }
         if (settingsDto.getWompiEventsSecret() != null && !settingsDto.getWompiEventsSecret().isBlank()) {
-            wompi.setExtraData(settingsDto.getWompiEventsSecret()); // JPA lo cifra con AES automáticamente
+            wompi.setExtraData(settingsDto.getWompiEventsSecret().trim()); // JPA lo cifra con AES automáticamente
+        }
+        if (settingsDto.getWompiIntegritySecret() != null && !settingsDto.getWompiIntegritySecret().isBlank()) {
+            wompi.setIntegritySecret(settingsDto.getWompiIntegritySecret().trim()); // JPA lo cifra con AES automáticamente
         }
         integrationRepository.save(wompi);
 

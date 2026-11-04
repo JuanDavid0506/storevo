@@ -49,6 +49,7 @@ public class StoreSettingsDto {
     private String wompiPublicKey;
     private String wompiPrivateKey;
     private String wompiEventsSecret;
+    private String wompiIntegritySecret;
 
     // --- Mi Paquete ---
     private boolean miPaqueteActive;

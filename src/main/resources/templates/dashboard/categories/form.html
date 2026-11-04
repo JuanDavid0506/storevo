@@ -15,7 +15,7 @@
         <h2 class="text-2xl font-black tracking-tight text-white" th:text="${category.id != null ? 'Editar Categoría' : 'Nueva Categoría'}">Título</h2>
     </div>
 
-    <form th:action="@{|/dashboard/${slug}/categories|}" th:object="${category}" method="POST" class="bg-slate-900 border border-slate-800 rounded-2xl shadow-sm p-8 space-y-6">
+    <form th:action="@{|/dashboard/${slug}/categories|}" th:object="${category}" method="POST" enctype="multipart/form-data" class="bg-slate-900 border border-slate-800 rounded-2xl shadow-sm p-8 space-y-6">
         <input type="hidden" th:field="*{id}">
 
         <div th:if="${category.id == null}">
@@ -59,6 +59,20 @@
         <div th:replace="~{components/ui/fragments :: input('name', 'Nombre de la Categoría (*)', 'text', 'Ej: Camisas', *{name})}"></div>
         <div th:replace="~{components/ui/fragments :: textarea('description', 'Descripción (Opcional)', 'Breve descripción...', *{description}, '2')}"></div>
 
+        <!-- Imagen propia de la categoría (opcional) -->
+        <div class="p-5 border border-slate-800 rounded-xl bg-slate-950 space-y-3">
+            <label for="imageFile" class="block text-sm font-bold text-slate-300">Imagen de la categoría (Opcional)</label>
+            <div th:if="${category.imageUrl != null and !#strings.isEmpty(category.imageUrl)}" class="flex items-center gap-4">
+                <img th:src="${category.imageUrl}" alt="Imagen actual de la categoría" class="w-20 h-20 object-cover rounded-lg border border-slate-700">
+                <label class="flex items-center gap-2 text-sm text-slate-400 cursor-pointer">
+                    <input type="checkbox" name="removeImage" value="true" class="w-4 h-4 rounded border-slate-700 bg-slate-950 text-storevo-500 focus:ring-storevo-500">
+                    Quitar imagen actual
+                </label>
+            </div>
+            <input type="file" id="imageFile" name="imageFile" accept="image/png,image/jpeg,image/webp"
+                   class="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-slate-800 file:text-white hover:file:bg-slate-700">
+            <p class="text-xs text-slate-500">JPG, PNG o WEBP, máximo 5 MB. Si no subes una, se usa la foto de uno de sus productos.</p>
+        </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
             <label class="flex items-start gap-3 cursor-pointer p-4 border border-slate-800 rounded-xl hover:bg-slate-800/50 transition">
                 <div class="flex items-center h-5">

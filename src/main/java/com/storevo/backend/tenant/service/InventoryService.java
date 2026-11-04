@@ -194,7 +194,155 @@ public class InventoryService {
             productRepository.save(product);
         }
     }
+    /**
+     * Línea de stock a descontar: producto, variante (opcional), cantidad y una etiqueta legible para mensajes.
+     */
+    public record StockLine(Long productId, Long variantId, int quantity, String label) {
+    }
 
+    /**
+     * Descuenta el stock de varias líneas de forma TODO O NADA y SIN lanzar excepciones.
+     * - Si alguna línea no tiene stock suficiente, NO descuenta nada y devuelve las etiquetas que fallaron.
+     * - Si todo está bien, descuenta todo, sincroniza el stock del producto padre y devuelve una lista vacía.
+     * - No lanza excepciones por falta de stock, así que no marca la transacción externa como "rollback-only".
+     * - Toma los bloqueos siempre en el mismo orden (producto, variante) para evitar deadlocks.
+     *
+     * @param enforceCatalogRules true = exige producto activo, categoría activa, variante activa y precio válido
+     *                            (confirmación manual); false = solo valida el stock (pago ya cobrado por Wompi).
+     */
+    @Transactional
+    public java.util.List<String> tryDeductAll(java.util.List<StockLine> lines, boolean enforceCatalogRules) {
+        java.util.Set<String> failures = new java.util.LinkedHashSet<>();
+        if (lines == null || lines.isEmpty()) {
+            return new java.util.ArrayList<>(failures);
+        }
+
+        java.util.List<StockLine> ordered = new java.util.ArrayList<>(lines);
+        ordered.sort(java.util.Comparator
+                .comparing((StockLine l) -> l.productId() != null ? l.productId() : 0L)
+                .thenComparing(l -> l.variantId() != null ? l.variantId() : 0L));
+
+        java.util.Map<Long, Product> products = new java.util.LinkedHashMap<>();
+        java.util.Map<Long, ProductVariant> variants = new java.util.LinkedHashMap<>();
+        java.util.Map<Long, Long> variantParent = new java.util.HashMap<>();
+        java.util.Map<String, Integer> needed = new java.util.LinkedHashMap<>();
+        java.util.Map<String, String> labels = new java.util.HashMap<>();
+
+        // ---- Fase 1: bloquear, validar y acumular cantidades necesarias ----
+        for (StockLine line : ordered) {
+            String label = (line.label() != null && !line.label().isBlank())
+                    ? line.label()
+                    : "Producto #" + line.productId();
+
+            if (line.productId() == null || line.quantity() <= 0) {
+                failures.add(label);
+                continue;
+            }
+
+            Product product = products.get(line.productId());
+            if (product == null) {
+                product = productRepository.findByIdWithLock(line.productId()).orElse(null);
+                if (product == null) {
+                    failures.add(label);
+                    continue;
+                }
+                products.put(product.getId(), product);
+            }
+
+            // Productos bajo pedido no manejan stock
+            if (Boolean.TRUE.equals(product.getIsMadeToOrder())) {
+                continue;
+            }
+
+            if (enforceCatalogRules
+                    && (!Boolean.TRUE.equals(product.getIsActive())
+                    || Boolean.TRUE.equals(product.getIsDeleted())
+                    || Boolean.TRUE.equals(product.getIsDraft())
+                    || !isCategoryBranchActive(product))) {
+                failures.add(label);
+                continue;
+            }
+
+            String key;
+            if (Boolean.TRUE.equals(product.getHasVariants())) {
+                if (line.variantId() == null) {
+                    failures.add(label);
+                    continue;
+                }
+                ProductVariant variant = variants.get(line.variantId());
+                if (variant == null) {
+                    variant = variantRepository.findByIdAndProductIdWithLock(line.variantId(), line.productId()).orElse(null);
+                    if (variant == null) {
+                        failures.add(label);
+                        continue;
+                    }
+                    variants.put(variant.getId(), variant);
+                    variantParent.put(variant.getId(), product.getId());
+                }
+                if (enforceCatalogRules
+                        && (!Boolean.TRUE.equals(variant.getIsActive()) || !hasValidEffectivePrice(product, variant))) {
+                    failures.add(label);
+                    continue;
+                }
+                key = "V:" + variant.getId();
+            } else {
+                if (line.variantId() != null) {
+                    failures.add(label);
+                    continue;
+                }
+                if (enforceCatalogRules && !hasValidEffectivePrice(product, null)) {
+                    failures.add(label);
+                    continue;
+                }
+                key = "P:" + product.getId();
+            }
+            needed.merge(key, line.quantity(), Integer::sum);
+            labels.putIfAbsent(key, label);
+        }
+
+        // ---- Verificar que alcance el stock para la suma de cantidades ----
+        for (java.util.Map.Entry<String, Integer> entry : needed.entrySet()) {
+            long id = Long.parseLong(entry.getKey().substring(2));
+            int available = 0;
+            if (entry.getKey().startsWith("V:")) {
+                ProductVariant v = variants.get(id);
+                available = (v != null && v.getStock() != null) ? v.getStock() : 0;
+            } else {
+                Product p = products.get(id);
+                available = (p != null && p.getStock() != null) ? p.getStock() : 0;
+            }
+            if (available < entry.getValue()) {
+                failures.add(labels.get(entry.getKey()));
+            }
+        }
+
+        if (!failures.isEmpty()) {
+            return new java.util.ArrayList<>(failures);
+        }
+
+        // ---- Fase 2: descontar (todo o nada) ----
+        java.util.Set<Long> parentsToSync = new java.util.LinkedHashSet<>();
+        for (java.util.Map.Entry<String, Integer> entry : needed.entrySet()) {
+            long id = Long.parseLong(entry.getKey().substring(2));
+            if (entry.getKey().startsWith("V:")) {
+                ProductVariant v = variants.get(id);
+                v.setStock(v.getStock() - entry.getValue());
+                variantRepository.save(v);
+                parentsToSync.add(variantParent.get(id));
+            } else {
+                Product p = products.get(id);
+                p.setStock(p.getStock() - entry.getValue());
+                productRepository.save(p);
+            }
+        }
+        for (Long parentId : parentsToSync) {
+            Product parent = products.get(parentId);
+            if (parent != null) {
+                syncParentProductStock(parent);
+            }
+        }
+        return new java.util.ArrayList<>(failures);
+    }
     public void syncParentProductStock(Product product) {
         if (product == null || product.getId() == null) {
             return;

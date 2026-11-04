@@ -68,7 +68,9 @@ public class ProductService {
                 || Boolean.TRUE.equals(product.getIsDraft())) {
             return false;
         }
-        if (product.getBrandRef() != null && Boolean.FALSE.equals(product.getBrandRef().getIsActive())) {
+        // Consulta directa: product.getBrandRef() es un proxy lazy y aquí no hay sesión abierta (open-in-view=false)
+        if (product.getId() != null
+                && Boolean.FALSE.equals(productRepository.findBrandActiveByProductId(product.getId()).orElse(null))) {
             return false;
         }
         return categoryService.isProductCategoryActive(product);

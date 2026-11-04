@@ -46,6 +46,7 @@ public class OrderService {
     private final StoreIntegrationRepository integrationRepository;
     private final com.storevo.backend.admin.repository.StoreRepository storeRepository;
     private final com.storevo.backend.admin.service.StoreSettingsService storeSettingsService;
+    private final org.springframework.transaction.PlatformTransactionManager transactionManager;
 
     @Autowired
     @Lazy
@@ -409,11 +410,20 @@ public class OrderService {
             return null;
         }
         try {
+            // Las tablas stores/store_settings viven en storevo_admin. La transacción actual está atada al esquema
+            // de la tienda, así que abrimos una transacción NUEVA y de solo lectura contra el esquema admin.
             TenantContext.clear();
-            Store store = storeRepository.findBySchemaName(currentSchema).orElse(null);
-            return (store != null) ? storeSettingsService.getSettingsByStore(store) : null;
+            org.springframework.transaction.support.TransactionTemplate template =
+                    new org.springframework.transaction.support.TransactionTemplate(transactionManager);
+            template.setPropagationBehavior(org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+            template.setReadOnly(true);
+            return template.execute(status -> {
+                Store store = storeRepository.findBySchemaName(currentSchema).orElse(null);
+                return (store != null) ? storeSettingsService.getSettingsByStore(store) : null;
+            });
         } catch (Exception e) {
-            return null;
+            // Fallar fuerte: si no podemos leer la configuración, es mejor detener el pedido que cobrar envío $0 en silencio.
+            throw new IllegalStateException("No se pudo cargar la configuración de envío de la tienda: " + e.getMessage(), e);
         } finally {
             TenantContext.setCurrentTenant(currentSchema);
         }
@@ -867,25 +877,38 @@ public class OrderService {
         return internalNote;
     }
 
-    private void deductOrderStock(Order order) {
+    private java.util.List<InventoryService.StockLine> buildStockLines(Order order) {
+        java.util.List<InventoryService.StockLine> lines = new java.util.ArrayList<>();
         for (OrderItem item : order.getItems()) {
-            inventoryService.deductStock(item.getProductId(), item.getVariantId(), item.getQuantity());
+            lines.add(new InventoryService.StockLine(
+                    item.getProductId(),
+                    item.getVariantId(),
+                    item.getQuantity() != null ? item.getQuantity() : 0,
+                    item.getProductName() + " (x" + item.getQuantity() + ")"));
+        }
+        return lines;
+    }
+
+    /**
+     * Confirmación manual: descuenta TODO o NADA aplicando las reglas del catálogo.
+     * Si falta stock lanza la excepción (la transacción completa se revierte y no queda nada a medias).
+     */
+    private void deductOrderStock(Order order) {
+        java.util.List<String> failures = inventoryService.tryDeductAll(buildStockLines(order), true);
+        if (!failures.isEmpty()) {
+            throw new InsufficientStockException("Stock insuficiente para: " + String.join(", ", failures));
         }
     }
 
+    /**
+     * Pago ya cobrado por Wompi: NUNCA lanza excepción (así el pedido sí queda en PAID).
+     * Descuenta TODO o NADA. Si algo no alcanza, no descuenta nada, deja stockDeducted=false
+     * y devuelve la lista de ítems con problema para registrar la alerta en el historial.
+     */
     private java.util.List<String> deductOrderStockSafely(Order order) {
-        java.util.List<String> failedItems = new java.util.ArrayList<>();
-        boolean anyDeducted = false;
-        for (OrderItem item : order.getItems()) {
-            try {
-                inventoryService.deductStock(item.getProductId(), item.getVariantId(), item.getQuantity());
-                anyDeducted = true;
-            } catch (Exception e) {
-                failedItems.add(item.getProductName() + " (x" + item.getQuantity() + ")");
-            }
-        }
-        order.setStockDeducted(anyDeducted && failedItems.isEmpty());
-        return failedItems;
+        java.util.List<String> failures = inventoryService.tryDeductAll(buildStockLines(order), false);
+        order.setStockDeducted(failures.isEmpty());
+        return failures;
     }
 
     private void restoreOrderStock(Order order) {
@@ -943,15 +966,14 @@ public class OrderService {
                     return "INVALID";
                 }
 
-                if (data.has("reference") && !data.get("reference").isNull()) {
-                    String ref = data.get("reference").asText("");
-                    String idStr = String.valueOf(orderId);
-                    boolean matchesOrder = ref.equals(idStr)
-                            || ref.matches(".*(?<!\\d)" + idStr + "(?!\\d).*");
-                    if (!matchesOrder) {
-                        System.out.println("Alerta de seguridad Wompi: La referencia " + ref + " no corresponde al pedido #" + orderId);
-                        return "INVALID";
-                    }
+                // La referencia debe ser EXACTAMENTE la que Storevo generó para este pedido (incluye el token privado)
+                String expectedRef = WompiService.buildReference(order.getId(), order.getPublicToken());
+                String ref = (data.has("reference") && !data.get("reference").isNull())
+                        ? data.get("reference").asText("")
+                        : "";
+                if (!expectedRef.equals(ref)) {
+                    System.out.println("Alerta de seguridad Wompi: La referencia " + ref + " no corresponde al pedido #" + orderId);
+                    return "INVALID";
                 }
 
                 long expectedCents = Math.round((order.getTotal() != null ? order.getTotal() : 0.0) * 100);
@@ -966,6 +988,15 @@ public class OrderService {
                 String definitiveStatus = data.get("status").asText();
 
                 if ("APPROVED".equals(definitiveStatus)) {
+                    // Si la tienda ya configuró AMBOS secretos (integridad y eventos), el webhook firmado es la única
+                    // fuente de verdad del pago: la página de retorno solo informa y no marca el pedido como pagado.
+                    boolean webhookIsAuthoritative = wompiConfig.getIntegritySecret() != null
+                            && !wompiConfig.getIntegritySecret().isBlank()
+                            && wompiConfig.getExtraData() != null
+                            && !wompiConfig.getExtraData().isBlank();
+                    if (webhookIsAuthoritative) {
+                        return "PENDING";
+                    }
                     self.updateOrderStatus(
                             orderId,
                             OrderStatus.PAID,

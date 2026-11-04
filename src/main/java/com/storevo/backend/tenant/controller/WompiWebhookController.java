@@ -11,6 +11,7 @@ import com.storevo.backend.tenant.model.EventOrigin;
 import com.storevo.backend.tenant.model.Order;
 import com.storevo.backend.tenant.model.OrderStatus;
 import com.storevo.backend.tenant.service.OrderService;
+import com.storevo.backend.tenant.service.WompiService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -86,10 +87,9 @@ public class WompiWebhookController {
         try {
             Order order = orderService.getOrderById(orderId);
 
-            // Verificar que la referencia corresponda estrictamente al ID del pedido
-            String idStr = String.valueOf(orderId);
-            boolean matchesOrder = reference != null && (reference.equals(idStr)
-                    || reference.matches(".*(?<!\\d)" + idStr + "(?!\\d).*"));
+            // Verificar que la referencia sea EXACTAMENTE la generada por Storevo para este pedido
+            boolean matchesOrder = reference != null
+                    && reference.equals(WompiService.buildReference(order.getId(), order.getPublicToken()));
             if (!matchesOrder) {
                 System.out.println("Alerta de seguridad Webhook Wompi: La referencia " + reference + " no corresponde al pedido #" + orderId);
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
@@ -110,8 +110,14 @@ public class WompiWebhookController {
                 // Mantener el pedido en PENDING registrando el intento fallido para permitir reintentos
                 orderService.recordPaymentAttemptFailure(orderId, transactionId, definitiveStatus.toUpperCase(Locale.ROOT));
             }
+        } catch (com.storevo.backend.tenant.exception.InvalidOrderStatusException
+                 | com.storevo.backend.tenant.exception.OrderNotFoundException e) {
+            // Error de negocio (pedido inexistente o transición no válida): reintentar no ayuda, respondemos 200.
+            System.out.println("Webhook Wompi ignorado por regla de negocio: " + e.getMessage());
         } catch (Exception e) {
+            // Error inesperado: respondemos 500 para que Wompi reintente el evento (el proceso es idempotente).
             System.out.println("No se pudo actualizar la orden desde el Webhook Wompi: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
 
         return ResponseEntity.ok().build();

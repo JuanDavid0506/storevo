@@ -53,6 +53,10 @@ public class StoreIntegration {
     @Column(name = "extra_data", columnDefinition = "TEXT")
     private String extraData; // Para Wompi: Webhook Secret. Para DIAN: Certificado/Resolución.
 
+
+    @Convert(converter = CryptoConverter.class)
+    @Column(name = "integrity_secret", columnDefinition = "TEXT")
+    private String integritySecret; // Para Wompi: Secreto de Integridad (firma del checkout)
     // -----------------------
 
     @Column(name = "created_at", updatable = false)
