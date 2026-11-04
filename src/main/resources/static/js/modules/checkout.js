@@ -16,12 +16,71 @@ document.addEventListener('DOMContentLoaded', function () {
     const nitDvInput = document.getElementById('checkout-nit-dv');
     const legalNameInput = document.getElementById('checkout-legal-name');
 
-    const subtotal = parseFloat(form.getAttribute('data-cart-subtotal') || '0') || 0;
+    const hasMixedCart = form.getAttribute('data-has-mixed-cart') === 'true';
+    const fullCartSubtotal = parseFloat(form.getAttribute('data-full-cart-subtotal') || form.getAttribute('data-cart-subtotal') || '0') || 0;
+    const inStockSubtotal = parseFloat(form.getAttribute('data-in-stock-subtotal') || form.getAttribute('data-cart-subtotal') || '0') || 0;
+    let subtotal = parseFloat(form.getAttribute('data-cart-subtotal') || '0') || 0;
     const pickupCityRaw = form.getAttribute('data-pickup-city') || '';
     const localRate = parseFloat(form.getAttribute('data-local-rate') || '-1');
     const nationalRate = parseFloat(form.getAttribute('data-national-rate') || '-1');
     const freeThreshold = parseFloat(form.getAttribute('data-free-threshold') || '0') || 0;
     const allowPickup = form.getAttribute('data-allow-pickup') === 'true';
+
+    const subtotalDisplayEl = document.getElementById('checkout-subtotal-display');
+    const btnSubmitOnline = document.getElementById('btn-submit-checkout');
+    const btnSubmitWhatsapp = document.getElementById('btn-submit-whatsapp');
+    const waNotConfiguredMsg = document.getElementById('whatsapp-not-configured-msg');
+    const emailInput = document.getElementById('checkout-email');
+    const docInput = document.getElementById('checkout-document');
+    const emailReqBadge = document.getElementById('email-req-badge');
+    const emailOptBadge = document.getElementById('email-opt-badge');
+    const docReqBadge = document.getElementById('doc-req-badge');
+    const docOptBadge = document.getElementById('doc-opt-badge');
+
+    function isOnlyInStockSelected() {
+        if (!hasMixedCart) return false;
+        const checked = form.querySelector('input[name="onlyInStockItems"]:checked');
+        return !checked || checked.value === 'true';
+    }
+
+    function syncMixedCartModeUI() {
+        if (!hasMixedCart) return;
+        const onlyInStock = isOnlyInStockSelected();
+        subtotal = onlyInStock ? inStockSubtotal : fullCartSubtotal;
+
+        if (subtotalDisplayEl) {
+            subtotalDisplayEl.textContent = formatCop(subtotal);
+        }
+
+        if (btnSubmitOnline) {
+            btnSubmitOnline.classList.toggle('hidden', !onlyInStock);
+        }
+        if (btnSubmitWhatsapp) {
+            btnSubmitWhatsapp.classList.toggle('hidden', onlyInStock);
+        }
+        if (waNotConfiguredMsg) {
+            waNotConfiguredMsg.classList.toggle('hidden', onlyInStock);
+        }
+
+        if (emailInput) {
+            if (onlyInStock) emailInput.setAttribute('required', 'required');
+            else emailInput.removeAttribute('required');
+        }
+        if (docInput) {
+            if (onlyInStock) docInput.setAttribute('required', 'required');
+            else docInput.removeAttribute('required');
+        }
+        if (emailReqBadge) emailReqBadge.classList.toggle('hidden', !onlyInStock);
+        if (emailOptBadge) emailOptBadge.classList.toggle('hidden', onlyInStock);
+        if (docReqBadge) docReqBadge.classList.toggle('hidden', !onlyInStock);
+        if (docOptBadge) docOptBadge.classList.toggle('hidden', onlyInStock);
+
+        document.querySelectorAll('.checkout-summary-item[data-made-to-order="true"]').forEach(function (row) {
+            row.classList.toggle('opacity-50', onlyInStock);
+            const note = row.querySelector('.checkout-deferred-note');
+            if (note) note.classList.toggle('hidden', !onlyInStock);
+        });
+    }
 
     function normalizeCity(text) {
         if (!text) return '';
@@ -163,6 +222,15 @@ document.addEventListener('DOMContentLoaded', function () {
     deliveryRadios.forEach(function (radio) {
         radio.addEventListener('change', recalculateShippingAndTotal);
     });
+
+    const mixedCartRadios = form.querySelectorAll('input[name="onlyInStockItems"]');
+    mixedCartRadios.forEach(function (radio) {
+        radio.addEventListener('change', function () {
+            syncMixedCartModeUI();
+            recalculateShippingAndTotal();
+        });
+    });
+    syncMixedCartModeUI();
 
     // Facturación electrónica DIAN y dígito de verificación NIT
     function updateInvoiceFields() {

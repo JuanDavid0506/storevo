@@ -60,13 +60,17 @@ public class StorefrontGlobalAdvice {
             }
         }
 
-        if (guestId == null) {
+        if (guestId == null || guestId.isBlank()) {
             guestId = UUID.randomUUID().toString();
-            Cookie cookie = new Cookie("storevo_guest_id", guestId);
-            cookie.setMaxAge(30 * 24 * 60 * 60); // 30 días de vida
-            cookie.setPath("/");
-            cookie.setHttpOnly(true);
-            response.addCookie(cookie);
+            org.springframework.http.ResponseCookie guestCookie = org.springframework.http.ResponseCookie
+                    .from("storevo_guest_id", guestId)
+                    .httpOnly(true)
+                    .secure(request.isSecure())
+                    .path("/")
+                    .maxAge(60L * 60 * 24 * 30) // 30 días
+                    .sameSite("Lax")
+                    .build();
+            response.addHeader(org.springframework.http.HttpHeaders.SET_COOKIE, guestCookie.toString());
         }
 
         request.setAttribute("guestId", guestId);

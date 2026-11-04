@@ -77,6 +77,40 @@ public class OrderController {
         return "storefront/order-success";
     }
 
+    @PostMapping("/{token}/cancel-and-restore")
+    public String cancelAndRestoreOrder(
+            @PathVariable String slug,
+            @PathVariable String token,
+            HttpServletRequest request,
+            RedirectAttributes redirectAttributes) {
+
+        Store store = (Store) request.getAttribute("currentStore");
+        if (store != null) {
+            TenantContext.setCurrentTenant(store.getSchemaName());
+        }
+
+        String guestId = (String) request.getAttribute("guestId");
+
+        try {
+            Order order = orderService.getOrderByPublicToken(token);
+            if (order.getStatus() == OrderStatus.PAID) {
+                return "redirect:/s/" + slug + "/order/" + order.getPublicToken() + "/wompi-result";
+            }
+            orderService.cancelPendingOrderAndRestoreToCart(token, guestId);
+            redirectAttributes.addFlashAttribute(
+                    "cartSuccess",
+                    "Tu pedido pendiente fue cancelado y devolvimos tus productos a la bolsa para que puedas modificarlos."
+            );
+            return "redirect:/s/" + slug + "/cart";
+        } catch (IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("cartError", e.getMessage());
+            return "redirect:/s/" + slug + "/cart";
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("cartError", "No se pudo restaurar el pedido a tu bolsa.");
+            return "redirect:/s/" + slug + "/cart";
+        }
+    }
+
     @GetMapping("/{token}/whatsapp")
     public String orderWhatsapp(
             @PathVariable String slug,

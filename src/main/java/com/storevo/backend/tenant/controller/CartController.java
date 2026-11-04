@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@lombok.extern.slf4j.Slf4j
 @Controller
 @RequestMapping("/s/{slug}/cart")
 @RequiredArgsConstructor
@@ -472,36 +473,40 @@ public class CartController {
             @RequestParam(required = false, defaultValue = "SHIPPING") String deliveryMethod,
             @RequestParam(required = false) String notes,
             @RequestParam(required = false) String mode,
+            @RequestParam(required = false, defaultValue = "false") Boolean onlyInStockItems,
             HttpServletRequest request,
             RedirectAttributes redirectAttributes) {
 
         String guestId = (String) request.getAttribute("guestId");
-        boolean direct = "direct".equals(mode);
-        String cartKey = resolveCartKey(guestId, mode);
-        String checkoutRedirect = "redirect:/s/" + slug + "/cart/checkout" + (direct ? "?mode=direct" : "");
+        boolean isDirect = "direct".equalsIgnoreCase(mode);
+        String cartSessionId = isDirect ? (guestId + ":direct") : guestId;
 
-        boolean hasMadeToOrderItem = cartManager.getCart(cartKey).stream()
+        List<CartItemDto> currentCart = cartManager.getCart(cartSessionId);
+        boolean hasMadeToOrderItem = currentCart.stream()
                 .anyMatch(item -> Boolean.TRUE.equals(item.getIsMadeToOrder()));
 
-        if (hasMadeToOrderItem) {
-            redirectAttributes.addFlashAttribute("checkoutError", "Tu carrito tiene productos bajo pedido. Por favor, utiliza el botón de WhatsApp.");
-            return checkoutRedirect;
+        if (hasMadeToOrderItem && !Boolean.TRUE.equals(onlyInStockItems)) {
+            redirectAttributes.addFlashAttribute("checkoutError", "Tu carrito tiene productos bajo pedido. Por favor, elige pagar solo los productos disponibles o coordina tu pedido por WhatsApp.");
+            return "redirect:/s/" + slug + "/cart/checkout" + (isDirect ? "?mode=direct" : "");
         }
 
         String finalDoc = formatDocumentWithDv(customerDocument, verificationDigit);
 
         try {
-            // En modo directo se lee y vacía SOLO el carrito directo (guestId:direct); la bolsa normal queda intacta
             Order order = orderService.createOrderFromCart(
-                    cartKey, customerName, customerPhone, customerEmail,
+                    cartSessionId, customerName, customerPhone, customerEmail,
                     documentType, finalDoc, verificationDigit, legalName, taxRegime, requiresElectronicInvoice,
-                    address, city, deliveryMethod, notes, OrderChannel.ONLINE
+                    address, city, deliveryMethod, notes, OrderChannel.ONLINE,
+                    Boolean.TRUE.equals(onlyInStockItems)
             );
             return "redirect:/s/" + slug + "/order/" + order.getPublicToken() + "/success";
+        } catch (com.storevo.backend.tenant.exception.InsufficientStockException | IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("checkoutError", e.getMessage());
+            return "redirect:/s/" + slug + "/cart/checkout" + (isDirect ? "?mode=direct" : "");
         } catch (Exception e) {
-            e.printStackTrace();
-            redirectAttributes.addFlashAttribute("checkoutError", e.getMessage() != null ? e.getMessage() : "No se pudo procesar tu pedido. Verifica los datos e intenta nuevamente.");
-            return checkoutRedirect;
+            log.error("Error inesperado procesando checkout ONLINE en tienda '{}': {}", slug, e.getMessage(), e);
+            redirectAttributes.addFlashAttribute("checkoutError", "No pudimos procesar tu pedido en este momento. Por favor verifica tus datos e inténtalo nuevamente.");
+            return "redirect:/s/" + slug + "/cart/checkout" + (isDirect ? "?mode=direct" : "");
         }
     }
 
@@ -526,22 +531,25 @@ public class CartController {
             RedirectAttributes redirectAttributes) {
 
         String guestId = (String) request.getAttribute("guestId");
-        boolean direct = "direct".equals(mode);
-        String cartKey = resolveCartKey(guestId, mode);
-        String checkoutRedirect = "redirect:/s/" + slug + "/cart/checkout" + (direct ? "?mode=direct" : "");
+        boolean isDirect = "direct".equalsIgnoreCase(mode);
+        String cartSessionId = isDirect ? (guestId + ":direct") : guestId;
         String finalDoc = formatDocumentWithDv(customerDocument, verificationDigit);
 
         try {
             Order order = orderService.createOrderFromCart(
-                    cartKey, customerName, customerPhone, customerEmail,
+                    cartSessionId, customerName, customerPhone, customerEmail,
                     documentType, finalDoc, verificationDigit, legalName, taxRegime, requiresElectronicInvoice,
-                    address, city, deliveryMethod, notes, OrderChannel.WHATSAPP
+                    address, city, deliveryMethod, notes, OrderChannel.WHATSAPP,
+                    false
             );
             return "redirect:/s/" + slug + "/order/" + order.getPublicToken() + "/whatsapp";
+        } catch (com.storevo.backend.tenant.exception.InsufficientStockException | IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("checkoutError", e.getMessage());
+            return "redirect:/s/" + slug + "/cart/checkout" + (isDirect ? "?mode=direct" : "");
         } catch (Exception e) {
-            e.printStackTrace();
-            redirectAttributes.addFlashAttribute("checkoutError", e.getMessage() != null ? e.getMessage() : "No se pudo registrar tu pedido. Verifica los datos e intenta nuevamente.");
-            return checkoutRedirect;
+            log.error("Error inesperado procesando checkout WHATSAPP en tienda '{}': {}", slug, e.getMessage(), e);
+            redirectAttributes.addFlashAttribute("checkoutError", "No pudimos procesar tu pedido en este momento. Por favor verifica tus datos e inténtalo nuevamente.");
+            return "redirect:/s/" + slug + "/cart/checkout" + (isDirect ? "?mode=direct" : "");
         }
     }
 
@@ -562,23 +570,16 @@ public class CartController {
             Model model,
             RedirectAttributes redirectAttributes) {
         String guestId = (String) request.getAttribute("guestId");
-        boolean direct = "direct".equals(mode);
-        String cartKey = resolveCartKey(guestId, mode);
-        List<CartItemDto> cart = cartManager.getCart(cartKey);
-        if (cart.isEmpty()) {
-            // Compra directa vacía (ya comprada o vencida) -> tienda; bolsa normal vacía -> bolsa
-            return direct ? "redirect:/s/" + slug : "redirect:/s/" + slug + "/cart";
-        }
+        boolean isDirect = "direct".equalsIgnoreCase(mode);
+        String cartSessionId = isDirect ? (guestId + ":direct") : guestId;
 
-        Long directProductId = direct ? cart.get(0).getProductId() : null;
+        List<CartItemDto> cart = cartManager.getCart(cartSessionId);
+        if (cart.isEmpty()) return "redirect:/s/" + slug + "/cart";
 
         for (CartItemDto item : cart) {
             if (!isCartItemValidAndPopulateMaxStock(item, null)) {
-                if (direct) {
-                    redirectAttributes.addFlashAttribute("cartError", "Este producto ya no está disponible.");
-                    return directProductId != null
-                            ? "redirect:/s/" + slug + "/p/" + directProductId
-                            : "redirect:/s/" + slug;
+                if (isDirect) {
+                    cartManager.clearCart(cartSessionId);
                 }
                 redirectAttributes.addFlashAttribute("cartError", "Tu bolsa contiene productos o variantes no disponibles. Por favor, revísala antes de continuar.");
                 return "redirect:/s/" + slug + "/cart";
@@ -586,18 +587,33 @@ public class CartController {
         }
 
         boolean hasMadeToOrderItem = cart.stream().anyMatch(item -> Boolean.TRUE.equals(item.getIsMadeToOrder()));
+        boolean hasInStockItem = cart.stream().anyMatch(item -> !Boolean.TRUE.equals(item.getIsMadeToOrder()));
 
         Store store = (Store) request.getAttribute("currentStore");
         TenantContext.clear();
         boolean wompiEnabled = integrationRepository.findByStoreAndIntegrationTypeAndIsActiveTrue(store, IntegrationType.WOMPI).isPresent();
         TenantContext.setCurrentTenant(store.getSchemaName());
 
+        boolean hasMixedCart = wompiEnabled && hasMadeToOrderItem && hasInStockItem;
+        int inStockItemsCount = cart.stream()
+                .filter(item -> !Boolean.TRUE.equals(item.getIsMadeToOrder()))
+                .mapToInt(item -> item.getQuantity() != null ? item.getQuantity() : 0)
+                .sum();
+        Double inStockSubtotal = cart.stream()
+                .filter(item -> !Boolean.TRUE.equals(item.getIsMadeToOrder()))
+                .filter(item -> item.getPrice() != null && item.getPrice() > 0 && item.getQuantity() != null && item.getQuantity() > 0)
+                .mapToDouble(CartItemDto::getSubtotal)
+                .sum();
+
         model.addAttribute("cartItems", cart);
-        model.addAttribute("cartTotal", cartManager.getTotal(cartKey));
-        model.addAttribute("isDirectBuy", direct);
-        model.addAttribute("directProductId", directProductId);
+        model.addAttribute("cartTotal", cartManager.getTotal(cartSessionId));
         model.addAttribute("hasMadeToOrderItem", hasMadeToOrderItem);
+        model.addAttribute("hasMixedCart", hasMixedCart);
+        model.addAttribute("inStockItemsCount", inStockItemsCount);
+        model.addAttribute("inStockSubtotal", inStockSubtotal);
         model.addAttribute("wompiEnabled", wompiEnabled);
+        model.addAttribute("isDirectBuy", isDirect);
+        model.addAttribute("directProductId", isDirect && !cart.isEmpty() ? cart.get(0).getProductId() : null);
         model.addAttribute("pageTitle", "Finalizar Compra");
 
         return "storefront/checkout";

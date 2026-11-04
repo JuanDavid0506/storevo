@@ -93,4 +93,10 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Query("SELECT DISTINCT oi.variantId FROM OrderItem oi WHERE oi.productId = :productId AND oi.variantId IS NOT NULL")
     java.util.Set<Long> findReferencedVariantIdsByProductId(@Param("productId") Long productId);
 
+    // Busca pedidos ONLINE en estado PENDING cuyo tiempo de pago haya expirado
+    @Query("SELECT o FROM Order o WHERE o.status = :status AND o.channel = :channel AND o.createdAt < :cutoff")
+    List<Order> findExpiredOrders(
+            @Param("status") OrderStatus status,
+            @Param("channel") OrderChannel channel,
+            @Param("cutoff") LocalDateTime cutoff);
 }

@@ -243,9 +243,48 @@ public class OrderService {
             String notes,
             OrderChannel channel) {
 
-        List<CartItemDto> cartItems = cartManager.getCart(slug);
-        if (cartItems.isEmpty()) {
+        return createOrderFromCart(
+                slug, customerName, customerPhone, customerEmail,
+                documentType, customerDocument, verificationDigit, legalName, taxRegime, requiresElectronicInvoice,
+                address, city, deliveryMethod, notes, channel, false
+        );
+    }
+
+    /**
+     * Crea el pedido desde el carrito soportando separación de carritos mixtos (onlyInStockItems = true conserva los productos bajo pedido en la bolsa).
+     */
+    @Transactional
+    public Order createOrderFromCart(
+            String slug,
+            String customerName,
+            String customerPhone,
+            String customerEmail,
+            String documentType,
+            String customerDocument,
+            String verificationDigit,
+            String legalName,
+            String taxRegime,
+            Boolean requiresElectronicInvoice,
+            String address,
+            String city,
+            String deliveryMethod,
+            String notes,
+            OrderChannel channel,
+            boolean onlyInStockItems) {
+
+        List<CartItemDto> allCartItems = cartManager.getCart(slug);
+        if (allCartItems.isEmpty()) {
             throw new IllegalArgumentException("El carrito está vacío");
+        }
+
+        List<CartItemDto> cartItems = onlyInStockItems
+                ? allCartItems.stream()
+                .filter(dto -> !Boolean.TRUE.equals(dto.getIsMadeToOrder()))
+                .collect(Collectors.toList())
+                : allCartItems;
+
+        if (cartItems.isEmpty()) {
+            throw new IllegalArgumentException("No hay productos con disponibilidad inmediata en tu bolsa para pagar en línea.");
         }
 
         com.storevo.backend.tenant.dto.StoreSettingsDto storeSettings = loadStoreSettingsForCurrentTenant();
@@ -399,9 +438,88 @@ public class OrderService {
         order.setCustomer(customer);
 
         Order savedOrder = orderRepository.save(order);
-        cartManager.clearCart(slug);
+
+        if (onlyInStockItems) {
+            for (CartItemDto processedDto : cartItems) {
+                cartManager.removeItem(slug, processedDto.getProductId(), processedDto.getVariantId());
+            }
+        } else {
+            cartManager.clearCart(slug);
+        }
 
         return savedOrder;
+    }
+
+    /**
+     * Cancela un pedido ONLINE que aún está en estado PENDING y restaura sus ítems a la bolsa normal del visitante.
+     */
+    @Transactional
+    public void cancelPendingOrderAndRestoreToCart(String publicToken, String guestId) {
+        Order order = getOrderByPublicToken(publicToken);
+
+        if (order.getStatus() != OrderStatus.PENDING || order.getChannel() != OrderChannel.ONLINE) {
+            throw new IllegalStateException("Este pedido ya no puede modificarse porque no está pendiente de pago en línea.");
+        }
+
+        if (guestId != null && !guestId.isBlank() && order.getItems() != null) {
+            String normalSessionId = guestId.endsWith(":direct")
+                    ? guestId.substring(0, guestId.length() - ":direct".length())
+                    : guestId;
+
+            List<CartItemDto> currentCart = cartManager.getCart(normalSessionId);
+
+            for (OrderItem item : order.getItems()) {
+                if (item == null || item.getProductId() == null || item.getQuantity() == null || item.getQuantity() <= 0) {
+                    continue;
+                }
+                Product product = productRepository.findById(item.getProductId()).orElse(null);
+                if (product == null
+                        || Boolean.TRUE.equals(product.getIsDeleted())
+                        || !Boolean.TRUE.equals(product.getIsActive())
+                        || Boolean.TRUE.equals(product.getIsDraft())) {
+                    continue;
+                }
+
+                Long targetVariantId = item.getVariantId();
+                if (Boolean.TRUE.equals(product.getHasVariants())) {
+                    if (targetVariantId == null) continue;
+                    ProductVariant variant = variantRepository.findByIdAndProductId(targetVariantId, product.getId()).orElse(null);
+                    if (variant == null || !Boolean.TRUE.equals(variant.getIsActive())) {
+                        continue;
+                    }
+                } else {
+                    targetVariantId = null;
+                }
+
+                final Long checkProdId = product.getId();
+                final Long checkVarId = targetVariantId;
+                boolean alreadyInCart = currentCart.stream().anyMatch(c ->
+                        checkProdId.equals(c.getProductId())
+                                && java.util.Objects.equals(checkVarId, c.getVariantId()));
+
+                try {
+                    if (alreadyInCart) {
+                        cartManager.removeItem(normalSessionId, checkProdId, checkVarId);
+                    }
+                    CartItemDto restoreDto = CartItemDto.builder()
+                            .productId(checkProdId)
+                            .variantId(checkVarId)
+                            .quantity(item.getQuantity())
+                            .build();
+                    cartManager.addItem(normalSessionId, restoreDto);
+                } catch (Exception ignored) {
+                    // Si el producto cambió de condiciones mientras tanto, omitirlo sin bloquear la cancelación
+                }
+            }
+        }
+
+        updateOrderStatus(
+                order.getId(),
+                OrderStatus.CANCELLED,
+                EventOrigin.WEB,
+                null,
+                "Pedido cancelado por el comprador para modificar su bolsa"
+        );
     }
 
     private com.storevo.backend.tenant.dto.StoreSettingsDto loadStoreSettingsForCurrentTenant() {
@@ -764,6 +882,11 @@ public class OrderService {
 
     @Transactional
     public OrderHistory updateOrderStatus(Long orderId, OrderStatus newStatus, EventOrigin origin, Long userId) {
+        return updateOrderStatus(orderId, newStatus, origin, userId, null);
+    }
+
+    @Transactional
+    public OrderHistory updateOrderStatus(Long orderId, OrderStatus newStatus, EventOrigin origin, Long userId, String customDescription) {
         Order order = orderRepository.findById(orderId).orElseThrow(() -> new OrderNotFoundException(orderId));
         OrderStatus oldStatus = order.getStatus();
 
@@ -816,13 +939,17 @@ public class OrderService {
 
         order.setStatus(newStatus);
 
+        String resolvedDescription = (customDescription != null && !customDescription.isBlank())
+                ? customDescription.trim()
+                : "El estado cambió a " + newStatus.getDisplayName();
+
         OrderHistory historyObj = OrderHistory.builder()
                 .order(order)
                 .eventType(OrderHistoryType.STATE_CHANGE)
                 .origin(origin)
                 .oldStatus(oldStatus)
                 .newStatus(newStatus)
-                .description("El estado cambió a " + newStatus.getDisplayName())
+                .description(resolvedDescription)
                 .userId(userId)
                 .build();
 

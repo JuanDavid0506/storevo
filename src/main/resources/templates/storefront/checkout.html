@@ -6,7 +6,9 @@
 </head>
 <body>
 <div layout:fragment="content" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12 min-h-[70vh]"
-     th:with="requiresWhatsapp=${hasMadeToOrderItem or !wompiEnabled},
+     th:with="isMixed=${hasMixedCart == true},
+              requiresWhatsapp=${(hasMadeToOrderItem and !isMixed) or !wompiEnabled},
+              effectiveInitialSubtotal=${isMixed and inStockSubtotal != null ? inStockSubtotal : (cartTotal != null ? cartTotal : 0)},
               allowPickup=${settings != null and settings.allowStorePickup == true},
               localRate=${settings != null and settings.localShippingRate != null ? settings.localShippingRate : -1},
               nationalRate=${settings != null and settings.nationalShippingRate != null ? settings.nationalShippingRate : -1},
@@ -33,7 +35,10 @@
         <form id="checkout-form" method="POST"
               th:attr="data-slug=${slug},
                        data-requires-whatsapp=${requiresWhatsapp},
-                       data-cart-subtotal=${cartTotal != null ? cartTotal : 0},
+                       data-has-mixed-cart=${isMixed},
+                       data-cart-subtotal=${effectiveInitialSubtotal},
+                       data-full-cart-subtotal=${cartTotal != null ? cartTotal : 0},
+                       data-in-stock-subtotal=${inStockSubtotal != null ? inStockSubtotal : (cartTotal != null ? cartTotal : 0)},
                        data-pickup-city=${pickupCity},
                        data-pickup-address=${pickupAddress},
                        data-local-rate=${localRate},
@@ -44,6 +49,41 @@
 
             <!-- Compra directa: se conserva el modo al enviar a pago o a WhatsApp -->
             <input type="hidden" name="mode" value="direct" th:if="${isDirectBuy == true}">
+
+            <!-- Selector de Compra Mixta (Productos con stock inmediato + Productos Bajo pedido) -->
+            <div th:if="${isMixed}" class="p-4 rounded-xl bg-amber-50/70 border border-amber-200 space-y-3">
+                <div class="flex items-start gap-2.5">
+                    <svg class="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <div>
+                        <p class="text-xs font-black uppercase tracking-wider text-amber-900">Tu bolsa combina productos disponibles y bajo pedido</p>
+                        <p class="text-xs text-amber-800 mt-0.5">Elige cómo prefieres continuar con tu compra:</p>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="flex items-start gap-2.5 p-3 rounded-xl bg-white border border-slate-200 cursor-pointer hover:border-brand transition has-[:checked]:border-brand has-[:checked]:ring-1 has-[:checked]:ring-brand">
+                        <input type="radio" name="onlyInStockItems" value="true" checked
+                               class="mt-0.5 text-brand focus:ring-brand">
+                        <span class="text-xs text-slate-800 leading-relaxed">
+                            <strong class="font-bold text-slate-900 block">
+                                Pagar ahora en línea los productos disponibles (<span th:text="${inStockItemsCount}">1</span>) por <span th:text="${'$ ' + #numbers.formatDecimal(inStockSubtotal, 1, 'POINT', 0, 'COMMA')}">$0</span>
+                            </strong>
+                            Dejar los productos de bajo pedido guardados en mi bolsa para coordinarlos luego por WhatsApp.
+                        </span>
+                    </label>
+
+                    <label class="flex items-start gap-2.5 p-3 rounded-xl bg-white border border-slate-200 cursor-pointer hover:border-brand transition has-[:checked]:border-brand has-[:checked]:ring-1 has-[:checked]:ring-brand">
+                        <input type="radio" name="onlyInStockItems" value="false"
+                               class="mt-0.5 text-brand focus:ring-brand">
+                        <span class="text-xs text-slate-800 leading-relaxed">
+                            <strong class="font-bold text-slate-900 block">Enviar y coordinar todo el pedido junto por WhatsApp</strong>
+                            Incluye todos los productos de tu bolsa (<span th:text="${'$ ' + #numbers.formatDecimal(cartTotal, 1, 'POINT', 0, 'COMMA')}">$0</span>) en una sola solicitud.
+                        </span>
+                    </label>
+                </div>
+            </div>
 
             <!-- Selector de Modalidad de Entrega (Envío a domicilio vs Recoger en tienda) -->
             <div th:if="${allowPickup}" class="pb-3 border-b border-slate-100">
@@ -213,30 +253,33 @@
                           class="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-brand focus:border-brand text-sm text-slate-900"></textarea>
             </div>
 
-            <!-- Aviso visual si es un producto bajo pedido -->
-            <div th:if="${hasMadeToOrderItem}" class="flex items-start gap-3 bg-amber-50 border border-amber-200 text-amber-800 text-sm font-medium p-4 rounded-xl mt-2">
+            <!-- Aviso visual si todos los productos requieren WhatsApp (no mixto) -->
+            <div th:if="${hasMadeToOrderItem and !isMixed}" class="flex items-start gap-3 bg-amber-50 border border-amber-200 text-amber-800 text-sm font-medium p-4 rounded-xl mt-2">
                 <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"></path></svg>
                 <span>Este pedido contiene productos bajo pedido. Para continuar, coordina tu pedido por WhatsApp.</span>
             </div>
 
             <!-- LÓGICA CONDICIONAL DE RUTEO -->
             <th:block>
-                <button th:if="${!requiresWhatsapp}" type="submit" id="btn-submit-checkout"
+                <button th:if="${!requiresWhatsapp or isMixed}" type="submit" id="btn-submit-checkout"
                         th:formaction="@{/s/{slug}/cart/checkout/process(slug=${slug})}"
                         class="w-full bg-brand hover-bg-brand text-white font-bold py-3.5 rounded-xl shadow-md transition mt-4 flex items-center justify-center gap-2">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
                     <span>Continuar al pago seguro</span>
                 </button>
 
-                <button th:if="${requiresWhatsapp and settings != null and settings.whatsapp != null and !#strings.isEmpty(settings.whatsapp)}"
+                <button th:if="${(requiresWhatsapp or isMixed) and settings != null and settings.whatsapp != null and !#strings.isEmpty(settings.whatsapp)}"
                         type="submit" id="btn-submit-whatsapp"
                         th:formaction="@{/s/{slug}/cart/checkout/whatsapp(slug=${slug})}"
+                        th:classappend="${isMixed ? 'hidden' : ''}"
                         class="w-full flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#1ebd5c] text-white font-bold py-3.5 rounded-xl shadow-md transition mt-4">
                     <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.305-.88-.653-1.473-1.46-1.646-1.757-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
                     <span>Enviar pedido por WhatsApp</span>
                 </button>
 
-                <p th:if="${requiresWhatsapp and (settings == null or settings.whatsapp == null or #strings.isEmpty(settings.whatsapp))}"
+                <p id="whatsapp-not-configured-msg"
+                   th:if="${(requiresWhatsapp or isMixed) and (settings == null or settings.whatsapp == null or #strings.isEmpty(settings.whatsapp))}"
+                   th:classappend="${isMixed ? 'hidden' : ''}"
                    class="text-xs text-red-500 text-center mt-3 font-bold">
                     Esta tienda no ha configurado su WhatsApp para recibir pedidos. Contáctala directamente.
                 </p>
@@ -247,15 +290,27 @@
         <div class="bg-white text-slate-900 p-6 store-radius shadow-sm border border-slate-200/80 h-fit sticky top-24">
             <h3 class="font-bold text-lg text-slate-900 mb-4 pb-3 border-b border-slate-100">Resumen de tu Pedido</h3>
             <div class="space-y-3.5 mb-6 max-h-80 overflow-y-auto pr-1">
-                <div th:each="item : ${cartItems}" class="flex justify-between items-start gap-3 text-sm">
+                <div th:each="item : ${cartItems}"
+                     th:attr="data-made-to-order=${item.isMadeToOrder}"
+                     class="checkout-summary-item flex justify-between items-start gap-3 text-sm transition-opacity">
                     <div class="min-w-0 flex-1">
-                        <p class="text-slate-800 font-semibold truncate">
-                            <span class="font-black text-slate-900" th:text="${item.quantity} + 'x'">1x</span>
-                            <span th:text="${item.name}">Producto</span>
-                        </p>
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <p class="text-slate-800 font-semibold truncate">
+                                <span class="font-black text-slate-900" th:text="${item.quantity} + 'x'">1x</span>
+                                <span th:text="${item.name}">Producto</span>
+                            </p>
+                            <span th:if="${item.isMadeToOrder}"
+                                  class="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                                Bajo pedido
+                            </span>
+                        </div>
                         <p th:if="${item.variantText != null and !item.variantText.isBlank()}"
                            class="text-xs text-slate-500 font-medium mt-0.5"
                            th:text="${item.variantText}"></p>
+                        <p th:if="${isMixed and item.isMadeToOrder}"
+                           class="checkout-deferred-note text-[11px] text-amber-700 font-semibold mt-0.5">
+                            Se conservará en tu bolsa para coordinar luego
+                        </p>
                     </div>
                     <span class="font-bold text-slate-900 flex-shrink-0"
                           th:text="${item.subtotal != null ? '$ ' + #numbers.formatDecimal(item.subtotal, 1, 'POINT', 0, 'COMMA') : '$ 0'}"></span>
