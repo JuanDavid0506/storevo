@@ -4,10 +4,10 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title layout:title-pattern="$CONTENT_TITLE | [[${settings != null and settings.storeName != null ? settings.storeName : 'Tienda'}]]">Tienda</title>
-        <meta name="description" th:content="'Explora el catálogo oficial de ' + ${settings != null and settings.storeName != null ? settings.storeName : 'nuestra tienda'} + ' y realiza tu pedido fácil y seguro.'">
         <meta property="og:site_name" th:content="${settings != null and settings.storeName != null ? settings.storeName : 'Tienda'}">
         <meta property="og:type" content="website">
         <th:block layout:fragment="head-meta">
+            <meta name="description" th:content="'Explora el catálogo oficial de ' + ${settings != null and settings.storeName != null ? settings.storeName : 'nuestra tienda'} + ' y realiza tu pedido fácil y seguro.'">
             <meta property="og:title" th:content="${(pageTitle != null ? pageTitle + ' | ' : '') + (settings != null and settings.storeName != null ? settings.storeName : 'Tienda')}">
             <meta property="og:description" th:content="'Compra online en ' + ${settings != null and settings.storeName != null ? settings.storeName : 'nuestra tienda'} + '. Conoce nuestros productos disponibles.'">
         </th:block>

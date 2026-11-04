@@ -39,6 +39,11 @@
             <a th:href="@{/s/{slug}/order/{token}/success(slug=${slug}, token=${order.publicToken})}" class="inline-block bg-brand hover-bg-brand text-white font-bold py-3 px-8 rounded-xl shadow-md transition">
                 Intentar pagar de nuevo
             </a>
+            <!-- Coordinar el pedido por WhatsApp (solo si la tienda lo tiene configurado) -->
+            <a th:if="${whatsappConfigured == true and whatsappLink != null}" th:href="${whatsappLink}" target="_blank" rel="noopener noreferrer"
+               class="inline-flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-xl shadow-md transition">
+                Coordinar por WhatsApp
+            </a>
             <!-- Botón para rendirse y volver al catálogo -->
             <a th:href="@{/s/{slug}(slug=${slug})}" class="inline-block bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-3 px-8 rounded-xl transition">
                 Volver a la tienda

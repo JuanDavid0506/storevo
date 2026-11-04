@@ -3,7 +3,27 @@
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layouts/store-layout}">
 <head>
-  <title th:text="${product.name} + ' - ' + ${settings != null and settings.storeName != null ? settings.storeName : 'Tienda'}">Detalle</title>
+  <title th:text="${product.name + ' - ' + (settings != null and settings.storeName != null ? settings.storeName : 'Tienda')}">
+    Detalle
+  </title>
+
+  <th:block layout:fragment="head-meta">
+    <meta name="description"
+          th:content="${product.description != null and !#strings.isEmpty(#strings.trim(product.description)) ? #strings.abbreviate(#strings.trim(product.description), 160) : 'Compra ' + product.name + ' en nuestra tienda.'}">
+
+    <meta property="og:title"
+          th:content="${product.name + ' | ' + (settings != null and settings.storeName != null ? settings.storeName : 'Tienda')}">
+
+    <meta property="og:description"
+          th:content="${product.description != null and !#strings.isEmpty(#strings.trim(product.description)) ? #strings.abbreviate(#strings.trim(product.description), 160) : 'Compra ' + product.name + ' en nuestra tienda.'}">
+
+    <meta property="og:image"
+          th:if="${product.mainImageUrl != null and #strings.startsWith(product.mainImageUrl, 'http')}"
+          th:content="${product.mainImageUrl}">
+
+    <meta name="twitter:card"
+          th:attr="content=${product.mainImageUrl != null and #strings.startsWith(product.mainImageUrl, 'http') ? 'summary_large_image' : 'summary'}">
+  </th:block>
 </head>
 <body>
 <div layout:fragment="content">

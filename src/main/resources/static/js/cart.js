@@ -166,23 +166,43 @@ Storevo.Cart = {
             }
             return;
         }
+        Storevo.Cart.startDirectPurchase(slug, productId, null, 1);
+    },
 
-        const formData = new FormData();
-        formData.append('productId', productId);
-        formData.append('quantity', 1);
+    // Compra directa: crea un carrito aislado con SOLO este producto y va al checkout (la bolsa normal no se toca)
+    _directBusy: false,
+    startDirectPurchase: function(slug, productId, variantId, quantity, onFinish) {
+        if (Storevo.Cart._directBusy) return;
+        Storevo.Cart._directBusy = true;
 
-        fetch(`/s/${slug}/cart/add-ajax`, {
+        const body = new URLSearchParams();
+        body.append('productId', productId);
+        if (variantId) body.append('variantId', variantId);
+        body.append('quantity', quantity || 1);
+
+        const release = () => {
+            Storevo.Cart._directBusy = false;
+            if (typeof onFinish === 'function') onFinish();
+        };
+
+        fetch(`/s/${slug}/cart/buy-now`, {
             method: 'POST',
-            body: formData,
-            credentials: 'same-origin'
+            body: body,
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
         })
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
-                    window.location.href = `/s/${slug}/cart/checkout`;
+                    window.location.href = data.redirectUrl || `/s/${slug}/cart/checkout?mode=direct`;
                 } else {
                     Storevo.UI.Toast.show(data.message, 'error');
+                    release();
                 }
+            })
+            .catch(() => {
+                Storevo.UI.Toast.show('Ocurrió un error de red.', 'error');
+                release();
             });
     },
 
@@ -249,20 +269,7 @@ Storevo.Cart = {
     buyNowWithQty: function(slug, productId) {
         const qtyEl = document.getElementById('qty');
         const qty = qtyEl ? qtyEl.value : 1;
-        const formData = new FormData();
-        formData.append('productId', productId);
-        formData.append('quantity', qty);
-
-        fetch(`/s/${slug}/cart/add-ajax`, {
-            method: 'POST',
-            body: formData,
-            credentials: 'same-origin'
-        })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) window.location.href = `/s/${slug}/cart/checkout`;
-                else Storevo.UI.Toast.show(data.message, 'error');
-            });
+        Storevo.Cart.startDirectPurchase(slug, productId, null, qty);
     }
 };
 

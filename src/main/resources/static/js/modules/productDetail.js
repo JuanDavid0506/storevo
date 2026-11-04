@@ -345,7 +345,7 @@ Storevo.ProductDetail = {
         btn.classList.add('opacity-75', 'pointer-events-none');
         btn.innerHTML = '<span class="animate-pulse">Procesando...</span>';
 
-        fetch(form.action.replace('/add', '/add-ajax'), {
+        fetch(`/s/${slug}/cart/buy-now`, {
             method: 'POST',
             body: new URLSearchParams(formData),
             credentials: 'same-origin',
@@ -354,7 +354,7 @@ Storevo.ProductDetail = {
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
-                    window.location.href = `/s/${slug}/cart/checkout`;
+                    window.location.href = data.redirectUrl || `/s/${slug}/cart/checkout?mode=direct`;
                 } else {
                     if (Storevo.UI && Storevo.UI.Toast) Storevo.UI.Toast.show(data.message, 'error');
                     btn.classList.remove('opacity-75', 'pointer-events-none');

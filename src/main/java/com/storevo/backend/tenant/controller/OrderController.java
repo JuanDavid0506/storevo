@@ -144,6 +144,23 @@ public class OrderController {
                 || order.getStatus() == OrderStatus.CANCELLED;
 
         if (paymentFailed) {
+            // Si la tienda tiene WhatsApp, el cliente puede coordinar el pedido por ese medio
+            TenantContext.clear();
+            var failedSettings = storeSettingsService.getSettingsByStore(store);
+            TenantContext.setCurrentTenant(store.getSchemaName());
+
+            String failedWhatsapp = failedSettings != null ? failedSettings.getWhatsapp() : null;
+            if (failedWhatsapp == null || failedWhatsapp.isBlank()) {
+                model.addAttribute("whatsappConfigured", false);
+            } else {
+                String failedMessage = "Hola, mi pago en línea del pedido #" + order.getId()
+                        + " fue rechazado. Quisiera coordinar el pago por otro medio.\n\n"
+                        + orderService.buildWhatsappMessage(order);
+                model.addAttribute("whatsappConfigured", true);
+                model.addAttribute("whatsappLink", "https://wa.me/" + normalizeWhatsappNumber(failedWhatsapp)
+                        + "?text=" + URLEncoder.encode(failedMessage, StandardCharsets.UTF_8));
+            }
+
             model.addAttribute("pageTitle", "Pago Rechazado");
             return "storefront/order-failed";
         }

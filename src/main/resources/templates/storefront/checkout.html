@@ -15,9 +15,9 @@
               pickupAddress=${settings != null and settings.shippingPickupAddress != null ? settings.shippingPickupAddress : ''}">
 
     <div class="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-        <a th:href="@{/s/{slug}/cart(slug=${slug})}" class="text-sm font-bold store-muted hover:text-brand transition inline-flex items-center gap-1.5">
+        <a th:href="${isDirectBuy == true and directProductId != null} ? @{/s/{slug}/p/{pid}(slug=${slug}, pid=${directProductId})} : @{/s/{slug}/cart(slug=${slug})}" class="text-sm font-bold store-muted hover:text-brand transition inline-flex items-center gap-1.5">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-            Volver a mi bolsa
+            <span th:text="${isDirectBuy == true} ? 'Volver al producto' : 'Volver a mi bolsa'">Volver a mi bolsa</span>
         </a>
         <h1 class="text-2xl sm:text-3xl font-black store-heading tracking-tight">Datos de Envío y Facturación</h1>
         <span class="hidden sm:inline w-28"></span>
@@ -41,6 +41,9 @@
                        data-free-threshold=${freeThreshold},
                        data-allow-pickup=${allowPickup}"
               class="bg-white text-slate-900 p-6 md:p-8 store-radius shadow-sm border border-slate-200/80 space-y-4">
+
+            <!-- Compra directa: se conserva el modo al enviar a pago o a WhatsApp -->
+            <input type="hidden" name="mode" value="direct" th:if="${isDirectBuy == true}">
 
             <!-- Selector de Modalidad de Entrega (Envío a domicilio vs Recoger en tienda) -->
             <div th:if="${allowPickup}" class="pb-3 border-b border-slate-100">

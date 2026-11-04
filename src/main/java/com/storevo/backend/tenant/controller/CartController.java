@@ -316,6 +316,111 @@ public class CartController {
 
         return ResponseEntity.ok(response);
     }
+    // ===================== COMPRA DIRECTA ("Comprar ahora") =====================
+    // Usa un carrito aislado (guestId + ":direct") para no mezclar la compra con la bolsa normal.
+
+    private static final String DIRECT_SUFFIX = ":direct";
+
+    private String resolveCartKey(String guestId, String mode) {
+        return "direct".equals(mode) ? guestId + DIRECT_SUFFIX : guestId;
+    }
+
+    private ResponseEntity<Map<String, Object>> buyNowError(String message) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("success", false);
+        body.put("message", message);
+        return ResponseEntity.ok(body);
+    }
+
+    @PostMapping("/buy-now")
+    @ResponseBody
+    @Transactional
+    public ResponseEntity<Map<String, Object>> buyNow(
+            @PathVariable String slug,
+            @RequestParam Long productId,
+            @RequestParam(required = false) Long variantId,
+            @RequestParam(defaultValue = "1") Integer quantity,
+            HttpServletRequest request) {
+
+        String guestId = (String) request.getAttribute("guestId");
+        String directKey = guestId + DIRECT_SUFFIX;
+
+        if (quantity == null || quantity <= 0) {
+            return buyNowError("La cantidad debe ser mayor a cero.");
+        }
+
+        Product product;
+        try {
+            product = productService.getProductById(productId);
+        } catch (Exception e) {
+            return buyNowError("Producto no encontrado.");
+        }
+
+        if (!productService.isProductPubliclyVisible(product)) {
+            return buyNowError("Producto no disponible.");
+        }
+
+        boolean isMadeToOrder = Boolean.TRUE.equals(product.getIsMadeToOrder());
+        int availableStock;
+        ProductVariant variant = null;
+
+        if (Boolean.TRUE.equals(product.getHasVariants())) {
+            if (variantId == null) {
+                return buyNowError("Debes seleccionar las opciones del producto.");
+            }
+            variant = variantRepository.findByIdAndProductId(variantId, product.getId()).orElse(null);
+            if (variant == null) {
+                return buyNowError("La variante seleccionada no pertenece a este producto.");
+            }
+            if (!Boolean.TRUE.equals(variant.getIsActive())) {
+                return buyNowError("Esta combinación no está disponible.");
+            }
+            availableStock = variant.getStock() != null ? variant.getStock() : 0;
+        } else {
+            if (variantId != null) {
+                return buyNowError("La variante seleccionada no pertenece a este producto.");
+            }
+            availableStock = product.getStock() != null ? product.getStock() : 0;
+        }
+
+        Double itemPrice = cartManager.resolveEffectivePrice(product, variant);
+        if (itemPrice == null || itemPrice <= 0.0) {
+            return buyNowError("Este producto no tiene un precio válido disponible.");
+        }
+
+        // El stock se valida SOLO contra la cantidad pedida: lo que haya en la bolsa normal no cuenta.
+        if (!isMadeToOrder) {
+            if (availableStock <= 0) {
+                return buyNowError("Este producto está agotado.");
+            }
+            if (quantity > availableStock) {
+                return buyNowError("Solo disponemos de " + availableStock + " unidad(es) de este producto.");
+            }
+        }
+
+        Long verifiedVariantId = variant != null ? variant.getId() : null;
+        CartItemDto item = CartItemDto.builder()
+                .productId(product.getId())
+                .variantId(verifiedVariantId)
+                .name(product.getName())
+                .variantText(cartManager.buildVariantText(variant))
+                .price(itemPrice)
+                .quantity(quantity)
+                .imageUrl(cartManager.resolveItemImageUrl(product, variant))
+                .isMadeToOrder(isMadeToOrder)
+                .build();
+
+        // Siempre se parte de un carrito directo vacío: solo queda el producto elegido
+        cartManager.clearCart(directKey);
+        cartManager.addItem(directKey, item);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("redirectUrl", "/s/" + slug + "/cart/checkout?mode=direct");
+        // La bolsa normal no se toca: el contador del navbar sigue contando solo guestId
+        response.put("cartCount", cartManager.getCartCount(guestId));
+        return ResponseEntity.ok(response);
+    }
 
     @PostMapping("/remove-ajax")
     @ResponseBody
@@ -366,24 +471,29 @@ public class CartController {
             @RequestParam(required = false) String city,
             @RequestParam(required = false, defaultValue = "SHIPPING") String deliveryMethod,
             @RequestParam(required = false) String notes,
+            @RequestParam(required = false) String mode,
             HttpServletRequest request,
             RedirectAttributes redirectAttributes) {
 
         String guestId = (String) request.getAttribute("guestId");
+        boolean direct = "direct".equals(mode);
+        String cartKey = resolveCartKey(guestId, mode);
+        String checkoutRedirect = "redirect:/s/" + slug + "/cart/checkout" + (direct ? "?mode=direct" : "");
 
-        boolean hasMadeToOrderItem = cartManager.getCart(guestId).stream()
+        boolean hasMadeToOrderItem = cartManager.getCart(cartKey).stream()
                 .anyMatch(item -> Boolean.TRUE.equals(item.getIsMadeToOrder()));
 
         if (hasMadeToOrderItem) {
             redirectAttributes.addFlashAttribute("checkoutError", "Tu carrito tiene productos bajo pedido. Por favor, utiliza el botón de WhatsApp.");
-            return "redirect:/s/" + slug + "/cart/checkout";
+            return checkoutRedirect;
         }
 
         String finalDoc = formatDocumentWithDv(customerDocument, verificationDigit);
 
         try {
+            // En modo directo se lee y vacía SOLO el carrito directo (guestId:direct); la bolsa normal queda intacta
             Order order = orderService.createOrderFromCart(
-                    guestId, customerName, customerPhone, customerEmail,
+                    cartKey, customerName, customerPhone, customerEmail,
                     documentType, finalDoc, verificationDigit, legalName, taxRegime, requiresElectronicInvoice,
                     address, city, deliveryMethod, notes, OrderChannel.ONLINE
             );
@@ -391,7 +501,7 @@ public class CartController {
         } catch (Exception e) {
             e.printStackTrace();
             redirectAttributes.addFlashAttribute("checkoutError", e.getMessage() != null ? e.getMessage() : "No se pudo procesar tu pedido. Verifica los datos e intenta nuevamente.");
-            return "redirect:/s/" + slug + "/cart/checkout";
+            return checkoutRedirect;
         }
     }
 
@@ -411,15 +521,19 @@ public class CartController {
             @RequestParam(required = false) String city,
             @RequestParam(required = false, defaultValue = "SHIPPING") String deliveryMethod,
             @RequestParam(required = false) String notes,
+            @RequestParam(required = false) String mode,
             HttpServletRequest request,
             RedirectAttributes redirectAttributes) {
 
         String guestId = (String) request.getAttribute("guestId");
+        boolean direct = "direct".equals(mode);
+        String cartKey = resolveCartKey(guestId, mode);
+        String checkoutRedirect = "redirect:/s/" + slug + "/cart/checkout" + (direct ? "?mode=direct" : "");
         String finalDoc = formatDocumentWithDv(customerDocument, verificationDigit);
 
         try {
             Order order = orderService.createOrderFromCart(
-                    guestId, customerName, customerPhone, customerEmail,
+                    cartKey, customerName, customerPhone, customerEmail,
                     documentType, finalDoc, verificationDigit, legalName, taxRegime, requiresElectronicInvoice,
                     address, city, deliveryMethod, notes, OrderChannel.WHATSAPP
             );
@@ -427,7 +541,7 @@ public class CartController {
         } catch (Exception e) {
             e.printStackTrace();
             redirectAttributes.addFlashAttribute("checkoutError", e.getMessage() != null ? e.getMessage() : "No se pudo registrar tu pedido. Verifica los datos e intenta nuevamente.");
-            return "redirect:/s/" + slug + "/cart/checkout";
+            return checkoutRedirect;
         }
     }
 
@@ -441,13 +555,31 @@ public class CartController {
     }
 
     @GetMapping("/checkout")
-    public String showCheckout(@PathVariable String slug, HttpServletRequest request, Model model, RedirectAttributes redirectAttributes) {
+    public String showCheckout(
+            @PathVariable String slug,
+            @RequestParam(required = false) String mode,
+            HttpServletRequest request,
+            Model model,
+            RedirectAttributes redirectAttributes) {
         String guestId = (String) request.getAttribute("guestId");
-        List<CartItemDto> cart = cartManager.getCart(guestId);
-        if (cart.isEmpty()) return "redirect:/s/" + slug + "/cart";
+        boolean direct = "direct".equals(mode);
+        String cartKey = resolveCartKey(guestId, mode);
+        List<CartItemDto> cart = cartManager.getCart(cartKey);
+        if (cart.isEmpty()) {
+            // Compra directa vacía (ya comprada o vencida) -> tienda; bolsa normal vacía -> bolsa
+            return direct ? "redirect:/s/" + slug : "redirect:/s/" + slug + "/cart";
+        }
+
+        Long directProductId = direct ? cart.get(0).getProductId() : null;
 
         for (CartItemDto item : cart) {
             if (!isCartItemValidAndPopulateMaxStock(item, null)) {
+                if (direct) {
+                    redirectAttributes.addFlashAttribute("cartError", "Este producto ya no está disponible.");
+                    return directProductId != null
+                            ? "redirect:/s/" + slug + "/p/" + directProductId
+                            : "redirect:/s/" + slug;
+                }
                 redirectAttributes.addFlashAttribute("cartError", "Tu bolsa contiene productos o variantes no disponibles. Por favor, revísala antes de continuar.");
                 return "redirect:/s/" + slug + "/cart";
             }
@@ -461,7 +593,9 @@ public class CartController {
         TenantContext.setCurrentTenant(store.getSchemaName());
 
         model.addAttribute("cartItems", cart);
-        model.addAttribute("cartTotal", cartManager.getTotal(guestId));
+        model.addAttribute("cartTotal", cartManager.getTotal(cartKey));
+        model.addAttribute("isDirectBuy", direct);
+        model.addAttribute("directProductId", directProductId);
         model.addAttribute("hasMadeToOrderItem", hasMadeToOrderItem);
         model.addAttribute("wompiEnabled", wompiEnabled);
         model.addAttribute("pageTitle", "Finalizar Compra");
