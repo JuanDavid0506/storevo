@@ -31,6 +31,10 @@
             <div th:if="${param.resetSuccess}" class="mb-4 bg-emerald-500/10 border border-emerald-500/40 text-emerald-300 px-4 py-3 rounded-lg text-xs font-semibold">
                 ¡Contraseña restablecida con éxito! Inicia sesión con tu nueva clave.
             </div>
+            <div th:if="${param.rateLimit != null or rateLimitError != null}"
+                 class="mb-4 bg-amber-500/10 border border-amber-500/40 text-amber-300 px-4 py-3 rounded-lg text-xs font-semibold"
+                 th:text="${rateLimitError != null ? rateLimitError : 'Has realizado demasiados intentos seguidos. Por favor espera un minuto antes de volver a intentarlo.'}">
+            </div>
             <div class="flex justify-between items-center mb-2">
                 <label for="password" class="block text-sm font-medium text-slate-300">Contraseña</label>
                 <a th:href="@{/forgot-password}" class="text-xs text-indigo-400 hover:text-indigo-300">¿Olvidaste tu contraseña?</a>

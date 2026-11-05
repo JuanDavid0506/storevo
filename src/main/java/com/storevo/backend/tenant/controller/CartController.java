@@ -37,6 +37,7 @@ public class CartController {
     private final ProductService productService;
     private final OrderService orderService;
     private final com.storevo.backend.tenant.service.CouponService couponService;
+    private final com.storevo.backend.config.security.RateLimitService rateLimitService;
     private final ProductVariantRepository variantRepository;
     private final StoreIntegrationRepository integrationRepository;
 
@@ -531,6 +532,11 @@ public class CartController {
         boolean isDirect = "direct".equalsIgnoreCase(mode);
         String cartSessionId = isDirect ? (guestId + ":direct") : guestId;
 
+        if (!rateLimitService.tryConsumeByIp(request, "checkout_submit_" + slug, 6, java.time.Duration.ofMinutes(1))) {
+            redirectAttributes.addFlashAttribute("checkoutError", com.storevo.backend.config.security.RateLimitService.RATE_LIMIT_MESSAGE);
+            return "redirect:/s/" + slug + "/cart/checkout" + (isDirect ? "?mode=direct" : "");
+        }
+
         List<CartItemDto> currentCart = cartManager.getCart(cartSessionId);
         boolean hasMadeToOrderItem = currentCart.stream()
                 .anyMatch(item -> Boolean.TRUE.equals(item.getIsMadeToOrder()));
@@ -581,6 +587,12 @@ public class CartController {
             @RequestParam(required = false) String couponCode,
             HttpServletRequest request,
             RedirectAttributes redirectAttributes) {
+
+        boolean isDirectCheck = "direct".equalsIgnoreCase(mode);
+        if (!rateLimitService.tryConsumeByIp(request, "checkout_submit_" + slug, 6, java.time.Duration.ofMinutes(1))) {
+            redirectAttributes.addFlashAttribute("checkoutError", com.storevo.backend.config.security.RateLimitService.RATE_LIMIT_MESSAGE);
+            return "redirect:/s/" + slug + "/cart/checkout" + (isDirectCheck ? "?mode=direct" : "");
+        }
 
         String guestId = (String) request.getAttribute("guestId");
         boolean isDirect = "direct".equalsIgnoreCase(mode);

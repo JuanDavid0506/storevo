@@ -278,4 +278,15 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             "COUNT(CASE WHEN p.isFeatured = true AND p.isDeleted = false THEN 1 END) as destacados " +
             "FROM Product p")
     ProductCountsProjection countProductsByStatus();
+
+    @Query("SELECT p FROM Product p WHERE p.isActive = true AND p.isDeleted = false AND p.isDraft = false " +
+            "AND (p.isMadeToOrder IS NULL OR p.isMadeToOrder = false) " +
+            "AND COALESCE(p.stock, 0) <= :threshold " +
+            "ORDER BY COALESCE(p.stock, 0) ASC, p.id DESC")
+    List<Product> findLowStockActiveProducts(@Param("threshold") int threshold, Pageable pageable);
+
+    @Query("SELECT COUNT(p) FROM Product p WHERE p.isActive = true AND p.isDeleted = false AND p.isDraft = false " +
+            "AND (p.isMadeToOrder IS NULL OR p.isMadeToOrder = false) " +
+            "AND COALESCE(p.stock, 0) <= :threshold")
+    long countLowStockActiveProducts(@Param("threshold") int threshold);
 }

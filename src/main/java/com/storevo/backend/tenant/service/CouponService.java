@@ -63,6 +63,24 @@ public class CouponService {
         return evaluation;
     }
 
+    /**
+     * Reintegra 1 uso al cupón cuando el pedido asociado se cancela o expira sin completarse.
+     */
+    @Transactional
+    public void releaseCouponUsage(String rawCode) {
+        if (rawCode == null || rawCode.isBlank()) {
+            return;
+        }
+        String normalizedCode = normalizeCode(rawCode);
+        couponRepository.findByCodeWithLock(normalizedCode).ifPresent(coupon -> {
+            int currentUsed = coupon.getUsedCount() != null ? coupon.getUsedCount() : 0;
+            if (currentUsed > 0) {
+                coupon.setUsedCount(currentUsed - 1);
+                couponRepository.save(coupon);
+            }
+        });
+    }
+
     private CouponEvaluation evaluateCouponRules(Coupon coupon, double subtotal) {
         if (!Boolean.TRUE.equals(coupon.getIsActive())) {
             throw new IllegalArgumentException("El cupón '" + coupon.getCode() + "' no se encuentra activo.");

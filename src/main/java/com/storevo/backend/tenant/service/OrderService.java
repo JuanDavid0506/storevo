@@ -1036,6 +1036,14 @@ public class OrderService {
             order.setStockDeducted(false);
         }
 
+        // 3. Reintegrar el uso del cupón al pasar por primera vez a CANCELLED o REFUNDED
+        boolean wasAlreadyCancelledOrRefunded = (oldStatus == OrderStatus.CANCELLED || oldStatus == OrderStatus.REFUNDED);
+        if (!wasAlreadyCancelledOrRefunded
+                && (newStatus == OrderStatus.CANCELLED || newStatus == OrderStatus.REFUNDED)
+                && order.getCouponCode() != null && !order.getCouponCode().isBlank()) {
+            couponService.releaseCouponUsage(order.getCouponCode());
+        }
+
         order.setStatus(newStatus);
 
         String resolvedDescription = (customDescription != null && !customDescription.isBlank())

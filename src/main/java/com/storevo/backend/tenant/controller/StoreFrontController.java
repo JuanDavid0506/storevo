@@ -50,6 +50,7 @@ public class StoreFrontController {
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
     private final StoreReviewRepository storeReviewRepository;
     private final StoreIntegrationRepository integrationRepository;
+    private final com.storevo.backend.config.security.RateLimitService rateLimitService;
 
     private int resolveGlobalPageSize(ThemeConfigDto theme, Integer requestedSize) {
         if (requestedSize != null && requestedSize >= 4 && requestedSize <= 48) {
@@ -761,6 +762,11 @@ public class StoreFrontController {
             @RequestParam String phone,
             HttpServletRequest request,
             RedirectAttributes redirectAttributes) {
+
+        if (!rateLimitService.tryConsumeByIp(request, "track_order_" + slug, 10, java.time.Duration.ofMinutes(1))) {
+            redirectAttributes.addFlashAttribute("trackError", com.storevo.backend.config.security.RateLimitService.RATE_LIMIT_MESSAGE);
+            return "redirect:/s/" + slug + "/track";
+        }
 
         Store store = (Store) request.getAttribute("currentStore");
         if (store != null) {

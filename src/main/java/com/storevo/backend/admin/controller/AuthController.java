@@ -18,6 +18,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class AuthController {
 
     private final AuthService authService;
+    private final com.storevo.backend.config.security.RateLimitService rateLimitService;
 
     @PostMapping("/auth/register")
     public String register(@ModelAttribute RegisterRequest request, HttpServletResponse response) {
@@ -33,7 +34,17 @@ public class AuthController {
     }
 
     @PostMapping("/auth/login")
-    public String login(@ModelAttribute LoginRequest request, HttpServletResponse response) {
+    public String login(
+            @ModelAttribute LoginRequest request,
+            HttpServletRequest httpRequest,
+            HttpServletResponse response,
+            RedirectAttributes redirectAttributes) {
+
+        if (!rateLimitService.tryConsumeByIp(httpRequest, "auth_login", 8, java.time.Duration.ofMinutes(1))) {
+            redirectAttributes.addFlashAttribute("rateLimitError", com.storevo.backend.config.security.RateLimitService.RATE_LIMIT_MESSAGE);
+            return "redirect:/login?rateLimit=true";
+        }
+
         try {
             AuthResponse authResponse = authService.login(request);
             setJwtCookie(response, authResponse.getToken());
@@ -55,6 +66,11 @@ public class AuthController {
             @RequestParam String email,
             HttpServletRequest request,
             RedirectAttributes redirectAttributes) {
+
+        if (!rateLimitService.tryConsumeByIp(request, "auth_forgot_password", 8, java.time.Duration.ofMinutes(1))) {
+            redirectAttributes.addFlashAttribute("errorMessage", com.storevo.backend.config.security.RateLimitService.RATE_LIMIT_MESSAGE);
+            return "redirect:/forgot-password";
+        }
 
         String baseUrl = resolveBaseUrl(request);
         authService.requestPasswordReset(email, baseUrl);

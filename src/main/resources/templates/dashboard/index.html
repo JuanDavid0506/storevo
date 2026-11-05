@@ -7,19 +7,73 @@
 </head>
 <body>
 
-<div layout:fragment="content">
+<div layout:fragment="content" class="space-y-8">
 
-    <div class="mb-8">
-        <h1 class="text-2xl font-bold text-white">Hola, bienvenido a tu tienda</h1>
-        <p class="text-slate-400 mt-1">Aquí tienes un resumen de lo que está pasando hoy.</p>
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-white">Hola, bienvenido a tu tienda</h1>
+            <p class="text-slate-400 mt-1">Aquí tienes un resumen de lo que está pasando en tu negocio.</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <a th:href="@{|/s/${slug}|}" target="_blank" rel="noopener"
+               class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 text-xs font-bold transition">
+                <span>Ver mi tienda pública</span>
+                <svg class="w-4 h-4 text-storevo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+            </a>
+        </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <!-- Ventas de hoy -->
+    <!-- CHECKLIST DE PUESTA EN MARCHA (Se muestra mientras no esté al 100%) -->
+    <div th:if="${metrics != null and !metrics.onboardingCompleted}"
+         class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm space-y-5">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+                <span class="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider bg-storevo-500/15 text-storevo-400 border border-storevo-500/30 mb-1.5">
+                    Guía de Inicio Rápido
+                </span>
+                <h3 class="text-lg font-bold text-white">Pon tu tienda lista para vender</h3>
+                <p class="text-xs text-slate-400 mt-0.5">Completa estos 4 pasos esenciales para activar tu catálogo y recibir tus primeros pedidos.</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="w-36 h-2.5 bg-slate-800 rounded-full overflow-hidden">
+                    <div class="h-full bg-storevo-500 rounded-full transition-all duration-500"
+                         th:style="|width: ${metrics.onboardingProgressPercent}%;|"></div>
+                </div>
+                <span class="text-sm font-black text-storevo-400" th:text="${metrics.onboardingProgressPercent + '%'}">50%</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div th:each="step : ${metrics.onboardingSteps}"
+                 th:class="${step['completed'] ? 'p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/25 flex flex-col justify-between gap-3' : 'p-4 rounded-xl bg-slate-950/70 border border-slate-800 flex flex-col justify-between gap-3'}">
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span th:if="${step['completed']}"
+                              class="w-6 h-6 rounded-full bg-emerald-500 text-slate-950 font-black text-xs flex items-center justify-center">✓</span>
+                        <span th:unless="${step['completed']}"
+                              class="w-6 h-6 rounded-full bg-slate-800 text-slate-300 font-bold text-xs flex items-center justify-center border border-slate-700"
+                              th:text="${step['number']}">1</span>
+                        <span th:if="${step['completed']}" class="text-[11px] font-bold text-emerald-400">Completado</span>
+                        <span th:unless="${step['completed']}" class="text-[11px] font-bold text-amber-400">Pendiente</span>
+                    </div>
+                    <h4 class="text-sm font-bold text-white leading-snug" th:text="${step['title']}">Paso</h4>
+                    <p class="text-xs text-slate-400 leading-relaxed" th:text="${step['description']}"></p>
+                </div>
+                <a th:href="${step['actionUrl']}"
+                   th:class="${step['completed'] ? 'text-xs font-semibold text-slate-400 hover:text-white transition inline-flex items-center gap-1' : 'w-full text-center py-2 px-3 rounded-lg bg-storevo-500 hover:bg-storevo-600 text-white text-xs font-bold transition'}">
+                    <span th:text="${step['actionLabel']}">Ir</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- TARJETAS DE MÉTRICAS PRINCIPALES -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Ingresos Totales -->
         <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
             <div class="flex justify-between items-start">
                 <div>
-                    <p class="text-sm font-medium text-slate-400">Ventas de hoy</p>
+                    <p class="text-sm font-medium text-slate-400">Ingresos acumulados</p>
                     <h3 class="text-3xl font-bold text-white mt-2"
                         th:text="${metrics.totalRevenue != null ? '$ ' + #numbers.formatDecimal(metrics.totalRevenue, 1, 'POINT', 0, 'COMMA') : '$ 0'}">$0</h3>
                 </div>
@@ -29,11 +83,11 @@
             </div>
         </div>
 
-        <!-- Pedidos Nuevos -->
+        <!-- Pedidos Nuevos / Pendientes -->
         <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
             <div class="flex justify-between items-start">
                 <div>
-                    <p class="text-sm font-medium text-slate-400">Pedidos Nuevos</p>
+                    <p class="text-sm font-medium text-slate-400">Pedidos Pendientes</p>
                     <h3 class="text-3xl font-bold text-white mt-2"
                         th:text="${metrics.pendingOrdersCount != null ? metrics.pendingOrdersCount : 0}">0</h3>
                 </div>
@@ -56,6 +110,93 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- PANELES OPERATIVOS: TOP MÁS VENDIDOS Y ALERTAS DE INVENTARIO -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- 1. Top 5 Productos Más Vendidos -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between gap-2 mb-4">
+                    <div>
+                        <h3 class="text-base font-bold text-white">Productos Más Vendidos</h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Ranking real calculado sobre pedidos pagados y confirmados.</p>
+                    </div>
+                    <a th:href="@{|/dashboard/${slug}/orders|}" class="text-xs font-bold text-storevo-400 hover:underline">Ver pedidos →</a>
+                </div>
+
+                <div th:if="${metrics.topSellingProducts == null or #lists.isEmpty(metrics.topSellingProducts)}"
+                     class="py-8 text-center text-xs text-slate-400">
+                    Aún no hay ventas confirmadas para mostrar en el ranking.
+                </div>
+
+                <div th:if="${metrics.topSellingProducts != null and not #lists.isEmpty(metrics.topSellingProducts)}"
+                     class="divide-y divide-slate-800/70">
+                    <div th:each="item, iterStat : ${metrics.topSellingProducts}"
+                         class="py-3 flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <span class="w-6 h-6 rounded-lg bg-slate-800 text-storevo-400 font-black text-xs flex items-center justify-center flex-shrink-0"
+                                  th:text="${iterStat.index + 1}">1</span>
+                            <p class="text-sm font-bold text-white truncate" th:text="${item['name']}">Producto</p>
+                        </div>
+                        <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-storevo-500/10 text-storevo-400 border border-storevo-500/20 shrink-0"
+                              th:text="${item['units'] + (item['units'] == 1 ? ' vendido' : ' vendidos')}">0 vendidos</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Alertas de Inventario (Stock bajo <= 5 o Agotados) -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between gap-2 mb-4">
+                    <div>
+                        <h3 class="text-base font-bold text-white flex items-center gap-2">
+                            Alertas de Inventario
+                            <span th:if="${metrics.lowStockProductsCount != null and metrics.lowStockProductsCount > 0}"
+                                  class="px-2 py-0.5 rounded-full text-xs font-black bg-amber-500/15 text-amber-400 border border-amber-500/30"
+                                  th:text="${metrics.lowStockProductsCount}">0</span>
+                        </h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Productos activos con 5 o menos unidades disponibles.</p>
+                    </div>
+                    <a th:href="@{/dashboard/{slug}/products(slug=${slug}, quick='out_of_stock')}"
+                       class="text-xs font-bold text-storevo-400 hover:underline">Ver inventario →</a>
+                </div>
+
+                <div th:if="${metrics.lowStockProducts == null or #lists.isEmpty(metrics.lowStockProducts)}"
+                     class="py-8 text-center text-xs text-slate-400">
+                    ✓ Todo tu catálogo activo cuenta con stock suficiente.
+                </div>
+
+                <div th:if="${metrics.lowStockProducts != null and not #lists.isEmpty(metrics.lowStockProducts)}"
+                     class="divide-y divide-slate-800/70">
+                    <div th:each="prod : ${metrics.lowStockProducts}"
+                         class="py-3 flex items-center justify-between gap-3">
+                        <div class="min-w-0 flex-1">
+                            <p class="text-sm font-bold text-white truncate" th:text="${prod['name']}">Producto</p>
+                            <p class="text-xs text-slate-500 font-mono" th:text="${prod['sku'] != null ? 'SKU: ' + prod['sku'] : ''}"></p>
+                        </div>
+                        <div class="flex items-center gap-3 shrink-0">
+                            <span th:if="${prod['outOfStock']}"
+                                  class="px-2.5 py-1 rounded-full text-[11px] font-black uppercase bg-red-500/15 text-red-400 border border-red-500/30">
+                                Agotado (0)
+                            </span>
+                            <span th:unless="${prod['outOfStock']}"
+                                  class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30"
+                                  th:text="${'Quedan ' + prod['stock']}">
+                                Quedan 3
+                            </span>
+                            <a th:href="@{/dashboard/{slug}/products/{id}/edit(slug=${slug}, id=${prod['id']})}"
+                               class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-white border border-slate-700 transition">
+                                Reponer
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 
 </div>

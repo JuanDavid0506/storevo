@@ -29,6 +29,7 @@ public class OrderController {
     private final OrderService orderService;
     private final WompiService wompiService;
     private final StoreReviewRepository storeReviewRepository;
+    private final com.storevo.backend.config.security.RateLimitService rateLimitService;
 
     @GetMapping("/{token}/success")
     public String orderSuccess(
@@ -226,6 +227,11 @@ public class OrderController {
         String redirectTarget = "whatsapp".equalsIgnoreCase(origin)
                 ? "redirect:/s/" + slug + "/order/" + order.getPublicToken() + "/whatsapp?reviewed=true"
                 : "redirect:/s/" + slug + "/order/" + order.getPublicToken() + "/wompi-result";
+
+        if (!rateLimitService.tryConsumeByIp(request, "order_review_" + slug, 6, java.time.Duration.ofMinutes(1))) {
+            redirectAttributes.addFlashAttribute("reviewError", com.storevo.backend.config.security.RateLimitService.RATE_LIMIT_MESSAGE);
+            return redirectTarget;
+        }
 
         try {
             if (order.getStatus() == OrderStatus.CANCELLED) {
