@@ -36,6 +36,7 @@ public class CartController {
     private final CartManager cartManager;
     private final ProductService productService;
     private final OrderService orderService;
+    private final com.storevo.backend.tenant.service.CouponService couponService;
     private final ProductVariantRepository variantRepository;
     private final StoreIntegrationRepository integrationRepository;
 
@@ -456,6 +457,54 @@ public class CartController {
         return "redirect:/s/" + slug + "/cart";
     }
 
+    @PostMapping("/apply-coupon")
+    @ResponseBody
+    public ResponseEntity< Map<String, Object> > applyCouponAjax(
+            @PathVariable String slug,
+            @RequestParam String code,
+            @RequestParam(required = false) String mode,
+            @RequestParam(required = false, defaultValue = "false") Boolean onlyInStockItems,
+            HttpServletRequest request) {
+
+        Store store = (Store) request.getAttribute("currentStore");
+        if (store != null) {
+            TenantContext.setCurrentTenant(store.getSchemaName());
+        }
+
+        String guestId = (String) request.getAttribute("guestId");
+        boolean isDirect = "direct".equalsIgnoreCase(mode);
+        String cartSessionId = isDirect ? (guestId + ":direct") : guestId;
+
+        Map<String, Object> res = new HashMap<>();
+        try {
+            List<CartItemDto> items = cartManager.getCart(cartSessionId);
+            double applicableSubtotal = items.stream()
+                    .filter(i -> !Boolean.TRUE.equals(onlyInStockItems) || !Boolean.TRUE.equals(i.getIsMadeToOrder()))
+                    .filter(i -> i.getPrice() != null && i.getPrice() > 0 && i.getQuantity() != null && i.getQuantity() > 0)
+                    .mapToDouble(CartItemDto::getSubtotal)
+                    .sum();
+
+            com.storevo.backend.tenant.service.CouponService.CouponEvaluation eval =
+                    couponService.validateAndCalculateDiscount(code, applicableSubtotal);
+
+            res.put("valid", true);
+            res.put("code", eval.code());
+            res.put("discountType", eval.discountType().name());
+            res.put("discountValue", eval.discountValue());
+            res.put("discountAmount", eval.discountAmount());
+            res.put("message", "¡Cupón " + eval.code() + " aplicado!");
+            return ResponseEntity.ok(res);
+        } catch (IllegalArgumentException e) {
+            res.put("valid", false);
+            res.put("message", e.getMessage());
+            return ResponseEntity.ok(res);
+        } catch (Exception e) {
+            res.put("valid", false);
+            res.put("message", "No se pudo validar el cupón en este momento.");
+            return ResponseEntity.ok(res);
+        }
+    }
+
     @PostMapping("/checkout/process")
     public String processCheckout(
             @PathVariable String slug,
@@ -474,6 +523,7 @@ public class CartController {
             @RequestParam(required = false) String notes,
             @RequestParam(required = false) String mode,
             @RequestParam(required = false, defaultValue = "false") Boolean onlyInStockItems,
+            @RequestParam(required = false) String couponCode,
             HttpServletRequest request,
             RedirectAttributes redirectAttributes) {
 
@@ -497,7 +547,8 @@ public class CartController {
                     cartSessionId, customerName, customerPhone, customerEmail,
                     documentType, finalDoc, verificationDigit, legalName, taxRegime, requiresElectronicInvoice,
                     address, city, deliveryMethod, notes, OrderChannel.ONLINE,
-                    Boolean.TRUE.equals(onlyInStockItems)
+                    Boolean.TRUE.equals(onlyInStockItems),
+                    couponCode
             );
             return "redirect:/s/" + slug + "/order/" + order.getPublicToken() + "/success";
         } catch (com.storevo.backend.tenant.exception.InsufficientStockException | IllegalArgumentException e) {
@@ -527,6 +578,7 @@ public class CartController {
             @RequestParam(required = false, defaultValue = "SHIPPING") String deliveryMethod,
             @RequestParam(required = false) String notes,
             @RequestParam(required = false) String mode,
+            @RequestParam(required = false) String couponCode,
             HttpServletRequest request,
             RedirectAttributes redirectAttributes) {
 
@@ -540,7 +592,8 @@ public class CartController {
                     cartSessionId, customerName, customerPhone, customerEmail,
                     documentType, finalDoc, verificationDigit, legalName, taxRegime, requiresElectronicInvoice,
                     address, city, deliveryMethod, notes, OrderChannel.WHATSAPP,
-                    false
+                    false,
+                    couponCode
             );
             return "redirect:/s/" + slug + "/order/" + order.getPublicToken() + "/whatsapp";
         } catch (com.storevo.backend.tenant.exception.InsufficientStockException | IllegalArgumentException e) {

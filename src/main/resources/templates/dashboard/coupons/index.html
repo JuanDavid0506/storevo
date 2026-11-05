@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/dashboard-layout}">
+<head>
+    <title>Cupones de Descuento</title>
+</head>
+<body>
+<div layout:fragment="content" class="space-y-6">
+
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h2 class="text-2xl font-bold text-white flex items-center gap-3">
+                Cupones de Descuento
+                <span class="bg-slate-800 text-storevo-400 text-xs font-black px-2.5 py-1 rounded-full border border-slate-700"
+                      th:text="${#lists.size(coupons)}">0</span>
+            </h2>
+            <p class="text-sm text-slate-400 mt-1">Crea códigos promocionales para tus campañas en Instagram, TikTok o WhatsApp.</p>
+        </div>
+    </div>
+
+    <div th:if="${successMessage}" class="bg-emerald-500/10 border border-emerald-500/40 text-emerald-300 px-4 py-3 rounded-xl text-sm font-medium" th:text="${successMessage}"></div>
+    <div th:if="${errorMessage}" class="bg-red-500/10 border border-red-500/40 text-red-300 px-4 py-3 rounded-xl text-sm font-medium" th:text="${errorMessage}"></div>
+
+    <!-- Formulario para crear nuevo cupón -->
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm">
+        <h3 class="text-base font-bold text-white mb-4">Crear Nuevo Cupón</h3>
+        <form th:action="@{/dashboard/{slug}/coupons(slug=${slug})}" method="POST" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 items-end">
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Código <span class="text-red-400">*</span></label>
+                <input type="text" name="code" required maxlength="50" placeholder="BIENVENIDO10"
+                       class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm font-bold uppercase tracking-wider text-white focus:border-storevo-500 focus:outline-none">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Tipo <span class="text-red-400">*</span></label>
+                <select name="discountType"
+                        class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:border-storevo-500 focus:outline-none">
+                    <option value="PERCENTAGE">Porcentaje (%)</option>
+                    <option value="FIXED_AMOUNT">Valor fijo ($ COP)</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Valor <span class="text-red-400">*</span></label>
+                <input type="number" name="discountValue" required min="1" step="any" placeholder="Ej: 10 o 15000"
+                       class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:border-storevo-500 focus:outline-none">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Compra mínima ($)</label>
+                <input type="number" name="minPurchaseAmount" min="0" step="1000" placeholder="Opcional"
+                       class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:border-storevo-500 focus:outline-none">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Límite de usos</label>
+                <input type="number" name="maxUses" min="1" step="1" placeholder="Ilimitado"
+                       class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:border-storevo-500 focus:outline-none">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Vence el</label>
+                <input type="date" name="expiresDate"
+                       class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white [color-scheme:dark] focus:border-storevo-500 focus:outline-none">
+            </div>
+
+            <div class="sm:col-span-2 lg:col-span-6 flex justify-end pt-2">
+                <button type="submit"
+                        class="px-5 py-2.5 rounded-xl bg-storevo-500 hover:bg-storevo-600 text-white text-sm font-bold shadow-lg shadow-storevo-500/20 transition cursor-pointer">
+                    + Guardar Cupón
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Tabla de Cupones -->
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+        <div th:if="${#lists.isEmpty(coupons)}" class="p-12 text-center text-slate-400 text-sm">
+            Aún no has creado ningún cupón de descuento en tu tienda.
+        </div>
+
+        <div th:unless="${#lists.isEmpty(coupons)}" class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-300">
+                <thead class="text-xs uppercase bg-slate-950 text-slate-500 border-b border-slate-800">
+                <tr>
+                    <th class="px-6 py-4 font-bold">Código</th>
+                    <th class="px-6 py-4 font-bold">Descuento</th>
+                    <th class="px-6 py-4 font-bold">Compra Mínima</th>
+                    <th class="px-6 py-4 font-bold">Usos</th>
+                    <th class="px-6 py-4 font-bold">Vencimiento</th>
+                    <th class="px-6 py-4 font-bold">Estado</th>
+                    <th class="px-6 py-4 font-bold text-right">Acciones</th>
+                </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800/60">
+                <tr th:each="c : ${coupons}" class="hover:bg-slate-800/40 transition">
+                    <td class="px-6 py-4 font-mono font-black text-white text-base" th:text="${c.code}">CODIGO</td>
+                    <td class="px-6 py-4 font-bold text-storevo-400">
+                        <span th:if="${c.discountType.name() == 'PERCENTAGE'}"
+                              th:text="${#numbers.formatDecimal(c.discountValue, 1, 'POINT', 0, 'COMMA') + '% OFF'}">10%</span>
+                        <span th:if="${c.discountType.name() == 'FIXED_AMOUNT'}"
+                              th:text="${'$ ' + #numbers.formatDecimal(c.discountValue, 1, 'POINT', 0, 'COMMA')}">$10.000</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span th:if="${c.minPurchaseAmount != null and c.minPurchaseAmount > 0}"
+                              th:text="${'$ ' + #numbers.formatDecimal(c.minPurchaseAmount, 1, 'POINT', 0, 'COMMA')}">$50.000</span>
+                        <span th:unless="${c.minPurchaseAmount != null and c.minPurchaseAmount > 0}" class="text-slate-500">Sin mínimo</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="font-bold text-white" th:text="${c.usedCount}">0</span>
+                        <span class="text-slate-500" th:text="${c.maxUses != null ? ' / ' + c.maxUses : ' (Ilimitado)'}"></span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span th:if="${c.expiresAt != null}" th:text="${#temporals.format(c.expiresAt, 'dd/MM/yyyy')}"></span>
+                        <span th:if="${c.expiresAt == null}" class="text-slate-500">No expira</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span th:if="${c.isActive and !c.expired and !c.usageLimitReached}"
+                              class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">Activo</span>
+                        <span th:if="${!c.isActive}"
+                              class="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-800 text-slate-400 border border-slate-700">Inactivo</span>
+                        <span th:if="${c.isActive and (c.expired or c.usageLimitReached)}"
+                              class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30"
+                              th:text="${c.expired ? 'Expirado' : 'Agotado'}">Expirado</span>
+                    </td>
+                    <td class="px-6 py-4 text-right space-x-2 whitespace-nowrap">
+                        <form th:action="@{/dashboard/{slug}/coupons/{id}/toggle(slug=${slug}, id=${c.id})}" method="POST" class="inline">
+                            <button type="submit"
+                                    class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 transition cursor-pointer"
+                                    th:text="${c.isActive ? 'Desactivar' : 'Activar'}">Alternar</button>
+                        </form>
+                        <form th:action="@{/dashboard/{slug}/coupons/{id}/delete(slug=${slug}, id=${c.id})}" method="POST" class="inline"
+                              onsubmit="return confirm('¿Eliminar este cupón de descuento?');">
+                            <button type="submit"
+                                    class="px-3 py-1.5 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-xs font-semibold text-red-300 border border-red-500/30 transition cursor-pointer">
+                                Eliminar
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</body>
+</html>

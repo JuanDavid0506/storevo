@@ -486,9 +486,23 @@ public class ProductService {
                             .collect(Collectors.joining(" / "))
                             : (v.getSku() != null ? v.getSku() : "Variante #" + v.getId());
 
-                    double varEffectivePrice = (v.getPrice() != null && v.getPrice() > 0.0)
-                            ? v.getPrice()
-                            : baseEffectivePrice;
+                    double varEffectivePrice = baseEffectivePrice;
+                    if (v.getPrice() != null && v.getPrice() > 0.0) {
+                        varEffectivePrice = v.getPrice();
+                        boolean hasExplicitCompare = v.getCompareAtPrice() != null && v.getCompareAtPrice() > v.getPrice();
+                        if (!hasExplicitCompare
+                                && p.getDiscountPrice() != null && p.getDiscountPrice() > 0.0
+                                && p.getPrice() != null && p.getPrice() > p.getDiscountPrice()) {
+                            if (Math.abs(v.getPrice() - p.getPrice()) < 0.01) {
+                                varEffectivePrice = p.getDiscountPrice();
+                            } else {
+                                double discounted = Math.round(v.getPrice() * (p.getDiscountPrice() / p.getPrice()));
+                                if (discounted > 0.0 && discounted < v.getPrice()) {
+                                    varEffectivePrice = discounted;
+                                }
+                            }
+                        }
+                    }
 
                     Map<String, Object> vMap = new LinkedHashMap<>();
                     vMap.put("id", v.getId());
@@ -600,16 +614,24 @@ public class ProductService {
                         : (existingProduct != null && existingProduct.getPrice() != null && existingProduct.getPrice() > 0.0
                         ? existingProduct.getPrice() : 0.0);
 
-                if (dto.getDiscountPrice() != null && dto.getDiscountPrice() > 0.0
-                        && fallbackBasePrice > 0.0 && dto.getDiscountPrice() >= fallbackBasePrice) {
-                    throw new IllegalArgumentException("El precio de descuento debe ser menor al precio base del producto.");
-                }
-
+                double minVariantPrice = Double.MAX_VALUE;
                 for (ProductDto.VariantDto v : validVariants) {
                     double vPrice = v.getPrice() != null ? v.getPrice() : 0.0;
                     if (vPrice <= 0.0 && fallbackBasePrice <= 0.0) {
                         throw new IllegalArgumentException("Todas las variantes deben tener un precio mayor a cero (o definir un precio base en el producto).");
                     }
+                    if (vPrice > 0.0 && vPrice < minVariantPrice) {
+                        minVariantPrice = vPrice;
+                    }
+                }
+
+                double referenceBaseForDiscount = (minVariantPrice != Double.MAX_VALUE)
+                        ? minVariantPrice
+                        : fallbackBasePrice;
+
+                if (dto.getDiscountPrice() != null && dto.getDiscountPrice() > 0.0
+                        && referenceBaseForDiscount > 0.0 && dto.getDiscountPrice() >= referenceBaseForDiscount) {
+                    throw new IllegalArgumentException("El precio de descuento debe ser menor al precio de las variantes del producto.");
                 }
             }
         }

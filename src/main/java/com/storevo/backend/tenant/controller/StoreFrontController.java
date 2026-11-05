@@ -10,10 +10,14 @@ import com.storevo.backend.tenant.dto.ThemeConfigDto;
 import com.storevo.backend.tenant.dto.ThemeCustomPageDto;
 import com.storevo.backend.tenant.dto.ThemeSectionDto;
 import com.storevo.backend.tenant.model.Category;
+import com.storevo.backend.tenant.model.Order;
+import com.storevo.backend.tenant.model.OrderChannel;
 import com.storevo.backend.tenant.model.Product;
 import com.storevo.backend.tenant.model.ProductImage;
 import com.storevo.backend.tenant.repository.StoreReviewRepository;
 import com.storevo.backend.tenant.service.CategoryService;
+import com.storevo.backend.tenant.service.CustomerService;
+import com.storevo.backend.tenant.service.OrderService;
 import com.storevo.backend.tenant.service.ProductService;
 import com.storevo.backend.tenant.service.StoreThemeService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,9 +28,11 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -39,6 +45,9 @@ public class StoreFrontController {
     private final ProductService productService;
     private final CategoryService categoryService;
     private final StoreThemeService storeThemeService;
+    private final OrderService orderService;
+    private final com.storevo.backend.tenant.service.CartManager cartManager;
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
     private final StoreReviewRepository storeReviewRepository;
     private final StoreIntegrationRepository integrationRepository;
 
@@ -257,7 +266,7 @@ public class StoreFrontController {
 
     @GetMapping("/api/catalog-page")
     @ResponseBody
-    public ResponseEntity<Map<String, Object>> getCatalogPageJson(
+    public ResponseEntity< Map<String, Object> > getCatalogPageJson(
             @PathVariable String slug,
             @RequestParam(required = false) String sectionId,
             @RequestParam(required = false) String pageKey,
@@ -359,7 +368,7 @@ public class StoreFrontController {
                 ? col.stream().filter(Objects::nonNull).map(o -> ((Number) o).longValue()).collect(Collectors.toSet())
                 : Collections.emptySet();
 
-        List<Map<String, Object>> serializedItems = new ArrayList<>();
+        List< Map<String, Object> > serializedItems = new ArrayList<>();
         for (Product p : resultPage.getContent()) {
             serializedItems.add(serializeProductCardData(p, wishlistIds));
         }
@@ -503,6 +512,12 @@ public class StoreFrontController {
         model.addAttribute("editorPageKey", "product");
         hydratePageContext(request, model, relatedCandidates);
         populateProductDetailModel(product, relatedCandidates, model);
+
+        String baseUrl = buildRequestBaseUrl(request);
+        String canonicalUrl = baseUrl + "/s/" + slug + "/p/" + product.getId();
+        model.addAttribute("canonicalUrl", canonicalUrl);
+        model.addAttribute("productJsonLd", buildProductJsonLd(product, canonicalUrl));
+
         return "storefront/detail";
     }
 
@@ -553,13 +568,23 @@ public class StoreFrontController {
     private void populateProductDetailModel(Product product, List<Product> sameCatCandidates, Model model) {
         model.addAttribute("product", product);
 
-        List<Map<String, Object>> variantsJson = new ArrayList<>();
+        List< Map<String, Object> > variantsJson = new ArrayList<>();
         if (product.getHasVariants() != null && product.getHasVariants()) {
             for (com.storevo.backend.tenant.model.ProductVariant v : product.getVariantsList()) {
                 if (v.getIsActive() != null && v.getIsActive()) {
+                    Double effectiveVarPrice = cartManager.resolveEffectivePrice(product, v);
+                    Double originalVarPrice = cartManager.resolveOriginalPrice(product, v);
+                    double effVal = effectiveVarPrice != null ? effectiveVarPrice : (v.getPrice() != null ? v.getPrice() : 0.0);
+                    double origVal = originalVarPrice != null ? originalVarPrice : effVal;
+                    boolean hasDisc = origVal > effVal && effVal > 0.0;
+                    long discPct = hasDisc ? Math.round(((origVal - effVal) * 100.0) / origVal) : 0L;
+
                     Map<String, Object> vMap = new HashMap<>();
                     vMap.put("id", v.getId());
-                    vMap.put("price", v.getPrice());
+                    vMap.put("price", effVal);
+                    vMap.put("originalPrice", origVal);
+                    vMap.put("hasDiscount", hasDisc);
+                    vMap.put("discountPercent", discPct);
                     vMap.put("stock", v.getStock());
                     vMap.put("sku", v.getSku());
 
@@ -592,5 +617,192 @@ public class StoreFrontController {
         model.addAttribute("products", sameCatCandidates != null ? sameCatCandidates : Collections.emptyList());
         model.addAttribute("editorPageKey", "product");
         model.addAttribute("pageTitle", product.getName());
+    }
+
+    private String buildRequestBaseUrl(HttpServletRequest request) {
+        String scheme = request.getHeader("X-Forwarded-Proto") != null
+                ? request.getHeader("X-Forwarded-Proto")
+                : request.getScheme();
+        String serverName = request.getServerName();
+        int serverPort = request.getServerPort();
+        String portSuffix = (serverPort == 80 || serverPort == 443) ? "" : ":" + serverPort;
+        return scheme + "://" + serverName + portSuffix;
+    }
+
+    private String buildProductJsonLd(Product product, String canonicalUrl) {
+        try {
+            double origPrice = product.getPrice() != null ? product.getPrice() : 0.0;
+            double discPrice = product.getDiscountPrice() != null ? product.getDiscountPrice() : 0.0;
+            double effectivePrice = (discPrice > 0.0 && (origPrice <= 0.0 || discPrice < origPrice)) ? discPrice : origPrice;
+
+            String availability;
+            if (Boolean.TRUE.equals(product.getIsMadeToOrder())) {
+                availability = "https://schema.org/PreOrder";
+            } else if (product.getStock() != null && product.getStock() > 0) {
+                availability = "https://schema.org/InStock";
+            } else {
+                availability = "https://schema.org/OutOfStock";
+            }
+
+            Map<String, Object> root = new LinkedHashMap<>();
+            root.put("@context", "https://schema.org");
+            root.put("@type", "Product");
+            root.put("name", product.getName() != null ? product.getName() : "");
+            if (product.getDescription() != null && !product.getDescription().isBlank()) {
+                root.put("description", product.getDescription().trim());
+            }
+            if (product.getMainImageUrl() != null && !product.getMainImageUrl().isBlank()) {
+                root.put("image", List.of(product.getMainImageUrl()));
+            }
+            if (product.getSku() != null && !product.getSku().isBlank()) {
+                root.put("sku", product.getSku());
+            }
+            if (product.getBrand() != null && !product.getBrand().isBlank()) {
+                Map<String, Object> brandNode = new LinkedHashMap<>();
+                brandNode.put("@type", "Brand");
+                brandNode.put("name", product.getBrand());
+                root.put("brand", brandNode);
+            }
+
+            Map<String, Object> offers = new LinkedHashMap<>();
+            offers.put("@type", "Offer");
+            offers.put("url", canonicalUrl);
+            offers.put("priceCurrency", "COP");
+            offers.put("price", Math.round(effectivePrice));
+            offers.put("availability", availability);
+            root.put("offers", offers);
+
+            return objectMapper.writeValueAsString(root).replace("</", "<\\/");
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    @GetMapping(value = "/sitemap.xml", produces = org.springframework.http.MediaType.APPLICATION_XML_VALUE)
+    @ResponseBody
+    public String storeSitemap(@PathVariable String slug, HttpServletRequest request) {
+        Store store = (Store) request.getAttribute("currentStore");
+        if (store != null) {
+            TenantContext.setCurrentTenant(store.getSchemaName());
+        }
+        String baseUrl = buildRequestBaseUrl(request);
+        String storeRoot = baseUrl + "/s/" + slug;
+
+        StringBuilder xml = new StringBuilder();
+        xml.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+        xml.append("<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n");
+
+        appendSitemapUrl(xml, storeRoot, null, "daily", "1.0");
+        appendSitemapUrl(xml, storeRoot + "/catalog", null, "daily", "0.9");
+
+        if (store != null) {
+            try {
+                ThemeConfigDto publishedTheme = storeThemeService.getRawThemeConfig(store, false);
+                if (publishedTheme != null && publishedTheme.getCustomPages() != null) {
+                    for (ThemeCustomPageDto cp : publishedTheme.getCustomPages()) {
+                        if (cp != null && cp.getSlug() != null && !cp.getSlug().isBlank()) {
+                            appendSitemapUrl(xml, storeRoot + "/page/" + cp.getSlug(), null, "weekly", "0.7");
+                        }
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+
+        List<Product> publicProducts = productService.getPublicCatalog(null);
+        java.time.format.DateTimeFormatter dateFmt = java.time.format.DateTimeFormatter.ISO_LOCAL_DATE;
+        for (Product p : publicProducts) {
+            if (p == null || p.getId() == null) continue;
+            String lastMod = null;
+            if (p.getUpdatedAt() != null) {
+                lastMod = p.getUpdatedAt().toLocalDate().format(dateFmt);
+            } else if (p.getCreatedAt() != null) {
+                lastMod = p.getCreatedAt().toLocalDate().format(dateFmt);
+            }
+            appendSitemapUrl(xml, storeRoot + "/p/" + p.getId(), lastMod, "weekly", "0.8");
+        }
+
+        xml.append("</urlset>");
+        return xml.toString();
+    }
+
+    private void appendSitemapUrl(StringBuilder xml, String loc, String lastMod, String changeFreq, String priority) {
+        xml.append("  <url>\n");
+        xml.append("    <loc>").append( org.springframework.web.util.HtmlUtils.htmlEscape(loc) ).append("</loc>\n");
+        if (lastMod != null && !lastMod.isBlank()) {
+            xml.append("    <lastmod>").append(lastMod).append("</lastmod>\n");
+        }
+        if (changeFreq != null) {
+            xml.append("    <changefreq>").append(changeFreq).append("</changefreq>\n");
+        }
+        if (priority != null) {
+            xml.append("    <priority>").append(priority).append("</priority>\n");
+        }
+        xml.append("  </url>\n");
+    }
+
+    // =========================================================================
+    // PÁGINA PÚBLICA "SEGUIR MI PEDIDO" (/s/{slug}/track)
+    // =========================================================================
+
+    @GetMapping("/track")
+    public String showTrackOrderPage(
+            @PathVariable String slug,
+            HttpServletRequest request,
+            Model model) {
+        model.addAttribute("pageTitle", "Seguir mi pedido");
+        hydratePageContext(request, model, Collections.emptyList());
+        return "storefront/track-order";
+    }
+
+    @PostMapping("/track")
+    public String processTrackOrder(
+            @PathVariable String slug,
+            @RequestParam String orderNumber,
+            @RequestParam String phone,
+            HttpServletRequest request,
+            RedirectAttributes redirectAttributes) {
+
+        Store store = (Store) request.getAttribute("currentStore");
+        if (store != null) {
+            TenantContext.setCurrentTenant(store.getSchemaName());
+        }
+
+        String genericError = "No encontramos ningún pedido que coincida con ese número y teléfono. Verifica los datos e intenta nuevamente.";
+
+        if (orderNumber == null || orderNumber.isBlank() || phone == null || phone.isBlank()) {
+            redirectAttributes.addFlashAttribute("trackError", genericError);
+            return "redirect:/s/" + slug + "/track";
+        }
+
+        String cleanedOrderNum = orderNumber.trim().replaceAll("[^0-9]", "");
+        if (cleanedOrderNum.isEmpty() || cleanedOrderNum.length() > 18) {
+            redirectAttributes.addFlashAttribute("trackError", genericError);
+            return "redirect:/s/" + slug + "/track";
+        }
+
+        String inputPhoneKey = CustomerService.normalizePhoneKey(phone);
+        if (inputPhoneKey.isEmpty()) {
+            redirectAttributes.addFlashAttribute("trackError", genericError);
+            return "redirect:/s/" + slug + "/track";
+        }
+
+        try {
+            Long parsedId = Long.parseLong(cleanedOrderNum);
+            Order order = orderService.getOrderById(parsedId);
+            String orderPhoneKey = CustomerService.normalizePhoneKey(order.getCustomerPhone());
+
+            if (orderPhoneKey.isEmpty() || !inputPhoneKey.equals(orderPhoneKey)) {
+                redirectAttributes.addFlashAttribute("trackError", genericError);
+                return "redirect:/s/" + slug + "/track";
+            }
+
+            if (order.getChannel() == OrderChannel.WHATSAPP) {
+                return "redirect:/s/" + slug + "/order/" + order.getPublicToken() + "/whatsapp?tracked=true";
+            }
+            return "redirect:/s/" + slug + "/order/" + order.getPublicToken() + "/wompi-result";
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("trackError", genericError);
+            return "redirect:/s/" + slug + "/track";
+        }
     }
 }

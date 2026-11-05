@@ -36,7 +36,7 @@ public class SecurityConfig {
                         // Rutas públicas de las tiendas de los clientes
                         .requestMatchers("/s/**").permitAll()
                         // Login y Webhooks
-                        .requestMatchers("/login", "/register", "/auth/**").permitAll()
+                        .requestMatchers("/login","/robots.txt", "/register", "/forgot-password", "/reset-password", "/auth/**").permitAll()
                         .requestMatchers("/api/v1/webhooks/**", "/api/webhooks/**").permitAll()
                         .anyRequest().authenticated()
                 )

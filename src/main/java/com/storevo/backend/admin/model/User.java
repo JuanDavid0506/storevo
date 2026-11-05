@@ -50,6 +50,13 @@ public class User implements UserDetails {
     @Column(length = 20)
     private String role = "ROLE_STORE_OWNER"; // Roles: ADMIN_SAAS, STORE_OWNER
 
+
+    @Column(name = "reset_password_token", length = 100)
+    private String resetPasswordToken;
+
+    @Column(name = "reset_password_expires_at")
+    private LocalDateTime resetPasswordExpiresAt;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 

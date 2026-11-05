@@ -33,6 +33,10 @@
                     <span class="font-semibold text-slate-800"
                           th:text="${'$ ' + #numbers.formatDecimal((order.subtotal != null and order.subtotal > 0 ? order.subtotal : order.total), 1, 'POINT', 0, 'COMMA')}">$0</span>
                 </div>
+                <div th:if="${order.discountAmount != null and order.discountAmount > 0}" class="flex justify-between text-emerald-700 font-semibold">
+                    <span th:text="${'Descuento' + (order.couponCode != null ? ' (' + order.couponCode + ')' : '')}">Descuento</span>
+                    <span th:text="${'- $ ' + #numbers.formatDecimal(order.discountAmount, 1, 'POINT', 0, 'COMMA')}">-$0</span>
+                </div>
                 <div class="flex justify-between text-slate-600">
                     <span th:text="${order.deliveryMethod == 'PICKUP' ? 'Entrega (Recogida en tienda)' : 'Envío a domicilio'}">Envío</span>
                     <span class="font-semibold"
@@ -44,7 +48,43 @@
                 <span class="text-slate-600 font-bold">Total</span>
                 <span class="font-black text-xl text-slate-900" th:text="${'$ ' + #numbers.formatDecimal(order.total, 1, 'POINT', 0, 'COMMA')}">$0</span>
             </div>
-            <p class="text-sm text-slate-500 mt-3">Estado actual: <span class="font-bold text-orange-500">Solicitud pendiente de confirmación</span></p>
+            <p class="text-sm text-slate-500 mt-3">
+                Estado actual:
+                <span class="font-bold text-slate-900"
+                      th:text="${order.status != null ? order.status.displayName : 'Solicitud pendiente de confirmación'}"></span>
+            </p>
+        </div>
+
+        <!-- BLOQUE DE ENVÍO Y RASTREO DE GUÍA -->
+        <div th:if="${order.shipments != null and !#lists.isEmpty(order.shipments)}"
+             class="bg-indigo-50/70 border border-indigo-200 rounded-xl p-5 text-left mb-8 space-y-3">
+            <div class="flex items-center gap-2 text-indigo-950 font-black text-sm">
+                <svg class="w-5 h-5 text-brand flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1"></path>
+                </svg>
+                <span>Información de Envío y Rastreo</span>
+            </div>
+            <div th:each="ship : ${order.shipments}" class="bg-white p-4 rounded-xl border border-indigo-100 text-xs sm:text-sm space-y-1.5">
+                <div class="flex justify-between items-center">
+                    <span class="text-slate-500">Transportadora:</span>
+                    <strong class="text-slate-900 font-bold" th:text="${ship.carrier != null ? ship.carrier.name : 'Transportadora'}"></strong>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-slate-500">Número de guía:</span>
+                    <span class="font-mono font-black text-slate-900" th:text="${ship.trackingNumber != null ? ship.trackingNumber : 'Asignando...'}"></span>
+                </div>
+                <div th:if="${ship.lastTrackingMessage != null and !ship.lastTrackingMessage.isBlank()}" class="flex justify-between items-center">
+                    <span class="text-slate-500">Último reporte:</span>
+                    <span class="font-semibold text-emerald-700" th:text="${ship.lastTrackingMessage}"></span>
+                </div>
+                <div th:if="${ship.dynamicTrackingUrl != null and !ship.dynamicTrackingUrl.isBlank()}" class="pt-2">
+                    <a th:href="${ship.dynamicTrackingUrl}" target="_blank" rel="noopener noreferrer"
+                       class="block w-full text-center bg-brand hover-bg-brand text-white font-bold py-2.5 px-4 rounded-lg transition text-xs">
+                        Rastrear paquete en línea →
+                    </a>
+                </div>
+            </div>
         </div>
 
         <div th:if="${whatsappConfigured}" class="space-y-4 mb-8">
@@ -109,8 +149,8 @@
 </div>
 
 <th:block layout:fragment="scripts">
-    <!-- Solo redirige automáticamente a WhatsApp en la carga inicial, no cuando regresa de enviar la reseña (?reviewed=true) -->
-    <script th:if="${whatsappConfigured and param.reviewed == null}" th:src="@{/js/modules/orderWhatsapp.js}"></script>
+    <!-- Solo redirige automáticamente a WhatsApp en la creación inicial, no al consultar desde /track (?tracked=true) ni tras reseñar (?reviewed=true) -->
+    <script th:if="${whatsappConfigured and param.reviewed == null and param.tracked == null}" th:src="@{/js/modules/orderWhatsapp.js}"></script>
 </th:block>
 </body>
 </html>

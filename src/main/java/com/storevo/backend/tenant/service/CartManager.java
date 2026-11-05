@@ -35,6 +35,13 @@ public class CartManager {
         if (product == null) {
             return null;
         }
+        Double basePrice = product.getPrice();
+        Double discountPrice = product.getDiscountPrice();
+        boolean hasParentDiscount = discountPrice != null
+                && !Double.isNaN(discountPrice)
+                && !Double.isInfinite(discountPrice)
+                && discountPrice > 0.0
+                && (basePrice == null || basePrice <= 0.0 || discountPrice < basePrice);
 
         if (Boolean.TRUE.equals(product.getHasVariants())) {
             if (variant == null || variant.getProduct() == null || product.getId() == null
@@ -43,26 +50,55 @@ public class CartManager {
             }
             Double varPrice = variant.getPrice();
             if (varPrice != null && !Double.isNaN(varPrice) && !Double.isInfinite(varPrice) && varPrice > 0.0) {
+                Double compareAt = variant.getCompareAtPrice();
+                if (compareAt != null && !Double.isNaN(compareAt) && !Double.isInfinite(compareAt) && compareAt > varPrice) {
+                    return varPrice;
+                }
+                if (hasParentDiscount) {
+                    if (basePrice != null && basePrice > 0.0) {
+                        if (Math.abs(varPrice - basePrice) < 0.01) {
+                            return discountPrice;
+                        }
+                        double ratio = discountPrice / basePrice;
+                        double discountedVarPrice = (double) Math.round(varPrice * ratio);
+                        if (discountedVarPrice > 0.0 && discountedVarPrice < varPrice) {
+                            return discountedVarPrice;
+                        }
+                    } else if (discountPrice < varPrice) {
+                        return discountPrice;
+                    }
+                }
                 return varPrice;
             }
         } else if (variant != null) {
             return null;
         }
 
-        Double basePrice = product.getPrice();
-        Double discountPrice = product.getDiscountPrice();
-
-        if (discountPrice != null && !Double.isNaN(discountPrice) && !Double.isInfinite(discountPrice) && discountPrice > 0.0) {
-            if (basePrice == null || basePrice <= 0.0 || discountPrice < basePrice) {
-                return discountPrice;
-            }
+        if (hasParentDiscount) {
+            return discountPrice;
         }
-
         if (basePrice != null && !Double.isNaN(basePrice) && !Double.isInfinite(basePrice) && basePrice > 0.0) {
             return basePrice;
         }
-
         return null;
+    }
+
+    public Double resolveOriginalPrice(Product product, ProductVariant variant) {
+        if (product == null) {
+            return 0.0;
+        }
+        if (Boolean.TRUE.equals(product.getHasVariants()) && variant != null) {
+            Double compareAt = variant.getCompareAtPrice();
+            Double varPrice = variant.getPrice();
+            if (compareAt != null && !Double.isNaN(compareAt) && !Double.isInfinite(compareAt)
+                    && compareAt > 0.0 && (varPrice == null || compareAt > varPrice)) {
+                return compareAt;
+            }
+            if (varPrice != null && !Double.isNaN(varPrice) && !Double.isInfinite(varPrice) && varPrice > 0.0) {
+                return varPrice;
+            }
+        }
+        return (product.getPrice() != null && product.getPrice() > 0.0) ? product.getPrice() : 0.0;
     }
 
     /**

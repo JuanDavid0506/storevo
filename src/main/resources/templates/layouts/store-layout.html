@@ -612,6 +612,11 @@
                                 <span class="font-semibold" th:text="${fEmailRaw}"></span>
                             </a>
                         </li>
+                        <li class="pt-1">
+                            <a th:href="@{/s/{slug}/track(slug=${slug}, preview=${fPreviewParam})}" class="inline-flex items-center gap-1.5 font-semibold hover:underline">
+                                <span>Seguir mi pedido →</span>
+                            </a>
+                        </li>
                     </ul>
                 </div>
                 <div class="sv-footer-credit-wrap" th:classappend="${!fShowCredit ? 'hidden' : ''}">
@@ -649,6 +654,7 @@
                          th:classappend="${!fShowPages ? 'hidden' : ''}">
                         <a th:href="@{/s/{slug}(slug=${slug}, preview=${fPreviewParam})}" class="sv-footer__link opacity-85 hover:opacity-100 transition">Inicio</a>
                         <a th:href="@{/s/{slug}/catalog(slug=${slug}, preview=${fPreviewParam})}" class="sv-footer__link opacity-85 hover:opacity-100 transition">Catálogo</a>
+                        <a th:href="@{/s/{slug}/track(slug=${slug}, preview=${fPreviewParam})}" class="sv-footer__link opacity-85 hover:opacity-100 transition">Seguir mi pedido</a>
                         <th:block th:if="${fHasCustomPages}">
                             <a th:each="cp : ${fCustomPages}"
                                th:href="@{/s/{slug}/page/{pageSlug}(slug=${slug}, pageSlug=${cp.slug}, preview=${fPreviewParam})}"
@@ -712,6 +718,7 @@
                     <span class="sv-footer-pages-wrap contents" th:classappend="${!fShowPages ? 'hidden' : ''}">
                         <a th:href="@{/s/{slug}(slug=${slug}, preview=${fPreviewParam})}" class="sv-footer__link opacity-85 hover:opacity-100 transition">Inicio</a>
                         <a th:href="@{/s/{slug}/catalog(slug=${slug}, preview=${fPreviewParam})}" class="sv-footer__link opacity-85 hover:opacity-100 transition">Catálogo</a>
+                        <a th:href="@{/s/{slug}/track(slug=${slug}, preview=${fPreviewParam})}" class="sv-footer__link opacity-85 hover:opacity-100 transition">Seguir mi pedido</a>
                     </span>
                     <span class="sv-footer-categories-wrap contents" th:if="${fHasCats}" th:classappend="${!fShowCategories ? 'hidden' : ''}">
                         <a th:each="cat, iterStat : ${fCats}"
@@ -842,6 +849,7 @@
                             <li><a th:href="@{/s/{slug}(slug=${slug}, preview=${fPreviewParam})}" class="sv-footer__link">Inicio</a></li>
                             <li><a th:href="@{/s/{slug}/wishlist(slug=${slug}, preview=${fPreviewParam})}" class="sv-footer__link">Mis Favoritos</a></li>
                             <li><a th:href="@{/s/{slug}/cart(slug=${slug}, preview=${fPreviewParam})}" class="sv-footer__link">Mi Bolsa</a></li>
+                            <li><a th:href="@{/s/{slug}/track(slug=${slug}, preview=${fPreviewParam})}" class="sv-footer__link">Seguir mi pedido</a></li>
                             <th:block th:if="${fHasCustomPages}">
                                 <li th:each="cp : ${fCustomPages}">
                                     <a th:href="@{/s/{slug}/page/{pageSlug}(slug=${slug}, pageSlug=${cp.slug}, preview=${fPreviewParam})}"

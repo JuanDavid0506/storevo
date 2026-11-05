@@ -89,6 +89,8 @@ public class TenantSchemaMigrationRunner implements CommandLineRunner {
                     "DOUBLE NOT NULL DEFAULT 0.0",
                     "UPDATE `%s`.orders SET subtotal = total WHERE subtotal IS NULL OR subtotal = 0"
             ),
+            new ColumnMigration("orders", "coupon_code", "VARCHAR(50) NULL"),
+            new ColumnMigration("orders", "discount_amount", "DOUBLE NOT NULL DEFAULT 0.0"),
             new ColumnMigration("orders", "shipping_cost", "DOUBLE NOT NULL DEFAULT 0.0"),
             new ColumnMigration("orders", "delivery_method", "VARCHAR(20) NOT NULL DEFAULT 'SHIPPING'"),
             new ColumnMigration(
@@ -114,6 +116,7 @@ public class TenantSchemaMigrationRunner implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
+        migrateAdminSchemaUsersTable();
         List<Store> stores = storeRepository.findAll();
         if (stores.isEmpty()) {
             return;
@@ -296,6 +299,19 @@ public class TenantSchemaMigrationRunner implements CommandLineRunner {
                     ? "ALTER TABLE `" + schema + "`.`" + table + "` ADD CONSTRAINT `" + indexName + "` UNIQUE (" + columnsSql + ")"
                     : "CREATE INDEX `" + indexName + "` ON `" + schema + "`.`" + table + "` (" + columnsSql + ")";
             jdbcTemplate.execute(sql);
+        }
+    }
+
+    private void migrateAdminSchemaUsersTable() {
+        try (Connection connection = dataSource.getConnection()) {
+            String adminCatalog = connection.getCatalog();
+            if (adminCatalog != null && !adminCatalog.isBlank()) {
+                addColumnIfMissing(adminCatalog, "users", "reset_password_token", "VARCHAR(100) NULL");
+                addColumnIfMissing(adminCatalog, "users", "reset_password_expires_at", "DATETIME NULL");
+                addIndexIfMissing(adminCatalog, "users", "idx_users_reset_token", "`reset_password_token`", false);
+            }
+        } catch (Exception e) {
+            log.warn("TenantSchemaMigrationRunner: aviso verificando tabla users en esquema central: {}", e.getMessage());
         }
     }
 

@@ -30,16 +30,19 @@
             Tu pedido <strong class="text-slate-900" th:text="'#' + ${order.id}"></strong> está registrado y estamos esperando la confirmación final de tu entidad financiera.
         </p>
 
-        <div class="bg-slate-50 p-6 rounded-xl border border-slate-200 text-left max-w-md mx-auto mb-8">
+        <div class="bg-slate-50 p-6 rounded-xl border border-slate-200 text-left max-w-md mx-auto mb-6">
             <ul class="space-y-3 text-sm">
                 <li class="flex justify-between items-center">
                     <span class="text-slate-500">Estado del Pedido:</span>
-                    <span th:if="${isPaid}" class="px-2.5 py-0.5 rounded-full text-xs font-black uppercase bg-emerald-100 text-emerald-700">Pagado</span>
-                    <span th:unless="${isPaid}" class="px-2.5 py-0.5 rounded-full text-xs font-black uppercase bg-amber-100 text-amber-800">En validación</span>
+                    <span th:if="${order.status != null and order.status.name() != 'PENDING'}"
+                          class="px-2.5 py-0.5 rounded-full text-xs font-black uppercase bg-emerald-100 text-emerald-700"
+                          th:text="${order.status.displayName}">Pagado</span>
+                    <span th:if="${order.status == null or order.status.name() == 'PENDING'}"
+                          class="px-2.5 py-0.5 rounded-full text-xs font-black uppercase bg-amber-100 text-amber-800">En validación</span>
                 </li>
-                <li class="flex justify-between">
+                <li th:if="${wompiTransactionId != null and !wompiTransactionId.isBlank()}" class="flex justify-between">
                     <span class="text-slate-500">Comprobante Wompi:</span>
-                    <span class="font-mono text-slate-900 font-bold" th:text="${wompiTransactionId != null and !wompiTransactionId.isBlank() ? wompiTransactionId : 'En proceso'}"></span>
+                    <span class="font-mono text-slate-900 font-bold" th:text="${wompiTransactionId}"></span>
                 </li>
                 <li class="flex justify-between">
                     <span class="text-slate-500">Cliente:</span>
@@ -50,6 +53,38 @@
                     <span class="text-slate-900 font-black text-base" th:text="${order.total != null ? '$ ' + #numbers.formatDecimal(order.total, 1, 'POINT', 0, 'COMMA') : '$ 0'}"></span>
                 </li>
             </ul>
+        </div>
+
+        <!-- BLOQUE DE ENVÍO Y RASTREO DE GUÍA -->
+        <div th:if="${order.shipments != null and !#lists.isEmpty(order.shipments)}"
+             class="max-w-md mx-auto mb-8 text-left bg-indigo-50/70 border border-indigo-200 rounded-xl p-5 space-y-3">
+            <div class="flex items-center gap-2 text-indigo-950 font-black text-sm">
+                <svg class="w-5 h-5 text-brand flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1"></path>
+                </svg>
+                <span>Información de Envío y Rastreo</span>
+            </div>
+            <div th:each="ship : ${order.shipments}" class="bg-white p-3.5 rounded-xl border border-indigo-100 text-xs space-y-1.5">
+                <div class="flex justify-between items-center">
+                    <span class="text-slate-500">Transportadora:</span>
+                    <strong class="text-slate-900 font-bold" th:text="${ship.carrier != null ? ship.carrier.name : 'Transportadora'}"></strong>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-slate-500">Número de guía:</span>
+                    <span class="font-mono font-black text-slate-900" th:text="${ship.trackingNumber != null ? ship.trackingNumber : 'Asignando...'}"></span>
+                </div>
+                <div th:if="${ship.lastTrackingMessage != null and !ship.lastTrackingMessage.isBlank()}" class="flex justify-between items-center">
+                    <span class="text-slate-500">Último reporte:</span>
+                    <span class="font-semibold text-emerald-700" th:text="${ship.lastTrackingMessage}"></span>
+                </div>
+                <div th:if="${ship.dynamicTrackingUrl != null and !ship.dynamicTrackingUrl.isBlank()}" class="pt-2">
+                    <a th:href="${ship.dynamicTrackingUrl}" target="_blank" rel="noopener noreferrer"
+                       class="block w-full text-center bg-brand hover-bg-brand text-white font-bold py-2 px-4 rounded-lg transition">
+                        Rastrear paquete en línea →
+                    </a>
+                </div>
+            </div>
         </div>
 
         <!-- BLOQUE DE CALIFICACIÓN REAL DEL COMPRADOR -->

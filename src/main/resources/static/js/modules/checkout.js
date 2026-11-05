@@ -99,6 +99,40 @@ document.addEventListener('DOMContentLoaded', function () {
         return '$ ' + rounded.toLocaleString('es-CO');
     }
 
+    let appliedCoupon = null; // { code, discountType, discountValue, discountAmount }
+
+    const couponInput = document.getElementById('checkout-coupon-input');
+    const couponHiddenInput = document.getElementById('checkout-coupon-hidden');
+    const btnApplyCoupon = document.getElementById('btn-apply-coupon');
+    const btnRemoveCoupon = document.getElementById('btn-remove-coupon');
+    const couponFeedback = document.getElementById('checkout-coupon-feedback');
+    const discountRow = document.getElementById('checkout-discount-row');
+    const discountCodeLabel = document.getElementById('checkout-discount-code-label');
+    const discountDisplay = document.getElementById('checkout-discount-display');
+
+    function computeCurrentDiscountAmount() {
+        if (!appliedCoupon) return 0;
+        if (appliedCoupon.discountType === 'PERCENTAGE') {
+            const pct = Math.min(100, Math.max(0, parseFloat(appliedCoupon.discountValue || '0')));
+            return Math.min(subtotal, Math.round(subtotal * (pct / 100.0)));
+        }
+        return Math.min(subtotal, Math.round(parseFloat(appliedCoupon.discountValue || '0')));
+    }
+
+    function renderCouponSummary() {
+        const discAmount = computeCurrentDiscountAmount();
+        if (appliedCoupon && discAmount > 0) {
+            if (discountRow) discountRow.classList.remove('hidden');
+            if (discountCodeLabel) discountCodeLabel.textContent = appliedCoupon.code;
+            if (discountDisplay) discountDisplay.textContent = '- ' + formatCop(discAmount);
+            if (couponHiddenInput) couponHiddenInput.value = appliedCoupon.code;
+        } else {
+            if (discountRow) discountRow.classList.add('hidden');
+            if (couponHiddenInput) couponHiddenInput.value = '';
+        }
+        return discAmount;
+    }
+
     function getSelectedDeliveryMethod() {
         const checkedRadio = form.querySelector('input[name="deliveryMethod"]:checked');
         if (checkedRadio) return checkedRadio.value;
@@ -107,6 +141,9 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function recalculateShippingAndTotal() {
+        const discountAmount = renderCouponSummary();
+        const netSubtotal = Math.max(0, subtotal - discountAmount);
+
         const deliveryMethod = getSelectedDeliveryMethod();
         const isPickup = allowPickup && deliveryMethod === 'PICKUP';
 
@@ -122,7 +159,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 shippingLabelEl.className = 'text-xs font-bold text-emerald-600';
             }
             if (totalDisplayEl) {
-                totalDisplayEl.textContent = formatCop(subtotal);
+                totalDisplayEl.textContent = formatCop(netSubtotal);
             }
             return;
         }
@@ -140,10 +177,10 @@ document.addEventListener('DOMContentLoaded', function () {
         if (freeHintEl) {
             if (freeThreshold > 0 && hasAnyRateConfigured) {
                 freeHintEl.classList.remove('hidden');
-                if (subtotal >= freeThreshold) {
+                if (netSubtotal >= freeThreshold) {
                     freeHintEl.textContent = '¡Felicidades! Tu pedido supera ' + formatCop(freeThreshold) + ' y tienes envío GRATIS.';
                 } else {
-                    const missing = freeThreshold - subtotal;
+                    const missing = freeThreshold - netSubtotal;
                     freeHintEl.textContent = 'Agrega ' + formatCop(missing) + ' más para obtener envío GRATIS.';
                 }
             } else {
@@ -151,13 +188,13 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
 
-        if (freeThreshold > 0 && subtotal >= freeThreshold) {
+        if (freeThreshold > 0 && netSubtotal >= freeThreshold) {
             if (shippingLabelEl) {
                 shippingLabelEl.textContent = '¡Gratis! ($ 0)';
                 shippingLabelEl.className = 'text-xs font-bold text-emerald-600';
             }
             if (totalDisplayEl) {
-                totalDisplayEl.textContent = formatCop(subtotal);
+                totalDisplayEl.textContent = formatCop(netSubtotal);
             }
             return;
         }
@@ -168,7 +205,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 shippingLabelEl.className = 'text-xs font-medium text-slate-500';
             }
             if (totalDisplayEl) {
-                totalDisplayEl.textContent = formatCop(subtotal);
+                totalDisplayEl.textContent = formatCop(netSubtotal);
             }
             return;
         }
@@ -182,7 +219,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 shippingLabelEl.className = 'text-xs font-medium text-amber-600';
             }
             if (totalDisplayEl) {
-                totalDisplayEl.textContent = formatCop(subtotal);
+                totalDisplayEl.textContent = formatCop(netSubtotal);
             }
             return;
         }
@@ -208,8 +245,100 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         if (totalDisplayEl) {
-            totalDisplayEl.textContent = formatCop(subtotal + shippingCost);
+            totalDisplayEl.textContent = formatCop(netSubtotal + shippingCost);
         }
+    }
+
+    function applyCouponAjax() {
+        if (!couponInput) return;
+        const rawCode = couponInput.value.trim();
+        if (!rawCode) return;
+
+        const slug = form.getAttribute('data-slug');
+        const modeInput = form.querySelector('input[name="mode"]');
+        const mode = modeInput ? modeInput.value : '';
+        const onlyInStock = isOnlyInStockSelected();
+
+        if (btnApplyCoupon) {
+            btnApplyCoupon.disabled = true;
+            btnApplyCoupon.textContent = '...';
+        }
+
+        const params = new URLSearchParams();
+        params.append('code', rawCode);
+        if (mode) params.append('mode', mode);
+        params.append('onlyInStockItems', onlyInStock ? 'true' : 'false');
+
+        fetch('/s/' + encodeURIComponent(slug) + '/cart/apply-coupon', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params.toString()
+        })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data && data.valid) {
+                    appliedCoupon = {
+                        code: data.code,
+                        discountType: data.discountType,
+                        discountValue: data.discountValue,
+                        discountAmount: data.discountAmount
+                    };
+                    couponInput.value = data.code;
+                    couponInput.readOnly = true;
+                    if (btnApplyCoupon) btnApplyCoupon.classList.add('hidden');
+                    if (btnRemoveCoupon) btnRemoveCoupon.classList.remove('hidden');
+                    if (couponFeedback) {
+                        couponFeedback.textContent = '✓ ' + data.message + ' (-' + formatCop(data.discountAmount) + ')';
+                        couponFeedback.className = 'text-xs font-bold text-emerald-600 mt-1.5 block';
+                    }
+                } else {
+                    appliedCoupon = null;
+                    if (couponFeedback) {
+                        couponFeedback.textContent = data && data.message ? data.message : 'Cupón no válido.';
+                        couponFeedback.className = 'text-xs font-bold text-red-600 mt-1.5 block';
+                    }
+                }
+                recalculateShippingAndTotal();
+            })
+            .catch(function () {
+                if (couponFeedback) {
+                    couponFeedback.textContent = 'No se pudo verificar el cupón en este momento.';
+                    couponFeedback.className = 'text-xs font-bold text-red-600 mt-1.5 block';
+                }
+            })
+            .finally(function () {
+                if (btnApplyCoupon) {
+                    btnApplyCoupon.disabled = false;
+                    btnApplyCoupon.textContent = 'Aplicar';
+                }
+            });
+    }
+
+    function removeCoupon() {
+        appliedCoupon = null;
+        if (couponInput) {
+            couponInput.value = '';
+            couponInput.readOnly = false;
+        }
+        if (btnApplyCoupon) btnApplyCoupon.classList.remove('hidden');
+        if (btnRemoveCoupon) btnRemoveCoupon.classList.add('hidden');
+        if (couponFeedback) couponFeedback.classList.add('hidden');
+        recalculateShippingAndTotal();
+    }
+
+    if (btnApplyCoupon) {
+        btnApplyCoupon.addEventListener('click', applyCouponAjax);
+    }
+    if (btnRemoveCoupon) {
+        btnRemoveCoupon.addEventListener('click', removeCoupon);
+    }
+    if (couponInput) {
+        couponInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                applyCouponAjax();
+            }
+        });
     }
 
     // Eventos para recalcular el envío en vivo
@@ -227,7 +356,11 @@ document.addEventListener('DOMContentLoaded', function () {
     mixedCartRadios.forEach(function (radio) {
         radio.addEventListener('change', function () {
             syncMixedCartModeUI();
-            recalculateShippingAndTotal();
+            if (appliedCoupon) {
+                applyCouponAjax();
+            } else {
+                recalculateShippingAndTotal();
+            }
         });
     });
     syncMixedCartModeUI();
@@ -265,4 +398,4 @@ document.addEventListener('DOMContentLoaded', function () {
 
     updateInvoiceFields();
     recalculateShippingAndTotal();
-});w
+});

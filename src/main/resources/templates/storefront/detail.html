@@ -23,10 +23,13 @@
 
     <meta name="twitter:card"
           th:attr="content=${product.mainImageUrl != null and #strings.startsWith(product.mainImageUrl, 'http') ? 'summary_large_image' : 'summary'}">
+    <link th:if="${canonicalUrl != null}" rel="canonical" th:href="${canonicalUrl}">
+    <script th:if="${productJsonLd != null}" type="application/ld+json" th:utext="${productJsonLd}"></script>
   </th:block>
 </head>
 <body>
 <div layout:fragment="content">
+
   <!-- Puente de datos limpio para productDetail.js -->
   <div id="product-detail-bridge" class="hidden"
        th:attr="data-has-variants=${product.hasVariants},
@@ -39,6 +42,9 @@
          th:attr="data-id=${v['id']},
                       data-signature=${v['signature']},
                       data-price=${v['price']},
+                      data-original-price=${v['originalPrice']},
+                      data-has-discount=${v['hasDiscount']},
+                      data-discount-percent=${v['discountPercent']},
                       data-stock=${v['stock']},
                       data-sku=${v['sku']},
                       data-image-ref=${v['imageRef']}"></div>
@@ -52,6 +58,43 @@
 </div>
 <th:block layout:fragment="scripts">
   <script th:src="@{/js/modules/productDetail.js}"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const selectedInput = document.getElementById('selectedVariantId');
+      const oldPriceEl = document.getElementById('dynamic-old-price');
+      const savingsBadgeEl = document.querySelector('.sv-detail-savings-badge');
+      const bridge = document.getElementById('product-detail-bridge');
+      if (!selectedInput || !bridge || !oldPriceEl) return;
+
+      function syncVariantDiscountUI() {
+        const varId = selectedInput.value;
+        if (!varId) return;
+        const node = bridge.querySelector('.variant-data-node[data-id="' + varId + '"]');
+        if (!node) return;
+        const hasDisc = node.getAttribute('data-has-discount') === 'true';
+        const origPrice = parseFloat(node.getAttribute('data-original-price') || '0');
+        const discPct = parseInt(node.getAttribute('data-discount-percent') || '0', 10);
+
+        if (hasDisc && origPrice > 0) {
+          oldPriceEl.textContent = '$ ' + Math.round(origPrice).toLocaleString('es-CO');
+          oldPriceEl.classList.remove('hidden');
+          if (savingsBadgeEl && discPct > 0) {
+            savingsBadgeEl.textContent = 'Ahorras ' + discPct + '%';
+            savingsBadgeEl.classList.remove('hidden');
+          }
+        } else {
+          oldPriceEl.classList.add('hidden');
+          if (savingsBadgeEl) savingsBadgeEl.classList.add('hidden');
+        }
+      }
+
+      document.querySelectorAll('.opt-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          setTimeout(syncVariantDiscountUI, 20);
+        });
+      });
+    });
+  </script>
 </th:block>
 </body>
 </html>

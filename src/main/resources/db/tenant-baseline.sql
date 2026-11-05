@@ -173,6 +173,8 @@ CREATE TABLE IF NOT EXISTS orders (
     city                        VARCHAR(100)   NOT NULL,
     notes                       TEXT,
     subtotal                    DOUBLE         NOT NULL DEFAULT 0.0,
+    coupon_code                 VARCHAR(50)    NULL,
+    discount_amount             DOUBLE         NOT NULL DEFAULT 0.0,
     shipping_cost               DOUBLE         NOT NULL DEFAULT 0.0,
     delivery_method             VARCHAR(20)    NOT NULL DEFAULT 'SHIPPING',
     total                       DOUBLE         NOT NULL DEFAULT 0.0,
@@ -307,4 +309,23 @@ CREATE TABLE IF NOT EXISTS shipments (
     CONSTRAINT fk_shipments_carrier FOREIGN KEY (carrier_id) REFERENCES carriers(id),
     INDEX idx_shipments_order (order_id, package_number),
     INDEX idx_shipments_external_id (external_shipment_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+-- ============================================================
+-- CUPONES DE DESCUENTO
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS coupons (
+                                       id                  BIGINT AUTO_INCREMENT PRIMARY KEY,
+                                       code                VARCHAR(50)  NOT NULL,
+    discount_type       VARCHAR(20)  NOT NULL,
+    discount_value      DOUBLE       NOT NULL,
+    min_purchase_amount DOUBLE       NULL,
+    max_uses            INT          NULL,
+    used_count          INT          NOT NULL DEFAULT 0,
+    expires_at          DATETIME     NULL,
+    is_active           BOOLEAN      NOT NULL DEFAULT TRUE,
+    created_at          TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at          TIMESTAMP    DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_coupons_code (code),
+    INDEX idx_coupons_active (is_active, expires_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

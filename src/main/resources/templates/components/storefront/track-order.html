@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/store-layout}">
+<head>
+    <title>Seguir mi pedido</title>
+</head>
+<body>
+<div layout:fragment="content" class="max-w-xl mx-auto px-4 sm:px-6 py-14 sm:py-20 min-h-[70vh]">
+    <div class="bg-white text-slate-900 p-6 sm:p-10 store-radius shadow-sm border border-slate-200/80">
+        <div class="w-16 h-16 bg-brand/10 text-brand rounded-2xl flex items-center justify-center mx-auto mb-5">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1"></path>
+            </svg>
+        </div>
+
+        <div class="text-center mb-6">
+            <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Seguir mi pedido</h1>
+            <p class="text-sm text-slate-500 mt-1.5">
+                Ingresa tu número de pedido y el teléfono con el que realizaste tu compra para consultar el estado y tu guía de envío.
+            </p>
+        </div>
+
+        <div th:if="${trackError}"
+             class="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3.5 rounded-xl text-xs sm:text-sm font-bold flex items-start gap-2.5">
+            <svg class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+            </svg>
+            <span th:text="${trackError}"></span>
+        </div>
+
+        <form th:action="@{/s/{slug}/track(slug=${slug})}" method="POST" data-no-spa="true" class="space-y-4">
+            <div>
+                <label for="track-order-number" class="block text-sm font-bold text-slate-700 mb-1">
+                    Número de Pedido <span class="text-red-500">*</span>
+                </label>
+                <input type="text" id="track-order-number" name="orderNumber" required
+                       placeholder="Ej: 105 o #105"
+                       class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-brand focus:border-brand text-sm text-slate-900">
+            </div>
+
+            <div>
+                <label for="track-phone" class="block text-sm font-bold text-slate-700 mb-1">
+                    Teléfono / WhatsApp de la compra <span class="text-red-500">*</span>
+                </label>
+                <input type="tel" id="track-phone" name="phone" required
+                       placeholder="Ej: 3001234567"
+                       class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-brand focus:border-brand text-sm text-slate-900">
+            </div>
+
+            <button type="submit"
+                    class="w-full bg-brand hover-bg-brand text-white font-bold py-3.5 px-6 rounded-xl shadow-md transition text-sm cursor-pointer">
+                Consultar estado del pedido
+            </button>
+        </form>
+
+        <div class="mt-6 pt-5 border-t border-slate-100 text-center">
+            <a th:href="@{/s/{slug}/catalog(slug=${slug})}" class="text-xs font-bold text-slate-500 hover:text-brand transition">
+                ← Volver al catálogo de la tienda
+            </a>
+        </div>
+    </div>
+</div>
+</body>
+</html>

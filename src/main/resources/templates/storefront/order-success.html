@@ -44,6 +44,10 @@
                     <span class="font-semibold text-slate-900"
                           th:text="${'$ ' + #numbers.formatDecimal((order.subtotal != null and order.subtotal > 0 ? order.subtotal : order.total), 1, 'POINT', 0, 'COMMA')}">$0</span>
                 </div>
+                <div th:if="${order.discountAmount != null and order.discountAmount > 0}" class="flex justify-between text-emerald-700 font-semibold">
+                    <span th:text="${'Descuento' + (order.couponCode != null ? ' (' + order.couponCode + ')' : '') + ':'}">Descuento:</span>
+                    <span th:text="${'- $ ' + #numbers.formatDecimal(order.discountAmount, 1, 'POINT', 0, 'COMMA')}">-$0</span>
+                </div>
                 <div class="flex justify-between text-slate-600">
                     <span th:text="${order.deliveryMethod == 'PICKUP' ? 'Entrega (Recogida en tienda):' : 'Costo de envío:'}">Envío:</span>
                     <span class="font-semibold"

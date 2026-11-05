@@ -69,6 +69,13 @@ public class Order {
     @Builder.Default
     private Double subtotal = 0.0;
 
+    @Column(name = "coupon_code", length = 50)
+    private String couponCode;
+
+    @Column(name = "discount_amount", nullable = false)
+    @Builder.Default
+    private Double discountAmount = 0.0;
+
     @Column(name = "shipping_cost", nullable = false)
     @Builder.Default
     private Double shippingCost = 0.0;
@@ -131,12 +138,15 @@ public class Order {
         if (this.shippingCost == null || this.shippingCost < 0.0) {
             this.shippingCost = 0.0;
         }
+        if (this.discountAmount == null || this.discountAmount < 0.0) {
+            this.discountAmount = 0.0;
+        }
         if (this.subtotal == null || this.subtotal <= 0.0) {
             this.subtotal = (this.total != null && this.total >= this.shippingCost)
                     ? (this.total - this.shippingCost)
                     : 0.0;
         }
-        this.total = this.subtotal + this.shippingCost;
+        this.total = Math.max(0.0, this.subtotal - this.discountAmount) + this.shippingCost;
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
     }
@@ -146,8 +156,11 @@ public class Order {
         if (this.shippingCost == null || this.shippingCost < 0.0) {
             this.shippingCost = 0.0;
         }
+        if (this.discountAmount == null || this.discountAmount < 0.0) {
+            this.discountAmount = 0.0;
+        }
         if (this.subtotal != null && this.subtotal > 0.0) {
-            this.total = this.subtotal + this.shippingCost;
+            this.total = Math.max(0.0, this.subtotal - this.discountAmount) + this.shippingCost;
         }
         this.updatedAt = LocalDateTime.now();
     }

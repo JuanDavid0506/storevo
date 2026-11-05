@@ -47,6 +47,8 @@ public class OrderService {
     private final com.storevo.backend.admin.repository.StoreRepository storeRepository;
     private final com.storevo.backend.admin.service.StoreSettingsService storeSettingsService;
     private final org.springframework.transaction.PlatformTransactionManager transactionManager;
+    private final EmailNotificationService emailNotificationService;
+    private final CouponService couponService;
 
     @Autowired
     @Lazy
@@ -250,9 +252,6 @@ public class OrderService {
         );
     }
 
-    /**
-     * Crea el pedido desde el carrito soportando separación de carritos mixtos (onlyInStockItems = true conserva los productos bajo pedido en la bolsa).
-     */
     @Transactional
     public Order createOrderFromCart(
             String slug,
@@ -271,6 +270,36 @@ public class OrderService {
             String notes,
             OrderChannel channel,
             boolean onlyInStockItems) {
+
+        return createOrderFromCart(
+                slug, customerName, customerPhone, customerEmail,
+                documentType, customerDocument, verificationDigit, legalName, taxRegime, requiresElectronicInvoice,
+                address, city, deliveryMethod, notes, channel, onlyInStockItems, null
+        );
+    }
+
+    /**
+     * Crea el pedido desde el carrito soportando separación de carritos mixtos y validación/consumo de cupón de descuento.
+     */
+    @Transactional
+    public Order createOrderFromCart(
+            String slug,
+            String customerName,
+            String customerPhone,
+            String customerEmail,
+            String documentType,
+            String customerDocument,
+            String verificationDigit,
+            String legalName,
+            String taxRegime,
+            Boolean requiresElectronicInvoice,
+            String address,
+            String city,
+            String deliveryMethod,
+            String notes,
+            OrderChannel channel,
+            boolean onlyInStockItems,
+            String couponCode) {
 
         List<CartItemDto> allCartItems = cartManager.getCart(slug);
         if (allCartItems.isEmpty()) {
@@ -408,12 +437,25 @@ public class OrderService {
             throw new IllegalArgumentException("El subtotal de los productos no es válido.");
         }
 
-        double verifiedShippingCost = storeSettingsService.calculateShippingCost(
-                storeSettings, verifiedSubtotal, resolvedCity, resolvedDeliveryMethod);
+        String appliedCouponCode = null;
+        double appliedDiscountAmount = 0.0;
+        if (couponCode != null && !couponCode.isBlank()) {
+            CouponService.CouponEvaluation eval = couponService.consumeCouponForOrder(couponCode, verifiedSubtotal);
+            if (eval != null) {
+                appliedCouponCode = eval.code();
+                appliedDiscountAmount = eval.discountAmount();
+            }
+        }
 
-        double verifiedOrderTotal = verifiedSubtotal + verifiedShippingCost;
+        double discountedSubtotal = Math.max(0.0, verifiedSubtotal - appliedDiscountAmount);
+        double verifiedShippingCost = storeSettingsService.calculateShippingCost(
+                storeSettings, discountedSubtotal, resolvedCity, resolvedDeliveryMethod);
+
+        double verifiedOrderTotal = discountedSubtotal + verifiedShippingCost;
 
         order.setSubtotal(verifiedSubtotal);
+        order.setCouponCode(appliedCouponCode);
+        order.setDiscountAmount(appliedDiscountAmount);
         order.setShippingCost(verifiedShippingCost);
         order.setTotal(verifiedOrderTotal);
         order.setItems(items);
@@ -446,6 +488,8 @@ public class OrderService {
         } else {
             cartManager.clearCart(slug);
         }
+
+        triggerOrderEmailsSafely(savedOrder, storeSettings);
 
         return savedOrder;
     }
@@ -769,7 +813,45 @@ public class OrderService {
         Customer customer = customerService.syncCustomerOnOrderCreated(order);
         order.setCustomer(customer);
 
-        return orderRepository.save(order);
+        Order savedOrder = orderRepository.save(order);
+        triggerOrderEmailsSafely(savedOrder, storeSettings);
+        return savedOrder;
+    }
+
+    private Store loadStoreForCurrentTenant() {
+        String currentSchema = TenantContext.getCurrentTenant();
+        if (currentSchema == null || currentSchema.isBlank() || TenantContext.DEFAULT_TENANT.equalsIgnoreCase(currentSchema)) {
+            return null;
+        }
+        try {
+            TenantContext.clear();
+            org.springframework.transaction.support.TransactionTemplate template =
+                    new org.springframework.transaction.support.TransactionTemplate(transactionManager);
+            template.setPropagationBehavior(org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+            template.setReadOnly(true);
+            return template.execute(status -> storeRepository.findBySchemaName(currentSchema).orElse(null));
+        } catch (Exception e) {
+            return null;
+        } finally {
+            TenantContext.setCurrentTenant(currentSchema);
+        }
+    }
+
+    private void triggerOrderEmailsSafely(Order savedOrder, com.storevo.backend.tenant.dto.StoreSettingsDto settings) {
+        if (savedOrder == null) return;
+        try {
+            if (savedOrder.getItems() != null) {
+                savedOrder.getItems().forEach(OrderItem::getProductName);
+            }
+            Store currentStore = loadStoreForCurrentTenant();
+            com.storevo.backend.tenant.dto.StoreSettingsDto resolvedSettings = (settings != null)
+                    ? settings
+                    : loadStoreSettingsForCurrentTenant();
+            emailNotificationService.sendOrderConfirmationToCustomer(currentStore, resolvedSettings, savedOrder);
+            emailNotificationService.sendNewOrderAlertToMerchant(currentStore, resolvedSettings, savedOrder);
+        } catch (Exception ignored) {
+            // El envío de correo nunca debe afectar la transacción del pedido
+        }
     }
 
     /**
@@ -797,7 +879,16 @@ public class OrderService {
                 : 0.0;
         boolean isPickup = "PICKUP".equalsIgnoreCase(order.getDeliveryMethod());
 
+        double disc = (order.getDiscountAmount() != null && order.getDiscountAmount() > 0.0)
+                ? order.getDiscountAmount()
+                : 0.0;
+
         sb.append("\n*Subtotal:* $").append(formatCurrency(sub));
+        if (disc > 0.0) {
+            String codeLabel = (order.getCouponCode() != null && !order.getCouponCode().isBlank())
+                    ? " (" + order.getCouponCode() + ")" : "";
+            sb.append("\n*Descuento").append(codeLabel).append(":* -$").append(formatCurrency(disc));
+        }
         if (isPickup) {
             sb.append("\n*Entrega:* Recogida en tienda ($0)");
         } else if (ship > 0.0) {
@@ -831,12 +922,20 @@ public class OrderService {
         double sub = (order.getSubtotal() != null && order.getSubtotal() > 0.0)
                 ? order.getSubtotal()
                 : (order.getTotal() != null ? order.getTotal() : 0.0);
+        double disc = (order.getDiscountAmount() != null && order.getDiscountAmount() > 0.0)
+                ? order.getDiscountAmount()
+                : 0.0;
         double ship = (order.getShippingCost() != null && order.getShippingCost() >= 0.0)
                 ? order.getShippingCost()
                 : 0.0;
         boolean isPickup = "PICKUP".equalsIgnoreCase(order.getDeliveryMethod());
 
         sb.append("\n*Subtotal productos:* $").append(formatCurrency(sub));
+        if (disc > 0.0) {
+            String codeLabel = (order.getCouponCode() != null && !order.getCouponCode().isBlank())
+                    ? " (Cupón " + order.getCouponCode() + ")" : "";
+            sb.append("\n*Descuento").append(codeLabel).append(":* -$").append(formatCurrency(disc));
+        }
         if (isPickup) {
             sb.append("\n*Entrega:* Recogida en tienda ($0)");
         } else if (ship > 0.0) {
@@ -959,6 +1058,10 @@ public class OrderService {
         if ((newStatus == OrderStatus.CANCELLED || newStatus == OrderStatus.REFUNDED)
                 && savedOrder.getCustomer() != null) {
             customerService.recalculateCustomerMetrics(savedOrder.getCustomer());
+        }
+
+        if (newStatus == OrderStatus.PAID && oldStatus != OrderStatus.PAID) {
+            triggerOrderEmailsSafely(savedOrder, null);
         }
 
         return historyObj;

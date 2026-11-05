@@ -28,9 +28,12 @@
         </div>
 
         <div>
+            <div th:if="${param.resetSuccess}" class="mb-4 bg-emerald-500/10 border border-emerald-500/40 text-emerald-300 px-4 py-3 rounded-lg text-xs font-semibold">
+                ¡Contraseña restablecida con éxito! Inicia sesión con tu nueva clave.
+            </div>
             <div class="flex justify-between items-center mb-2">
-                <label for="password" class="block text-sm font-medium text-slate-400">Contraseña</label>
-                <a href="#" class="text-xs text-storevo-500 hover:text-storevo-400 transition">¿Olvidaste tu contraseña?</a>
+                <label for="password" class="block text-sm font-medium text-slate-300">Contraseña</label>
+                <a th:href="@{/forgot-password}" class="text-xs text-indigo-400 hover:text-indigo-300">¿Olvidaste tu contraseña?</a>
             </div>
             <input type="password" id="password" name="password" required
                    class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-storevo-500 focus:border-transparent transition">
