@@ -9,6 +9,7 @@ import java.util.Deque;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 public class RateLimitService {
@@ -21,6 +22,7 @@ public class RateLimitService {
     private record BucketEntry(Deque<Long> timestamps, long windowMillis) {}
 
     private final Map<String, BucketEntry> buckets = new ConcurrentHashMap<>();
+    private final AtomicLong lastCleanupMs = new AtomicLong(0);
 
     /**
      * Valida y consume 1 intento para la clave indicada dentro de la ventana de tiempo.
@@ -65,23 +67,17 @@ public class RateLimitService {
         if (request == null) {
             return "unknown";
         }
-        String xff = request.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isBlank()) {
-            String first = xff.split(",")[0].trim();
-            if (!first.isEmpty()) {
-                return first;
-            }
-        }
-        String realIp = request.getHeader("X-Real-IP");
-        if (realIp != null && !realIp.isBlank()) {
-            return realIp.trim();
-        }
-        return request.getRemoteAddr() != null ? request.getRemoteAddr() : "unknown";
+        String remoteAddr = request.getRemoteAddr();
+        return (remoteAddr != null && !remoteAddr.isBlank()) ? remoteAddr.trim() : "unknown";
     }
 
     @Scheduled(fixedDelay = 300000L, initialDelay = 300000L)
     public void cleanupExpiredBuckets() {
         long now = System.currentTimeMillis();
+        long last = lastCleanupMs.get();
+        if (!(now - last > 60_000L && lastCleanupMs.compareAndSet(last, now))) {
+            return;
+        }
         for (String key : buckets.keySet()) {
             BucketEntry bucket = buckets.get(key);
             if (bucket == null) {

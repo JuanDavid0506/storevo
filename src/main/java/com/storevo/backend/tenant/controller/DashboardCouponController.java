@@ -54,7 +54,7 @@ public class DashboardCouponController {
             RedirectAttributes redirectAttributes) {
 
         try {
-            LocalDateTime expiresAt = expiresDate != null ? expiresDate.atTime(LocalTime.MAX) : null;
+            LocalDateTime expiresAt = expiresDate != null ? expiresDate.atTime(LocalTime.of(23, 59, 59)) : null;
             couponService.createCoupon(code, discountType, discountValue, minPurchaseAmount, maxUses, expiresAt);
             redirectAttributes.addFlashAttribute("successMessage", "Cupón creado exitosamente.");
         } catch (IllegalArgumentException e) {

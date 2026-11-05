@@ -38,7 +38,7 @@ public class TenantCleanupScheduler {
      * Se ejecuta cada hora para limpiar en cada tienda activa:
      * 1. Carritos de compra directa (:direct) con más de 24 horas.
      * 2. Carritos normales abandonados con más de 7 días.
-     * 3. Pedidos ONLINE en estado PENDING con más de 24 horas sin pago.
+     * 3. Pedidos ONLINE en estado PENDING con más de 48 horas sin pago.
      */
     @Scheduled(fixedDelay = 3600000L, initialDelay = 60000L)
     public void cleanupAbandonedCartsAndExpiredOrders() {
@@ -60,7 +60,7 @@ public class TenantCleanupScheduler {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime directCartCutoff = now.minusHours(24);
         LocalDateTime regularCartCutoff = now.minusDays(7);
-        LocalDateTime pendingOrderCutoff = now.minusHours(24);
+        LocalDateTime pendingOrderCutoff = now.minusHours(48);
 
         for (Store store : stores) {
             if (store == null || "SUSPENDED".equalsIgnoreCase(store.getStatus())) {
@@ -76,38 +76,48 @@ public class TenantCleanupScheduler {
                 TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
                 txTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
 
-                txTemplate.executeWithoutResult(status -> {
-                    int deletedDirect = cartItemRepository.deleteExpiredDirectCartItems(directCartCutoff);
-                    int deletedRegular = cartItemRepository.deleteExpiredRegularCartItems(regularCartCutoff);
+                int[] cartCounts = new int[2];
+                List<Long> expiredOrderIds = txTemplate.execute(status -> {
+                    cartCounts[0] = cartItemRepository.deleteExpiredDirectCartItems(directCartCutoff);
+                    cartCounts[1] = cartItemRepository.deleteExpiredRegularCartItems(regularCartCutoff);
 
-                    List<Order> expiredOrders = orderRepository.findExpiredOrders(
-                            OrderStatus.PENDING,
-                            OrderChannel.ONLINE,
-                            pendingOrderCutoff
-                    );
+                    return orderRepository.findExpiredOrders(
+                                    OrderStatus.PENDING,
+                                    OrderChannel.ONLINE,
+                                    pendingOrderCutoff
+                            ).stream()
+                            .map(Order::getId)
+                            .toList();
+                });
 
-                    int cancelledCount = 0;
-                    for (Order expiredOrder : expiredOrders) {
+                int cancelledCount = 0;
+                if (expiredOrderIds != null) {
+                    for (Long expiredOrderId : expiredOrderIds) {
+                        if (expiredOrderId == null) continue;
                         try {
-                            orderService.updateOrderStatus(
-                                    expiredOrder.getId(),
-                                    OrderStatus.CANCELLED,
-                                    EventOrigin.SYSTEM,
-                                    null,
-                                    "Pedido cancelado automáticamente por expiración del tiempo de pago"
+                            TransactionTemplate orderTxTemplate = new TransactionTemplate(transactionManager);
+                            orderTxTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+                            orderTxTemplate.executeWithoutResult(orderStatus ->
+                                    orderService.updateOrderStatus(
+                                            expiredOrderId,
+                                            OrderStatus.CANCELLED,
+                                            EventOrigin.SYSTEM,
+                                            null,
+                                            "Pedido cancelado automáticamente por expiración del tiempo de pago"
+                                    )
                             );
                             cancelledCount++;
                         } catch (Exception ex) {
                             log.warn("TenantCleanupScheduler [{}]: no se pudo cancelar pedido vencido #{}: {}",
-                                    schema, expiredOrder.getId(), ex.getMessage());
+                                    schema, expiredOrderId, ex.getMessage());
                         }
                     }
+                }
 
-                    if (deletedDirect > 0 || deletedRegular > 0 || cancelledCount > 0) {
-                        log.info("TenantCleanupScheduler [{}]: eliminados {} ítem(s) :direct, {} ítem(s) de bolsa y cancelados {} pedido(s) PENDING vencidos.",
-                                schema, deletedDirect, deletedRegular, cancelledCount);
-                    }
-                });
+                if (cartCounts[0] > 0 || cartCounts[1] > 0 || cancelledCount > 0) {
+                    log.info("TenantCleanupScheduler [{}]: eliminados {} ítem(s) :direct, {} ítem(s) de bolsa y cancelados {} pedido(s) PENDING vencidos.",
+                            schema, cartCounts[0], cartCounts[1], cancelledCount);
+                }
             } catch (Exception e) {
                 log.warn("TenantCleanupScheduler: error ejecutando limpieza en esquema '{}': {}", schema, e.getMessage());
             } finally {

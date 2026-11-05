@@ -52,8 +52,9 @@ public enum OrderStatus {
                         || nextStatus == REFUNDED;
             case SHIPPED:
                 return nextStatus == DELIVERED;
-            case DELIVERED:
             case CANCELLED:
+                return nextStatus == PAID;
+            case DELIVERED:
             case REFUNDED:
                 return false;
             default:

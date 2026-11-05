@@ -208,6 +208,7 @@ public class EmailNotificationService {
         }
     }
 
+    @Async
     public void sendNewOrderAlertToMerchant(Store store, StoreSettingsDto settings, Order order) {
         sendNewOrderAlertToMerchant(store, settings, order, null);
     }

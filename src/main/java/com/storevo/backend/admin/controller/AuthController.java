@@ -8,6 +8,7 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +20,9 @@ public class AuthController {
 
     private final AuthService authService;
     private final com.storevo.backend.config.security.RateLimitService rateLimitService;
+
+    @Value("${storevo.mail.base-url:http://localhost:8080}")
+    private String appBaseUrl;
 
     @PostMapping("/auth/register")
     public String register(@ModelAttribute RegisterRequest request, HttpServletResponse response) {
@@ -58,7 +62,7 @@ public class AuthController {
 
     @GetMapping({"/forgot-password", "/auth/forgot-password"})
     public String showForgotPasswordForm() {
-        return "forgot-password";
+        return "auth/forgot-password";
     }
 
     @PostMapping({"/forgot-password", "/auth/forgot-password"})
@@ -95,7 +99,7 @@ public class AuthController {
             return "redirect:/forgot-password";
         }
         model.addAttribute("token", token.trim());
-        return "reset-password";
+        return "auth/reset-password";
     }
 
     @PostMapping({"/reset-password", "/auth/reset-password"})
@@ -126,13 +130,11 @@ public class AuthController {
     }
 
     private String resolveBaseUrl(HttpServletRequest request) {
-        String scheme = request.getHeader("X-Forwarded-Proto") != null
-                ? request.getHeader("X-Forwarded-Proto")
-                : request.getScheme();
-        String serverName = request.getServerName();
-        int serverPort = request.getServerPort();
-        String portSuffix = (serverPort == 80 || serverPort == 443) ? "" : ":" + serverPort;
-        return scheme + "://" + serverName + portSuffix;
+        if (appBaseUrl == null || appBaseUrl.isBlank()) {
+            return "http://localhost:8080";
+        }
+        String clean = appBaseUrl.trim();
+        return clean.endsWith("/") ? clean.substring(0, clean.length() - 1) : clean;
     }
 
     private void setJwtCookie(HttpServletResponse response, String token) {

@@ -81,6 +81,22 @@ public class CouponService {
         });
     }
 
+    /**
+     * Vuelve a consumir 1 uso del cupón de forma segura cuando un pedido previamente cancelado recibe un pago aprobado.
+     */
+    @Transactional
+    public void reconsumeCouponUsage(String rawCode) {
+        if (rawCode == null || rawCode.isBlank()) {
+            return;
+        }
+        String normalizedCode = normalizeCode(rawCode);
+        couponRepository.findByCodeWithLock(normalizedCode).ifPresent(coupon -> {
+            int currentUsed = coupon.getUsedCount() != null ? coupon.getUsedCount() : 0;
+            coupon.setUsedCount(currentUsed + 1);
+            couponRepository.save(coupon);
+        });
+    }
+
     private CouponEvaluation evaluateCouponRules(Coupon coupon, double subtotal) {
         if (!Boolean.TRUE.equals(coupon.getIsActive())) {
             throw new IllegalArgumentException("El cupón '" + coupon.getCode() + "' no se encuentra activo.");
@@ -147,6 +163,10 @@ public class CouponService {
             throw new IllegalArgumentException("El límite de usos debe ser mayor a cero (o dejarse vacío para usos ilimitados).");
         }
 
+        LocalDateTime safeExpiresAt = expiresAt != null
+                ? expiresAt.toLocalDate().atTime(java.time.LocalTime.of(23, 59, 59))
+                : null;
+
         Coupon coupon = Coupon.builder()
                 .code(cleanCode)
                 .discountType(discountType)
@@ -154,7 +174,7 @@ public class CouponService {
                 .minPurchaseAmount(minPurchaseAmount != null && minPurchaseAmount > 0 ? minPurchaseAmount : null)
                 .maxUses(maxUses)
                 .usedCount(0)
-                .expiresAt(expiresAt)
+                .expiresAt(safeExpiresAt)
                 .isActive(true)
                 .build();
 

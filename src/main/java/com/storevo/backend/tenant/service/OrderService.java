@@ -45,6 +45,7 @@ public class OrderService {
     private final CustomerService customerService;
     private final StoreIntegrationRepository integrationRepository;
     private final com.storevo.backend.admin.repository.StoreRepository storeRepository;
+    private final com.storevo.backend.admin.repository.UserRepository userRepository;
     private final com.storevo.backend.admin.service.StoreSettingsService storeSettingsService;
     private final org.springframework.transaction.PlatformTransactionManager transactionManager;
     private final EmailNotificationService emailNotificationService;
@@ -460,16 +461,27 @@ public class OrderService {
         order.setTotal(verifiedOrderTotal);
         order.setItems(items);
 
+        boolean zeroTotalOnlineOrder = (channel == OrderChannel.ONLINE && verifiedOrderTotal <= 0.0);
+        if (zeroTotalOnlineOrder) {
+            deductOrderStock(order);
+            order.setStatus(OrderStatus.PAID);
+            order.setPaymentMethod("Cupón 100%");
+            order.setStockDeducted(true);
+        }
+
+        OrderStatus initialHistoryStatus = zeroTotalOnlineOrder ? OrderStatus.PAID : OrderStatus.PENDING;
         String historyDescription = channel == OrderChannel.WHATSAPP
                 ? "Pedido creado por el cliente y enviado por WhatsApp para confirmación."
-                : "Pedido creado por el cliente.";
+                : (zeroTotalOnlineOrder
+                ? "Pedido confirmado y pagado automáticamente (Cupón 100%)."
+                : "Pedido creado por el cliente.");
 
         OrderHistory historyObj = OrderHistory.builder()
                 .order(order)
                 .eventType(OrderHistoryType.SYSTEM_EVENT)
                 .origin(EventOrigin.WEB)
                 .oldStatus(null)
-                .newStatus(OrderStatus.PENDING)
+                .newStatus(initialHistoryStatus)
                 .description(historyDescription)
                 .userId(null)
                 .build();
@@ -510,8 +522,6 @@ public class OrderService {
                     ? guestId.substring(0, guestId.length() - ":direct".length())
                     : guestId;
 
-            List<CartItemDto> currentCart = cartManager.getCart(normalSessionId);
-
             for (OrderItem item : order.getItems()) {
                 if (item == null || item.getProductId() == null || item.getQuantity() == null || item.getQuantity() <= 0) {
                     continue;
@@ -537,14 +547,8 @@ public class OrderService {
 
                 final Long checkProdId = product.getId();
                 final Long checkVarId = targetVariantId;
-                boolean alreadyInCart = currentCart.stream().anyMatch(c ->
-                        checkProdId.equals(c.getProductId())
-                                && java.util.Objects.equals(checkVarId, c.getVariantId()));
 
                 try {
-                    if (alreadyInCart) {
-                        cartManager.removeItem(normalSessionId, checkProdId, checkVarId);
-                    }
                     CartItemDto restoreDto = CartItemDto.builder()
                             .productId(checkProdId)
                             .variantId(checkVarId)
@@ -818,22 +822,47 @@ public class OrderService {
         return savedOrder;
     }
 
-    private Store loadStoreForCurrentTenant() {
-        String currentSchema = TenantContext.getCurrentTenant();
-        if (currentSchema == null || currentSchema.isBlank() || TenantContext.DEFAULT_TENANT.equalsIgnoreCase(currentSchema)) {
-            return null;
+    private record TenantEmailMetadata(
+            Store store,
+            com.storevo.backend.tenant.dto.StoreSettingsDto settings,
+            String fallbackOwnerEmail
+    ) {}
+
+    private TenantEmailMetadata loadEmailMetadataForSchema(
+            String schemaName,
+            com.storevo.backend.tenant.dto.StoreSettingsDto preloadedSettings) {
+        if (schemaName == null || schemaName.isBlank() || TenantContext.DEFAULT_TENANT.equalsIgnoreCase(schemaName)) {
+            return new TenantEmailMetadata(null, preloadedSettings, null);
         }
+        String previousTenant = TenantContext.getCurrentTenant();
         try {
             TenantContext.clear();
             org.springframework.transaction.support.TransactionTemplate template =
                     new org.springframework.transaction.support.TransactionTemplate(transactionManager);
             template.setPropagationBehavior(org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW);
             template.setReadOnly(true);
-            return template.execute(status -> storeRepository.findBySchemaName(currentSchema).orElse(null));
+            TenantEmailMetadata result = template.execute(status -> {
+                Store store = storeRepository.findBySchemaName(schemaName).orElse(null);
+                if (store == null) {
+                    return new TenantEmailMetadata(null, preloadedSettings, null);
+                }
+                com.storevo.backend.tenant.dto.StoreSettingsDto resolvedSettings = (preloadedSettings != null)
+                        ? preloadedSettings
+                        : storeSettingsService.getSettingsByStore(store);
+                String ownerEmail = userRepository.findFirstByStoreIdOrderByIdAsc(store.getId())
+                        .map(com.storevo.backend.admin.model.User::getEmail)
+                        .orElse(null);
+                return new TenantEmailMetadata(store, resolvedSettings, ownerEmail);
+            });
+            return result != null ? result : new TenantEmailMetadata(null, preloadedSettings, null);
         } catch (Exception e) {
-            return null;
+            return new TenantEmailMetadata(null, preloadedSettings, null);
         } finally {
-            TenantContext.setCurrentTenant(currentSchema);
+            if (previousTenant != null) {
+                TenantContext.setCurrentTenant(previousTenant);
+            } else {
+                TenantContext.clear();
+            }
         }
     }
 
@@ -841,14 +870,32 @@ public class OrderService {
         if (savedOrder == null) return;
         try {
             if (savedOrder.getItems() != null) {
+                savedOrder.getItems().size();
                 savedOrder.getItems().forEach(OrderItem::getProductName);
             }
-            Store currentStore = loadStoreForCurrentTenant();
-            com.storevo.backend.tenant.dto.StoreSettingsDto resolvedSettings = (settings != null)
-                    ? settings
-                    : loadStoreSettingsForCurrentTenant();
-            emailNotificationService.sendOrderConfirmationToCustomer(currentStore, resolvedSettings, savedOrder);
-            emailNotificationService.sendNewOrderAlertToMerchant(currentStore, resolvedSettings, savedOrder);
+            final String currentSchema = TenantContext.getCurrentTenant();
+            Runnable dispatchTask = () -> {
+                try {
+                    TenantEmailMetadata meta = loadEmailMetadataForSchema(currentSchema, settings);
+                    emailNotificationService.sendOrderConfirmationToCustomer(meta.store(), meta.settings(), savedOrder);
+                    emailNotificationService.sendNewOrderAlertToMerchant(
+                            meta.store(), meta.settings(), savedOrder, meta.fallbackOwnerEmail());
+                } catch (Exception ignored) {
+                }
+            };
+
+            if (org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive()) {
+                org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                        new org.springframework.transaction.support.TransactionSynchronization() {
+                            @Override
+                            public void afterCommit() {
+                                dispatchTask.run();
+                            }
+                        }
+                );
+            } else {
+                dispatchTask.run();
+            }
         } catch (Exception ignored) {
             // El envío de correo nunca debe afectar la transacción del pedido
         }
@@ -986,7 +1033,7 @@ public class OrderService {
 
     @Transactional
     public OrderHistory updateOrderStatus(Long orderId, OrderStatus newStatus, EventOrigin origin, Long userId, String customDescription) {
-        Order order = orderRepository.findById(orderId).orElseThrow(() -> new OrderNotFoundException(orderId));
+        Order order = orderRepository.findByIdWithLock(orderId).orElseThrow(() -> new OrderNotFoundException(orderId));
         OrderStatus oldStatus = order.getStatus();
 
         // Idempotencia ante llegada simultánea de Webhook y retorno web
@@ -995,6 +1042,11 @@ public class OrderService {
         }
 
         if (!oldStatus.canTransitionTo(newStatus)) {
+            throw new InvalidOrderStatusException(oldStatus, newStatus);
+        }
+
+        // La transición especial de CANCELLED -> PAID solo se permite ante confirmación verificada de Wompi (WEBHOOK)
+        if (oldStatus == OrderStatus.CANCELLED && (newStatus != OrderStatus.PAID || origin != EventOrigin.WEBHOOK)) {
             throw new InvalidOrderStatusException(oldStatus, newStatus);
         }
 
@@ -1008,7 +1060,7 @@ public class OrderService {
 
             if (newStatus == OrderStatus.PAID && origin == EventOrigin.WEBHOOK) {
                 // Si el pago ya fue cobrado por Wompi, descontamos de forma segura sin perder el estado PAID
-                java.util.List<String> stockWarnings = deductOrderStockSafely(order);
+                java.util.List<String> stockWarnings = tryDeductStockForOrder(order);
                 if (!stockWarnings.isEmpty()) {
                     OrderHistory alertHistory = OrderHistory.builder()
                             .order(order)
@@ -1029,14 +1081,20 @@ public class OrderService {
             }
         }
 
-        // 2. Restaurar stock al pasar a CANCELLED o REFUNDED únicamente si ya había sido descontado
+        // 2. Si el pedido estaba en CANCELLED y pasa a PAID por pago verificado de Wompi, volver a consumir el cupón si aplica
+        if (oldStatus == OrderStatus.CANCELLED && newStatus == OrderStatus.PAID
+                && order.getCouponCode() != null && !order.getCouponCode().isBlank()) {
+            couponService.reconsumeCouponUsage(order.getCouponCode());
+        }
+
+        // 3. Restaurar stock al pasar a CANCELLED o REFUNDED únicamente si ya había sido descontado
         if ((newStatus == OrderStatus.CANCELLED || newStatus == OrderStatus.REFUNDED)
                 && Boolean.TRUE.equals(order.getStockDeducted())) {
             restoreOrderStock(order);
             order.setStockDeducted(false);
         }
 
-        // 3. Reintegrar el uso del cupón al pasar por primera vez a CANCELLED o REFUNDED
+        // 4. Reintegrar el uso del cupón al pasar por primera vez a CANCELLED o REFUNDED
         boolean wasAlreadyCancelledOrRefunded = (oldStatus == OrderStatus.CANCELLED || oldStatus == OrderStatus.REFUNDED);
         if (!wasAlreadyCancelledOrRefunded
                 && (newStatus == OrderStatus.CANCELLED || newStatus == OrderStatus.REFUNDED)
@@ -1046,9 +1104,14 @@ public class OrderService {
 
         order.setStatus(newStatus);
 
-        String resolvedDescription = (customDescription != null && !customDescription.isBlank())
-                ? customDescription.trim()
-                : "El estado cambió a " + newStatus.getDisplayName();
+        String resolvedDescription;
+        if (oldStatus == OrderStatus.CANCELLED && newStatus == OrderStatus.PAID) {
+            resolvedDescription = "Pago aprobado en Wompi recibido sobre pedido previamente cancelado. Verificar inventario/despacho.";
+        } else if (customDescription != null && !customDescription.isBlank()) {
+            resolvedDescription = customDescription.trim();
+        } else {
+            resolvedDescription = "El estado cambió a " + newStatus.getDisplayName();
+        }
 
         OrderHistory historyObj = OrderHistory.builder()
                 .order(order)
@@ -1063,8 +1126,7 @@ public class OrderService {
         order.getHistory().add(historyObj);
         Order savedOrder = orderRepository.save(order);
 
-        if ((newStatus == OrderStatus.CANCELLED || newStatus == OrderStatus.REFUNDED)
-                && savedOrder.getCustomer() != null) {
+        if (savedOrder.getCustomer() != null) {
             customerService.recalculateCustomerMetrics(savedOrder.getCustomer());
         }
 
@@ -1143,6 +1205,10 @@ public class OrderService {
      * Descuenta TODO o NADA. Si algo no alcanza, no descuenta nada, deja stockDeducted=false
      * y devuelve la lista de ítems con problema para registrar la alerta en el historial.
      */
+    private java.util.List<String> tryDeductStockForOrder(Order order) {
+        return deductOrderStockSafely(order);
+    }
+
     private java.util.List<String> deductOrderStockSafely(Order order) {
         java.util.List<String> failures = inventoryService.tryDeductAll(buildStockLines(order), false);
         order.setStockDeducted(failures.isEmpty());
@@ -1168,7 +1234,7 @@ public class OrderService {
             if (wompiTransactionId == null || wompiTransactionId.isBlank()) {
                 return "PENDING";
             }
-            if (order.getStatus() != OrderStatus.PENDING) {
+            if (order.getStatus() != OrderStatus.PENDING && order.getStatus() != OrderStatus.CANCELLED) {
                 return order.getStatus().name();
             }
 

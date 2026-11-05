@@ -752,7 +752,7 @@ public class StoreFrontController {
             Model model) {
         model.addAttribute("pageTitle", "Seguir mi pedido");
         hydratePageContext(request, model, Collections.emptyList());
-        return "storefront/track-order";
+        return "components/storefront/track-order";
     }
 
     @PostMapping("/track")

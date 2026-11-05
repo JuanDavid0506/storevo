@@ -22,6 +22,15 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class CustomerService {
 
+    private static final Set<OrderStatus> VALID_SPENT_STATUSES = EnumSet.of(
+            OrderStatus.PAID,
+            OrderStatus.CONFIRMED,
+            OrderStatus.PREPARING,
+            OrderStatus.PACKED,
+            OrderStatus.SHIPPED,
+            OrderStatus.DELIVERED
+    );
+
     private final CustomerRepository customerRepository;
     private final OrderRepository orderRepository;
 
@@ -204,7 +213,7 @@ public class CustomerService {
 
         long currentOrders = customer.getTotalOrders() != null ? customer.getTotalOrders() : 0L;
         double currentSpent = customer.getTotalSpent() != null ? customer.getTotalSpent() : 0.0;
-        double orderTotal = (order.getTotal() != null && order.getStatus() != OrderStatus.CANCELLED && order.getStatus() != OrderStatus.REFUNDED)
+        double orderTotal = (order.getTotal() != null && order.getStatus() != null && VALID_SPENT_STATUSES.contains(order.getStatus()))
                 ? order.getTotal()
                 : 0.0;
 
@@ -225,7 +234,7 @@ public class CustomerService {
     }
 
     /**
-     * Recalcula los totales del cliente cuando un pedido cambia de estado (ej. al cancelarse o reembolsarse).
+     * Recalcula los totales del cliente cuando un pedido cambia de estado (ej. al pagarse, confirmarse, cancelarse o reembolsarse).
      */
     @Transactional
     public void recalculateCustomerMetrics(Customer customer) {
@@ -235,7 +244,7 @@ public class CustomerService {
         List<Order> customerOrders = orderRepository.findByCustomerIdOrderByCreatedAtDesc(customer.getId());
         long totalOrders = customerOrders.size();
         double totalSpent = customerOrders.stream()
-                .filter(o -> o.getStatus() != OrderStatus.CANCELLED && o.getStatus() != OrderStatus.REFUNDED)
+                .filter(o -> o.getStatus() != null && VALID_SPENT_STATUSES.contains(o.getStatus()))
                 .mapToDouble(o -> o.getTotal() != null ? o.getTotal() : 0.0)
                 .sum();
 

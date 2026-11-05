@@ -39,7 +39,18 @@ public class OrderController {
             Model model) {
         Order order = orderService.getOrderByPublicToken(token);
 
-        if (order.getStatus() == OrderStatus.PAID) {
+        if (order.getStatus() == OrderStatus.PENDING && order.getTotal() != null && order.getTotal() <= 0.0) {
+            orderService.updateOrderStatus(
+                    order.getId(),
+                    OrderStatus.PAID,
+                    com.storevo.backend.tenant.model.EventOrigin.SYSTEM,
+                    null,
+                    "Pedido confirmado automáticamente con monto $0 (Cupón 100%)."
+            );
+            return "redirect:/s/" + slug + "/order/" + order.getPublicToken() + "/wompi-result";
+        }
+
+        if (order.getStatus() != OrderStatus.PENDING) {
             return "redirect:/s/" + slug + "/order/" + order.getPublicToken() + "/wompi-result";
         }
 
@@ -234,7 +245,20 @@ public class OrderController {
         }
 
         try {
-            if (order.getStatus() == OrderStatus.CANCELLED) {
+            boolean isEligibleForReview = order.getStatus() != null && java.util.EnumSet.of(
+                    OrderStatus.PAID,
+                    OrderStatus.CONFIRMED,
+                    OrderStatus.PREPARING,
+                    OrderStatus.PACKED,
+                    OrderStatus.SHIPPED,
+                    OrderStatus.DELIVERED
+            ).contains(order.getStatus());
+
+            if (!isEligibleForReview) {
+                redirectAttributes.addFlashAttribute(
+                        "reviewError",
+                        "Solo puedes publicar una reseña verificada cuando tu pedido esté confirmado o pagado."
+                );
                 return redirectTarget;
             }
 
