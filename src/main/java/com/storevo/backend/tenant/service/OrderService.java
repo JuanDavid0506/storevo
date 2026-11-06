@@ -519,8 +519,9 @@ public class OrderService {
 
         if (authenticatedCustomerId != null) {
             Customer authCustomer = customerService.getCustomerEntityById(authenticatedCustomerId);
-            if (authCustomer != null) {
+            if (authCustomer != null && Boolean.TRUE.equals(authCustomer.getHasAccount())) {
                 order.setCustomer(authCustomer);
+                order.setPlacedWithAccount(true);
             }
         }
 
@@ -571,24 +572,37 @@ public class OrderService {
                 }
 
                 Long targetVariantId = item.getVariantId();
+                int availableStock;
                 if (Boolean.TRUE.equals(product.getHasVariants())) {
                     if (targetVariantId == null) continue;
                     ProductVariant variant = variantRepository.findByIdAndProductId(targetVariantId, product.getId()).orElse(null);
                     if (variant == null || !Boolean.TRUE.equals(variant.getIsActive())) {
                         continue;
                     }
+                    availableStock = variant.getStock() != null ? variant.getStock() : 0;
                 } else {
                     targetVariantId = null;
+                    availableStock = product.getStock() != null ? product.getStock() : 0;
                 }
 
                 final Long checkProdId = product.getId();
                 final Long checkVarId = targetVariantId;
 
+                // No superar el stock disponible sumando lo que ya hay en la bolsa (salvo productos bajo pedido)
+                int qtyToRestore = item.getQuantity();
+                if (!Boolean.TRUE.equals(product.getIsMadeToOrder())) {
+                    int alreadyInCart = cartManager.getItemQuantity(normalSessionId, checkProdId, checkVarId);
+                    qtyToRestore = Math.min(qtyToRestore, Math.max(0, availableStock - alreadyInCart));
+                }
+                if (qtyToRestore <= 0) {
+                    continue;
+                }
+
                 try {
                     CartItemDto restoreDto = CartItemDto.builder()
                             .productId(checkProdId)
                             .variantId(checkVarId)
-                            .quantity(item.getQuantity())
+                            .quantity(qtyToRestore)
                             .build();
                     cartManager.addItem(normalSessionId, restoreDto);
                 } catch (Exception ignored) {

@@ -103,6 +103,14 @@ public class Order {
     @Builder.Default
     private Boolean stockDeducted = false;
 
+    /**
+     * true únicamente cuando el pedido fue creado por un comprador con sesión iniciada en la tienda.
+     * El portal "Mi Cuenta" solo muestra estos pedidos (nunca pedidos de invitado vinculados por teléfono/email).
+     */
+    @Column(name = "placed_with_account", nullable = false)
+    @Builder.Default
+    private Boolean placedWithAccount = false;
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("createdAt DESC")
     @Builder.Default
@@ -131,6 +139,9 @@ public class Order {
         }
         if (this.stockDeducted == null) {
             this.stockDeducted = false;
+        }
+        if (this.placedWithAccount == null) {
+            this.placedWithAccount = false;
         }
         if (this.deliveryMethod == null || this.deliveryMethod.isBlank()) {
             this.deliveryMethod = "SHIPPING";

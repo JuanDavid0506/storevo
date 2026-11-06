@@ -23,7 +23,6 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
     Optional<Customer> findFirstByEmailIgnoreCaseAndHasAccountTrue(String email);
 
     Optional<Customer> findByResetPasswordToken(String resetPasswordToken);
-
     List<Customer> findAllByOrderByLastOrderDateDescIdDesc();
 
     @Query("SELECT c FROM Customer c WHERE " +

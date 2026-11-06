@@ -36,10 +36,10 @@
     </div>
 
     <!-- Alertas -->
-    <div th:if="${accountSuccess or reviewSuccess}"
+    <div th:if="${accountSuccess != null or reviewSuccess != null}"
          class="mb-6 bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3.5 store-radius text-xs sm:text-sm font-bold"
          th:text="${accountSuccess != null ? accountSuccess : reviewSuccess}"></div>
-    <div th:if="${accountError or reviewError}"
+    <div th:if="${accountError != null or reviewError != null}"
          class="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3.5 store-radius text-xs sm:text-sm font-bold"
          th:text="${accountError != null ? accountError : reviewError}"></div>
 

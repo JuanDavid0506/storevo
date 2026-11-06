@@ -72,7 +72,7 @@ public class WishlistManager {
             return;
         }
 
-        List<WishlistItem> guestItems = wishlistRepository.findBySessionId(cleanGuestId);
+        List<WishlistItem> guestItems = wishlistRepository.findBySessionIdForUpdate(cleanGuestId);
         if (guestItems == null || guestItems.isEmpty()) {
             return;
         }

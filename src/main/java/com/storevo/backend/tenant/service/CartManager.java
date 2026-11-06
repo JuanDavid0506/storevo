@@ -185,7 +185,7 @@ public class CartManager {
     @Transactional(readOnly = true)
     public int getItemQuantity(String sessionId, Long productId, Long variantId) {
         if (sessionId == null) return 0;
-        return cartItemRepository.findBySessionIdAndProductIdAndVariantId(sessionId, productId, variantId)
+        return cartItemRepository.findFirstBySessionIdAndProductIdAndVariantIdOrderByIdAsc(sessionId, productId, variantId)
                 .map(CartItem::getQuantity)
                 .orElse(0);
     }
@@ -228,7 +228,7 @@ public class CartManager {
         }
 
         Long verifiedVariantId = variant != null ? variant.getId() : null;
-        Optional<CartItem> existingOpt = cartItemRepository.findBySessionIdAndProductIdAndVariantId(
+        Optional<CartItem> existingOpt = cartItemRepository.findFirstBySessionIdAndProductIdAndVariantIdOrderByIdAsc(
                 sessionId, product.getId(), verifiedVariantId);
 
         if (existingOpt.isPresent()) {
@@ -295,7 +295,11 @@ public class CartManager {
             return;
         }
 
-        List<CartItem> guestItems = cartItemRepository.findBySessionId(cleanGuestId);
+        // Compra directa ("Comprar ahora") iniciada como invitado: se traslada tal cual a la cuenta,
+        // reemplazando cualquier compra directa previa, para que el checkout ?mode=direct continúe tras el login.
+        migrateGuestDirectCart(cleanGuestId + DIRECT_SUFFIX, customerSessionId + DIRECT_SUFFIX);
+
+        List<CartItem> guestItems = cartItemRepository.findBySessionIdForUpdate(cleanGuestId);
         if (guestItems == null || guestItems.isEmpty()) {
             return;
         }
@@ -339,7 +343,7 @@ public class CartManager {
                 continue;
             }
 
-            Optional<CartItem> existingCustomerItemOpt = cartItemRepository.findBySessionIdAndProductIdAndVariantId(
+            Optional<CartItem> existingCustomerItemOpt = cartItemRepository.findFirstBySessionIdAndProductIdAndVariantIdOrderByIdAsc(
                     customerSessionId, product.getId(), verifiedVariantId);
 
             if (existingCustomerItemOpt.isPresent()) {
@@ -370,5 +374,22 @@ public class CartManager {
         }
 
         cartItemRepository.deleteBySessionId(cleanGuestId);
+    }
+
+    private static final String DIRECT_SUFFIX = ":direct";
+
+    private void migrateGuestDirectCart(String guestDirectId, String customerDirectId) {
+        List<CartItem> guestDirectItems = cartItemRepository.findBySessionIdForUpdate(guestDirectId);
+        if (guestDirectItems == null || guestDirectItems.isEmpty()) {
+            return;
+        }
+        cartItemRepository.deleteBySessionId(customerDirectId);
+        for (CartItem item : guestDirectItems) {
+            if (item == null) {
+                continue;
+            }
+            item.setSessionId(customerDirectId);
+            cartItemRepository.save(item);
+        }
     }
 }

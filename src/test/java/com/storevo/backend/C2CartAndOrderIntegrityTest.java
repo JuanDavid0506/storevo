@@ -38,6 +38,14 @@ class C2CartAndOrderIntegrityTest {
     @Mock private StoreIntegrationRepository integrationRepository;
     @Mock private ProductService productService;
     @Mock private HttpServletRequest request;
+    @Mock private com.storevo.backend.tenant.service.CustomerService customerService;
+    @Mock private com.storevo.backend.tenant.service.CouponService couponService;
+    @Mock private com.storevo.backend.tenant.service.EmailNotificationService emailNotificationService;
+    @Mock private com.storevo.backend.config.security.RateLimitService rateLimitService;
+    @Mock private com.storevo.backend.admin.repository.StoreRepository storeRepository;
+    @Mock private com.storevo.backend.admin.repository.UserRepository userRepository;
+    @Mock private com.storevo.backend.admin.service.StoreSettingsService storeSettingsService;
+    @Mock private org.springframework.transaction.PlatformTransactionManager transactionManager;
 
     private CartManager cartManager;
     private InventoryService inventoryService;
@@ -52,12 +60,16 @@ class C2CartAndOrderIntegrityTest {
         inventoryService = new InventoryService(productRepository, variantRepository);
         orderService = new OrderService(
                 orderRepository, productRepository, variantRepository,
-                cartManager, inventoryService, integrationRepository
+                cartManager, inventoryService, customerService, integrationRepository,
+                storeRepository, userRepository, storeSettingsService, transactionManager,
+                emailNotificationService, couponService
         );
         cartController = new CartController(
-                cartManager, productService, orderService, variantRepository, integrationRepository
+                cartManager, productService, orderService, customerService, couponService,
+                rateLimitService, variantRepository, integrationRepository
         );
         lenient().when(request.getAttribute("guestId")).thenReturn(SESSION_ID);
+        lenient().when(productService.isProductPubliclyVisible(any())).thenReturn(true);
     }
 
     @Test
@@ -125,7 +137,8 @@ class C2CartAndOrderIntegrityTest {
     }
 
     @Test
-    void test5_addVariantWithZeroPrice_rejectedWithoutFallbackToParentPrice() {
+    void test5_addVariantWithZeroPrice_fallsBackToParentPrice() {
+        // Regla vigente (CartManager.resolveEffectivePrice): variante con precio <= 0 usa el precio del producto padre
         Product product = Product.builder()
                 .id(40L).name("Perfume").price(90000.0)
                 .stock(10).hasVariants(true).isActive(true).isDeleted(false).isDraft(false)
@@ -135,11 +148,31 @@ class C2CartAndOrderIntegrityTest {
                 .build();
 
         when(productService.getProductById(40L)).thenReturn(product);
+        when(productRepository.findById(40L)).thenReturn(Optional.of(product));
         when(variantRepository.findByIdAndProductId(401L, 40L)).thenReturn(Optional.of(zeroVariant));
 
+        assertEquals(90000.0, cartManager.resolveEffectivePrice(product, zeroVariant));
         ResponseEntity< Map<String, Object> > res = cartController.addToCartAjax("mi-tienda", 40L, 401L, 1, request);
+        assertEquals(Boolean.TRUE, res.getBody().get("success"));
+        verify(cartItemRepository).save(any(CartItem.class));
+    }
+
+    @Test
+    void test5b_addProductWithoutAnyValidPrice_rejected() {
+        Product product = Product.builder()
+                .id(41L).name("Sin precio").price(0.0)
+                .stock(10).hasVariants(true).isActive(true).isDeleted(false).isDraft(false)
+                .build();
+        ProductVariant zeroVariant = ProductVariant.builder()
+                .id(411L).product(product).price(0.0).stock(10).isActive(true)
+                .build();
+
+        when(productService.getProductById(41L)).thenReturn(product);
+        when(variantRepository.findByIdAndProductId(411L, 41L)).thenReturn(Optional.of(zeroVariant));
+
+        ResponseEntity< Map<String, Object> > res = cartController.addToCartAjax("mi-tienda", 41L, 411L, 1, request);
         assertEquals(Boolean.FALSE, res.getBody().get("success"));
-        assertEquals("Esta variante no tiene un precio válido disponible.", res.getBody().get("message"));
+        assertEquals("Este producto no tiene un precio válido disponible.", res.getBody().get("message"));
         verify(cartItemRepository, never()).save(any());
     }
 

@@ -31,6 +31,9 @@ public class OrderController {
     private final StoreReviewRepository storeReviewRepository;
     private final com.storevo.backend.config.security.RateLimitService rateLimitService;
 
+    @org.springframework.beans.factory.annotation.Value("${storevo.mail.base-url:http://localhost:8080}")
+    private String appBaseUrl;
+
     @GetMapping("/{token}/success")
     public String orderSuccess(
             @PathVariable String slug,
@@ -64,11 +67,10 @@ public class OrderController {
             WompiCheckoutData checkoutData = wompiService.prepareCheckout(store, order);
             TenantContext.setCurrentTenant(store.getSchemaName());
 
-            String scheme = request.getHeader("X-Forwarded-Proto") != null ? request.getHeader("X-Forwarded-Proto") : request.getScheme();
-            String serverName = request.getServerName();
-            int serverPort = request.getServerPort();
-            String portSuffix = (serverPort == 80 || serverPort == 443) ? "" : ":" + serverPort;
-            String baseUrl = scheme + "://" + serverName + portSuffix;
+            // Base pública configurada (no el header Host/X-Forwarded-*, manipulable por el cliente)
+            String baseUrl = appBaseUrl != null && !appBaseUrl.isBlank()
+                    ? (appBaseUrl.trim().endsWith("/") ? appBaseUrl.trim().substring(0, appBaseUrl.trim().length() - 1) : appBaseUrl.trim())
+                    : "http://localhost:8080";
 
             String redirectUrl = baseUrl + "/s/" + slug + "/order/" + order.getPublicToken() + "/wompi-result";
 

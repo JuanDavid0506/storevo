@@ -89,6 +89,10 @@ public class Customer {
     @Column(name = "last_login_at")
     private LocalDateTime lastLoginAt;
 
+    /** Momento del último cambio de contraseña: invalida los JWT de comprador emitidos antes. */
+    @Column(name = "password_changed_at")
+    private LocalDateTime passwordChangedAt;
+
     @Column(name = "channels_csv", length = 60)
     private String channelsCsv;
 

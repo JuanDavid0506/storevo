@@ -106,20 +106,9 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             @Param("channel") OrderChannel channel,
             @Param("cutoff") LocalDateTime cutoff);
 
-    // Cuenta los pedidos de un comprador en un estado específico (ej. PENDING para badge en el Navbar)
-    long countByCustomerIdAndStatus(Long customerId, OrderStatus status);
+    // Portal "Mi Cuenta": solo pedidos creados con la sesión autenticada del comprador
+    List<Order> findByCustomerIdAndPlacedWithAccountTrueOrderByCreatedAtDesc(Long customerId);
 
-    // Reclama y vincula automáticamente pedidos históricos hechos como invitado por teléfono o correo
-    @org.springframework.data.jpa.repository.Modifying
-    @Query("UPDATE Order o SET o.customer = :customer WHERE " +
-            "(o.customer IS NULL OR o.customer.id <> :#{#customer.id}) AND (" +
-            "  (:rawPhone IS NOT NULL AND :rawPhone <> '' AND o.customerPhone = :rawPhone) " +
-            "  OR (:normalizedPhone IS NOT NULL AND :normalizedPhone <> '' AND o.customerPhone LIKE CONCAT('%', :normalizedPhone)) " +
-            "  OR (:email IS NOT NULL AND :email <> '' AND LOWER(o.customerEmail) = LOWER(:email))" +
-            ")")
-    int claimGuestOrdersForCustomer(
-            @Param("customer") com.storevo.backend.tenant.model.Customer customer,
-            @Param("rawPhone") String rawPhone,
-            @Param("normalizedPhone") String normalizedPhone,
-            @Param("email") String email);
+    // Badge del Navbar: pedidos del comprador autenticado en un estado específico (ej. PENDING)
+    long countByCustomerIdAndStatusAndPlacedWithAccountTrue(Long customerId, OrderStatus status);
 }

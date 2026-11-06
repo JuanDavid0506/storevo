@@ -109,7 +109,11 @@ public class TenantSchemaMigrationRunner implements CommandLineRunner {
             new ColumnMigration("customers", "has_account", "BOOLEAN NOT NULL DEFAULT FALSE"),
             new ColumnMigration("customers", "reset_password_token", "VARCHAR(100) NULL"),
             new ColumnMigration("customers", "reset_password_expires_at", "DATETIME NULL"),
-            new ColumnMigration("customers", "last_login_at", "DATETIME NULL")
+            new ColumnMigration("customers", "last_login_at", "DATETIME NULL"),
+            new ColumnMigration("customers", "password_changed_at", "DATETIME NULL"),
+
+            // --- Pedidos creados con sesión de comprador (visibles en "Mi Cuenta") ---
+            new ColumnMigration("orders", "placed_with_account", "BOOLEAN NOT NULL DEFAULT FALSE")
     );
 
     private static final List<IndexMigration> TENANT_INDEX_MIGRATIONS = List.of(

@@ -128,6 +128,20 @@ public class JwtService {
         return null;
     }
 
+    /**
+     * Fecha de emisión (iat) de un token de comprador ya validado; null si no existe o el token no es válido.
+     */
+    public Date extractCustomerTokenIssuedAt(String token) {
+        if (token == null || token.isBlank()) {
+            return null;
+        }
+        final Claims claims = extractAllClaims(token);
+        if (claims == null || !STORE_CUSTOMER_TOKEN_TYPE.equals(claims.get(TOKEN_TYPE_CLAIM))) {
+            return null;
+        }
+        return claims.getIssuedAt();
+    }
+
     public static String buildCustomerCookieName(String slug) {
         String safeSlug = (slug != null) ? slug.trim().toLowerCase().replaceAll("[^a-z0-9_-]", "_") : "default";
         return "storevo_cust_" + safeSlug;

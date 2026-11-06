@@ -26,6 +26,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class CustomerService {
 
+    static final String INVALID_CREDENTIALS_MESSAGE = "Credenciales incorrectas o cuenta no registrada en esta tienda.";
+
     private static final Set<OrderStatus> VALID_SPENT_STATUSES = EnumSet.of(
             OrderStatus.PAID,
             OrderStatus.CONFIRMED,
@@ -186,6 +188,13 @@ public class CustomerService {
         if (customer == null && order.getCustomerEmail() != null && !order.getCustomerEmail().isBlank()) {
             customer = customerRepository.findFirstByEmailIgnoreCaseOrderByHasAccountDescIdDesc(order.getCustomerEmail().trim()).orElse(null);
         }
+
+        // Una cuenta registrada (o la cuenta autenticada que compra) NUNCA se modifica con los datos tecleados
+        // en un pedido: evita que un invitado cambie el email/teléfono de una cuenta ajena (Account Takeover vía
+        // recuperación de contraseña) y que el checkout autenticado altere la identidad de la cuenta.
+        // Los datos de la cuenta solo cambian desde "Mi Cuenta" o con "Guardar estos datos" en el checkout.
+        boolean protectedAccount = customer != null && Boolean.TRUE.equals(customer.getHasAccount());
+
         if (customer == null) {
             customer = Customer.builder()
                     .phoneKey(phoneKey)
@@ -198,38 +207,8 @@ public class CustomerService {
                     .build();
         }
 
-        if (order.getCustomerName() != null && !order.getCustomerName().isBlank()) {
-            customer.setName(order.getCustomerName().trim());
-        }
-        if (order.getCustomerPhone() != null && !order.getCustomerPhone().isBlank()) {
-            customer.setPhone(order.getCustomerPhone().trim());
-        }
-        if (order.getCity() != null && !order.getCity().isBlank()) {
-            customer.setCity(order.getCity().trim());
-        }
-        if (order.getAddress() != null && !order.getAddress().isBlank()) {
-            customer.setAddress(order.getAddress().trim());
-        }
-        if (order.getCustomerEmail() != null && !order.getCustomerEmail().isBlank()) {
-            customer.setEmail(order.getCustomerEmail().trim());
-        }
-        if (order.getDocumentType() != null && !order.getDocumentType().isBlank()) {
-            customer.setDocumentType(order.getDocumentType().trim());
-        }
-        if (order.getCustomerDocument() != null && !order.getCustomerDocument().isBlank()) {
-            customer.setDocument(order.getCustomerDocument().trim());
-        }
-        if (order.getVerificationDigit() != null && !order.getVerificationDigit().isBlank()) {
-            customer.setVerificationDigit(order.getVerificationDigit().trim());
-        }
-        if (order.getLegalName() != null && !order.getLegalName().isBlank()) {
-            customer.setLegalName(order.getLegalName().trim());
-        }
-        if (order.getTaxRegime() != null && !order.getTaxRegime().isBlank()) {
-            customer.setTaxRegime(order.getTaxRegime().trim());
-        }
-        if (Boolean.TRUE.equals(order.getRequiresElectronicInvoice())) {
-            customer.setRequiresElectronicInvoice(true);
+        if (!protectedAccount) {
+            applyOrderContactDataToGuestProfile(customer, order);
         }
 
         long currentOrders = customer.getTotalOrders() != null ? customer.getTotalOrders() : 0L;
@@ -252,6 +231,63 @@ public class CustomerService {
         }
 
         return customerRepository.save(customer);
+    }
+
+    /**
+     * Copia los datos de contacto/facturación del pedido al perfil CRM de un cliente invitado (sin cuenta).
+     */
+    private void applyOrderContactDataToGuestProfile(Customer customer, Order order) {
+        if (order.getCustomerName() != null && !order.getCustomerName().isBlank()) {
+            customer.setName(order.getCustomerName().trim());
+        }
+        if (order.getCustomerPhone() != null && !order.getCustomerPhone().isBlank()) {
+            customer.setPhone(order.getCustomerPhone().trim());
+        }
+        if (order.getCity() != null && !order.getCity().isBlank()) {
+            customer.setCity(order.getCity().trim());
+        }
+        if (order.getAddress() != null && !order.getAddress().isBlank()) {
+            customer.setAddress(order.getAddress().trim());
+        }
+        if (order.getCustomerEmail() != null && !order.getCustomerEmail().isBlank()) {
+            customer.setEmail(order.getCustomerEmail().trim());
+        }
+        if (order.getDocumentType() != null && !order.getDocumentType().isBlank()) {
+            customer.setDocumentType(order.getDocumentType().trim());
+        }
+        if (order.getCustomerDocument() != null && !order.getCustomerDocument().isBlank()) {
+            customer.setDocument(stripVerificationDigit(order.getCustomerDocument(), order.getVerificationDigit()));
+        }
+        if (order.getVerificationDigit() != null && !order.getVerificationDigit().isBlank()) {
+            customer.setVerificationDigit(order.getVerificationDigit().trim());
+        }
+        if (order.getLegalName() != null && !order.getLegalName().isBlank()) {
+            customer.setLegalName(order.getLegalName().trim());
+        }
+        if (order.getTaxRegime() != null && !order.getTaxRegime().isBlank()) {
+            customer.setTaxRegime(order.getTaxRegime().trim());
+        }
+        if (Boolean.TRUE.equals(order.getRequiresElectronicInvoice())) {
+            customer.setRequiresElectronicInvoice(true);
+        }
+    }
+
+    /**
+     * El pedido guarda el documento como "numero-DV"; el perfil lo guarda sin DV (el DV va en su propio campo),
+     * igual que lo hace "Mi Cuenta", para no duplicar el dígito al autocompletar el checkout.
+     */
+    static String stripVerificationDigit(String document, String verificationDigit) {
+        if (document == null) {
+            return null;
+        }
+        String cleanDoc = document.trim();
+        if (verificationDigit != null && !verificationDigit.isBlank()) {
+            String suffix = "-" + verificationDigit.trim();
+            if (cleanDoc.endsWith(suffix) && cleanDoc.length() > suffix.length()) {
+                return cleanDoc.substring(0, cleanDoc.length() - suffix.length());
+            }
+        }
+        return cleanDoc;
     }
 
     /**
@@ -364,7 +400,7 @@ public class CustomerService {
         if (customerId == null) {
             return 0L;
         }
-        return orderRepository.countByCustomerIdAndStatus(customerId, OrderStatus.PENDING);
+        return orderRepository.countByCustomerIdAndStatusAndPlacedWithAccountTrue(customerId, OrderStatus.PENDING);
     }
 
     @Transactional(readOnly = true)
@@ -372,7 +408,9 @@ public class CustomerService {
         if (customerId == null) {
             return Collections.emptyList();
         }
-        List<Order> orders = orderRepository.findByCustomerIdOrderByCreatedAtDesc(customerId);
+        // Solo pedidos creados con la sesión autenticada: los pedidos de invitado vinculados por teléfono/email
+        // en el CRM del comerciante nunca se exponen en el portal del comprador.
+        List<Order> orders = orderRepository.findByCustomerIdAndPlacedWithAccountTrueOrderByCreatedAtDesc(customerId);
         for (Order o : orders) {
             o.getItems().size();
             o.getShipments().size();
@@ -387,8 +425,9 @@ public class CustomerService {
     }
 
     /**
-     * Registra una cuenta de comprador en la tienda actual o promueve un perfil previo de invitado,
-     * reclamando automáticamente todos sus pedidos históricos y fusionando su bolsa y favoritos.
+     * Registra una cuenta de comprador en la tienda actual o promueve un perfil previo de invitado.
+     * Al promover un perfil de invitado se descartan sus datos sensibles previos (dirección, documento,
+     * razón social...) y NO se reclaman pedidos históricos: el portal solo muestra pedidos hechos con la cuenta.
      */
     @Transactional
     public Customer registerCustomerAccount(
@@ -450,21 +489,20 @@ public class CustomerService {
             customer.setName(cleanName);
             customer.setPhone(cleanPhone);
             customer.setEmail(cleanEmail);
+            clearSensitiveGuestData(customer);
         }
 
+        LocalDateTime now = LocalDateTime.now();
         customer.setPasswordHash(passwordEncoder.encode(rawPassword));
         customer.setHasAccount(true);
-        customer.setLastLoginAt(LocalDateTime.now());
+        customer.setLastLoginAt(now);
+        customer.setPasswordChangedAt(now);
         customer.setResetPasswordToken(null);
         customer.setResetPasswordExpiresAt(null);
 
         customer = customerRepository.save(customer);
 
-        // 3. Reclamar pedidos históricos de invitado y recalcular métricas
-        orderRepository.claimGuestOrdersForCustomer(customer, cleanPhone, phoneKey, cleanEmail);
-        recalculateCustomerMetrics(customer);
-
-        // 4. Fusionar bolsa y lista de deseos de invitado hacia la cuenta
+        // 3. Fusionar bolsa y lista de deseos de invitado hacia la cuenta
         cartManager.mergeGuestCartIntoCustomerCart(guestSessionId, customer.getId());
         wishlistManager.mergeGuestWishlistIntoCustomerWishlist(guestSessionId, customer.getId());
 
@@ -491,21 +529,18 @@ public class CustomerService {
                     : Optional.empty();
         }
 
-        Customer customer = candidateOpt
+        // Mensaje único para no revelar si la cuenta existe (enumeración de usuarios)
+        Customer candidate = candidateOpt
                 .filter(c -> Boolean.TRUE.equals(c.getHasAccount()) && c.getPasswordHash() != null)
-                .orElseThrow(() -> new IllegalArgumentException("Credenciales incorrectas o cuenta no registrada en esta tienda."));
+                .orElseThrow(() -> new IllegalArgumentException(INVALID_CREDENTIALS_MESSAGE));
 
-        if (!passwordEncoder.matches(rawPassword, customer.getPasswordHash())) {
-            throw new IllegalArgumentException("Credenciales incorrectas. Verifica tu contraseña.");
+        if (!passwordEncoder.matches(rawPassword, candidate.getPasswordHash())) {
+            throw new IllegalArgumentException(INVALID_CREDENTIALS_MESSAGE);
         }
 
+        Customer customer = candidate;
         customer.setLastLoginAt(LocalDateTime.now());
         customer = customerRepository.save(customer);
-
-        // Vincular cualquier pedido reciente que haya hecho como invitado con su teléfono o correo
-        String normPhone = normalizePhoneKey(customer.getPhone());
-        orderRepository.claimGuestOrdersForCustomer(customer, customer.getPhone(), normPhone, customer.getEmail());
-        recalculateCustomerMetrics(customer);
 
         // Fusionar bolsa y favoritos de la sesión anónima actual
         cartManager.mergeGuestCartIntoCustomerCart(guestSessionId, customer.getId());
@@ -598,6 +633,7 @@ public class CustomerService {
         }
 
         customer.setPasswordHash(passwordEncoder.encode(newPassword));
+        customer.setPasswordChangedAt(LocalDateTime.now());
         customerRepository.save(customer);
     }
 
@@ -621,7 +657,8 @@ public class CustomerService {
 
         customerOpt.filter(c -> c.getEmail() != null && !c.getEmail().isBlank()).ifPresent(customer -> {
             String token = UUID.randomUUID().toString();
-            customer.setResetPasswordToken(token);
+            // En BD solo se guarda el hash SHA-256: una fuga de la tabla no permite usar enlaces vigentes
+            customer.setResetPasswordToken(hashResetToken(token));
             customer.setResetPasswordExpiresAt(LocalDateTime.now().plusMinutes(30));
             customerRepository.save(customer);
 
@@ -629,8 +666,10 @@ public class CustomerService {
                     ? (baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl.trim())
                     : "http://localhost:8080";
             String resetLink = cleanBase + "/s/" + store.getSlug() + "/account/reset-password?token=" + token;
-            emailNotificationService.sendStoreCustomerPasswordResetEmail(
-                    store, settings, customer.getEmail(), customer.getName(), resetLink);
+            final String toEmail = customer.getEmail();
+            final String toName = customer.getName();
+            runAfterCommit(() -> emailNotificationService.sendStoreCustomerPasswordResetEmail(
+                    store, settings, toEmail, toName, resetLink));
         });
     }
 
@@ -639,10 +678,49 @@ public class CustomerService {
         if (token == null || token.isBlank()) {
             return false;
         }
-        return customerRepository.findByResetPasswordToken(token.trim())
+        return customerRepository.findByResetPasswordToken(hashResetToken(token.trim()))
                 .filter(c -> c.getResetPasswordExpiresAt() != null
                         && c.getResetPasswordExpiresAt().isAfter(LocalDateTime.now()))
                 .isPresent();
+    }
+
+    static String hashResetToken(String rawToken) {
+        try {
+            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(rawToken.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            return java.util.HexFormat.of().formatHex(hash);
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 no disponible", e);
+        }
+    }
+
+    private void runAfterCommit(Runnable task) {
+        if (org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive()) {
+            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                    new org.springframework.transaction.support.TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            task.run();
+                        }
+                    });
+        } else {
+            task.run();
+        }
+    }
+
+    /**
+     * Descarta los datos sensibles heredados de un perfil de invitado cuando se convierte en cuenta,
+     * para que quien activa la cuenta no vea direcciones/documentos tecleados previamente por otra persona.
+     */
+    private void clearSensitiveGuestData(Customer customer) {
+        customer.setAddress(null);
+        customer.setCity(null);
+        customer.setDocumentType(null);
+        customer.setDocument(null);
+        customer.setVerificationDigit(null);
+        customer.setLegalName(null);
+        customer.setTaxRegime(null);
+        customer.setRequiresElectronicInvoice(false);
     }
 
     @Transactional
@@ -653,7 +731,7 @@ public class CustomerService {
         if (newPassword == null || newPassword.trim().length() < 8) {
             throw new IllegalArgumentException("La nueva contraseña debe tener al menos 8 caracteres.");
         }
-        Customer customer = customerRepository.findByResetPasswordToken(token.trim())
+        Customer customer = customerRepository.findByResetPasswordToken(hashResetToken(token.trim()))
                 .orElseThrow(() -> new IllegalArgumentException("El enlace de recuperación no es válido o ya fue utilizado."));
 
         if (customer.getResetPasswordExpiresAt() == null
@@ -661,7 +739,12 @@ public class CustomerService {
             throw new IllegalArgumentException("El enlace de recuperación ha expirado. Solicita uno nuevo.");
         }
 
+        // Si el enlace activa por primera vez un perfil de invitado, se aplica la misma limpieza que en el registro
+        if (!Boolean.TRUE.equals(customer.getHasAccount())) {
+            clearSensitiveGuestData(customer);
+        }
         customer.setPasswordHash(passwordEncoder.encode(newPassword));
+        customer.setPasswordChangedAt(LocalDateTime.now());
         customer.setHasAccount(true);
         customer.setResetPasswordToken(null);
         customer.setResetPasswordExpiresAt(null);

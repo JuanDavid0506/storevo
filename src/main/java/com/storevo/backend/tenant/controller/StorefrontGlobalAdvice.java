@@ -116,7 +116,8 @@ public class StorefrontGlobalAdvice {
             if (validatedCustomerId != null) {
                 com.storevo.backend.tenant.model.Customer candidate =
                         customerService.getCustomerEntityById(validatedCustomerId);
-                if (candidate != null && Boolean.TRUE.equals(candidate.getHasAccount())) {
+                if (candidate != null && Boolean.TRUE.equals(candidate.getHasAccount())
+                        && !isTokenIssuedBeforePasswordChange(customerToken, candidate)) {
                     loggedCustomer = candidate;
                     activeSessionId = CartManager.buildCustomerSessionId(loggedCustomer.getId());
                 }
@@ -149,5 +150,24 @@ public class StorefrontGlobalAdvice {
         model.addAttribute("cartCount", cartManager.getCartCount(activeSessionId));
         model.addAttribute("wishlistCount", wishlistManager.getWishlistCount(activeSessionId));
         model.addAttribute("wishlistProductIds", wishlistManager.getWishlist(activeSessionId));
+    }
+
+    /**
+     * Un cambio o restablecimiento de contraseña invalida todas las sesiones emitidas antes de ese momento.
+     * Se compara a resolución de segundos porque el claim iat del JWT no guarda milisegundos.
+     */
+    private boolean isTokenIssuedBeforePasswordChange(String token, com.storevo.backend.tenant.model.Customer customer) {
+        if (customer.getPasswordChangedAt() == null) {
+            return false;
+        }
+        java.util.Date issuedAt = jwtService.extractCustomerTokenIssuedAt(token);
+        if (issuedAt == null) {
+            return true;
+        }
+        long changedAtSeconds = customer.getPasswordChangedAt()
+                .atZone(java.time.ZoneId.systemDefault())
+                .toEpochSecond();
+        long issuedAtSeconds = issuedAt.toInstant().getEpochSecond();
+        return issuedAtSeconds < changedAtSeconds;
     }
 }

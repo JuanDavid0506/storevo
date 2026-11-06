@@ -146,6 +146,13 @@ public class StoreCustomerAuthController {
         }
     }
 
+    @GetMapping("/register")
+    public String showRegisterPage(@PathVariable String slug, @RequestParam(required = false) String redirect) {
+        String safeRedirect = sanitizeRedirect(slug, redirect);
+        return "redirect:/s/" + slug + "/account/login?tab=register"
+                + (safeRedirect != null ? "&redirect=" + safeRedirect : "");
+    }
+
     @PostMapping("/register")
     public String processCustomerRegister(
             @PathVariable String slug,
@@ -204,7 +211,7 @@ public class StoreCustomerAuthController {
         }
     }
 
-    @RequestMapping(value = "/logout", method = {RequestMethod.POST, RequestMethod.GET})
+    @PostMapping("/logout")
     public String logoutCustomer(
             @PathVariable String slug,
             HttpServletRequest request,
@@ -234,6 +241,11 @@ public class StoreCustomerAuthController {
         Customer loggedCustomer = (Customer) request.getAttribute("loggedCustomer");
         if (loggedCustomer == null) {
             return "redirect:/s/" + slug + "/account/login";
+        }
+
+        if (!rateLimitService.tryConsumeByIp(request, "cust_profile_" + slug, 10, Duration.ofMinutes(1))) {
+            redirectAttributes.addFlashAttribute("accountError", RateLimitService.RATE_LIMIT_MESSAGE);
+            return "redirect:/s/" + slug + "/account?tab=profile";
         }
 
         Store store = (Store) request.getAttribute("currentStore");
@@ -273,11 +285,17 @@ public class StoreCustomerAuthController {
             @RequestParam String newPassword,
             @RequestParam(required = false) String confirmPassword,
             HttpServletRequest request,
+            HttpServletResponse response,
             RedirectAttributes redirectAttributes) {
 
         Customer loggedCustomer = (Customer) request.getAttribute("loggedCustomer");
         if (loggedCustomer == null) {
             return "redirect:/s/" + slug + "/account/login";
+        }
+
+        if (!rateLimitService.tryConsumeByIp(request, "cust_password_" + slug, 5, Duration.ofMinutes(1))) {
+            redirectAttributes.addFlashAttribute("accountError", RateLimitService.RATE_LIMIT_MESSAGE);
+            return "redirect:/s/" + slug + "/account?tab=profile";
         }
 
         Store store = (Store) request.getAttribute("currentStore");
@@ -292,6 +310,10 @@ public class StoreCustomerAuthController {
 
         try {
             customerService.changeCustomerPassword(loggedCustomer.getId(), currentPassword, newPassword);
+            // El cambio invalida las sesiones anteriores (password_changed_at); se emite una nueva para este dispositivo
+            if (store != null) {
+                setCustomerJwtCookie(request, response, store, slug, loggedCustomer.getId(), false);
+            }
             redirectAttributes.addFlashAttribute("accountSuccess", "Tu contraseña ha sido actualizada exitosamente.");
         } catch (IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("accountError", e.getMessage());
@@ -346,6 +368,11 @@ public class StoreCustomerAuthController {
             Model model,
             RedirectAttributes redirectAttributes) {
 
+        if (!rateLimitService.tryConsumeByIp(request, "cust_reset_view_" + slug, 20, Duration.ofMinutes(1))) {
+            redirectAttributes.addFlashAttribute("authError", RateLimitService.RATE_LIMIT_MESSAGE);
+            return "redirect:/s/" + slug + "/account/forgot-password";
+        }
+
         Store store = (Store) request.getAttribute("currentStore");
         if (store != null) {
             TenantContext.setCurrentTenant(store.getSchemaName());
@@ -372,6 +399,11 @@ public class StoreCustomerAuthController {
             @RequestParam(required = false) String confirmPassword,
             HttpServletRequest request,
             RedirectAttributes redirectAttributes) {
+
+        if (!rateLimitService.tryConsumeByIp(request, "cust_reset_submit_" + slug, 6, Duration.ofMinutes(1))) {
+            redirectAttributes.addFlashAttribute("authError", RateLimitService.RATE_LIMIT_MESSAGE);
+            return "redirect:/s/" + slug + "/account/forgot-password";
+        }
 
         Store store = (Store) request.getAttribute("currentStore");
         if (store != null) {
