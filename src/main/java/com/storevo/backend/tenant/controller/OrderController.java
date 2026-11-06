@@ -235,9 +235,14 @@ public class OrderController {
 
         Order order = orderService.getOrderByPublicToken(token);
 
-        String redirectTarget = "whatsapp".equalsIgnoreCase(origin)
-                ? "redirect:/s/" + slug + "/order/" + order.getPublicToken() + "/whatsapp?reviewed=true"
-                : "redirect:/s/" + slug + "/order/" + order.getPublicToken() + "/wompi-result";
+        String redirectTarget;
+        if ("account".equalsIgnoreCase(origin)) {
+            redirectTarget = "redirect:/s/" + slug + "/account?reviewed=true";
+        } else if ("whatsapp".equalsIgnoreCase(origin)) {
+            redirectTarget = "redirect:/s/" + slug + "/order/" + order.getPublicToken() + "/whatsapp?reviewed=true";
+        } else {
+            redirectTarget = "redirect:/s/" + slug + "/order/" + order.getPublicToken() + "/wompi-result";
+        }
 
         if (!rateLimitService.tryConsumeByIp(request, "order_review_" + slug, 6, java.time.Duration.ofMinutes(1))) {
             redirectAttributes.addFlashAttribute("reviewError", com.storevo.backend.config.security.RateLimitService.RATE_LIMIT_MESSAGE);

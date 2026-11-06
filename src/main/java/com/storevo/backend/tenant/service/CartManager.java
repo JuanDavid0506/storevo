@@ -273,4 +273,102 @@ public class CartManager {
         if (sessionId == null) return;
         cartItemRepository.deleteBySessionId(sessionId);
     }
+
+    public static String buildCustomerSessionId(Long customerId) {
+        return customerId != null ? "cust:" + customerId : null;
+    }
+
+    /**
+     * Fusiona los productos que el visitante tenía en su bolsa de invitado (guestSessionId)
+     * hacia la bolsa persistente de su cuenta (cust:{customerId}), respetando límites de stock.
+     */
+    @Transactional
+    public void mergeGuestCartIntoCustomerCart(String guestSessionId, Long customerId) {
+        if (guestSessionId == null || guestSessionId.isBlank() || customerId == null) {
+            return;
+        }
+        String cleanGuestId = guestSessionId.endsWith(":direct")
+                ? guestSessionId.substring(0, guestSessionId.length() - ":direct".length())
+                : guestSessionId.trim();
+        String customerSessionId = buildCustomerSessionId(customerId);
+        if (cleanGuestId.isEmpty() || cleanGuestId.equals(customerSessionId) || cleanGuestId.startsWith("cust:")) {
+            return;
+        }
+
+        List<CartItem> guestItems = cartItemRepository.findBySessionId(cleanGuestId);
+        if (guestItems == null || guestItems.isEmpty()) {
+            return;
+        }
+
+        for (CartItem guestItem : guestItems) {
+            if (guestItem == null || guestItem.getProduct() == null || guestItem.getQuantity() == null || guestItem.getQuantity() <= 0) {
+                continue;
+            }
+            Product product = guestItem.getProduct();
+            if (Boolean.TRUE.equals(product.getIsDeleted())
+                    || !Boolean.TRUE.equals(product.getIsActive())
+                    || Boolean.TRUE.equals(product.getIsDraft())) {
+                continue;
+            }
+
+            ProductVariant variant = guestItem.getVariant();
+            Long verifiedVariantId = null;
+            int maxAvailableStock;
+
+            if (Boolean.TRUE.equals(product.getHasVariants())) {
+                if (variant == null || !Boolean.TRUE.equals(variant.getIsActive())
+                        || variant.getProduct() == null || !product.getId().equals(variant.getProduct().getId())) {
+                    continue;
+                }
+                verifiedVariantId = variant.getId();
+                maxAvailableStock = variant.getStock() != null ? Math.max(0, variant.getStock()) : 0;
+            } else {
+                if (variant != null) {
+                    continue;
+                }
+                maxAvailableStock = product.getStock() != null ? Math.max(0, product.getStock()) : 0;
+            }
+
+            Double effectivePrice = resolveEffectivePrice(product, variant);
+            if (effectivePrice == null || effectivePrice <= 0.0) {
+                continue;
+            }
+
+            boolean isMadeToOrder = Boolean.TRUE.equals(product.getIsMadeToOrder());
+            if (!isMadeToOrder && maxAvailableStock <= 0) {
+                continue;
+            }
+
+            Optional<CartItem> existingCustomerItemOpt = cartItemRepository.findBySessionIdAndProductIdAndVariantId(
+                    customerSessionId, product.getId(), verifiedVariantId);
+
+            if (existingCustomerItemOpt.isPresent()) {
+                CartItem existing = existingCustomerItemOpt.get();
+                int currentQty = existing.getQuantity() != null ? existing.getQuantity() : 0;
+                int mergedQty = currentQty + guestItem.getQuantity();
+                if (!isMadeToOrder) {
+                    mergedQty = Math.min(mergedQty, Math.max(currentQty, maxAvailableStock));
+                }
+                if (mergedQty > 0) {
+                    existing.setQuantity(mergedQty);
+                    cartItemRepository.save(existing);
+                }
+            } else {
+                int targetQty = isMadeToOrder
+                        ? guestItem.getQuantity()
+                        : Math.min(guestItem.getQuantity(), maxAvailableStock);
+                if (targetQty > 0) {
+                    CartItem migrated = CartItem.builder()
+                            .sessionId(customerSessionId)
+                            .product(product)
+                            .variant(variant)
+                            .quantity(targetQty)
+                            .build();
+                    cartItemRepository.save(migrated);
+                }
+            }
+        }
+
+        cartItemRepository.deleteBySessionId(cleanGuestId);
+    }
 }

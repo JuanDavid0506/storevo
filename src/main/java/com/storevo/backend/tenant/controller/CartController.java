@@ -36,6 +36,7 @@ public class CartController {
     private final CartManager cartManager;
     private final ProductService productService;
     private final OrderService orderService;
+    private final com.storevo.backend.tenant.service.CustomerService customerService;
     private final com.storevo.backend.tenant.service.CouponService couponService;
     private final com.storevo.backend.config.security.RateLimitService rateLimitService;
     private final ProductVariantRepository variantRepository;
@@ -525,6 +526,7 @@ public class CartController {
             @RequestParam(required = false) String mode,
             @RequestParam(required = false, defaultValue = "false") Boolean onlyInStockItems,
             @RequestParam(required = false) String couponCode,
+            @RequestParam(required = false, defaultValue = "false") Boolean saveProfileData,
             HttpServletRequest request,
             RedirectAttributes redirectAttributes) {
 
@@ -547,6 +549,20 @@ public class CartController {
         }
 
         String finalDoc = formatDocumentWithDv(customerDocument, verificationDigit);
+        com.storevo.backend.tenant.model.Customer loggedCustomer =
+                (com.storevo.backend.tenant.model.Customer) request.getAttribute("loggedCustomer");
+        Long authCustomerId = loggedCustomer != null ? loggedCustomer.getId() : null;
+
+        if (authCustomerId != null && Boolean.TRUE.equals(saveProfileData)) {
+            try {
+                customerService.updateAuthenticatedCustomerProfile(
+                        authCustomerId, customerName, customerPhone, customerEmail,
+                        city, address, documentType, customerDocument, verificationDigit,
+                        legalName, taxRegime, requiresElectronicInvoice
+                );
+            } catch (Exception ignored) {
+            }
+        }
 
         try {
             Order order = orderService.createOrderFromCart(
@@ -554,7 +570,8 @@ public class CartController {
                     documentType, finalDoc, verificationDigit, legalName, taxRegime, requiresElectronicInvoice,
                     address, city, deliveryMethod, notes, OrderChannel.ONLINE,
                     Boolean.TRUE.equals(onlyInStockItems),
-                    couponCode
+                    couponCode,
+                    authCustomerId
             );
             return "redirect:/s/" + slug + "/order/" + order.getPublicToken() + "/success";
         } catch (com.storevo.backend.tenant.exception.InsufficientStockException | IllegalArgumentException e) {
@@ -585,6 +602,7 @@ public class CartController {
             @RequestParam(required = false) String notes,
             @RequestParam(required = false) String mode,
             @RequestParam(required = false) String couponCode,
+            @RequestParam(required = false, defaultValue = "false") Boolean saveProfileData,
             HttpServletRequest request,
             RedirectAttributes redirectAttributes) {
 
@@ -598,6 +616,20 @@ public class CartController {
         boolean isDirect = "direct".equalsIgnoreCase(mode);
         String cartSessionId = isDirect ? (guestId + ":direct") : guestId;
         String finalDoc = formatDocumentWithDv(customerDocument, verificationDigit);
+        com.storevo.backend.tenant.model.Customer loggedCustomer =
+                (com.storevo.backend.tenant.model.Customer) request.getAttribute("loggedCustomer");
+        Long authCustomerId = loggedCustomer != null ? loggedCustomer.getId() : null;
+
+        if (authCustomerId != null && Boolean.TRUE.equals(saveProfileData)) {
+            try {
+                customerService.updateAuthenticatedCustomerProfile(
+                        authCustomerId, customerName, customerPhone, customerEmail,
+                        city, address, documentType, customerDocument, verificationDigit,
+                        legalName, taxRegime, requiresElectronicInvoice
+                );
+            } catch (Exception ignored) {
+            }
+        }
 
         try {
             Order order = orderService.createOrderFromCart(
@@ -605,7 +637,8 @@ public class CartController {
                     documentType, finalDoc, verificationDigit, legalName, taxRegime, requiresElectronicInvoice,
                     address, city, deliveryMethod, notes, OrderChannel.WHATSAPP,
                     false,
-                    couponCode
+                    couponCode,
+                    authCustomerId
             );
             return "redirect:/s/" + slug + "/order/" + order.getPublicToken() + "/whatsapp";
         } catch (com.storevo.backend.tenant.exception.InsufficientStockException | IllegalArgumentException e) {

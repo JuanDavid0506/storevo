@@ -71,6 +71,24 @@ public class Customer {
     @Column(name = "last_channel", length = 20)
     private OrderChannel lastChannel;
 
+    @Column(name = "password_hash", length = 255)
+    @ToString.Exclude
+    private String passwordHash;
+
+    @Column(name = "has_account", nullable = false)
+    @Builder.Default
+    private Boolean hasAccount = false;
+
+    @Column(name = "reset_password_token", length = 100)
+    @ToString.Exclude
+    private String resetPasswordToken;
+
+    @Column(name = "reset_password_expires_at")
+    private LocalDateTime resetPasswordExpiresAt;
+
+    @Column(name = "last_login_at")
+    private LocalDateTime lastLoginAt;
+
     @Column(name = "channels_csv", length = 60)
     private String channelsCsv;
 
@@ -85,6 +103,7 @@ public class Customer {
         if (this.totalOrders == null) this.totalOrders = 0L;
         if (this.totalSpent == null) this.totalSpent = 0.0;
         if (this.requiresElectronicInvoice == null) this.requiresElectronicInvoice = false;
+        if (this.hasAccount == null) this.hasAccount = false;
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
     }

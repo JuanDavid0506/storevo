@@ -26,7 +26,8 @@ import java.util.UUID;
         StoreFrontController.class,
         CartController.class,
         WishlistController.class,
-        OrderController.class
+        OrderController.class,
+        StoreCustomerAuthController.class
 })
 @RequiredArgsConstructor
 public class StorefrontGlobalAdvice {
@@ -36,6 +37,8 @@ public class StorefrontGlobalAdvice {
     private final CategoryService categoryService;
     private final CartManager cartManager;
     private final WishlistManager wishlistManager;
+    private final com.storevo.backend.config.security.JwtService jwtService;
+    private final com.storevo.backend.tenant.service.CustomerService customerService;
 
     @ModelAttribute
     public void loadGlobalStoreData(Model model, HttpServletRequest request, HttpServletResponse response) {
@@ -49,21 +52,25 @@ public class StorefrontGlobalAdvice {
             return;
         }
 
-        // --- GENERACIÓN DE LA CÉDULA (COOKIE UUID) ---
-        String guestId = null;
+        // --- GENERACIÓN DE LA CÉDULA DE INVITADO (COOKIE UUID) ---
+        String rawGuestId = null;
+        String customerToken = null;
+        String expectedCustCookieName = com.storevo.backend.config.security.JwtService.buildCustomerCookieName(slug);
+
         if (request.getCookies() != null) {
             for (Cookie cookie : request.getCookies()) {
                 if ("storevo_guest_id".equals(cookie.getName())) {
-                    guestId = cookie.getValue();
-                    break;
+                    rawGuestId = cookie.getValue();
+                } else if (expectedCustCookieName.equals(cookie.getName())) {
+                    customerToken = cookie.getValue();
                 }
             }
         }
 
-        if (guestId == null || guestId.isBlank()) {
-            guestId = UUID.randomUUID().toString();
+        if (rawGuestId == null || rawGuestId.isBlank()) {
+            rawGuestId = UUID.randomUUID().toString();
             org.springframework.http.ResponseCookie guestCookie = org.springframework.http.ResponseCookie
-                    .from("storevo_guest_id", guestId)
+                    .from("storevo_guest_id", rawGuestId)
                     .httpOnly(true)
                     .secure(request.isSecure())
                     .path("/")
@@ -73,7 +80,7 @@ public class StorefrontGlobalAdvice {
             response.addHeader(org.springframework.http.HttpHeaders.SET_COOKIE, guestCookie.toString());
         }
 
-        request.setAttribute("guestId", guestId);
+        request.setAttribute("rawGuestId", rawGuestId);
 
         // 1. Consultar base de datos de ADMIN antes de cambiar el contexto
         TenantContext.clear();
@@ -99,14 +106,48 @@ public class StorefrontGlobalAdvice {
         // 2. Bajar el switch: Cambiar al esquema del Tenant
         TenantContext.setCurrentTenant(store.getSchemaName());
 
-        // 3. Consultar base de datos del TENANT para Navbar y Colecciones (con fotos en los 3 niveles)
+        // 3. Resolver sesión aislada del comprador en esta tienda (si existe cookie storevo_cust_{slug})
+        String activeSessionId = rawGuestId;
+        com.storevo.backend.tenant.model.Customer loggedCustomer = null;
+
+        if (customerToken != null && !customerToken.isBlank()) {
+            Long validatedCustomerId = jwtService.extractValidatedCustomerId(
+                    customerToken, store.getSchemaName(), slug);
+            if (validatedCustomerId != null) {
+                com.storevo.backend.tenant.model.Customer candidate =
+                        customerService.getCustomerEntityById(validatedCustomerId);
+                if (candidate != null && Boolean.TRUE.equals(candidate.getHasAccount())) {
+                    loggedCustomer = candidate;
+                    activeSessionId = CartManager.buildCustomerSessionId(loggedCustomer.getId());
+                }
+            }
+            if (loggedCustomer == null) {
+                org.springframework.http.ResponseCookie clearCookie = org.springframework.http.ResponseCookie
+                        .from(expectedCustCookieName, "")
+                        .httpOnly(true)
+                        .secure(request.isSecure())
+                        .path("/s/" + slug)
+                        .maxAge(0)
+                        .sameSite("Lax")
+                        .build();
+                response.addHeader(org.springframework.http.HttpHeaders.SET_COOKIE, clearCookie.toString());
+            }
+        }
+
+        request.setAttribute("guestId", activeSessionId);
+        request.setAttribute("loggedCustomer", loggedCustomer);
+        model.addAttribute("loggedCustomer", loggedCustomer);
+        model.addAttribute("customerPendingOrdersCount",
+                loggedCustomer != null ? customerService.countPendingOrdersByCustomerId(loggedCustomer.getId()) : 0L);
+
+        // 4. Consultar base de datos del TENANT para Navbar y Colecciones (con fotos en los 3 niveles)
         model.addAttribute("categories", categoryService.getAllCategories());
         model.addAttribute("navCategories", categoryService.getNavCategories());
         model.addAttribute("categoryImageMap", categoryService.getCategoryImagesMap());
 
-        // 4. Contadores de Bolsa y Favoritos del visitante
-        model.addAttribute("cartCount", cartManager.getCartCount(guestId));
-        model.addAttribute("wishlistCount", wishlistManager.getWishlistCount(guestId));
-        model.addAttribute("wishlistProductIds", wishlistManager.getWishlist(guestId));
+        // 5. Contadores de Bolsa y Favoritos del visitante o comprador autenticado
+        model.addAttribute("cartCount", cartManager.getCartCount(activeSessionId));
+        model.addAttribute("wishlistCount", wishlistManager.getWishlistCount(activeSessionId));
+        model.addAttribute("wishlistProductIds", wishlistManager.getWishlist(activeSessionId));
     }
 }

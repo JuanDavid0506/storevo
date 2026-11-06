@@ -119,9 +119,35 @@
             </div>
             <input th:unless="${allowPickup}" type="hidden" name="deliveryMethod" value="SHIPPING">
 
+            <!-- Banner de Cuenta de Comprador (Autocompletado o invitación a iniciar sesión) -->
+            <div th:if="${loggedCustomer == null}" class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3">
+                <div class="text-xs text-slate-600">
+                    <span class="font-bold text-slate-900 block">¿Ya tienes cuenta en esta tienda?</span>
+                    <span>Inicia sesión para autocompletar tus datos de envío y guardar tu pedido en tu historial.</span>
+                </div>
+                <a th:href="@{/s/{slug}/account/login(slug=${slug}, redirect=${isDirectBuy == true ? '/s/' + slug + '/cart/checkout?mode=direct' : '/s/' + slug + '/cart/checkout'})}"
+                   data-no-spa="true"
+                   class="px-3.5 py-2 rounded-xl bg-brand text-white text-xs font-bold shadow-2xs hover-bg-brand transition shrink-0">
+                    Iniciar sesión
+                </a>
+            </div>
+
+            <div th:if="${loggedCustomer != null}" class="p-3.5 rounded-xl bg-emerald-50/80 border border-emerald-200 flex items-center justify-between gap-3">
+                <div class="text-xs text-emerald-950">
+                    <span class="font-bold block" th:text="${'Comprando como ' + loggedCustomer.name}">Comprando con tu cuenta</span>
+                    <span class="text-emerald-700">Hemos autocompletado tus datos guardados.</span>
+                </div>
+                <a th:href="@{/s/{slug}/account(slug=${slug})}"
+                   data-no-spa="true"
+                   class="text-xs font-bold text-brand hover:underline shrink-0">
+                    Mi Cuenta →
+                </a>
+            </div>
+
             <div>
                 <label for="checkout-name" class="block text-sm font-bold text-slate-700 mb-1">Nombre Completo <span class="text-red-500">*</span></label>
                 <input type="text" name="customerName" id="checkout-name" required
+                       th:value="${loggedCustomer != null ? loggedCustomer.name : ''}"
                        placeholder="Nombre y apellidos de quien recibe"
                        class="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-brand focus:border-brand text-sm text-slate-900">
             </div>
@@ -130,6 +156,7 @@
                 <div>
                     <label for="checkout-phone" class="block text-sm font-bold text-slate-700 mb-1">Teléfono / WhatsApp <span class="text-red-500">*</span></label>
                     <input type="tel" name="customerPhone" id="checkout-phone" required
+                           th:value="${loggedCustomer != null ? loggedCustomer.phone : ''}"
                            placeholder="Ej: 3001234567"
                            class="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-brand focus:border-brand text-sm text-slate-900">
                 </div>
@@ -141,6 +168,7 @@
                     </label>
                     <input type="email" name="customerEmail" id="checkout-email"
                            th:required="${!requiresWhatsapp}"
+                           th:value="${loggedCustomer != null and loggedCustomer.email != null ? loggedCustomer.email : ''}"
                            placeholder="Para comprobante y guía"
                            class="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-brand focus:border-brand text-sm text-slate-900">
                 </div>
@@ -155,9 +183,11 @@
                 <div class="flex gap-2">
                     <input type="text" name="customerDocument" id="checkout-document"
                            th:required="${!requiresWhatsapp}"
+                           th:value="${loggedCustomer != null and loggedCustomer.document != null ? loggedCustomer.document : ''}"
                            class="flex-1 px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-brand focus:border-brand text-sm text-slate-900"
                            placeholder="Para tu guía de envío o factura">
                     <input type="text" name="verificationDigit" id="checkout-nit-dv" maxlength="1"
+                           th:value="${loggedCustomer != null and loggedCustomer.verificationDigit != null ? loggedCustomer.verificationDigit : ''}"
                            placeholder="DV" title="Dígito de verificación del NIT"
                            class="hidden w-16 text-center px-2 py-2.5 border border-slate-300 rounded-xl focus:ring-brand focus:border-brand text-sm font-mono text-slate-900">
                 </div>
@@ -167,6 +197,7 @@
                 <div>
                     <label for="checkout-city" class="block text-sm font-bold text-slate-700 mb-1">Ciudad / Municipio <span id="city-req-star" class="text-red-500">*</span></label>
                     <input type="text" name="city" id="checkout-city" list="colombia-cities-list" required
+                           th:value="${loggedCustomer != null and loggedCustomer.city != null ? loggedCustomer.city : ''}"
                            placeholder="Ej: Bogotá, Medellín..."
                            class="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-brand focus:border-brand text-sm text-slate-900">
                     <datalist id="colombia-cities-list">
@@ -204,6 +235,7 @@
                 <div>
                     <label for="checkout-address" class="block text-sm font-bold text-slate-700 mb-1">Dirección de Entrega <span id="address-req-star" class="text-red-500">*</span></label>
                     <input type="text" name="address" id="checkout-address" required
+                           th:value="${loggedCustomer != null and loggedCustomer.address != null ? loggedCustomer.address : ''}"
                            placeholder="Calle/Carrera, #, Apto/Barrio"
                            class="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-brand focus:border-brand text-sm text-slate-900">
                 </div>
@@ -213,6 +245,7 @@
             <div class="pt-2 border-t border-slate-100">
                 <label class="flex items-center gap-2.5 cursor-pointer select-none py-1">
                     <input type="checkbox" name="requiresElectronicInvoice" id="toggle-electronic-invoice" value="true"
+                           th:checked="${loggedCustomer != null and loggedCustomer.requiresElectronicInvoice == true}"
                            class="w-4 h-4 rounded border-slate-300 text-brand focus:ring-brand">
                     <span class="text-sm font-medium text-slate-700">Requiero factura electrónica con datos fiscales (Empresa / RUT)</span>
                 </label>
@@ -223,29 +256,39 @@
                             <label for="checkout-doc-type" class="block text-xs font-bold uppercase text-slate-600 mb-1">Tipo de Documento</label>
                             <select name="documentType" id="checkout-doc-type"
                                     class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-900">
-                                <option value="CC">Cédula de Ciudadanía (CC)</option>
-                                <option value="NIT">NIT (Empresa)</option>
-                                <option value="CE">Cédula de Extranjería (CE)</option>
-                                <option value="PP">Pasaporte</option>
+                                <option value="CC" th:selected="${loggedCustomer == null or loggedCustomer.documentType == null or loggedCustomer.documentType == 'CC'}">Cédula de Ciudadanía (CC)</option>
+                                <option value="NIT" th:selected="${loggedCustomer != null and loggedCustomer.documentType == 'NIT'}">NIT (Empresa)</option>
+                                <option value="CE" th:selected="${loggedCustomer != null and loggedCustomer.documentType == 'CE'}">Cédula de Extranjería (CE)</option>
+                                <option value="PP" th:selected="${loggedCustomer != null and loggedCustomer.documentType == 'PP'}">Pasaporte</option>
                             </select>
                         </div>
                         <div>
                             <label for="checkout-tax-regime" class="block text-xs font-bold uppercase text-slate-600 mb-1">Régimen / Responsabilidad</label>
                             <select name="taxRegime" id="checkout-tax-regime"
                                     class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-900">
-                                <option value="R-99-PN">No responsable de IVA (Persona Natural)</option>
-                                <option value="IVA">Responsable de IVA (Régimen Común)</option>
-                                <option value="SIMPLE">Régimen Simple de Tributación</option>
+                                <option value="R-99-PN" th:selected="${loggedCustomer == null or loggedCustomer.taxRegime == null or loggedCustomer.taxRegime == 'R-99-PN'}">No responsable de IVA (Persona Natural)</option>
+                                <option value="IVA" th:selected="${loggedCustomer != null and loggedCustomer.taxRegime == 'IVA'}">Responsable de IVA (Régimen Común)</option>
+                                <option value="SIMPLE" th:selected="${loggedCustomer != null and loggedCustomer.taxRegime == 'SIMPLE'}">Régimen Simple de Tributación</option>
                             </select>
                         </div>
                     </div>
                     <div>
                         <label for="checkout-legal-name" class="block text-xs font-bold uppercase text-slate-600 mb-1">Razón Social o Nombre Fiscal <span class="text-red-500">*</span></label>
                         <input type="text" name="legalName" id="checkout-legal-name"
+                               th:value="${loggedCustomer != null and loggedCustomer.legalName != null ? loggedCustomer.legalName : ''}"
                                placeholder="Nombre de la empresa o titular fiscal"
                                class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-900">
                     </div>
                 </div>
+            </div>
+
+            <!-- Opción para guardar cambios en la cuenta del comprador autenticado -->
+            <div th:if="${loggedCustomer != null}" class="pt-1">
+                <label class="flex items-center gap-2.5 cursor-pointer select-none">
+                    <input type="checkbox" name="saveProfileData" value="true" checked
+                           class="w-4 h-4 rounded border-slate-300 text-brand focus:ring-brand">
+                    <span class="text-xs font-semibold text-slate-600">Guardar estos datos como mi dirección predeterminada para futuras compras</span>
+                </label>
             </div>
 
             <div>

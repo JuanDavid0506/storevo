@@ -279,9 +279,6 @@ public class OrderService {
         );
     }
 
-    /**
-     * Crea el pedido desde el carrito soportando separación de carritos mixtos y validación/consumo de cupón de descuento.
-     */
     @Transactional
     public Order createOrderFromCart(
             String slug,
@@ -301,6 +298,38 @@ public class OrderService {
             OrderChannel channel,
             boolean onlyInStockItems,
             String couponCode) {
+
+        return createOrderFromCart(
+                slug, customerName, customerPhone, customerEmail,
+                documentType, customerDocument, verificationDigit, legalName, taxRegime, requiresElectronicInvoice,
+                address, city, deliveryMethod, notes, channel, onlyInStockItems, couponCode, null
+        );
+    }
+
+    /**
+     * Crea el pedido desde el carrito soportando separación de carritos mixtos, validación/consumo de cupón de descuento
+     * y asociación prioritaria a la cuenta del comprador autenticado (authenticatedCustomerId).
+     */
+    @Transactional
+    public Order createOrderFromCart(
+            String slug,
+            String customerName,
+            String customerPhone,
+            String customerEmail,
+            String documentType,
+            String customerDocument,
+            String verificationDigit,
+            String legalName,
+            String taxRegime,
+            Boolean requiresElectronicInvoice,
+            String address,
+            String city,
+            String deliveryMethod,
+            String notes,
+            OrderChannel channel,
+            boolean onlyInStockItems,
+            String couponCode,
+            Long authenticatedCustomerId) {
 
         List<CartItemDto> allCartItems = cartManager.getCart(slug);
         if (allCartItems.isEmpty()) {
@@ -487,6 +516,13 @@ public class OrderService {
                 .build();
 
         order.getHistory().add(historyObj);
+
+        if (authenticatedCustomerId != null) {
+            Customer authCustomer = customerService.getCustomerEntityById(authenticatedCustomerId);
+            if (authCustomer != null) {
+                order.setCustomer(authCustomer);
+            }
+        }
 
         Customer customer = customerService.syncCustomerOnOrderCreated(order);
         order.setCustomer(customer);

@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/store-layout}">
+<head>
+    <title>Mi Cuenta</title>
+</head>
+<body>
+<div layout:fragment="content" class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12 min-h-[75vh]">
+
+    <!-- Encabezado de Cuenta -->
+    <div class="bg-white text-slate-900 p-6 sm:p-8 store-radius shadow-sm border border-slate-200/80 mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div class="flex items-center gap-4">
+            <div class="w-14 h-14 rounded-2xl bg-brand text-white font-black text-xl flex items-center justify-center shrink-0 uppercase"
+                 th:text="${customer.name != null and !customer.name.isBlank() ? #strings.substring(customer.name, 0, 1) : 'C'}">C</div>
+            <div>
+                <h1 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight" th:text="${'Hola, ' + customer.name}">Hola</h1>
+                <p class="text-xs sm:text-sm text-slate-500">
+                    <span th:if="${customer.email != null}" th:text="${customer.email + ' · '}"></span>
+                    <span th:text="${customer.phone}"></span>
+                </p>
+            </div>
+        </div>
+        <div class="flex items-center gap-3 flex-wrap">
+            <a th:href="@{/s/{slug}/catalog(slug=${slug})}"
+               class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition">
+                Ir al Catálogo
+            </a>
+            <form th:action="@{/s/{slug}/account/logout(slug=${slug})}" method="POST" data-no-spa="true" class="m-0">
+                <button type="submit"
+                        class="px-4 py-2.5 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold transition cursor-pointer">
+                    Cerrar sesión
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Alertas -->
+    <div th:if="${accountSuccess or reviewSuccess}"
+         class="mb-6 bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3.5 store-radius text-xs sm:text-sm font-bold"
+         th:text="${accountSuccess != null ? accountSuccess : reviewSuccess}"></div>
+    <div th:if="${accountError or reviewError}"
+         class="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3.5 store-radius text-xs sm:text-sm font-bold"
+         th:text="${accountError != null ? accountError : reviewError}"></div>
+
+    <!-- Banner Prioritario de Pedidos Pendientes de Pago -->
+    <div th:if="${not #lists.isEmpty(pendingOnlineOrders)}"
+         class="mb-8 bg-amber-50 border border-amber-200 p-5 sm:p-6 store-radius space-y-4">
+        <div class="flex items-start gap-3">
+            <span class="w-9 h-9 rounded-xl bg-amber-500/15 text-amber-700 flex items-center justify-center shrink-0 font-black">!</span>
+            <div>
+                <h2 class="text-sm sm:text-base font-black text-amber-950">Tienes pedidos pendientes de pago en línea</h2>
+                <p class="text-xs text-amber-800 mt-0.5">Puedes retomar el pago seguro ahora mismo o cancelar el pedido para devolver los productos a tu bolsa.</p>
+            </div>
+        </div>
+
+        <div class="space-y-3">
+            <div th:each="po : ${pendingOnlineOrders}"
+                 class="bg-white p-4 rounded-xl border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <p class="text-sm font-black text-slate-900">
+                        Pedido #<span th:text="${po.id}">1</span>
+                        <span class="text-xs font-semibold text-slate-500 ml-2"
+                              th:text="${po.createdAt != null ? #temporals.format(po.createdAt, 'dd/MM/yyyy HH:mm') : ''}"></span>
+                    </p>
+                    <p class="text-xs text-slate-600 mt-0.5">
+                        Total a pagar: <strong class="text-slate-900" th:text="${'$ ' + #numbers.formatDecimal(po.total, 1, 'POINT', 0, 'COMMA')}">$0</strong>
+                    </p>
+                </div>
+                <div class="flex items-center gap-2.5 flex-wrap">
+                    <a th:href="@{/s/{slug}/order/{token}/success(slug=${slug}, token=${po.publicToken})}"
+                       data-no-spa="true"
+                       class="px-4 py-2.5 rounded-xl bg-brand hover-bg-brand text-white text-xs font-bold shadow-sm transition">
+                        Pagar ahora
+                    </a>
+                    <form th:action="@{/s/{slug}/order/{token}/cancel-and-restore(slug=${slug}, token=${po.publicToken})}"
+                          method="POST" data-no-spa="true" class="m-0">
+                        <button type="submit"
+                                class="px-3.5 py-2.5 rounded-xl border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold transition cursor-pointer">
+                            Modificar y volver a la bolsa
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navegación de Pestañas: Mis Pedidos vs Mis Datos de Envío -->
+    <div class="flex items-center gap-2 border-b border-slate-200 mb-6">
+        <button type="button" id="acc-tab-orders-btn"
+                onclick="switchAccountSection('orders')"
+                th:classappend="${activeTab != 'profile' ? 'border-brand text-brand' : 'border-transparent text-slate-500 hover:text-slate-800'}"
+                class="px-4 py-3 border-b-2 font-bold text-sm transition cursor-pointer">
+            Mis Pedidos (<span th:text="${#lists.size(customerOrders)}">0</span>)
+        </button>
+        <button type="button" id="acc-tab-profile-btn"
+                onclick="switchAccountSection('profile')"
+                th:classappend="${activeTab == 'profile' ? 'border-brand text-brand' : 'border-transparent text-slate-500 hover:text-slate-800'}"
+                class="px-4 py-3 border-b-2 font-bold text-sm transition cursor-pointer">
+            Mis Datos de Envío y Contraseña
+        </button>
+    </div>
+
+    <!-- SECCIÓN 1: HISTORIAL Y SEGUIMIENTO DE PEDIDOS -->
+    <div id="acc-section-orders" th:classappend="${activeTab == 'profile' ? 'hidden' : ''}" class="space-y-4">
+        <div th:if="${#lists.isEmpty(customerOrders)}"
+             class="bg-white text-slate-900 p-12 store-radius border border-slate-200/80 text-center">
+            <p class="text-base font-bold text-slate-800">Aún no tienes pedidos registrados en tu cuenta</p>
+            <p class="text-xs text-slate-500 mt-1 mb-5">Explora nuestro catálogo y realiza tu primera compra.</p>
+            <a th:href="@{/s/{slug}/catalog(slug=${slug})}"
+               class="inline-block bg-brand text-white font-bold py-3 px-6 rounded-xl text-xs shadow-md hover-bg-brand transition">
+                Explorar productos
+            </a>
+        </div>
+
+        <div th:each="ord : ${customerOrders}"
+             th:with="existingRev=${reviewsByOrderId != null ? reviewsByOrderId.get(ord.id) : null},
+                      canReview=${ord.status != null and (ord.status.name() == 'PAID' or ord.status.name() == 'CONFIRMED' or ord.status.name() == 'PREPARING' or ord.status.name() == 'PACKED' or ord.status.name() == 'SHIPPED' or ord.status.name() == 'DELIVERED')}"
+             class="bg-white text-slate-900 p-6 store-radius shadow-sm border border-slate-200/80 space-y-4">
+
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-slate-100">
+                <div>
+                    <div class="flex items-center gap-2.5 flex-wrap">
+                        <span class="font-black text-base text-slate-900" th:text="${'Pedido #' + ord.id}">Pedido #1</span>
+                        <span class="px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase bg-slate-100 text-slate-800"
+                              th:text="${ord.status != null ? ord.status.displayName : 'Registrado'}">Estado</span>
+                        <span class="text-xs text-slate-400"
+                              th:text="${ord.createdAt != null ? #temporals.format(ord.createdAt, 'dd/MM/yyyy HH:mm') : ''}"></span>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-1">
+                        Destino: <span class="font-semibold text-slate-700" th:text="${ord.city + ' — ' + ord.address}"></span>
+                    </p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="text-lg font-black text-slate-900"
+                          th:text="${'$ ' + #numbers.formatDecimal(ord.total, 1, 'POINT', 0, 'COMMA')}">$0</span>
+                    <a th:href="${ord.channel != null and ord.channel.name() == 'WHATSAPP'
+                                ? '/s/' + slug + '/order/' + ord.publicToken + '/whatsapp?tracked=true'
+                                : (ord.status != null and ord.status.name() == 'PENDING'
+                                    ? '/s/' + slug + '/order/' + ord.publicToken + '/success'
+                                    : '/s/' + slug + '/order/' + ord.publicToken + '/wompi-result')}"
+                       data-no-spa="true"
+                       class="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition">
+                        Ver comprobante
+                    </a>
+                </div>
+            </div>
+
+            <!-- Ítems del Pedido -->
+            <div class="space-y-1.5 text-xs sm:text-sm">
+                <div th:each="it : ${ord.items}" class="flex justify-between text-slate-700">
+                    <span>
+                        <strong class="font-bold text-slate-900" th:text="${it.quantity + 'x '}">1x </strong>
+                        <span th:text="${it.productName}">Producto</span>
+                    </span>
+                    <span class="font-semibold text-slate-900"
+                          th:text="${'$ ' + #numbers.formatDecimal(it.subtotal, 1, 'POINT', 0, 'COMMA')}">$0</span>
+                </div>
+            </div>
+
+            <!-- Guías de Rastreo si el pedido ya tiene despacho -->
+            <div th:if="${ord.shipments != null and not #lists.isEmpty(ord.shipments)}"
+                 class="p-4 rounded-xl bg-indigo-50/70 border border-indigo-200 space-y-2">
+                <p class="text-xs font-black uppercase tracking-wider text-indigo-950">Seguimiento de Envío</p>
+                <div th:each="sh : ${ord.shipments}" class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs bg-white p-3 rounded-lg border border-indigo-100">
+                    <div>
+                        <span class="text-slate-500">Transportadora:</span>
+                        <strong class="text-slate-900" th:text="${sh.carrier != null ? sh.carrier.name : 'Transportadora'}"></strong>
+                        <span class="mx-1.5 text-slate-300">|</span>
+                        <span class="text-slate-500">Guía:</span>
+                        <span class="font-mono font-bold text-slate-900" th:text="${sh.trackingNumber}"></span>
+                    </div>
+                    <a th:if="${sh.dynamicTrackingUrl != null and !sh.dynamicTrackingUrl.isBlank()}"
+                       th:href="${sh.dynamicTrackingUrl}" target="_blank" rel="noopener noreferrer"
+                       class="text-xs font-bold text-brand hover:underline">
+                        Rastrear paquete en línea →
+                    </a>
+                </div>
+            </div>
+
+            <!-- Calificación Verificada Directa desde Mi Cuenta -->
+            <div th:if="${existingRev != null}" class="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200 text-xs text-emerald-900">
+                <span class="font-bold">✓ Tu calificación verificada:</span>
+                <span class="italic ml-1" th:text="'“' + ${existingRev.comment} + '”'"></span>
+            </div>
+
+            <details th:if="${existingRev == null and canReview}" class="group bg-slate-50 rounded-xl border border-slate-200 p-3.5">
+                <summary class="text-xs font-bold text-brand cursor-pointer list-none flex items-center justify-between">
+                    <span>★ Calificar este pedido verificado</span>
+                    <span class="text-slate-400 group-open:rotate-180 transition-transform">▼</span>
+                </summary>
+                <form th:action="@{/s/{slug}/order/{token}/review(slug=${slug}, token=${ord.publicToken})}"
+                      method="POST" data-no-spa="true" class="mt-3 pt-3 border-t border-slate-200 space-y-3">
+                    <input type="hidden" name="origin" value="account">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Puntuación</label>
+                            <select name="rating" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900">
+                                <option value="5">★★★★★ (5/5 - Excelente)</option>
+                                <option value="4">★★★★☆ (4/5 - Muy buena)</option>
+                                <option value="3">★★★☆☆ (3/5 - Buena)</option>
+                                <option value="2">★★☆☆☆ (2/5 - Regular)</option>
+                                <option value="1">★☆☆☆☆ (1/5 - Por mejorar)</option>
+                            </select>
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Comentario</label>
+                            <input type="text" name="comment" required minlength="4" maxlength="500"
+                                   placeholder="¿Qué te parecieron tus productos y la atención?"
+                                   class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900">
+                        </div>
+                    </div>
+                    <button type="submit" class="bg-brand hover-bg-brand text-white font-bold py-2 px-4 rounded-lg text-xs transition cursor-pointer">
+                        Publicar calificación
+                    </button>
+                </form>
+            </details>
+        </div>
+    </div>
+
+    <!-- SECCIÓN 2: PERFIL, DIRECCIÓN GUARDADA Y CONTRASEÑA -->
+    <div id="acc-section-profile" th:classappend="${activeTab != 'profile' ? 'hidden' : ''}" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <form th:action="@{/s/{slug}/account/profile(slug=${slug})}" method="POST" data-no-spa="true"
+              class="lg:col-span-2 bg-white text-slate-900 p-6 sm:p-8 store-radius shadow-sm border border-slate-200/80 space-y-4">
+            <h2 class="text-lg font-black text-slate-900 border-b border-slate-100 pb-3">Datos Predeterminados de Envío y Facturación</h2>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Nombre Completo <span class="text-red-500">*</span></label>
+                    <input type="text" name="name" required th:value="${customer.name}"
+                           class="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm text-slate-900">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Teléfono / WhatsApp <span class="text-red-500">*</span></label>
+                    <input type="tel" name="phone" required th:value="${customer.phone}"
+                           class="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm text-slate-900">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Correo Electrónico</label>
+                    <input type="email" name="email" th:value="${customer.email}"
+                           class="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm text-slate-900">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Ciudad / Municipio</label>
+                    <input type="text" name="city" th:value="${customer.city}"
+                           placeholder="Ej: Bogotá, Medellín..."
+                           class="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm text-slate-900">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Dirección de Entrega</label>
+                <input type="text" name="address" th:value="${customer.address}"
+                       placeholder="Calle/Carrera, #, Apto/Barrio"
+                       class="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm text-slate-900">
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-slate-100">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Tipo Documento</label>
+                    <select name="documentType" class="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900">
+                        <option value="CC" th:selected="${customer.documentType == null or customer.documentType == 'CC'}">CC</option>
+                        <option value="NIT" th:selected="${customer.documentType == 'NIT'}">NIT</option>
+                        <option value="CE" th:selected="${customer.documentType == 'CE'}">CE</option>
+                        <option value="PP" th:selected="${customer.documentType == 'PP'}">Pasaporte</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Número Documento</label>
+                    <input type="text" name="document" th:value="${customer.document}"
+                           class="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm text-slate-900">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-600 mb-1">DV (Solo NIT)</label>
+                    <input type="text" name="verificationDigit" maxlength="1" th:value="${customer.verificationDigit}"
+                           class="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm text-slate-900">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Razón Social (Opcional)</label>
+                    <input type="text" name="legalName" th:value="${customer.legalName}"
+                           class="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm text-slate-900">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Régimen Tributario</label>
+                    <select name="taxRegime" class="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900">
+                        <option value="R-99-PN" th:selected="${customer.taxRegime == null or customer.taxRegime == 'R-99-PN'}">No responsable de IVA</option>
+                        <option value="IVA" th:selected="${customer.taxRegime == 'IVA'}">Responsable de IVA</option>
+                        <option value="SIMPLE" th:selected="${customer.taxRegime == 'SIMPLE'}">Régimen Simple</option>
+                    </select>
+                </div>
+            </div>
+
+            <label class="flex items-center gap-2 cursor-pointer select-none pt-1">
+                <input type="checkbox" name="requiresElectronicInvoice" value="true"
+                       th:checked="${customer.requiresElectronicInvoice == true}"
+                       class="w-4 h-4 rounded border-slate-300 text-brand focus:ring-brand">
+                <span class="text-xs font-semibold text-slate-700">Solicitar factura electrónica por defecto en mis compras</span>
+            </label>
+
+            <button type="submit"
+                    class="bg-brand hover-bg-brand text-white font-bold py-3 px-6 rounded-xl shadow-md transition text-sm cursor-pointer">
+                Guardar mis datos
+            </button>
+        </form>
+
+        <!-- Cambio de Contraseña -->
+        <form th:action="@{/s/{slug}/account/password(slug=${slug})}" method="POST" data-no-spa="true"
+              class="bg-white text-slate-900 p-6 sm:p-8 store-radius shadow-sm border border-slate-200/80 space-y-4 h-fit">
+            <h2 class="text-lg font-black text-slate-900 border-b border-slate-100 pb-3">Cambiar Contraseña</h2>
+
+            <div>
+                <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Contraseña Actual <span class="text-red-500">*</span></label>
+                <input type="password" name="currentPassword" required
+                       class="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm text-slate-900">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Nueva Contraseña <span class="text-red-500">*</span></label>
+                <input type="password" name="newPassword" required minlength="8"
+                       placeholder="Mínimo 8 caracteres"
+                       class="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm text-slate-900">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Confirmar Nueva <span class="text-red-500">*</span></label>
+                <input type="password" name="confirmPassword" required minlength="8"
+                       class="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm text-slate-900">
+            </div>
+
+            <button type="submit"
+                    class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 px-6 rounded-xl transition text-sm cursor-pointer">
+                Actualizar contraseña
+            </button>
+        </form>
+    </div>
+</div>
+<th:block layout:fragment="scripts">
+    <script>
+        function switchAccountSection(sec) {
+            const ordersEl = document.getElementById('acc-section-orders');
+            const profEl = document.getElementById('acc-section-profile');
+            const ordBtn = document.getElementById('acc-tab-orders-btn');
+            const profBtn = document.getElementById('acc-tab-profile-btn');
+            if (!ordersEl || !profEl) return;
+            const isProf = sec === 'profile';
+            ordersEl.classList.toggle('hidden', isProf);
+            profEl.classList.toggle('hidden', !isProf);
+            if (ordBtn && profBtn) {
+                ordBtn.className = 'px-4 py-3 border-b-2 font-bold text-sm transition cursor-pointer ' +
+                    (!isProf ? 'border-brand text-brand' : 'border-transparent text-slate-500 hover:text-slate-800');
+                profBtn.className = 'px-4 py-3 border-b-2 font-bold text-sm transition cursor-pointer ' +
+                    (isProf ? 'border-brand text-brand' : 'border-transparent text-slate-500 hover:text-slate-800');
+            }
+        }
+    </script>
+</th:block>
+</body>
+</html>

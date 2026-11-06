@@ -55,4 +55,42 @@ public class WishlistManager {
         if (sessionId == null) return 0;
         return wishlistRepository.findBySessionId(sessionId).size();
     }
+
+    /**
+     * Fusiona los favoritos guardados como invitado (guestSessionId) hacia la cuenta del comprador (cust:{customerId}).
+     */
+    @Transactional
+    public void mergeGuestWishlistIntoCustomerWishlist(String guestSessionId, Long customerId) {
+        if (guestSessionId == null || guestSessionId.isBlank() || customerId == null) {
+            return;
+        }
+        String cleanGuestId = guestSessionId.endsWith(":direct")
+                ? guestSessionId.substring(0, guestSessionId.length() - ":direct".length())
+                : guestSessionId.trim();
+        String customerSessionId = "cust:" + customerId;
+        if (cleanGuestId.isEmpty() || cleanGuestId.equals(customerSessionId) || cleanGuestId.startsWith("cust:")) {
+            return;
+        }
+
+        List<WishlistItem> guestItems = wishlistRepository.findBySessionId(cleanGuestId);
+        if (guestItems == null || guestItems.isEmpty()) {
+            return;
+        }
+
+        for (WishlistItem guestItem : guestItems) {
+            if (guestItem == null || guestItem.getProduct() == null || guestItem.getProduct().getId() == null) {
+                continue;
+            }
+            Long prodId = guestItem.getProduct().getId();
+            if (wishlistRepository.findBySessionIdAndProductId(customerSessionId, prodId).isEmpty()) {
+                WishlistItem migrated = WishlistItem.builder()
+                        .sessionId(customerSessionId)
+                        .product(guestItem.getProduct())
+                        .build();
+                wishlistRepository.save(migrated);
+            }
+        }
+
+        wishlistRepository.deleteBySessionId(cleanGuestId);
+    }
 }

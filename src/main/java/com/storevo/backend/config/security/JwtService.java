@@ -52,6 +52,11 @@ public class JwtService {
         return generateToken(new HashMap<>(), userDetails);
     }
 
+    private static final String TOKEN_TYPE_CLAIM = "typ";
+    private static final String STORE_CUSTOMER_TOKEN_TYPE = "STORE_CUSTOMER";
+    private static final long CUSTOMER_DEFAULT_EXPIRATION_MS = 24L * 60 * 60 * 1000L; // 24 horas
+    private static final long CUSTOMER_REMEMBER_ME_EXPIRATION_MS = 30L * 24 * 60 * 60 * 1000L; // 30 días
+
     public String generateToken(Map<String, Object> extraClaims, UserDetails userDetails) {
         return Jwts.builder()
                 .setClaims(extraClaims)
@@ -62,8 +67,82 @@ public class JwtService {
                 .compact();
     }
 
+    /**
+     * Genera un JWT exclusivo para un comprador autenticado en una tienda específica (/s/{slug}).
+     * Incluye claims obligatorios de aislamiento multi-tenant (typ, tenant, slug, cid).
+     */
+    public String generateCustomerToken(Long customerId, String tenantSchema, String storeSlug, boolean rememberMe) {
+        if (customerId == null || tenantSchema == null || tenantSchema.isBlank() || storeSlug == null || storeSlug.isBlank()) {
+            throw new IllegalArgumentException("Datos insuficientes para generar token de comprador.");
+        }
+        Map<String, Object> claims = new HashMap<>();
+        claims.put(TOKEN_TYPE_CLAIM, STORE_CUSTOMER_TOKEN_TYPE);
+        claims.put("tenant", tenantSchema.trim());
+        claims.put("slug", storeSlug.trim());
+        claims.put("cid", customerId);
+
+        long ttl = rememberMe ? CUSTOMER_REMEMBER_ME_EXPIRATION_MS : CUSTOMER_DEFAULT_EXPIRATION_MS;
+        long now = System.currentTimeMillis();
+
+        return Jwts.builder()
+                .setClaims(claims)
+                .setSubject("cust:" + customerId)
+                .setIssuedAt(new Date(now))
+                .setExpiration(new Date(now + ttl))
+                .signWith(getSignInKey(), SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+    /**
+     * Valida criptográficamente el token del comprador y verifica que pertenezca
+     * exactamente al esquema y slug de la tienda actual. Devuelve el ID del Customer o null si no es válido.
+     */
+    public Long extractValidatedCustomerId(String token, String expectedTenantSchema, String expectedSlug) {
+        if (token == null || token.isBlank() || expectedTenantSchema == null || expectedSlug == null) {
+            return null;
+        }
+        final Claims claims = extractAllClaims(token);
+        if (claims == null || isTokenExpired(token)) {
+            return null;
+        }
+        Object typ = claims.get(TOKEN_TYPE_CLAIM);
+        if (!STORE_CUSTOMER_TOKEN_TYPE.equals(typ)) {
+            return null;
+        }
+        String tokenTenant = claims.get("tenant", String.class);
+        String tokenSlug = claims.get("slug", String.class);
+        if (!expectedTenantSchema.trim().equals(tokenTenant) || !expectedSlug.trim().equalsIgnoreCase(tokenSlug)) {
+            return null;
+        }
+        Object rawCid = claims.get("cid");
+        if (rawCid instanceof Number num) {
+            return num.longValue();
+        }
+        if (rawCid instanceof String str) {
+            try {
+                return Long.parseLong(str.trim());
+            } catch (NumberFormatException ignored) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    public static String buildCustomerCookieName(String slug) {
+        String safeSlug = (slug != null) ? slug.trim().toLowerCase().replaceAll("[^a-z0-9_-]", "_") : "default";
+        return "storevo_cust_" + safeSlug;
+    }
+
     public String extractUsername(String token) {
-        return extractClaim(token, Claims::getSubject);
+        final Claims claims = extractAllClaims(token);
+        if (claims == null) {
+            return null;
+        }
+        // Defensa adicional: un token de comprador jamás debe autenticar en el filtro de comerciantes
+        if (STORE_CUSTOMER_TOKEN_TYPE.equals(claims.get(TOKEN_TYPE_CLAIM))) {
+            return null;
+        }
+        return claims.getSubject();
     }
 
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {

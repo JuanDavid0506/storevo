@@ -102,7 +102,14 @@ public class TenantSchemaMigrationRunner implements CommandLineRunner {
 
             // --- Evolución de shipments ---
             new ColumnMigration("shipments", "label_pdf_url", "VARCHAR(500) NULL"),
-            new ColumnMigration("shipments", "last_tracking_message", "VARCHAR(255) NULL")
+            new ColumnMigration("shipments", "last_tracking_message", "VARCHAR(255) NULL"),
+
+            // --- Evolución de customers (Cuentas de Compradores por Tienda) ---
+            new ColumnMigration("customers", "password_hash", "VARCHAR(255) NULL"),
+            new ColumnMigration("customers", "has_account", "BOOLEAN NOT NULL DEFAULT FALSE"),
+            new ColumnMigration("customers", "reset_password_token", "VARCHAR(100) NULL"),
+            new ColumnMigration("customers", "reset_password_expires_at", "DATETIME NULL"),
+            new ColumnMigration("customers", "last_login_at", "DATETIME NULL")
     );
 
     private static final List<IndexMigration> TENANT_INDEX_MIGRATIONS = List.of(
@@ -111,7 +118,9 @@ public class TenantSchemaMigrationRunner implements CommandLineRunner {
             new IndexMigration("orders", "idx_orders_status_created", "`status`, `created_at`", false),
             new IndexMigration("orders", "idx_orders_customer_phone", "`customer_phone`, `created_at`", false),
             new IndexMigration("order_items", "idx_order_items_product", "`product_id`, `order_id`", false),
-            new IndexMigration("shipments", "idx_shipments_external_id", "`external_shipment_id`", false)
+            new IndexMigration("shipments", "idx_shipments_external_id", "`external_shipment_id`", false),
+            new IndexMigration("customers", "idx_customers_email", "`email`", false),
+            new IndexMigration("customers", "idx_customers_reset_token", "`reset_password_token`", false)
     );
 
     @Override

@@ -60,6 +60,16 @@
                       th:text="'🔒 Compra 100% segura en ' + ${settings != null ? settings.storeName : 'Tienda'}">🔒 Compra 100% segura</span>
                 <a th:href="@{/s/{slug}/wishlist(slug=${slug}, preview=${previewParam})}"
                    class="text-white/85 hover:text-white font-semibold">Favoritos</a>
+                <a th:if="${loggedCustomer != null}"
+                   th:href="@{/s/{slug}/account(slug=${slug})}"
+                   data-no-spa="true"
+                   class="text-white hover:text-emerald-300 font-bold inline-flex items-center gap-1">
+                    <span>👤 Mi Cuenta</span>
+                </a>
+                <a th:if="${loggedCustomer == null}"
+                   th:href="@{/s/{slug}/account/login(slug=${slug})}"
+                   data-no-spa="true"
+                   class="text-white/85 hover:text-white font-semibold">Ingresar</a>
             </div>
         </div>
     </div>
@@ -180,12 +190,28 @@
                 <div class="sv-search-panel-host"></div>
             </form>
 
-            <!-- Acciones: Disparador de Búsqueda + Favoritos + Bolsa -->
+            <!-- Acciones: Disparador de Búsqueda + Cuenta + Favoritos + Bolsa -->
             <div class="sv-nav__actions">
                 <button type="button" id="sv-nav-search-trigger" class="sv-nav__icon sv-nav__search-trigger" title="Buscar productos" aria-label="Buscar productos" aria-expanded="false">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                     <span class="sv-nav__search-trigger-label" th:text="${gs != null and gs.searchPlaceholder != null ? gs.searchPlaceholder : 'Buscar...'}">Buscar...</span>
                 </button>
+
+                <a th:href="${loggedCustomer != null ? '/s/' + slug + '/account' : '/s/' + slug + '/account/login'}"
+                   data-no-spa="true"
+                   class="sv-nav__icon relative"
+                   th:title="${loggedCustomer != null ? 'Mi Cuenta (' + loggedCustomer.name + ')' : 'Iniciar sesión / Mi Cuenta'}"
+                   th:attr="aria-label=${loggedCustomer != null ? 'Mi Cuenta' : 'Iniciar sesión'}">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                    </svg>
+                    <span th:if="${loggedCustomer != null and customerPendingOrdersCount != null and customerPendingOrdersCount > 0}"
+                          class="sv-nav__badge bg-amber-500 text-white"
+                          title="Tienes pedidos pendientes de pago"
+                          th:text="${customerPendingOrdersCount}">1</span>
+                    <span th:if="${loggedCustomer != null and (customerPendingOrdersCount == null or customerPendingOrdersCount == 0)}"
+                          class="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white absolute top-1.5 right-1.5"></span>
+                </a>
 
                 <a th:href="@{/s/{slug}/wishlist(slug=${slug}, preview=${previewParam})}" class="sv-nav__icon sv-nav__icon--wish" title="Mis Favoritos" aria-label="Mis Favoritos">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
@@ -328,6 +354,14 @@
 
         <!-- Accesos rápidos -->
         <div class="sv-drawer__footer p-4 space-y-2">
+            <a th:href="${loggedCustomer != null ? '/s/' + slug + '/account' : '/s/' + slug + '/account/login'}"
+               data-no-spa="true"
+               class="sv-drawer__wish-btn w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition">
+                <svg class="w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                </svg>
+                <span th:text="${loggedCustomer != null ? 'Mi Cuenta (' + loggedCustomer.name + ')' : 'Iniciar sesión / Crear cuenta'}">Mi Cuenta</span>
+            </a>
             <div class="grid grid-cols-2 gap-2">
                 <a th:href="@{/s/{slug}/wishlist(slug=${slug}, preview=${previewParam})}" class="sv-drawer__wish-btn flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-bold transition">
                     <svg class="w-4 h-4 text-brand" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L12 8.343l3.172-3.171a4 4 0 115.656 5.656L12 21.414l-8.828-8.828a4 4 0 010-5.656z" clip-rule="evenodd"></path></svg>

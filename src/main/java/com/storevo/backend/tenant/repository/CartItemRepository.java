@@ -21,6 +21,6 @@ public interface CartItemRepository extends JpaRepository<CartItem, Long> {
     int deleteExpiredDirectCartItems(@Param("cutoff") LocalDateTime cutoff);
 
     @Modifying
-    @Query("DELETE FROM CartItem c WHERE c.sessionId NOT LIKE '%:direct' AND c.createdAt < :cutoff")
+    @Query("DELETE FROM CartItem c WHERE c.sessionId NOT LIKE '%:direct' AND c.sessionId NOT LIKE 'cust:%' AND c.createdAt < :cutoff")
     int deleteExpiredRegularCartItems(@Param("cutoff") LocalDateTime cutoff);
 }

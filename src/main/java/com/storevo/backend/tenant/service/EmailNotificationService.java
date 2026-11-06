@@ -309,6 +309,56 @@ public class EmailNotificationService {
         }
     }
 
+    /**
+     * 5. Envía al comprador de una tienda el enlace para restablecer la contraseña de su cuenta en esa tienda.
+     */
+    @Async
+    public void sendStoreCustomerPasswordResetEmail(
+            Store store,
+            StoreSettingsDto settings,
+            String toEmail,
+            String customerName,
+            String resetLink) {
+        try {
+            if (isBlank(toEmail) || isBlank(resetLink)) {
+                return;
+            }
+            String storeName = resolveStoreName(store, settings);
+            String primaryColor = (settings != null && !isBlank(settings.getPrimaryColor()))
+                    ? settings.getPrimaryColor()
+                    : "#4f46e5";
+            String safeName = !isBlank(customerName) ? customerName.trim() : "Cliente";
+
+            String html = "<div style='font-family:Inter,Arial,sans-serif;background-color:#f8fafc;padding:32px 16px;color:#0f172a;'>"
+                    + "<div style='max-width:520px;margin:0 auto;background:#ffffff;border-radius:16px;border:1px solid #e2e8f0;overflow:hidden;'>"
+                    + "<div style='background:" + escape(primaryColor) + ";padding:22px 24px;color:#ffffff;text-align:center;'>"
+                    + "<h1 style='margin:0;font-size:19px;font-weight:800;'>" + escape(storeName) + "</h1>"
+                    + "<p style='margin:4px 0 0;font-size:12px;opacity:0.9;'>Recuperación de acceso a tu cuenta</p>"
+                    + "</div>"
+                    + "<div style='padding:28px 24px;'>"
+                    + "<p style='margin:0 0 12px;font-size:15px;'>Hola <strong>" + escape(safeName) + "</strong>,</p>"
+                    + "<p style='margin:0 0 22px;font-size:14px;color:#475569;line-height:1.6;'>"
+                    + "Recibimos una solicitud para cambiar la contraseña de tu cuenta de cliente en <strong>" + escape(storeName) + "</strong>. "
+                    + "Haz clic en el siguiente botón para crear una nueva contraseña (válido por 30 minutos):"
+                    + "</p>"
+                    + "<div style='text-align:center;margin:24px 0;'>"
+                    + "<a href='" + escape(resetLink) + "' style='display:inline-block;background:" + escape(primaryColor) + ";color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:13px 28px;border-radius:10px;'>"
+                    + "Crear nueva contraseña"
+                    + "</a>"
+                    + "</div>"
+                    + "<p style='margin:0;font-size:12px;color:#64748b;line-height:1.5;text-align:center;'>"
+                    + "Si no solicitaste este cambio, puedes ignorar este correo con total tranquilidad."
+                    + "</p>"
+                    + "</div>"
+                    + "</div>"
+                    + "</div>";
+
+            sendHtmlEmail(toEmail.trim(), "Recupera tu contraseña en " + storeName, html);
+        } catch (Exception e) {
+            log.warn("EmailNotificationService: error enviando recuperación de comprador a '{}': {}", toEmail, e.getMessage());
+        }
+    }
+
     private void sendHtmlEmail(String to, String subject, String htmlBody) {
         if (!mailEnabled) {
             log.info("EmailNotificationService [MAIL_ENABLED=false]: Correo simulado hacia '{}' | Asunto: '{}'", to, subject);
