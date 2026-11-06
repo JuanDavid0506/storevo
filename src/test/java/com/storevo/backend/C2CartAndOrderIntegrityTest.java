@@ -208,6 +208,35 @@ class C2CartAndOrderIntegrityTest {
     }
 
     @Test
+    void test10_buyerWithAnUnverifiedAccountCanCheckoutAndTheOrderStaysInTheirAccount() {
+        // D3 (verificación de correo): la barrera aplica SOLO al portal; el checkout con una cuenta sin verificar fluye normal
+        Product product = Product.builder()
+                .id(90L).name("Taza").price(20000.0)
+                .stock(5).hasVariants(false).isActive(true).isDeleted(false).isDraft(false)
+                .build();
+        CartItem inCart = CartItem.builder().sessionId("cust:7").product(product).variant(null).quantity(2).build();
+        Customer unverified = Customer.builder()
+                .id(7L).name("Ana").phone("3001234567").email("ana@mail.com").hasAccount(true) // emailVerifiedAt == null
+                .build();
+
+        when(cartItemRepository.findBySessionId("cust:7")).thenReturn(List.of(inCart));
+        when(productRepository.findById(90L)).thenReturn(Optional.of(product));
+        when(customerService.getCustomerEntityById(7L)).thenReturn(unverified);
+        when(customerService.syncCustomerOnOrderCreated(any(Order.class))).thenAnswer(inv -> inv.getArgument(0, Order.class).getCustomer());
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0, Order.class));
+
+        Order order = orderService.createOrderFromCart(
+                "cust:7", "Ana", "3001234567", "ana@mail.com", null, null, null, null, null, false,
+                "Calle 1 # 2-3", "Bogotá", "SHIPPING", null, OrderChannel.ONLINE, false, null, 7L);
+
+        assertNull(unverified.getEmailVerifiedAt());
+        assertSame(unverified, order.getCustomer());
+        assertTrue(order.getPlacedWithAccount(), "queda en su cuenta y aparecerá en Mi Cuenta cuando verifique");
+        assertEquals(OrderStatus.PENDING, order.getStatus());
+        assertEquals(40000.0, order.getSubtotal());
+    }
+
+    @Test
     void test7_createOrderWithForeignVariant_throwsException() {
         Product productA = Product.builder()
                 .id(60L).name("Bolso").price(200000.0)

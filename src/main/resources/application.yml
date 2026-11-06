@@ -66,3 +66,11 @@ storevo:
     enabled: ${MAIL_ENABLED:false}
     from: ${MAIL_FROM:no-reply@storevo.com}
     base-url: ${APP_BASE_URL:http://localhost:8080}
+  customer:
+    email-verification:
+      # required = el comprador debe verificar su correo para entrar a "Mi Cuenta" (el checkout nunca se bloquea).
+      # off = sin verificación (todas las cuentas se tratan como verificadas).
+      mode: ${CUSTOMER_EMAIL_VERIFICATION:required}
+      # Inicio del plazo de gracia de 30 dias para las cuentas creadas ANTES de esta fecha (AAAA-MM-DD).
+      # Ajustala a la fecha real del despliegue: pasados 30 dias desde ella, las cuentas antiguas sin verificar quedan bloqueadas.
+      grace-start: ${CUSTOMER_EMAIL_VERIFICATION_GRACE_START:2026-11-06}

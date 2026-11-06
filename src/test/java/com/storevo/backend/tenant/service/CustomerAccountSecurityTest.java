@@ -40,7 +40,8 @@ class CustomerAccountSecurityTest {
     void setUp() {
         customerService = new CustomerService(
                 customerRepository, orderRepository, passwordEncoder,
-                cartManager, wishlistManager, emailNotificationService);
+                cartManager, wishlistManager, emailNotificationService,
+                new EmailVerificationPolicy(true, java.time.LocalDate.of(2026, 11, 6)));
         lenient().when(customerRepository.save(any(Customer.class))).thenAnswer(inv -> inv.getArgument(0));
     }
 
@@ -198,5 +199,194 @@ class CustomerAccountSecurityTest {
         when(customerRepository.findByResetPasswordToken(CustomerService.hashResetToken(rawToken)))
                 .thenReturn(Optional.of(account));
         assertTrue(customerService.isCustomerResetTokenValid(rawToken));
+    }
+
+    @Test
+    void passwordPolicy_isEnforcedOnRegistration() {
+        IllegalArgumentException noNumber = assertThrows(IllegalArgumentException.class, () ->
+                customerService.registerCustomerAccount("Ana Pérez", "ana@mail.com", "3001234567", "abcdefgh", null));
+        assertTrue(noNumber.getMessage().contains("Al menos un número"), noNumber.getMessage());
+
+        IllegalArgumentException tooLong = assertThrows(IllegalArgumentException.class, () ->
+                customerService.registerCustomerAccount("Ana Pérez", "ana@mail.com", "3001234567", "a".repeat(72) + "1", null));
+        assertTrue(tooLong.getMessage().contains("72 bytes"), tooLong.getMessage());
+
+        verify(customerRepository, never()).save(any(Customer.class));
+    }
+
+    @Test
+    void passwordPolicy_isEnforcedWhenChangingThePassword() {
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+                customerService.changeCustomerPassword(1L, "actual123", "12345678"));
+        assertTrue(ex.getMessage().contains("Al menos una letra"), ex.getMessage());
+        verify(customerRepository, never()).save(any(Customer.class));
+        verify(passwordEncoder, never()).encode(anyString());
+    }
+
+    @Test
+    void passwordPolicy_isEnforcedWhenResettingWithAToken() {
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+                customerService.resetCustomerPasswordWithToken("some-token", "corta1"));
+        assertTrue(ex.getMessage().contains("Mínimo 8 caracteres"), ex.getMessage());
+        verify(customerRepository, never()).save(any(Customer.class));
+    }
+
+    @Test
+    void passwordPolicy_doesNotTrimSoTheStoredPasswordIsWhatTheUserTyped() {
+        Customer account = registeredAccount();
+        when(customerRepository.findById(1L)).thenReturn(Optional.of(account));
+        when(passwordEncoder.matches("actual123", "hash")).thenReturn(true);
+        when(passwordEncoder.encode(anyString())).thenReturn("encoded");
+
+        customerService.changeCustomerPassword(1L, "actual123", "  clave1  ");
+
+        verify(passwordEncoder).encode("  clave1  ");
+    }
+
+    // ===================== Fase 2: verificación de correo =====================
+
+    private Customer squatter(java.time.LocalDateTime createdAt, java.time.LocalDateTime linkExpiresAt) {
+        return Customer.builder()
+                .id(50L).phoneKey("3150000000").phone("3150000000").name("Impostor").email("victima@mail.com")
+                .hasAccount(true).passwordHash("hash-impostor").createdAt(createdAt)
+                .emailVerificationToken("hash-token").emailVerificationExpiresAt(linkExpiresAt)
+                .build();
+    }
+
+    private static final java.time.LocalDateTime AFTER_RELEASE = java.time.LocalDateTime.of(2026, 11, 7, 10, 0);
+    private static final java.time.LocalDateTime BEFORE_RELEASE = java.time.LocalDateTime.of(2026, 11, 5, 10, 0);
+
+    @Test
+    void registration_createsTheAccountWithTheEmailUnverified() {
+        when(customerRepository.findFirstByEmailIgnoreCaseAndHasAccountTrue("nuevo@mail.com")).thenReturn(Optional.empty());
+        when(customerRepository.findByPhoneKey("3001234567")).thenReturn(Optional.empty());
+        when(passwordEncoder.encode(anyString())).thenReturn("encoded");
+
+        Customer created = customerService.registerCustomerAccount("Nuevo Usuario", "nuevo@mail.com", "3001234567", "password123", null);
+
+        assertTrue(created.getHasAccount());
+        assertNull(created.getEmailVerifiedAt());
+        assertNull(created.getEmailVerificationToken());
+    }
+
+    @Test
+    void registration_releasesAnEmailClaimedByAStaleUnverifiedAccount() {
+        Customer holder = squatter(AFTER_RELEASE, java.time.LocalDateTime.now().minusHours(1)); // enlace vencido
+        when(customerRepository.findFirstByEmailIgnoreCaseAndHasAccountTrue("victima@mail.com")).thenReturn(Optional.of(holder));
+        when(customerRepository.findByPhoneKey("3001234567")).thenReturn(Optional.empty());
+        when(passwordEncoder.encode(anyString())).thenReturn("encoded");
+
+        Customer real = customerService.registerCustomerAccount("Dueño Real", "victima@mail.com", "3001234567", "password123", null);
+
+        assertTrue(real.getHasAccount());
+        assertEquals("victima@mail.com", real.getEmail());
+        // el impostor pierde el acceso y el correo, pero se conserva su perfil (teléfono, pedidos, métricas)
+        assertFalse(holder.getHasAccount());
+        assertNull(holder.getPasswordHash());
+        assertNull(holder.getEmail());
+        assertNull(holder.getEmailVerificationToken());
+        assertEquals("3150000000", holder.getPhone());
+    }
+
+    @Test
+    void registration_doesNotStealAnEmailWhoseVerificationLinkIsStillValid() {
+        Customer holder = squatter(AFTER_RELEASE, java.time.LocalDateTime.now().plusHours(2)); // todavía puede verificar
+        when(customerRepository.findFirstByEmailIgnoreCaseAndHasAccountTrue("victima@mail.com")).thenReturn(Optional.of(holder));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+                customerService.registerCustomerAccount("Otra Persona", "victima@mail.com", "3001234567", "password123", null));
+
+        assertTrue(ex.getMessage().contains("Ya existe una cuenta registrada con este correo"));
+        assertTrue(holder.getHasAccount());
+        assertEquals("victima@mail.com", holder.getEmail());
+    }
+
+    @Test
+    void registration_neverReleasesExistingOrVerifiedAccountsNorWhenVerificationIsOff() {
+        Customer existing = squatter(BEFORE_RELEASE, java.time.LocalDateTime.now().minusHours(1)); // cuenta existente con plazo de gracia
+        Customer verified = squatter(AFTER_RELEASE, java.time.LocalDateTime.now().minusHours(1));
+        verified.setEmailVerifiedAt(AFTER_RELEASE.plusHours(1));
+        Customer recentButPolicyOff = squatter(AFTER_RELEASE, java.time.LocalDateTime.now().minusHours(1));
+
+        for (Customer holder : java.util.List.of(existing, verified)) {
+            when(customerRepository.findFirstByEmailIgnoreCaseAndHasAccountTrue("victima@mail.com")).thenReturn(Optional.of(holder));
+            assertThrows(IllegalArgumentException.class, () ->
+                    customerService.registerCustomerAccount("Otra Persona", "victima@mail.com", "3001234567", "password123", null));
+            assertTrue(holder.getHasAccount(), "no se debe tocar la cuenta de " + holder.getId());
+        }
+
+        CustomerService off = new CustomerService(customerRepository, orderRepository, passwordEncoder, cartManager,
+                wishlistManager, emailNotificationService, new EmailVerificationPolicy(false, java.time.LocalDate.of(2026, 11, 6)));
+        when(customerRepository.findFirstByEmailIgnoreCaseAndHasAccountTrue("victima@mail.com")).thenReturn(Optional.of(recentButPolicyOff));
+        assertThrows(IllegalArgumentException.class, () ->
+                off.registerCustomerAccount("Otra Persona", "victima@mail.com", "3001234567", "password123", null));
+        assertTrue(recentButPolicyOff.getHasAccount());
+    }
+
+    @Test
+    void changingTheEmailDropsTheVerificationAndPendingLinksButKeepsTheResendCooldown() {
+        Customer account = registeredAccount();
+        java.time.LocalDateTime sent = java.time.LocalDateTime.of(2026, 11, 8, 9, 0);
+        account.setEmailVerifiedAt(java.time.LocalDateTime.of(2026, 11, 8, 9, 5));
+        account.setEmailVerificationToken("hash");
+        account.setEmailVerificationExpiresAt(sent.plusHours(24));
+        account.setEmailVerificationSentAt(sent);
+        account.setResetPasswordToken("reset-hash");
+        account.setResetPasswordExpiresAt(sent.plusMinutes(30));
+        when(customerRepository.findById(1L)).thenReturn(Optional.of(account));
+        when(customerRepository.findFirstByEmailIgnoreCaseAndHasAccountTrue("nuevo@mail.com")).thenReturn(Optional.empty());
+
+        Customer updated = customerService.updateAuthenticatedCustomerProfile(
+                1L, null, null, "Nuevo@Mail.com", null, null, null, null, null, null, null, null);
+
+        assertEquals("nuevo@mail.com", updated.getEmail());
+        assertNull(updated.getEmailVerifiedAt());
+        assertNull(updated.getEmailVerificationToken());
+        assertNull(updated.getEmailVerificationExpiresAt());
+        assertNull(updated.getResetPasswordToken());
+        assertNull(updated.getResetPasswordExpiresAt());
+        assertEquals(sent, updated.getEmailVerificationSentAt());
+    }
+
+    @Test
+    void savingTheSameEmailWithDifferentCaseKeepsTheVerification() {
+        Customer account = registeredAccount();
+        java.time.LocalDateTime verifiedAt = java.time.LocalDateTime.of(2026, 11, 8, 9, 5);
+        account.setEmailVerifiedAt(verifiedAt);
+        when(customerRepository.findById(1L)).thenReturn(Optional.of(account));
+        when(customerRepository.findFirstByEmailIgnoreCaseAndHasAccountTrue("victima@mail.com")).thenReturn(Optional.of(account));
+
+        Customer updated = customerService.updateAuthenticatedCustomerProfile(
+                1L, null, null, "VICTIMA@mail.com", null, null, null, null, null, null, null, null);
+
+        assertEquals(verifiedAt, updated.getEmailVerifiedAt());
+    }
+
+    @Test
+    void profileEmailMustLookLikeAnEmail() {
+        when(customerRepository.findById(1L)).thenReturn(Optional.of(registeredAccount()));
+
+        assertThrows(IllegalArgumentException.class, () -> customerService.updateAuthenticatedCustomerProfile(
+                1L, null, null, "sin-arroba", null, null, null, null, null, null, null, null));
+        assertThrows(IllegalArgumentException.class, () -> customerService.updateAuthenticatedCustomerProfile(
+                1L, null, null, "a".repeat(120) + "@mail.com", null, null, null, null, null, null, null, null));
+    }
+
+    @Test
+    void resettingThePasswordThroughTheEmailLinkVerifiesTheEmail() {
+        Customer account = registeredAccount();
+        account.setEmailVerificationToken("pendiente");
+        account.setEmailVerificationExpiresAt(java.time.LocalDateTime.now().plusHours(3));
+        account.setResetPasswordToken(CustomerService.hashResetToken("tok-reset"));
+        account.setResetPasswordExpiresAt(java.time.LocalDateTime.now().plusMinutes(20));
+        when(customerRepository.findByResetPasswordToken(CustomerService.hashResetToken("tok-reset"))).thenReturn(Optional.of(account));
+        when(passwordEncoder.encode(anyString())).thenReturn("encoded");
+
+        customerService.resetCustomerPasswordWithToken("tok-reset", "nuevaClave1");
+
+        assertNotNull(account.getEmailVerifiedAt(), "usar el enlace enviado al correo demuestra que es del comprador");
+        assertNull(account.getEmailVerificationToken());
+        assertNull(account.getEmailVerificationExpiresAt());
+        assertNull(account.getResetPasswordToken());
     }
 }

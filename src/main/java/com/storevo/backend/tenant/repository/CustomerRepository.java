@@ -23,6 +23,9 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
     Optional<Customer> findFirstByEmailIgnoreCaseAndHasAccountTrue(String email);
 
     Optional<Customer> findByResetPasswordToken(String resetPasswordToken);
+
+    // Recibe el SHA-256 del token de verificación de correo (nunca el token en claro)
+    Optional<Customer> findByEmailVerificationToken(String emailVerificationTokenHash);
     List<Customer> findAllByOrderByLastOrderDateDescIdDesc();
 
     @Query("SELECT c FROM Customer c WHERE " +

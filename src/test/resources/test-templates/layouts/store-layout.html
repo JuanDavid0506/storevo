@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
+<head>
+    <meta charset="UTF-8">
+    <title layout:title-pattern="$CONTENT_TITLE | Tienda">Tienda</title>
+</head>
+<body>
+<!-- Layout mínimo SOLO para pruebas: permite renderizar las plantillas de cuenta reales sin el layout completo de 3.800 líneas -->
+<main layout:fragment="content"></main>
+<th:block layout:fragment="scripts"></th:block>
+</body>
+</html>

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/store-layout}">
+<head>
+    <title>Verifica tu correo</title>
+</head>
+<body>
+<!--
+    Única pantalla del portal "Mi Cuenta" cuando el correo no está verificado y no hay plazo de gracia.
+    El carrito, el checkout y el resto de la tienda siguen funcionando: solo el portal exige verificar.
+-->
+<div layout:fragment="content" class="sv-acct-auth"
+     th:with="storeName=${settings != null and settings.storeName != null and !settings.storeName.isBlank() ? settings.storeName : 'esta tienda'}">
+    <div class="sv-acct-surface">
+        <div class="sv-acct-auth__icon" aria-hidden="true">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+        </div>
+        <h1 class="sv-acct-auth__title">Verifica tu correo para continuar</h1>
+        <p class="sv-acct-auth__lead">
+            Para proteger tu cuenta en <strong th:text="${storeName}">la tienda</strong>, confirma que
+            <strong th:text="${maskedEmail}">a***@correo.com</strong> es tuyo. Te enviamos un enlace de verificación (vale 24 horas).
+        </p>
+
+        <th:block th:replace="~{storefront/account/fragments :: alert('success', ${accountSuccess})}"></th:block>
+        <th:block th:replace="~{storefront/account/fragments :: alert('error', ${accountError})}"></th:block>
+
+        <form th:action="@{/s/{slug}/account/resend-verification(slug=${slug})}" method="POST"
+              data-no-spa="true" data-sv-loading class="sv-acct-form">
+            <button type="submit" class="sv-acct-btn sv-acct-btn--primary sv-acct-btn--block font-bold rounded-xl">
+                Reenviar enlace de verificación
+            </button>
+            <p class="sv-acct-hint" th:if="${resendWaitSeconds != null and resendWaitSeconds > 0}"
+               th:text="${'Acabamos de enviarte uno: podrás pedir otro en ' + resendWaitSeconds + ' segundos.'}">Espera un momento.</p>
+        </form>
+
+        <div class="sv-acct-note sv-acct-mt">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span>Revisa también la carpeta de spam. Puedes seguir comprando con normalidad: la verificación solo es necesaria para entrar a «Mi Cuenta».</span>
+        </div>
+
+        <!-- Corregir el correo: sin esto, quien se equivocó al escribirlo quedaría sin salida -->
+        <details class="sv-acct-disclosure sv-acct-mt">
+            <summary>¿Escribiste mal tu correo?</summary>
+            <div class="sv-acct-disclosure__body">
+                <form th:action="@{/s/{slug}/account/change-unverified-email(slug=${slug})}" method="POST"
+                      data-no-spa="true" data-sv-loading class="sv-acct-form">
+                    <div>
+                        <label class="sv-acct-label" for="fix-email">Correo correcto</label>
+                        <input id="fix-email" type="email" name="email" required autocomplete="email" inputmode="email"
+                               placeholder="tu@correo.com" class="sv-acct-input">
+                    </div>
+                    <button type="submit" class="sv-acct-btn sv-acct-btn--ghost sv-acct-btn--sm font-bold rounded-xl">
+                        Cambiar y enviar enlace
+                    </button>
+                </form>
+            </div>
+        </details>
+
+        <div class="sv-acct-auth__foot">
+            <a th:href="@{/s/{slug}/catalog(slug=${slug})}" class="sv-acct-link">Seguir comprando</a>
+            <span aria-hidden="true"> · </span>
+            <form th:action="@{/s/{slug}/account/logout(slug=${slug})}" method="POST" data-no-spa="true" class="sv-acct-inline-form">
+                <button type="submit" class="sv-acct-link sv-acct-link--button">Cerrar sesión</button>
+            </form>
+        </div>
+    </div>
+</div>
+<th:block layout:fragment="scripts">
+    <th:block th:replace="~{storefront/account/fragments :: account-js}"></th:block>
+</th:block>
+</body>
+</html>

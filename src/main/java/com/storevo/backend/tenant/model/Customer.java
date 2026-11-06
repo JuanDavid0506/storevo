@@ -93,6 +93,23 @@ public class Customer {
     @Column(name = "password_changed_at")
     private LocalDateTime passwordChangedAt;
 
+    /** Momento en que el comprador demostró acceso a su correo. NULL = correo sin verificar. */
+    @Column(name = "email_verified_at")
+    private LocalDateTime emailVerifiedAt;
+
+    /** SHA-256 (hex) del token de verificación vigente; el token en claro solo viaja en el correo. De un solo uso. */
+    @Column(name = "email_verification_token", length = 100)
+    @ToString.Exclude
+    private String emailVerificationToken;
+
+    /** Vencimiento del token de verificación vigente. */
+    @Column(name = "email_verification_expires_at")
+    private LocalDateTime emailVerificationExpiresAt;
+
+    /** Último envío del correo de verificación: limita los reenvíos (anti-abuso). */
+    @Column(name = "email_verification_sent_at")
+    private LocalDateTime emailVerificationSentAt;
+
     @Column(name = "channels_csv", length = 60)
     private String channelsCsv;
 

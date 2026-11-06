@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/store-layout}">
+<head>
+    <title>Verificar correo</title>
+</head>
+<body>
+<!--
+    Destino del enlace del correo. Un GET no consume el token (los antivirus y previsualizadores de correo lo abren):
+    el comprador debe pulsar el botón, que envía un POST.
+-->
+<div layout:fragment="content" class="sv-acct-auth"
+     th:with="storeName=${settings != null and settings.storeName != null and !settings.storeName.isBlank() ? settings.storeName : 'esta tienda'}">
+    <div class="sv-acct-surface">
+
+        <!-- Enlace válido -->
+        <th:block th:if="${verifyState == 'VALID'}">
+            <div class="sv-acct-auth__icon" aria-hidden="true">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <h1 class="sv-acct-auth__title">Confirma tu correo</h1>
+            <p class="sv-acct-auth__lead">
+                Un último paso para activar tu cuenta en <strong th:text="${storeName}">la tienda</strong>.
+            </p>
+            <form th:action="@{/s/{slug}/account/verify-email(slug=${slug})}" method="POST"
+                  data-no-spa="true" data-sv-loading class="sv-acct-form">
+                <input type="hidden" name="token" th:value="${token}">
+                <button type="submit" class="sv-acct-btn sv-acct-btn--primary sv-acct-btn--block font-bold rounded-xl">
+                    Verificar mi correo
+                </button>
+            </form>
+        </th:block>
+
+        <!-- Enlace vencido o ya usado -->
+        <th:block th:unless="${verifyState == 'VALID'}">
+            <div class="sv-acct-auth__icon" aria-hidden="true">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <h1 class="sv-acct-auth__title"
+                th:text="${verifyState == 'EXPIRED' ? 'Este enlace venció' : 'Este enlace no es válido'}">Este enlace venció</h1>
+            <p class="sv-acct-auth__lead"
+               th:text="${verifyState == 'EXPIRED'
+                    ? 'Los enlaces de verificación duran 24 horas. Pide uno nuevo y te lo enviamos al instante.'
+                    : 'Puede que ya lo hayas usado, que hayas pedido uno más reciente o que el enlace esté incompleto. Si ya verificaste tu correo, solo inicia sesión.'}">
+                Pide uno nuevo.
+            </p>
+
+            <th:block th:replace="~{storefront/account/fragments :: alert('error', ${authError})}"></th:block>
+
+            <form th:action="@{/s/{slug}/account/resend-verification(slug=${slug})}" method="POST"
+                  data-no-spa="true" data-sv-loading class="sv-acct-form">
+                <div th:if="${loggedCustomer == null}">
+                    <label class="sv-acct-label" for="resend-email">Tu correo electrónico</label>
+                    <input id="resend-email" type="email" name="email" required autocomplete="email" inputmode="email"
+                           placeholder="tu@correo.com" class="sv-acct-input">
+                </div>
+                <button type="submit" class="sv-acct-btn sv-acct-btn--primary sv-acct-btn--block font-bold rounded-xl">
+                    Enviar un enlace nuevo
+                </button>
+            </form>
+        </th:block>
+
+        <div class="sv-acct-auth__foot">
+            <a th:href="@{/s/{slug}/account/login(slug=${slug})}" data-no-spa="true" class="sv-acct-link">Ir a iniciar sesión</a>
+            <span aria-hidden="true"> · </span>
+            <a th:href="@{/s/{slug}/catalog(slug=${slug})}" class="sv-acct-link">Seguir comprando</a>
+        </div>
+    </div>
+</div>
+<th:block layout:fragment="scripts">
+    <th:block th:replace="~{storefront/account/fragments :: account-js}"></th:block>
+</th:block>
+</body>
+</html>

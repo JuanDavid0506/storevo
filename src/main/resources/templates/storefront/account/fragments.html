@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- Aviso accesible (éxito / error / advertencia). Se omite solo si el mensaje es null. -->
+<div th:fragment="alert(kind, message)" th:if="${message != null}" role="alert"
+     class="sv-acct-alert" th:classappend="${'sv-acct-alert--' + kind}">
+    <span class="sv-acct-alert__icon" aria-hidden="true"><span th:text="${kind == 'success' ? '✓' : '!'}">!</span></span>
+    <div class="sv-acct-alert__body" th:text="${message}">Mensaje</div>
+    <button type="button" class="sv-acct-alert__close" aria-label="Cerrar aviso" onclick="svAcctDismiss(this)">&times;</button>
+</div>
+
+<!--
+    Requisitos de contraseña en tiempo real. La lista y el JS salen de PasswordPolicy (Java): la interfaz no tiene
+    reglas escritas a mano. Debe ir DENTRO del formulario, con inputs marcados data-pw-new y data-pw-confirm.
+-->
+<div th:fragment="pw-rules" class="sv-acct-pw" data-sv-pw th:attr="data-rules=${passwordRulesJson}">
+    <ul class="sv-acct-pw__list" aria-label="Requisitos de la contraseña">
+        <li th:each="r : ${passwordRules}" class="sv-acct-pw__rule" th:attr="data-rule=${r.id}"
+            th:hidden="${r.hiddenUntilViolated}">
+            <span class="sv-acct-pw__mark" aria-hidden="true"></span>
+            <span th:text="${r.label}">Requisito</span>
+        </li>
+    </ul>
+</div>
+
+<!-- Indicador de coincidencia con la confirmación. Puede ir en otro sitio del mismo formulario (p. ej. bajo el campo de confirmación). -->
+<p th:fragment="pw-match" class="sv-acct-pw__match" data-pw-match hidden aria-live="polite">
+    <span class="sv-acct-pw__mark" aria-hidden="true"></span>
+    <span data-pw-match-text></span>
+</p>
+
+<!-- JS compartido de las pantallas de cuenta. Sin listeners globales acumulables: compatible con el router SPA. -->
+<script th:fragment="account-js">
+    (function () {
+        window.svAcctTogglePwd = function (btn) {
+            var wrap = btn && btn.parentElement;
+            var input = wrap ? wrap.querySelector('input') : null;
+            if (!input) return;
+            var show = input.type === 'password';
+            input.type = show ? 'text' : 'password';
+            btn.setAttribute('aria-pressed', show ? 'true' : 'false');
+            btn.setAttribute('aria-label', show ? 'Ocultar contraseña' : 'Mostrar contraseña');
+        };
+
+        window.svAcctDismiss = function (btn) {
+            var el = btn && btn.closest ? btn.closest('.sv-acct-alert') : null;
+            if (el && el.parentNode) el.parentNode.removeChild(el);
+        };
+
+        // Evalúa una regla de PasswordPolicy (mismos tres tipos que el servidor: minLength, maxBytes, regex).
+        function svPwRuleOk(rule, pwd) {
+            var p = pwd || '';
+            if (rule.type === 'minLength') return Array.from(p).length >= rule.value;
+            if (rule.type === 'maxBytes') return new TextEncoder().encode(p).length <= rule.value;
+            if (rule.type === 'regex') {
+                try { return new RegExp(rule.pattern, 'u').test(p); } catch (e) { return true; }
+            }
+            return true;
+        }
+
+        // Requisitos de contraseña y coincidencia con la confirmación, en tiempo real.
+        var pwBoxes = document.querySelectorAll('[data-sv-pw]');
+        for (var b = 0; b < pwBoxes.length; b++) {
+            (function (box) {
+                if (box.getAttribute('data-sv-pw-bound') === '1') return;
+                var form = box.closest('form');
+                var newInput = form ? form.querySelector('[data-pw-new]') : null;
+                if (!newInput) return;
+                box.setAttribute('data-sv-pw-bound', '1');
+                var confirmInput = form.querySelector('[data-pw-confirm]');
+                var matchEl = form.querySelector('[data-pw-match]');
+                var matchText = matchEl ? matchEl.querySelector('[data-pw-match-text]') : null;
+                var rules = [];
+                try { rules = JSON.parse(box.getAttribute('data-rules') || '[]'); } catch (e) { rules = []; }
+
+                function update() {
+                    var value = newInput.value;
+                    var failing = [];
+                    for (var i = 0; i < rules.length; i++) {
+                        var rule = rules[i];
+                        var li = box.querySelector('[data-rule="' + rule.id + '"]');
+                        var ok = svPwRuleOk(rule, value);
+                        if (!ok) failing.push(rule.label);
+                        if (!li) continue;
+                        li.classList.toggle('is-ok', ok && value.length > 0);
+                        li.classList.toggle('is-bad', !ok && rule.hiddenUntilViolated === true);
+                        if (rule.hiddenUntilViolated) li.hidden = ok;
+                    }
+                    newInput.setCustomValidity(value.length > 0 && failing.length > 0
+                        ? 'La contraseña no cumple los requisitos: ' + failing.join('; ') + '.' : '');
+
+                    if (confirmInput && matchEl) {
+                        var typed = confirmInput.value.length > 0;
+                        var same = confirmInput.value === value;
+                        matchEl.hidden = !typed;
+                        matchEl.classList.toggle('is-ok', typed && same);
+                        matchEl.classList.toggle('is-bad', typed && !same);
+                        if (matchText) matchText.textContent = same ? 'Las contraseñas coinciden' : 'Las contraseñas no coinciden';
+                        confirmInput.setCustomValidity(typed && !same ? 'Las contraseñas no coinciden.' : '');
+                    }
+                }
+
+                newInput.addEventListener('input', update);
+                if (confirmInput) confirmInput.addEventListener('input', update);
+                update();
+            })(pwBoxes[b]);
+        }
+
+        // Estado de carga: al enviar un formulario marcado con data-sv-loading, el botón de envío muestra un spinner.
+        var forms = document.querySelectorAll('form[data-sv-loading]');
+        for (var i = 0; i < forms.length; i++) {
+            (function (form) {
+                if (form.getAttribute('data-sv-bound') === '1') return;
+                form.setAttribute('data-sv-bound', '1');
+                form.addEventListener('submit', function (ev) {
+                    if (ev.defaultPrevented) return;
+                    var btn = ev.submitter || form.querySelector('button[type="submit"]');
+                    if (btn) {
+                        btn.classList.add('is-loading');
+                        btn.setAttribute('aria-busy', 'true');
+                    }
+                });
+            })(forms[i]);
+        }
+
+        // Si el navegador restaura la página desde la caché (botón Atrás), se quitan los spinners pendientes.
+        if (!window.__svAcctPageshow) {
+            window.__svAcctPageshow = true;
+            window.addEventListener('pageshow', function (ev) {
+                if (!ev.persisted) return;
+                var busy = document.querySelectorAll('.sv-acct-btn.is-loading');
+                for (var j = 0; j < busy.length; j++) {
+                    busy[j].classList.remove('is-loading');
+                    busy[j].removeAttribute('aria-busy');
+                }
+            });
+        }
+    })();
+</script>
+
+</body>
+</html>

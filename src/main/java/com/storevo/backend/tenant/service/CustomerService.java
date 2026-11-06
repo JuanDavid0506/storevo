@@ -43,6 +43,7 @@ public class CustomerService {
     private final CartManager cartManager;
     private final WishlistManager wishlistManager;
     private final EmailNotificationService emailNotificationService;
+    private final EmailVerificationPolicy verificationPolicy;
 
     @Transactional(readOnly = true)
     public List<CustomerDto> getAllCustomers() {
@@ -450,13 +451,11 @@ public class CustomerService {
         if (phoneKey.length() < 7) {
             throw new IllegalArgumentException("Por favor ingresa un número de teléfono / WhatsApp válido.");
         }
-        if (rawPassword == null || rawPassword.trim().length() < 8) {
-            throw new IllegalArgumentException("La contraseña debe tener al menos 8 caracteres.");
-        }
+        PasswordPolicy.requireValid(rawPassword);
 
         // 1. Verificar si ya existe una cuenta registrada con ese correo o teléfono
         Optional<Customer> registeredByEmail = customerRepository.findFirstByEmailIgnoreCaseAndHasAccountTrue(cleanEmail);
-        if (registeredByEmail.isPresent()) {
+        if (registeredByEmail.isPresent() && !releaseStaleUnverifiedEmailClaim(registeredByEmail.get())) {
             throw new IllegalArgumentException("Ya existe una cuenta registrada con este correo electrónico. Inicia sesión.");
         }
 
@@ -499,6 +498,10 @@ public class CustomerService {
         customer.setPasswordChangedAt(now);
         customer.setResetPasswordToken(null);
         customer.setResetPasswordExpiresAt(null);
+        // La cuenta nace con el correo SIN verificar; el controlador emite y envía el enlace tras el registro
+        customer.setEmailVerifiedAt(null);
+        customer.setEmailVerificationToken(null);
+        customer.setEmailVerificationExpiresAt(null);
 
         customer = customerRepository.save(customer);
 
@@ -585,11 +588,24 @@ public class CustomerService {
         }
         if (email != null && !email.isBlank()) {
             String cleanEmail = email.trim().toLowerCase(Locale.ROOT);
+            if (!cleanEmail.contains("@") || cleanEmail.length() > 120) {
+                throw new IllegalArgumentException("Por favor ingresa un correo electrónico válido.");
+            }
             Optional<Customer> emailCollision = customerRepository.findFirstByEmailIgnoreCaseAndHasAccountTrue(cleanEmail);
             if (emailCollision.isPresent() && !emailCollision.get().getId().equals(customer.getId())) {
                 throw new IllegalArgumentException("Ese correo electrónico ya está en uso por otra cuenta.");
             }
+            boolean emailChanged = customer.getEmail() == null || !customer.getEmail().equalsIgnoreCase(cleanEmail);
             customer.setEmail(cleanEmail);
+            if (emailChanged) {
+                // Un correo nuevo no hereda la verificación del anterior ni sus enlaces pendientes (verificación y recuperación).
+                // emailVerificationSentAt se conserva a propósito: mantiene el tiempo mínimo entre envíos aunque se cambie el correo.
+                customer.setEmailVerifiedAt(null);
+                customer.setEmailVerificationToken(null);
+                customer.setEmailVerificationExpiresAt(null);
+                customer.setResetPasswordToken(null);
+                customer.setResetPasswordExpiresAt(null);
+            }
         }
         if (city != null) {
             customer.setCity(cleanNullable(city));
@@ -621,9 +637,7 @@ public class CustomerService {
 
     @Transactional
     public void changeCustomerPassword(Long customerId, String currentPassword, String newPassword) {
-        if (newPassword == null || newPassword.trim().length() < 8) {
-            throw new IllegalArgumentException("La nueva contraseña debe tener al menos 8 caracteres.");
-        }
+        PasswordPolicy.requireValid(newPassword);
         Customer customer = customerRepository.findById(customerId)
                 .orElseThrow(() -> new IllegalArgumentException("Cuenta no encontrada."));
 
@@ -728,9 +742,7 @@ public class CustomerService {
         if (token == null || token.isBlank()) {
             throw new IllegalArgumentException("El enlace de recuperación no es válido o ha expirado.");
         }
-        if (newPassword == null || newPassword.trim().length() < 8) {
-            throw new IllegalArgumentException("La nueva contraseña debe tener al menos 8 caracteres.");
-        }
+        PasswordPolicy.requireValid(newPassword);
         Customer customer = customerRepository.findByResetPasswordToken(hashResetToken(token.trim()))
                 .orElseThrow(() -> new IllegalArgumentException("El enlace de recuperación no es válido o ya fue utilizado."));
 
@@ -744,10 +756,48 @@ public class CustomerService {
             clearSensitiveGuestData(customer);
         }
         customer.setPasswordHash(passwordEncoder.encode(newPassword));
-        customer.setPasswordChangedAt(LocalDateTime.now());
+        LocalDateTime now = LocalDateTime.now();
+        customer.setPasswordChangedAt(now);
         customer.setHasAccount(true);
         customer.setResetPasswordToken(null);
         customer.setResetPasswordExpiresAt(null);
+        // El enlace de recuperación solo llega a la bandeja del correo de la cuenta: usarlo equivale a verificarlo
+        if (customer.getEmailVerifiedAt() == null && customer.getEmail() != null && !customer.getEmail().isBlank()) {
+            customer.setEmailVerifiedAt(now);
+        }
+        customer.setEmailVerificationToken(null);
+        customer.setEmailVerificationExpiresAt(null);
         customerRepository.save(customer);
+    }
+
+    /**
+     * Anti-«squatting» de correos: alguien pudo registrar el correo de otra persona sin demostrar que es suyo y bloquearlo
+     * ("Ya existe una cuenta con este correo"). Si esa cuenta sigue SIN verificar, es reciente (no es una cuenta existente con plazo
+     * de gracia) y su enlace de verificación ya venció, se libera el correo: la cuenta pasa a ser un perfil de invitado sin acceso
+     * (se conservan su teléfono, pedidos y métricas) y el dueño real puede registrarse.
+     *
+     * @return true si el correo quedó libre
+     */
+    private boolean releaseStaleUnverifiedEmailClaim(Customer holder) {
+        if (!verificationPolicy.isEnabled()
+                || holder.getEmailVerifiedAt() != null
+                || verificationPolicy.isExistingAccount(holder)) {
+            return false;
+        }
+        LocalDateTime now = LocalDateTime.now();
+        boolean linkStillValid = holder.getEmailVerificationExpiresAt() != null
+                && holder.getEmailVerificationExpiresAt().isAfter(now);
+        if (linkStillValid) {
+            return false;
+        }
+        holder.setHasAccount(false);
+        holder.setPasswordHash(null);
+        holder.setEmail(null);
+        holder.setEmailVerificationToken(null);
+        holder.setEmailVerificationExpiresAt(null);
+        holder.setResetPasswordToken(null);
+        holder.setResetPasswordExpiresAt(null);
+        customerRepository.save(holder);
+        return true;
     }
 }

@@ -6,358 +6,515 @@
     <title>Mi Cuenta</title>
 </head>
 <body>
-<div layout:fragment="content" class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12 min-h-[75vh]">
+<div layout:fragment="content" class="sv-acct"
+     th:with="storeName=${settings != null and settings.storeName != null and !settings.storeName.isBlank() ? settings.storeName : 'esta tienda'},
+              stats=${orderStats}">
 
-    <!-- Encabezado de Cuenta -->
-    <div class="bg-white text-slate-900 p-6 sm:p-8 store-radius shadow-sm border border-slate-200/80 mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div class="flex items-center gap-4">
-            <div class="w-14 h-14 rounded-2xl bg-brand text-white font-black text-xl flex items-center justify-center shrink-0 uppercase"
+    <!-- Encabezado de la cuenta -->
+    <header class="sv-acct-surface sv-acct-header">
+        <div class="sv-acct-ident">
+            <div class="sv-acct-avatar" aria-hidden="true"
                  th:text="${customer.name != null and !customer.name.isBlank() ? #strings.substring(customer.name, 0, 1) : 'C'}">C</div>
-            <div>
-                <h1 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight" th:text="${'Hola, ' + customer.name}">Hola</h1>
-                <p class="text-xs sm:text-sm text-slate-500">
+            <div class="sv-acct-ident__text">
+                <h1 class="sv-acct-title" th:text="${'Hola, ' + (customer.name != null ? customer.name : '')}">Hola</h1>
+                <p class="sv-acct-sub">
                     <span th:if="${customer.email != null}" th:text="${customer.email + ' · '}"></span>
                     <span th:text="${customer.phone}"></span>
+                    <span th:if="${customer.createdAt != null}"
+                          th:text="${' · Cliente desde ' + #temporals.format(customer.createdAt, 'MM/yyyy')}"></span>
                 </p>
             </div>
         </div>
-        <div class="flex items-center gap-3 flex-wrap">
+        <div class="sv-acct-actions">
             <a th:href="@{/s/{slug}/catalog(slug=${slug})}"
-               class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition">
-                Ir al Catálogo
+               class="sv-acct-btn sv-acct-btn--primary font-bold rounded-xl">
+                Seguir comprando
             </a>
             <form th:action="@{/s/{slug}/account/logout(slug=${slug})}" method="POST" data-no-spa="true" class="m-0">
-                <button type="submit"
-                        class="px-4 py-2.5 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold transition cursor-pointer">
+                <button type="submit" class="sv-acct-btn sv-acct-btn--ghost font-bold rounded-xl">
                     Cerrar sesión
                 </button>
             </form>
         </div>
+    </header>
+
+    <!-- Avisos -->
+    <th:block th:replace="~{storefront/account/fragments :: alert('success', ${accountSuccess != null ? accountSuccess : reviewSuccess})}"></th:block>
+    <th:block th:replace="~{storefront/account/fragments :: alert('error', ${accountError != null ? accountError : reviewError})}"></th:block>
+
+    <!-- Aviso PERSISTENTE (sin botón de cerrar): cuenta existente con el correo sin verificar dentro del plazo de gracia -->
+    <div th:if="${emailVerificationGrace != null}" class="sv-acct-alert sv-acct-alert--warn sv-acct-alert--stack" role="status">
+        <span class="sv-acct-alert__icon" aria-hidden="true"><span>!</span></span>
+        <div class="sv-acct-alert__body">
+            <strong>Verifica tu correo.</strong>
+            <span th:text="${'Tienes hasta el ' + emailVerificationGrace['deadline'] + ' ('
+                    + (emailVerificationGrace['daysLeft'] == 1 ? 'queda 1 día' : 'quedan ' + emailVerificationGrace['daysLeft'] + ' días')
+                    + ') para confirmar ' + emailVerificationGrace['maskedEmail'] + '. Pasado ese plazo no podrás entrar a Mi Cuenta hasta verificarlo; comprar seguirá funcionando.'}">
+                Tienes hasta el 06/12/2026 para confirmar tu correo.
+            </span>
+            <span class="sv-acct-hint" th:if="${emailVerificationGrace['resendWaitSeconds'] > 0}"
+                  th:text="${'Podrás pedir otro enlace en ' + emailVerificationGrace['resendWaitSeconds'] + ' segundos.'}"></span>
+        </div>
+        <form th:action="@{/s/{slug}/account/resend-verification(slug=${slug})}" method="POST"
+              data-no-spa="true" data-sv-loading class="sv-acct-alert__action">
+            <button type="submit" class="sv-acct-btn sv-acct-btn--ghost sv-acct-btn--sm font-bold rounded-xl">
+                Enviar enlace de verificación
+            </button>
+        </form>
     </div>
 
-    <!-- Alertas -->
-    <div th:if="${accountSuccess != null or reviewSuccess != null}"
-         class="mb-6 bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3.5 store-radius text-xs sm:text-sm font-bold"
-         th:text="${accountSuccess != null ? accountSuccess : reviewSuccess}"></div>
-    <div th:if="${accountError != null or reviewError != null}"
-         class="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3.5 store-radius text-xs sm:text-sm font-bold"
-         th:text="${accountError != null ? accountError : reviewError}"></div>
-
-    <!-- Banner Prioritario de Pedidos Pendientes de Pago -->
-    <div th:if="${not #lists.isEmpty(pendingOnlineOrders)}"
-         class="mb-8 bg-amber-50 border border-amber-200 p-5 sm:p-6 store-radius space-y-4">
-        <div class="flex items-start gap-3">
-            <span class="w-9 h-9 rounded-xl bg-amber-500/15 text-amber-700 flex items-center justify-center shrink-0 font-black">!</span>
-            <div>
-                <h2 class="text-sm sm:text-base font-black text-amber-950">Tienes pedidos pendientes de pago en línea</h2>
-                <p class="text-xs text-amber-800 mt-0.5">Puedes retomar el pago seguro ahora mismo o cancelar el pedido para devolver los productos a tu bolsa.</p>
-            </div>
+    <!-- Indicadores (calculados solo con los pedidos que se muestran abajo) -->
+    <div class="sv-acct-stats" role="list" aria-label="Resumen de tus pedidos">
+        <div class="sv-acct-surface sv-acct-stat" role="listitem">
+            <span class="sv-acct-stat__value" th:text="${stats != null ? stats['total'] : 0}">0</span>
+            <span class="sv-acct-stat__label">Pedidos</span>
         </div>
-
-        <div class="space-y-3">
-            <div th:each="po : ${pendingOnlineOrders}"
-                 class="bg-white p-4 rounded-xl border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <p class="text-sm font-black text-slate-900">
-                        Pedido #<span th:text="${po.id}">1</span>
-                        <span class="text-xs font-semibold text-slate-500 ml-2"
-                              th:text="${po.createdAt != null ? #temporals.format(po.createdAt, 'dd/MM/yyyy HH:mm') : ''}"></span>
-                    </p>
-                    <p class="text-xs text-slate-600 mt-0.5">
-                        Total a pagar: <strong class="text-slate-900" th:text="${'$ ' + #numbers.formatDecimal(po.total, 1, 'POINT', 0, 'COMMA')}">$0</strong>
-                    </p>
-                </div>
-                <div class="flex items-center gap-2.5 flex-wrap">
-                    <a th:href="@{/s/{slug}/order/{token}/success(slug=${slug}, token=${po.publicToken})}"
-                       data-no-spa="true"
-                       class="px-4 py-2.5 rounded-xl bg-brand hover-bg-brand text-white text-xs font-bold shadow-sm transition">
-                        Pagar ahora
-                    </a>
-                    <form th:action="@{/s/{slug}/order/{token}/cancel-and-restore(slug=${slug}, token=${po.publicToken})}"
-                          method="POST" data-no-spa="true" class="m-0">
-                        <button type="submit"
-                                class="px-3.5 py-2.5 rounded-xl border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold transition cursor-pointer">
-                            Modificar y volver a la bolsa
-                        </button>
-                    </form>
-                </div>
-            </div>
+        <div class="sv-acct-surface sv-acct-stat sv-acct-stat--accent" role="listitem">
+            <span class="sv-acct-stat__value" th:text="${stats != null ? stats['inProgress'] : 0}">0</span>
+            <span class="sv-acct-stat__label">En curso</span>
+        </div>
+        <div class="sv-acct-surface sv-acct-stat" role="listitem">
+            <span class="sv-acct-stat__value" th:text="${stats != null ? stats['delivered'] : 0}">0</span>
+            <span class="sv-acct-stat__label">Entregados</span>
         </div>
     </div>
 
-    <!-- Navegación de Pestañas: Mis Pedidos vs Mis Datos de Envío -->
-    <div class="flex items-center gap-2 border-b border-slate-200 mb-6">
-        <button type="button" id="acc-tab-orders-btn"
-                onclick="switchAccountSection('orders')"
-                th:classappend="${activeTab != 'profile' ? 'border-brand text-brand' : 'border-transparent text-slate-500 hover:text-slate-800'}"
-                class="px-4 py-3 border-b-2 font-bold text-sm transition cursor-pointer">
-            Mis Pedidos (<span th:text="${#lists.size(customerOrders)}">0</span>)
-        </button>
-        <button type="button" id="acc-tab-profile-btn"
-                onclick="switchAccountSection('profile')"
-                th:classappend="${activeTab == 'profile' ? 'border-brand text-brand' : 'border-transparent text-slate-500 hover:text-slate-800'}"
-                class="px-4 py-3 border-b-2 font-bold text-sm transition cursor-pointer">
-            Mis Datos de Envío y Contraseña
-        </button>
-    </div>
+    <div class="sv-acct-shell">
 
-    <!-- SECCIÓN 1: HISTORIAL Y SEGUIMIENTO DE PEDIDOS -->
-    <div id="acc-section-orders" th:classappend="${activeTab == 'profile' ? 'hidden' : ''}" class="space-y-4">
-        <div th:if="${#lists.isEmpty(customerOrders)}"
-             class="bg-white text-slate-900 p-12 store-radius border border-slate-200/80 text-center">
-            <p class="text-base font-bold text-slate-800">Aún no tienes pedidos registrados en tu cuenta</p>
-            <p class="text-xs text-slate-500 mt-1 mb-5">Explora nuestro catálogo y realiza tu primera compra.</p>
-            <a th:href="@{/s/{slug}/catalog(slug=${slug})}"
-               class="inline-block bg-brand text-white font-bold py-3 px-6 rounded-xl text-xs shadow-md hover-bg-brand transition">
-                Explorar productos
-            </a>
-        </div>
+        <!-- Navegación: barra lateral en escritorio, pestañas desplazables en móvil -->
+        <nav class="sv-acct-surface sv-acct-nav" role="tablist" aria-label="Secciones de tu cuenta"
+             onkeydown="svAcctNavKey(event)">
+            <button type="button" role="tab" id="acc-tab-orders" aria-controls="acc-panel-orders"
+                    class="sv-acct-nav__item" onclick="svAcctSwitch('orders')"
+                    th:attr="aria-selected=${activeTab == 'orders'}, tabindex=${activeTab == 'orders' ? '0' : '-1'}">
+                <svg class="sv-acct-nav__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+                <span>Mis pedidos</span>
+                <span class="sv-acct-nav__badge" th:if="${not #lists.isEmpty(pendingOnlineOrders)}"
+                      th:text="${#lists.size(pendingOnlineOrders)}"
+                      title="Pedidos pendientes de pago">1</span>
+            </button>
+            <button type="button" role="tab" id="acc-tab-shipping" aria-controls="acc-panel-shipping"
+                    class="sv-acct-nav__item" onclick="svAcctSwitch('shipping')"
+                    th:attr="aria-selected=${activeTab == 'shipping'}, tabindex=${activeTab == 'shipping' ? '0' : '-1'}">
+                <svg class="sv-acct-nav__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                <span>Datos de envío</span>
+            </button>
+            <button type="button" role="tab" id="acc-tab-billing" aria-controls="acc-panel-billing"
+                    class="sv-acct-nav__item" onclick="svAcctSwitch('billing')"
+                    th:attr="aria-selected=${activeTab == 'billing'}, tabindex=${activeTab == 'billing' ? '0' : '-1'}">
+                <svg class="sv-acct-nav__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                <span>Facturación</span>
+            </button>
+            <button type="button" role="tab" id="acc-tab-security" aria-controls="acc-panel-security"
+                    class="sv-acct-nav__item" onclick="svAcctSwitch('security')"
+                    th:attr="aria-selected=${activeTab == 'security'}, tabindex=${activeTab == 'security' ? '0' : '-1'}">
+                <svg class="sv-acct-nav__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                <span>Seguridad</span>
+            </button>
+        </nav>
 
-        <div th:each="ord : ${customerOrders}"
-             th:with="existingRev=${reviewsByOrderId != null ? reviewsByOrderId.get(ord.id) : null},
-                      canReview=${ord.status != null and (ord.status.name() == 'PAID' or ord.status.name() == 'CONFIRMED' or ord.status.name() == 'PREPARING' or ord.status.name() == 'PACKED' or ord.status.name() == 'SHIPPED' or ord.status.name() == 'DELIVERED')}"
-             class="bg-white text-slate-900 p-6 store-radius shadow-sm border border-slate-200/80 space-y-4">
+        <div class="sv-acct-main">
 
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-slate-100">
-                <div>
-                    <div class="flex items-center gap-2.5 flex-wrap">
-                        <span class="font-black text-base text-slate-900" th:text="${'Pedido #' + ord.id}">Pedido #1</span>
-                        <span class="px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase bg-slate-100 text-slate-800"
-                              th:text="${ord.status != null ? ord.status.displayName : 'Registrado'}">Estado</span>
-                        <span class="text-xs text-slate-400"
-                              th:text="${ord.createdAt != null ? #temporals.format(ord.createdAt, 'dd/MM/yyyy HH:mm') : ''}"></span>
-                    </div>
-                    <p class="text-xs text-slate-500 mt-1">
-                        Destino: <span class="font-semibold text-slate-700" th:text="${ord.city + ' — ' + ord.address}"></span>
-                    </p>
-                </div>
-                <div class="flex items-center gap-3">
-                    <span class="text-lg font-black text-slate-900"
-                          th:text="${'$ ' + #numbers.formatDecimal(ord.total, 1, 'POINT', 0, 'COMMA')}">$0</span>
-                    <a th:href="${ord.channel != null and ord.channel.name() == 'WHATSAPP'
-                                ? '/s/' + slug + '/order/' + ord.publicToken + '/whatsapp?tracked=true'
-                                : (ord.status != null and ord.status.name() == 'PENDING'
-                                    ? '/s/' + slug + '/order/' + ord.publicToken + '/success'
-                                    : '/s/' + slug + '/order/' + ord.publicToken + '/wompi-result')}"
-                       data-no-spa="true"
-                       class="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition">
-                        Ver comprobante
-                    </a>
-                </div>
-            </div>
+            <!-- PANEL 1: PEDIDOS -->
+            <section id="acc-panel-orders" role="tabpanel" aria-labelledby="acc-tab-orders"
+                     class="sv-acct-panel" th:hidden="${activeTab != 'orders'}">
 
-            <!-- Ítems del Pedido -->
-            <div class="space-y-1.5 text-xs sm:text-sm">
-                <div th:each="it : ${ord.items}" class="flex justify-between text-slate-700">
-                    <span>
-                        <strong class="font-bold text-slate-900" th:text="${it.quantity + 'x '}">1x </strong>
-                        <span th:text="${it.productName}">Producto</span>
-                    </span>
-                    <span class="font-semibold text-slate-900"
-                          th:text="${'$ ' + #numbers.formatDecimal(it.subtotal, 1, 'POINT', 0, 'COMMA')}">$0</span>
-                </div>
-            </div>
-
-            <!-- Guías de Rastreo si el pedido ya tiene despacho -->
-            <div th:if="${ord.shipments != null and not #lists.isEmpty(ord.shipments)}"
-                 class="p-4 rounded-xl bg-indigo-50/70 border border-indigo-200 space-y-2">
-                <p class="text-xs font-black uppercase tracking-wider text-indigo-950">Seguimiento de Envío</p>
-                <div th:each="sh : ${ord.shipments}" class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs bg-white p-3 rounded-lg border border-indigo-100">
+                <!-- Pedidos pendientes de pago en línea -->
+                <div th:if="${not #lists.isEmpty(pendingOnlineOrders)}" class="sv-acct-surface sv-acct-pending">
                     <div>
-                        <span class="text-slate-500">Transportadora:</span>
-                        <strong class="text-slate-900" th:text="${sh.carrier != null ? sh.carrier.name : 'Transportadora'}"></strong>
-                        <span class="mx-1.5 text-slate-300">|</span>
-                        <span class="text-slate-500">Guía:</span>
-                        <span class="font-mono font-bold text-slate-900" th:text="${sh.trackingNumber}"></span>
+                        <h2 class="sv-acct-pending__title">Tienes pedidos pendientes de pago</h2>
+                        <p class="sv-acct-pending__text">Puedes retomar el pago seguro ahora mismo o cancelar el pedido para devolver los productos a tu bolsa.</p>
                     </div>
-                    <a th:if="${sh.dynamicTrackingUrl != null and !sh.dynamicTrackingUrl.isBlank()}"
-                       th:href="${sh.dynamicTrackingUrl}" target="_blank" rel="noopener noreferrer"
-                       class="text-xs font-bold text-brand hover:underline">
-                        Rastrear paquete en línea →
+                    <div class="sv-acct-pending__row" th:each="po : ${pendingOnlineOrders}">
+                        <div>
+                            <strong th:text="${'Pedido #' + po.id}">Pedido #1</strong>
+                            <span class="sv-acct-sub" th:text="${po.createdAt != null ? ' · ' + #temporals.format(po.createdAt, 'dd/MM/yyyy HH:mm') : ''}"></span>
+                            <div class="sv-acct-sub">Total a pagar:
+                                <strong th:text="${'$ ' + #numbers.formatDecimal(po.total ?: 0, 1, 'POINT', 0, 'COMMA')}">$0</strong>
+                            </div>
+                        </div>
+                        <div class="sv-acct-order__side">
+                            <a th:href="@{/s/{slug}/order/{token}/success(slug=${slug}, token=${po.publicToken})}"
+                               data-no-spa="true"
+                               class="sv-acct-btn sv-acct-btn--primary sv-acct-btn--sm font-bold rounded-xl">
+                                Pagar ahora
+                            </a>
+                            <form th:action="@{/s/{slug}/order/{token}/cancel-and-restore(slug=${slug}, token=${po.publicToken})}"
+                                  method="POST" data-no-spa="true" data-sv-loading class="m-0"
+                                  onsubmit="return confirm('Se cancelará este pedido y sus productos volverán a tu bolsa para que puedas modificarlos. ¿Continuar?');">
+                                <button type="submit" class="sv-acct-btn sv-acct-btn--ghost sv-acct-btn--sm font-bold rounded-xl">
+                                    Modificar y volver a la bolsa
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Estado vacío -->
+                <div th:if="${#lists.isEmpty(customerOrders)}" class="sv-acct-surface sv-acct-empty">
+                    <div class="sv-acct-empty__icon" aria-hidden="true">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+                    </div>
+                    <h2 class="sv-acct-empty__title">Aún no tienes pedidos en tu cuenta</h2>
+                    <p class="sv-acct-empty__text">Explora el catálogo y haz tu primera compra: la verás aquí con su seguimiento.</p>
+                    <a th:href="@{/s/{slug}/catalog(slug=${slug})}"
+                       class="sv-acct-btn sv-acct-btn--primary font-bold rounded-xl">
+                        Explorar productos
                     </a>
                 </div>
-            </div>
 
-            <!-- Calificación Verificada Directa desde Mi Cuenta -->
-            <div th:if="${existingRev != null}" class="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200 text-xs text-emerald-900">
-                <span class="font-bold">✓ Tu calificación verificada:</span>
-                <span class="italic ml-1" th:text="'“' + ${existingRev.comment} + '”'"></span>
-            </div>
+                <!-- Historial -->
+                <article th:each="ord : ${customerOrders}" class="sv-acct-surface sv-acct-order"
+                         th:with="st=${ord.status != null ? ord.status.name() : ''},
+                                  statusClass=${st == 'PENDING' ? 'pending' : (st == 'DELIVERED' ? 'done' : (st == 'SHIPPED' ? 'shipped' : ((st == 'CANCELLED' or st == 'REFUNDED') ? 'cancelled' : 'progress')))},
+                                  step=${st == 'DELIVERED' ? 4 : (st == 'SHIPPED' ? 3 : ((st == 'PREPARING' or st == 'PACKED') ? 2 : ((st == 'PAID' or st == 'CONFIRMED') ? 1 : 0)))},
+                                  showSteps=${st != '' and st != 'PENDING' and st != 'CANCELLED' and st != 'REFUNDED'},
+                                  existingRev=${reviewsByOrderId != null ? reviewsByOrderId.get(ord.id) : null},
+                                  canReview=${st == 'PAID' or st == 'CONFIRMED' or st == 'PREPARING' or st == 'PACKED' or st == 'SHIPPED' or st == 'DELIVERED'}">
 
-            <details th:if="${existingRev == null and canReview}" class="group bg-slate-50 rounded-xl border border-slate-200 p-3.5">
-                <summary class="text-xs font-bold text-brand cursor-pointer list-none flex items-center justify-between">
-                    <span>★ Calificar este pedido verificado</span>
-                    <span class="text-slate-400 group-open:rotate-180 transition-transform">▼</span>
-                </summary>
-                <form th:action="@{/s/{slug}/order/{token}/review(slug=${slug}, token=${ord.publicToken})}"
-                      method="POST" data-no-spa="true" class="mt-3 pt-3 border-t border-slate-200 space-y-3">
-                    <input type="hidden" name="origin" value="account">
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div class="sv-acct-order__head">
                         <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">Puntuación</label>
-                            <select name="rating" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900">
-                                <option value="5">★★★★★ (5/5 - Excelente)</option>
-                                <option value="4">★★★★☆ (4/5 - Muy buena)</option>
-                                <option value="3">★★★☆☆ (3/5 - Buena)</option>
-                                <option value="2">★★☆☆☆ (2/5 - Regular)</option>
-                                <option value="1">★☆☆☆☆ (1/5 - Por mejorar)</option>
-                            </select>
+                            <div class="sv-acct-order__row">
+                                <span class="sv-acct-order__id" th:text="${'Pedido #' + ord.id}">Pedido #1</span>
+                                <span class="sv-acct-pill" th:classappend="${'sv-acct-pill--' + statusClass}"
+                                      th:text="${ord.status != null ? ord.status.displayName : 'Registrado'}">Estado</span>
+                            </div>
+                            <p class="sv-acct-order__meta">
+                                <span th:if="${ord.createdAt != null}" th:text="${#temporals.format(ord.createdAt, 'dd/MM/yyyy HH:mm')}"></span>
+                                <span th:if="${ord.city != null or ord.address != null}"
+                                      th:text="${' · Destino: ' + (ord.city != null ? ord.city : '') + (ord.address != null ? ' — ' + ord.address : '')}"></span>
+                            </p>
                         </div>
-                        <div class="sm:col-span-2">
-                            <label class="block text-xs font-bold text-slate-700 mb-1">Comentario</label>
-                            <input type="text" name="comment" required minlength="4" maxlength="500"
-                                   placeholder="¿Qué te parecieron tus productos y la atención?"
-                                   class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900">
+                        <div class="sv-acct-order__side">
+                            <span class="sv-acct-order__total"
+                                  th:text="${'$ ' + #numbers.formatDecimal(ord.total ?: 0, 1, 'POINT', 0, 'COMMA')}">$0</span>
+                            <a th:href="${ord.channel != null and ord.channel.name() == 'WHATSAPP'
+                                        ? '/s/' + slug + '/order/' + ord.publicToken + '/whatsapp?tracked=true'
+                                        : (st == 'PENDING'
+                                            ? '/s/' + slug + '/order/' + ord.publicToken + '/success'
+                                            : '/s/' + slug + '/order/' + ord.publicToken + '/wompi-result')}"
+                               data-no-spa="true"
+                               class="sv-acct-btn sv-acct-btn--ghost sv-acct-btn--sm font-bold rounded-xl">
+                                Ver comprobante
+                            </a>
                         </div>
                     </div>
-                    <button type="submit" class="bg-brand hover-bg-brand text-white font-bold py-2 px-4 rounded-lg text-xs transition cursor-pointer">
-                        Publicar calificación
-                    </button>
+
+                    <div class="sv-acct-order__body">
+                        <!-- Progreso -->
+                        <ol class="sv-acct-steps" th:if="${showSteps}" aria-label="Progreso del pedido">
+                            <li th:classappend="${(step >= 1 ? 'is-done ' : '') + (step == 1 ? 'is-current' : '')}">Pagado</li>
+                            <li th:classappend="${(step >= 2 ? 'is-done ' : '') + (step == 2 ? 'is-current' : '')}">Preparando</li>
+                            <li th:classappend="${(step >= 3 ? 'is-done ' : '') + (step == 3 ? 'is-current' : '')}">Enviado</li>
+                            <li th:classappend="${(step >= 4 ? 'is-done ' : '') + (step == 4 ? 'is-current' : '')}">Entregado</li>
+                        </ol>
+
+                        <!-- Ítems -->
+                        <ul class="sv-acct-items">
+                            <li th:each="it : ${ord.items}">
+                                <span>
+                                    <span class="sv-acct-items__qty" th:text="${it.quantity + 'x'}">1x</span>
+                                    <span th:text="${it.productName}">Producto</span>
+                                </span>
+                                <span class="sv-acct-items__price"
+                                      th:text="${'$ ' + #numbers.formatDecimal(it.subtotal ?: 0, 1, 'POINT', 0, 'COMMA')}">$0</span>
+                            </li>
+                        </ul>
+
+                        <!-- Seguimiento -->
+                        <div th:if="${ord.shipments != null and not #lists.isEmpty(ord.shipments)}" class="sv-acct-track">
+                            <p class="sv-acct-track__title">Seguimiento de envío</p>
+                            <div class="sv-acct-track__row" th:each="sh : ${ord.shipments}">
+                                <div>
+                                    <span class="sv-acct-sub">Transportadora:</span>
+                                    <strong th:text="${sh.carrier != null ? sh.carrier.name : 'Transportadora'}"></strong>
+                                    <span class="sv-acct-sub"> · Guía:</span>
+                                    <strong th:text="${sh.trackingNumber}"></strong>
+                                </div>
+                                <a th:if="${sh.dynamicTrackingUrl != null and !sh.dynamicTrackingUrl.isBlank()}"
+                                   th:href="${sh.dynamicTrackingUrl}" target="_blank" rel="noopener noreferrer"
+                                   class="sv-acct-link">
+                                    Rastrear paquete →
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Reseña -->
+                        <div th:if="${existingRev != null}" class="sv-acct-review">
+                            <strong>✓ Tu calificación verificada:</strong>
+                            <em th:text="${'“' + existingRev.comment + '”'}"></em>
+                        </div>
+
+                        <details th:if="${existingRev == null and canReview}" class="sv-acct-disclosure">
+                            <summary>★ Calificar este pedido</summary>
+                            <div class="sv-acct-disclosure__body">
+                                <form th:action="@{/s/{slug}/order/{token}/review(slug=${slug}, token=${ord.publicToken})}"
+                                      method="POST" data-no-spa="true" data-sv-loading class="sv-acct-review-form">
+                                    <input type="hidden" name="origin" value="account">
+                                    <div class="sv-acct-grid sv-acct-grid--2">
+                                        <div>
+                                            <label class="sv-acct-label" th:for="${'rating-' + ord.id}">Puntuación</label>
+                                            <select name="rating" th:id="${'rating-' + ord.id}" class="sv-acct-input">
+                                                <option value="5">★★★★★ (5/5 - Excelente)</option>
+                                                <option value="4">★★★★☆ (4/5 - Muy buena)</option>
+                                                <option value="3">★★★☆☆ (3/5 - Buena)</option>
+                                                <option value="2">★★☆☆☆ (2/5 - Regular)</option>
+                                                <option value="1">★☆☆☆☆ (1/5 - Por mejorar)</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="sv-acct-label" th:for="${'comment-' + ord.id}">Comentario</label>
+                                            <input type="text" name="comment" th:id="${'comment-' + ord.id}" required minlength="4" maxlength="500"
+                                                   placeholder="¿Qué te parecieron tus productos y la atención?"
+                                                   class="sv-acct-input">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <button type="submit" class="sv-acct-btn sv-acct-btn--primary sv-acct-btn--sm font-bold rounded-xl">
+                                            Publicar calificación
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </details>
+                    </div>
+                </article>
+
+                <div class="sv-acct-note" th:unless="${#lists.isEmpty(customerOrders)}">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <span>Aquí aparecen los pedidos que haces con tu cuenta iniciada. Los pedidos hechos como invitado se consultan con el enlace que recibiste al comprar.</span>
+                </div>
+            </section>
+
+            <!-- Datos personales y de facturación: un solo formulario, dos paneles -->
+            <form id="acc-profile-form" th:action="@{/s/{slug}/account/profile(slug=${slug})}" method="POST"
+                  data-no-spa="true" data-sv-loading class="sv-acct-contents">
+
+                <!-- PANEL 2: DATOS DE ENVÍO -->
+                <section id="acc-panel-shipping" role="tabpanel" aria-labelledby="acc-tab-shipping"
+                         class="sv-acct-panel" th:hidden="${activeTab != 'shipping'}">
+                    <div class="sv-acct-surface sv-acct-section">
+                        <h2 class="sv-acct-section__title">Contacto</h2>
+                        <p class="sv-acct-section__desc">Usamos estos datos para avisarte del estado de tus pedidos.</p>
+                        <div class="sv-acct-form">
+                            <div class="sv-acct-grid sv-acct-grid--2">
+                                <div>
+                                    <label class="sv-acct-label" for="acc-name">Nombre completo <span class="sv-acct-req">*</span></label>
+                                    <input id="acc-name" type="text" name="name" required autocomplete="name"
+                                           th:value="${customer.name}" class="sv-acct-input">
+                                </div>
+                                <div>
+                                    <label class="sv-acct-label" for="acc-phone">Teléfono / WhatsApp <span class="sv-acct-req">*</span></label>
+                                    <input id="acc-phone" type="tel" name="phone" required autocomplete="tel" inputmode="tel"
+                                           th:value="${customer.phone}" class="sv-acct-input">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="sv-acct-label" for="acc-email">Correo electrónico</label>
+                                <input id="acc-email" type="email" name="email" autocomplete="email" inputmode="email"
+                                       th:value="${customer.email}" class="sv-acct-input">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="sv-acct-surface sv-acct-section">
+                        <h2 class="sv-acct-section__title">Dirección de entrega predeterminada</h2>
+                        <p class="sv-acct-section__desc">Se autocompletará en el checkout cuando compres con tu cuenta.</p>
+                        <div class="sv-acct-form">
+                            <div class="sv-acct-grid sv-acct-grid--2">
+                                <div>
+                                    <label class="sv-acct-label" for="acc-city">Ciudad / Municipio</label>
+                                    <input id="acc-city" type="text" name="city" autocomplete="address-level2"
+                                           placeholder="Ej: Bogotá, Medellín..." th:value="${customer.city}" class="sv-acct-input">
+                                </div>
+                                <div>
+                                    <label class="sv-acct-label" for="acc-address">Dirección</label>
+                                    <input id="acc-address" type="text" name="address" autocomplete="street-address"
+                                           placeholder="Calle/Carrera, #, Apto/Barrio" th:value="${customer.address}" class="sv-acct-input">
+                                </div>
+                            </div>
+                            <div class="sv-acct-note">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                                <span th:text="${'En ' + storeName + ' usamos tus datos solo para procesar envíos, facturación y atención de tus pedidos.'}">Usamos tus datos solo para procesar tus pedidos.</span>
+                            </div>
+                            <div>
+                                <button type="submit" class="sv-acct-btn sv-acct-btn--primary font-bold rounded-xl">Guardar mis datos</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- PANEL 3: FACTURACIÓN -->
+                <section id="acc-panel-billing" role="tabpanel" aria-labelledby="acc-tab-billing"
+                         class="sv-acct-panel" th:hidden="${activeTab != 'billing'}">
+                    <div class="sv-acct-surface sv-acct-section">
+                        <h2 class="sv-acct-section__title">Datos de facturación</h2>
+                        <p class="sv-acct-section__desc">Opcionales. Si los guardas, no tendrás que escribirlos en cada compra.</p>
+                        <div class="sv-acct-form">
+                            <label class="sv-acct-check">
+                                <input type="checkbox" name="requiresElectronicInvoice" value="true"
+                                       th:checked="${customer.requiresElectronicInvoice == true}">
+                                <span>Solicitar factura electrónica por defecto en mis compras</span>
+                            </label>
+                            <div class="sv-acct-grid sv-acct-grid--3">
+                                <div>
+                                    <label class="sv-acct-label" for="acc-doctype">Tipo de documento</label>
+                                    <select id="acc-doctype" name="documentType" class="sv-acct-input">
+                                        <option value="CC" th:selected="${customer.documentType == null or customer.documentType == 'CC'}">CC</option>
+                                        <option value="NIT" th:selected="${customer.documentType == 'NIT'}">NIT</option>
+                                        <option value="CE" th:selected="${customer.documentType == 'CE'}">CE</option>
+                                        <option value="PP" th:selected="${customer.documentType == 'PP'}">Pasaporte</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="sv-acct-label" for="acc-document">Número de documento</label>
+                                    <input id="acc-document" type="text" name="document" inputmode="numeric" autocomplete="off"
+                                           th:value="${customer.document}" class="sv-acct-input">
+                                </div>
+                                <div>
+                                    <label class="sv-acct-label" for="acc-dv">DV (solo NIT)</label>
+                                    <input id="acc-dv" type="text" name="verificationDigit" maxlength="1" inputmode="numeric" autocomplete="off"
+                                           th:value="${customer.verificationDigit}" class="sv-acct-input">
+                                </div>
+                            </div>
+                            <div class="sv-acct-grid sv-acct-grid--2">
+                                <div>
+                                    <label class="sv-acct-label" for="acc-legal">Razón social (opcional)</label>
+                                    <input id="acc-legal" type="text" name="legalName" autocomplete="organization"
+                                           th:value="${customer.legalName}" class="sv-acct-input">
+                                </div>
+                                <div>
+                                    <label class="sv-acct-label" for="acc-regime">Régimen tributario</label>
+                                    <select id="acc-regime" name="taxRegime" class="sv-acct-input">
+                                        <option value="R-99-PN" th:selected="${customer.taxRegime == null or customer.taxRegime == 'R-99-PN'}">No responsable de IVA</option>
+                                        <option value="IVA" th:selected="${customer.taxRegime == 'IVA'}">Responsable de IVA</option>
+                                        <option value="SIMPLE" th:selected="${customer.taxRegime == 'SIMPLE'}">Régimen Simple</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <button type="submit" class="sv-acct-btn sv-acct-btn--primary font-bold rounded-xl">Guardar mis datos</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </form>
+
+            <!-- PANEL 4: SEGURIDAD -->
+            <section id="acc-panel-security" role="tabpanel" aria-labelledby="acc-tab-security"
+                     class="sv-acct-panel" th:hidden="${activeTab != 'security'}">
+                <form th:action="@{/s/{slug}/account/password(slug=${slug})}" method="POST"
+                      data-no-spa="true" data-sv-loading class="sv-acct-surface sv-acct-section">
+                    <h2 class="sv-acct-section__title">Cambiar contraseña</h2>
+                    <p class="sv-acct-section__desc">Elige una contraseña que no uses en otros sitios. Verás los requisitos mientras la escribes.</p>
+                    <div class="sv-acct-form">
+                        <div>
+                            <label class="sv-acct-label" for="acc-cur-pwd">Contraseña actual <span class="sv-acct-req">*</span></label>
+                            <div class="sv-acct-pwd">
+                                <input id="acc-cur-pwd" type="password" name="currentPassword" required
+                                       autocomplete="current-password" class="sv-acct-input">
+                                <button type="button" class="sv-acct-pwd__toggle" aria-label="Mostrar contraseña" aria-pressed="false" onclick="svAcctTogglePwd(this)">
+                                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="sv-acct-grid sv-acct-grid--2">
+                            <div>
+                                <label class="sv-acct-label" for="acc-new-pwd">Nueva contraseña <span class="sv-acct-req">*</span></label>
+                                <div class="sv-acct-pwd">
+                                    <input id="acc-new-pwd" type="password" name="newPassword" required data-pw-new
+                                           autocomplete="new-password" placeholder="Crea tu nueva contraseña" class="sv-acct-input">
+                                    <button type="button" class="sv-acct-pwd__toggle" aria-label="Mostrar contraseña" aria-pressed="false" onclick="svAcctTogglePwd(this)">
+                                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="sv-acct-label" for="acc-conf-pwd">Confirmar nueva <span class="sv-acct-req">*</span></label>
+                                <div class="sv-acct-pwd">
+                                    <input id="acc-conf-pwd" type="password" name="confirmPassword" required data-pw-confirm
+                                           autocomplete="new-password" class="sv-acct-input">
+                                    <button type="button" class="sv-acct-pwd__toggle" aria-label="Mostrar contraseña" aria-pressed="false" onclick="svAcctTogglePwd(this)">
+                                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <th:block th:replace="~{storefront/account/fragments :: pw-rules}"></th:block>
+                        <th:block th:replace="~{storefront/account/fragments :: pw-match}"></th:block>
+                        <div class="sv-acct-note">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                            <span>Al cambiar tu contraseña cerraremos tus otras sesiones abiertas; en este dispositivo seguirás conectado.</span>
+                        </div>
+                        <div>
+                            <button type="submit" class="sv-acct-btn sv-acct-btn--primary font-bold rounded-xl">Actualizar contraseña</button>
+                        </div>
+                    </div>
                 </form>
-            </details>
+            </section>
         </div>
-    </div>
-
-    <!-- SECCIÓN 2: PERFIL, DIRECCIÓN GUARDADA Y CONTRASEÑA -->
-    <div id="acc-section-profile" th:classappend="${activeTab != 'profile' ? 'hidden' : ''}" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <form th:action="@{/s/{slug}/account/profile(slug=${slug})}" method="POST" data-no-spa="true"
-              class="lg:col-span-2 bg-white text-slate-900 p-6 sm:p-8 store-radius shadow-sm border border-slate-200/80 space-y-4">
-            <h2 class="text-lg font-black text-slate-900 border-b border-slate-100 pb-3">Datos Predeterminados de Envío y Facturación</h2>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Nombre Completo <span class="text-red-500">*</span></label>
-                    <input type="text" name="name" required th:value="${customer.name}"
-                           class="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm text-slate-900">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Teléfono / WhatsApp <span class="text-red-500">*</span></label>
-                    <input type="tel" name="phone" required th:value="${customer.phone}"
-                           class="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm text-slate-900">
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Correo Electrónico</label>
-                    <input type="email" name="email" th:value="${customer.email}"
-                           class="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm text-slate-900">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Ciudad / Municipio</label>
-                    <input type="text" name="city" th:value="${customer.city}"
-                           placeholder="Ej: Bogotá, Medellín..."
-                           class="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm text-slate-900">
-                </div>
-            </div>
-
-            <div>
-                <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Dirección de Entrega</label>
-                <input type="text" name="address" th:value="${customer.address}"
-                       placeholder="Calle/Carrera, #, Apto/Barrio"
-                       class="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm text-slate-900">
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-slate-100">
-                <div>
-                    <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Tipo Documento</label>
-                    <select name="documentType" class="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900">
-                        <option value="CC" th:selected="${customer.documentType == null or customer.documentType == 'CC'}">CC</option>
-                        <option value="NIT" th:selected="${customer.documentType == 'NIT'}">NIT</option>
-                        <option value="CE" th:selected="${customer.documentType == 'CE'}">CE</option>
-                        <option value="PP" th:selected="${customer.documentType == 'PP'}">Pasaporte</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Número Documento</label>
-                    <input type="text" name="document" th:value="${customer.document}"
-                           class="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm text-slate-900">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold uppercase text-slate-600 mb-1">DV (Solo NIT)</label>
-                    <input type="text" name="verificationDigit" maxlength="1" th:value="${customer.verificationDigit}"
-                           class="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm text-slate-900">
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Razón Social (Opcional)</label>
-                    <input type="text" name="legalName" th:value="${customer.legalName}"
-                           class="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm text-slate-900">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Régimen Tributario</label>
-                    <select name="taxRegime" class="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900">
-                        <option value="R-99-PN" th:selected="${customer.taxRegime == null or customer.taxRegime == 'R-99-PN'}">No responsable de IVA</option>
-                        <option value="IVA" th:selected="${customer.taxRegime == 'IVA'}">Responsable de IVA</option>
-                        <option value="SIMPLE" th:selected="${customer.taxRegime == 'SIMPLE'}">Régimen Simple</option>
-                    </select>
-                </div>
-            </div>
-
-            <label class="flex items-center gap-2 cursor-pointer select-none pt-1">
-                <input type="checkbox" name="requiresElectronicInvoice" value="true"
-                       th:checked="${customer.requiresElectronicInvoice == true}"
-                       class="w-4 h-4 rounded border-slate-300 text-brand focus:ring-brand">
-                <span class="text-xs font-semibold text-slate-700">Solicitar factura electrónica por defecto en mis compras</span>
-            </label>
-
-            <button type="submit"
-                    class="bg-brand hover-bg-brand text-white font-bold py-3 px-6 rounded-xl shadow-md transition text-sm cursor-pointer">
-                Guardar mis datos
-            </button>
-        </form>
-
-        <!-- Cambio de Contraseña -->
-        <form th:action="@{/s/{slug}/account/password(slug=${slug})}" method="POST" data-no-spa="true"
-              class="bg-white text-slate-900 p-6 sm:p-8 store-radius shadow-sm border border-slate-200/80 space-y-4 h-fit">
-            <h2 class="text-lg font-black text-slate-900 border-b border-slate-100 pb-3">Cambiar Contraseña</h2>
-
-            <div>
-                <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Contraseña Actual <span class="text-red-500">*</span></label>
-                <input type="password" name="currentPassword" required
-                       class="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm text-slate-900">
-            </div>
-
-            <div>
-                <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Nueva Contraseña <span class="text-red-500">*</span></label>
-                <input type="password" name="newPassword" required minlength="8"
-                       placeholder="Mínimo 8 caracteres"
-                       class="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm text-slate-900">
-            </div>
-
-            <div>
-                <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Confirmar Nueva <span class="text-red-500">*</span></label>
-                <input type="password" name="confirmPassword" required minlength="8"
-                       class="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm text-slate-900">
-            </div>
-
-            <button type="submit"
-                    class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 px-6 rounded-xl transition text-sm cursor-pointer">
-                Actualizar contraseña
-            </button>
-        </form>
     </div>
 </div>
+
 <th:block layout:fragment="scripts">
+    <th:block th:replace="~{storefront/account/fragments :: account-js}"></th:block>
     <script>
-        function switchAccountSection(sec) {
-            const ordersEl = document.getElementById('acc-section-orders');
-            const profEl = document.getElementById('acc-section-profile');
-            const ordBtn = document.getElementById('acc-tab-orders-btn');
-            const profBtn = document.getElementById('acc-tab-profile-btn');
-            if (!ordersEl || !profEl) return;
-            const isProf = sec === 'profile';
-            ordersEl.classList.toggle('hidden', isProf);
-            profEl.classList.toggle('hidden', !isProf);
-            if (ordBtn && profBtn) {
-                ordBtn.className = 'px-4 py-3 border-b-2 font-bold text-sm transition cursor-pointer ' +
-                    (!isProf ? 'border-brand text-brand' : 'border-transparent text-slate-500 hover:text-slate-800');
-                profBtn.className = 'px-4 py-3 border-b-2 font-bold text-sm transition cursor-pointer ' +
-                    (isProf ? 'border-brand text-brand' : 'border-transparent text-slate-500 hover:text-slate-800');
-            }
-        }
+        (function () {
+            var TABS = ['orders', 'shipping', 'billing', 'security'];
+
+            window.svAcctSwitch = function (name, focusTab) {
+                if (TABS.indexOf(name) < 0) name = 'orders';
+                for (var i = 0; i < TABS.length; i++) {
+                    var key = TABS[i];
+                    var panel = document.getElementById('acc-panel-' + key);
+                    var tab = document.getElementById('acc-tab-' + key);
+                    var on = key === name;
+                    if (panel) panel.hidden = !on;
+                    if (tab) {
+                        tab.setAttribute('aria-selected', on ? 'true' : 'false');
+                        tab.tabIndex = on ? 0 : -1;
+                        if (on && focusTab) tab.focus();
+                        if (on && tab.scrollIntoView) {
+                            try { tab.scrollIntoView({block: 'nearest', inline: 'center'}); } catch (e) { /* navegador antiguo */ }
+                        }
+                    }
+                }
+                // Si el usuario estaba más abajo que el inicio del portal (p. ej. al final de "Mis pedidos"), el documento se
+                // acorta y el navegador deja el scroll a mitad del nuevo panel: se vuelve al inicio del portal para no perder el contexto.
+                var shell = document.querySelector('.sv-acct-shell');
+                if (shell) {
+                    var navH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sv-nav-h')) || 0;
+                    var shellTop = shell.getBoundingClientRect().top;
+                    if (shellTop < navH) {
+                        window.scrollTo(0, Math.max(0, window.scrollY + shellTop - navH - 12));
+                    }
+                }
+                try {
+                    var url = new URL(window.location.href);
+                    url.searchParams.set('tab', name);
+                    window.history.replaceState(window.history.state, '', url.toString());
+                } catch (e) { /* sin historial disponible */ }
+            };
+
+            // Navegación con teclado en la lista de pestañas (flechas, Inicio, Fin)
+            window.svAcctNavKey = function (ev) {
+                var keys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'];
+                if (keys.indexOf(ev.key) < 0) return;
+                var current = -1;
+                for (var i = 0; i < TABS.length; i++) {
+                    var t = document.getElementById('acc-tab-' + TABS[i]);
+                    if (t && t.getAttribute('aria-selected') === 'true') current = i;
+                }
+                if (current < 0) current = 0;
+                var next = current;
+                if (ev.key === 'ArrowRight' || ev.key === 'ArrowDown') next = (current + 1) % TABS.length;
+                else if (ev.key === 'ArrowLeft' || ev.key === 'ArrowUp') next = (current - 1 + TABS.length) % TABS.length;
+                else if (ev.key === 'Home') next = 0;
+                else if (ev.key === 'End') next = TABS.length - 1;
+                ev.preventDefault();
+                window.svAcctSwitch(TABS[next], true);
+            };
+        })();
     </script>
 </th:block>
 </body>

@@ -112,6 +112,13 @@ public class TenantSchemaMigrationRunner implements CommandLineRunner {
             new ColumnMigration("customers", "last_login_at", "DATETIME NULL"),
             new ColumnMigration("customers", "password_changed_at", "DATETIME NULL"),
 
+            // --- Verificación de correo del comprador (todas NULL: las cuentas existentes no se modifican;
+            //     su plazo de gracia se calcula desde created_at, ver EmailVerificationPolicy) ---
+            new ColumnMigration("customers", "email_verified_at", "DATETIME NULL"),
+            new ColumnMigration("customers", "email_verification_token", "VARCHAR(100) NULL"),
+            new ColumnMigration("customers", "email_verification_expires_at", "DATETIME NULL"),
+            new ColumnMigration("customers", "email_verification_sent_at", "DATETIME NULL"),
+
             // --- Pedidos creados con sesión de comprador (visibles en "Mi Cuenta") ---
             new ColumnMigration("orders", "placed_with_account", "BOOLEAN NOT NULL DEFAULT FALSE")
     );
@@ -124,7 +131,8 @@ public class TenantSchemaMigrationRunner implements CommandLineRunner {
             new IndexMigration("order_items", "idx_order_items_product", "`product_id`, `order_id`", false),
             new IndexMigration("shipments", "idx_shipments_external_id", "`external_shipment_id`", false),
             new IndexMigration("customers", "idx_customers_email", "`email`", false),
-            new IndexMigration("customers", "idx_customers_reset_token", "`reset_password_token`", false)
+            new IndexMigration("customers", "idx_customers_reset_token", "`reset_password_token`", false),
+            new IndexMigration("customers", "idx_customers_verification_token", "`email_verification_token`", false)
     );
 
     @Override
